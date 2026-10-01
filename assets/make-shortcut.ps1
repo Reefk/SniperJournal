@@ -11,7 +11,7 @@ try {
     $shell = New-Object -ComObject WScript.Shell
     $link = Join-Path $desktop 'Sniper Journal.lnk'
     $sc = $shell.CreateShortcut($link)
-    $sc.TargetPath       = Join-Path $Root 'start.bat'
+    $sc.TargetPath       = Join-Path $Root 'assets\open-app.vbs'
     $sc.WorkingDirectory = $Root
     $sc.Description      = 'Sniper Journal - your trading journal'
 

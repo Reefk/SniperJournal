@@ -1,4 +1,7 @@
 @echo off
+rem The visible launcher. You normally will not need this: the app runs in the
+rem background and starts with Windows. Use it when you want to watch what the
+rem server is doing, or to run the app without the background service.
 title Sniper Journal
 cd /d "%~dp0"
 
@@ -25,6 +28,19 @@ if not exist "node_modules\" (
   exit /b 1
 )
 
+rem If the background copy is already serving, just open it.
+powershell -NoProfile -Command "try { Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:3000' -TimeoutSec 3 | Out-Null; exit 0 } catch { exit 1 }" >nul 2>nul
+if not errorlevel 1 (
+  echo   Sniper Journal is already running in the background.
+  echo   Opening it...
+  start "" http://localhost:3000
+  echo.
+  echo   To watch the server instead, run stop.bat first, then this again.
+  echo.
+  pause
+  exit /b 0
+)
+
 if not exist ".next\BUILD_ID" (
   echo   Preparing the app...
   echo.
@@ -40,10 +56,7 @@ if not exist ".next\BUILD_ID" (
 )
 
 echo   Opening at http://localhost:3000
-echo   Your journal is saved in the "data" folder next to this file.
-echo.
 echo   Keep this window open while you use the app.
-echo   Close it when you are finished.
 echo.
 
 start "" http://localhost:3000

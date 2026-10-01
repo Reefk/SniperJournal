@@ -19,11 +19,15 @@ it saves the whole dance below.
 2. **Unzip this folder** somewhere permanent, such as `C:\SniperJournal`.
    Your journal file lives inside it, so avoid the Downloads folder.
 3. **Double-click `INSTALLER.bat`.** It takes a few minutes: it installs what the
-   app needs, builds it, clears the download mark from every file, and puts a
-   shortcut on your desktop.
-4. The app opens at <http://localhost:3000> and a **Sniper Journal icon appears
-   on your desktop**. From then on, that icon is how you open it. You will not
-   need the installer again.
+   app needs, builds it, clears the download mark from every file, puts a
+   shortcut on your desktop, and sets the app to run quietly in the background.
+4. The app opens, and from then on it is simply there. **No black window to keep
+   open, nothing to close.** It starts with Windows and waits for you.
+5. **Install it as a proper app** (worth the ten seconds): in Chrome, click the
+   three dots at the top right → *Cast, save and share* → **Install page as
+   app**. Sniper Journal then gets its own window with no address bar, its own
+   icon in the Start menu and on the taskbar, and behaves like any other
+   installed program.
 
 ### If you skipped the Unblock step
 
@@ -37,8 +41,27 @@ any script it has not seen signed by a paid-for certificate, which this is not.
 
 The desktop shortcut is created once, on that first run, so if you delete it on
 purpose it stays deleted. To get it back — or after moving the folder somewhere
-else — double-click `create-shortcut.bat`. You can also drag the desktop icon
-onto your taskbar to pin it.
+else — double-click `create-shortcut.bat`.
+
+### Running it in the background
+
+The server is the app. It runs hidden, with no console window, and starts when
+you sign in to Windows, so <http://localhost:3000> always answers.
+
+| If you want to | Double-click |
+| --- | --- |
+| Open the app | the desktop icon, or the installed app's icon |
+| Shut it down | `stop.bat` |
+| Stop it starting with Windows | `autostart-off.bat` |
+| Turn that back on | `autostart-on.bat` |
+| Watch the server while it runs | `stop.bat`, then `start.bat` |
+
+Stopping it never loses anything: your journal is written to disk within a third
+of a second of every change.
+
+`start.bat` is the visible version, useful when something is wrong and you want
+to read the error. If the background copy is already running, it will say so and
+just open the app rather than fighting it for the port.
 
 On macOS or Linux there is no installer: run `./start.sh`, which sets itself up
 on the first run. The desktop shortcut is a Windows thing; elsewhere, keep a
@@ -221,6 +244,10 @@ journal useful. Two ways to add it:
 
 **The window closes immediately.** Node.js is probably not installed. Install it
 from <https://nodejs.org> and run `INSTALLER.bat` again.
+
+**"This site can't be reached" / ERR_CONNECTION_REFUSED.** The background server
+is not running — usually because something stopped it, or autostart is off. Open
+the app from the desktop icon, which starts it again, and refresh.
 
 **A security warning keeps coming back.** Run `INSTALLER.bat` once more — it
 clears the download mark from every file in the folder. If it still appears,

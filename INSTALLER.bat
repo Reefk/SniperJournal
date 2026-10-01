@@ -65,18 +65,39 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "%HERE%\assets\make-shortcut
 if errorlevel 1 echo   You can add one later by running create-shortcut.bat.
 
 echo.
+echo   Setting it to start with Windows...
+powershell -NoProfile -ExecutionPolicy Bypass -File "%HERE%\assets\autostart.ps1" -Root "%HERE%"
+if errorlevel 1 echo   You can turn this on later with autostart-on.bat.
+
+echo.
+echo   Starting it now...
+start "" wscript.exe "%HERE%\assets\open-app.vbs"
+
+echo.
 echo   ============================================
 echo     READY
 echo   ============================================
 echo.
-echo   From now on, open the app with the Sniper Journal
-echo   icon on your desktop. You will not need this
-echo   installer again.
+echo   Sniper Journal now runs quietly in the background and
+echo   starts with Windows. There is no black window to keep
+echo   open, and nothing to close.
 echo.
-echo   Your journal is saved in the "data" folder, next
-echo   to this file. Nothing leaves this computer.
+echo   ONE LAST STEP, worth doing once:
+echo.
+echo     In the Chrome window that just opened, click the
+echo     three dots at the top right, choose Cast save and
+echo     share, then Install page as app.
+echo.
+echo   That gives Sniper Journal its own window with no
+echo   address bar, and its own icon in the Start menu.
+echo.
+echo   Your journal is saved in the "data" folder next to
+echo   this file. Nothing leaves this computer.
+echo.
+echo   Other things in this folder, if you ever need them:
+echo     stop.bat            shut the app down
+echo     autostart-off.bat   stop it starting with Windows
+echo     create-shortcut.bat put the desktop icon back
 echo.
 pause
-
-start "" "%HERE%\start.bat"
 exit /b 0
