@@ -28,6 +28,7 @@ are using the journal and close it when you are finished.
 | What | Where |
 | --- | --- |
 | Your journal | `data/journal.json` |
+| Chart screenshots | `data/screenshots/` |
 | Automatic daily backups | `data/backups/` (the last 30 are kept) |
 | Manual backups | wherever you save them, from the profile menu |
 
@@ -154,6 +155,27 @@ brings the separate parts back.
 Trades can only be merged when they share a symbol, a direction and an account,
 and are either all closed or all open — otherwise the result would quietly lose
 a realised profit.
+
+### Attaching the chart
+
+Every trade can carry a screenshot of the setup. In the trade form, the **Chart**
+box on the right takes an image three ways: click it and pick a file, drag one
+in, or just press **Ctrl + V** — screenshot your chart and paste it straight
+into the open form, which is by far the quickest. Hover the thumbnail to view it
+full size, replace it, or remove it.
+
+Images are saved as ordinary files in `data/screenshots/`, **not** inside
+`journal.json`. That keeps the journal file small and quick no matter how many
+charts you attach. Large captures are scaled down to 1800px before saving, so a
+few hundred charts stay in the tens of megabytes rather than gigabytes.
+
+Two things worth knowing: the JSON backup contains your trades but not the
+images, so copy `data/screenshots/` as well when moving to another computer, and
+deleting a trade deletes its image with it.
+
+If you would rather link to a chart you host elsewhere, such as a TradingView
+snapshot, there is still a **Chart link** field under *Futures, forex and manual
+P&L*. You can use either, or both.
 
 ### Filling in what the broker did not record
 

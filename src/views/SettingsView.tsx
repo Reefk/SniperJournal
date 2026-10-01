@@ -181,6 +181,7 @@ export function SettingsView() {
           </div>
           <p className="mt-3 text-xs leading-relaxed text-faint">
             A dated copy is also written into the data/backups folder automatically, once on each day you make changes. The last 30 are kept.
+            Chart images are saved as files in data/screenshots rather than inside the backup, so copy that folder too if you are moving to another computer.
           </p>
         </Section>
 

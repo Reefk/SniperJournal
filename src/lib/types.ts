@@ -38,7 +38,10 @@ export interface Trade {
   setupId?: string;
   tags: string[];
   notes?: string;
+  /** a link to a chart, e.g. a TradingView snapshot */
   screenshotUrl?: string;
+  /** an image saved in data/screenshots, by file name */
+  screenshotFile?: string;
   review?: SelfReview;
   /** kept in the journal but left out of every statistic */
   excluded?: boolean;

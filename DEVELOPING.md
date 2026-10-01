@@ -57,6 +57,7 @@ data/               your journal and its backups, created at runtime
 | The wording and rules of the AI insights | `src/lib/insights.ts` |
 | Which CSV column names are recognised | `ALIASES` in `src/lib/csv.ts` |
 | How partial fills are combined into one trade | `src/lib/merge.ts` |
+| Chart image upload, scaling and storage | `src/lib/screenshots.ts`, `src/app/api/screenshot/` |
 | The trade entry form | `src/components/trades/TradeFormModal.tsx` |
 | Trading session hours | `src/lib/sessions.ts` |
 | The generated test data | `src/lib/sample.ts` |

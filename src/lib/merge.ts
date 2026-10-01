@@ -102,6 +102,7 @@ export function mergeTrades(trades: Trade[]): Trade {
     notes: notes || undefined,
     review: withReview?.review,
     screenshotUrl: legs.find((t) => t.screenshotUrl)?.screenshotUrl,
+    screenshotFile: legs.find((t) => t.screenshotFile)?.screenshotFile,
     excluded: legs.every((t) => t.excluded) ? true : false,
     isSample: legs.every((t) => t.isSample) ? true : undefined,
     externalId: externalIds.length ? [...new Set(externalIds)].join('|') : undefined,

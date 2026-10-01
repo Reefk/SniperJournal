@@ -15,6 +15,7 @@ import { Field, Input, Select, Textarea } from '@/components/ui/Field';
 import { TagInput } from '@/components/ui/TagInput';
 import { RatingInput } from '@/components/ui/RatingInput';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
+import { ChartImage } from './ChartImage';
 
 interface FormState {
   accountId: string;
@@ -38,6 +39,7 @@ interface FormState {
   tags: string[];
   notes: string;
   screenshotUrl: string;
+  screenshotFile?: string;
   discipline?: number;
   execution?: number;
   patience?: number;
@@ -74,6 +76,7 @@ function initialState(accountId: string, trade?: Trade, defaults?: Partial<Trade
     tags: src.tags ?? [],
     notes: src.notes ?? '',
     screenshotUrl: src.screenshotUrl ?? '',
+    screenshotFile: src.screenshotFile,
     discipline: src.review?.discipline,
     execution: src.review?.execution,
     patience: src.review?.patience,
@@ -125,6 +128,7 @@ function validate(f: FormState, editing?: Trade): { errors: Errors; input?: Trad
       tags: f.tags,
       notes: f.notes.trim() || undefined,
       screenshotUrl: f.screenshotUrl.trim() || undefined,
+      screenshotFile: f.screenshotFile,
       review: { discipline: f.discipline, execution: f.execution, patience: f.patience },
       excluded: editing?.excluded ?? false,
       isSample: editing?.isSample,
@@ -391,7 +395,7 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
                 <p className="col-span-3 text-xs leading-relaxed text-faint">
                   Multiplier examples: ES = 50, NQ = 20, MES = 5, one standard forex lot = 100,000 units. Use manual P&L when copying the figure straight from your broker is simpler.
                 </p>
-                <Field label="Chart screenshot link" className="col-span-3">
+                <Field label="Chart link" hint="instead of, or alongside, an uploaded image" className="col-span-3">
                   <Input value={form.screenshotUrl} onChange={(e) => set('screenshotUrl', e.target.value)} placeholder="https://www.tradingview.com/x/…" />
                 </Field>
               </div>
@@ -425,6 +429,12 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
               ))}
             </dl>
           </div>
+
+          <ChartImage
+            file={form.screenshotFile}
+            onChange={(name) => set('screenshotFile', name)}
+            onError={(message) => toast(message, 'error')}
+          />
 
           <div className="rounded-lg border border-line p-4">
             <div className="text-sm font-medium text-fg">Self-review</div>

@@ -7,6 +7,7 @@ import type { Account, JournalData, Resource, Setup, Trade, TradeInput, Settings
 import { generateSampleData } from '@/lib/sample';
 import { isIncomplete, netPnl } from '@/lib/trade-math';
 import { mergeIssue, mergeTrades as combineTrades } from '@/lib/merge';
+import { deleteScreenshot } from '@/lib/screenshots';
 import { uid } from '@/lib/utils';
 
 const LOCAL_KEY = 'sniper-journal:v1';
@@ -219,6 +220,10 @@ export function JournalProvider({ children }: { children: ReactNode }) {
     },
     deleteTrades: (ids) => {
       const set = new Set(ids);
+      // a deleted trade should not leave its chart behind in the data folder
+      for (const t of dataRef.current.trades) {
+        if (set.has(t.id) && t.screenshotFile) void deleteScreenshot(t.screenshotFile);
+      }
       mutate((d) => ({ ...d, trades: d.trades.filter((t) => !set.has(t.id)) }));
     },
     setExcluded: (ids, excluded) => {

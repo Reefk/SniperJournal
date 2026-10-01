@@ -6,3 +6,4 @@ next-env.d.ts
 data/*.json
 data/backups
 .DS_Store
+data/screenshots

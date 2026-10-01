@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowDown, ArrowLeftRight, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, Download, Eye, EyeOff,
-  FlaskConical, Merge, Pencil, Plus, RotateCcw, Search, SquarePen, Trash2, TriangleAlert, Upload,
+  FlaskConical, ImageIcon, Merge, Pencil, Plus, RotateCcw, Search, SquarePen, Trash2, TriangleAlert, Upload,
 } from 'lucide-react';
 import type { Trade } from '@/lib/types';
 import { useJournal } from '@/store/JournalProvider';
@@ -423,6 +423,9 @@ export function TradesView() {
                       <td className={cn('px-3 py-2.5', dim)}>
                         <div className="flex items-center gap-2">
                           <span className="font-semibold text-fg">{t.symbol}</span>
+                          {(t.screenshotFile || t.screenshotUrl) && (
+                            <ImageIcon className="size-3.5 shrink-0 text-faint" aria-label="Has a chart" />
+                          )}
                           {isIncomplete(t) && <StatusBadge tone="warn">needs details</StatusBadge>}
                         </div>
                         <div className="flex max-w-[190px] items-center gap-1.5 truncate text-xs text-faint">
