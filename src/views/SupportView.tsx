@@ -1,0 +1,117 @@
+'use client';
+
+import { FolderOpen, HardDrive, Keyboard, LifeBuoy, ShieldCheck, Upload } from 'lucide-react';
+import { useJournal } from '@/store/JournalProvider';
+import { PageHeader } from '@/components/ui/PageHeader';
+
+const SHORTCUTS = [
+  ['N', 'Log a new trade'],
+  ['Ctrl K  or  /', 'Jump to search'],
+  ['Ctrl + Enter', 'Save the trade form'],
+  ['Esc', 'Close a dialog'],
+];
+
+const FAQ: Array<{ q: string; a: string }> = [
+  {
+    q: 'Where exactly is my data kept?',
+    a: 'In a plain JSON file at data/journal.json inside the Sniper Journal folder on this PC. Nothing is uploaded anywhere, and the app works with your internet disconnected. A copy is also mirrored into this browser so your work survives if the app is closed mid-edit.',
+  },
+  {
+    q: 'What happens if I break something?',
+    a: 'Every day that you make a change, the previous version of the file is copied into data/backups before the new one is written. The last 30 daily copies are kept. You can also download a backup at any time from your profile menu, and restore it from Settings.',
+  },
+  {
+    q: 'Why is a trade missing from my statistics?',
+    a: 'Statistics only count closed trades, so anything without an exit price or a manual P&L is left out until you close it. Trades you marked with the eye icon are also deliberately excluded while staying in the journal.',
+  },
+  {
+    q: 'How do I log futures or forex properly?',
+    a: 'Open the "Futures, forex and manual P&L" section in the trade form and set the contract multiplier: ES is 50, NQ is 20, MES is 5, and one standard forex lot is 100,000 units. If it is easier, switch P&L to manual and paste the figure from your broker instead.',
+  },
+  {
+    q: 'What counts as an R multiple?',
+    a: 'Your result divided by the money you had at risk between entry and stop loss. Trades logged without a stop cannot be measured in R, which is why the risk and R:R statistics ask you to record one.',
+  },
+  {
+    q: 'Can I run this on more than one computer?',
+    a: 'Each installation keeps its own file. To move your journal, download a backup from one machine and restore it on the other from Settings.',
+  },
+];
+
+export function SupportView() {
+  const { filePath, saveStatus } = useJournal();
+
+  return (
+    <>
+      <PageHeader title="Support" description="How Sniper Journal works, and where your data lives." />
+
+      <div className="grid grid-cols-3 gap-4">
+        <section className="rounded-xl border border-line bg-surface p-5">
+          <HardDrive className="size-5 text-accent" />
+          <h2 className="mt-3 text-sm font-semibold text-fg">Your journal file</h2>
+          <p className="mt-1.5 text-sm leading-relaxed text-muted">
+            {saveStatus === 'browser'
+              ? 'The app cannot reach its file right now, so changes are being kept in this browser only. They will be written to disk as soon as it is reachable again.'
+              : 'Saved automatically a moment after every change.'}
+          </p>
+          {filePath && <p className="num mt-3 break-all rounded-md border border-line bg-app px-3 py-2 text-xs text-muted">{filePath}</p>}
+        </section>
+
+        <section className="rounded-xl border border-line bg-surface p-5">
+          <ShieldCheck className="size-5 text-profit" />
+          <h2 className="mt-3 text-sm font-semibold text-fg">Nothing leaves this PC</h2>
+          <p className="mt-1.5 text-sm leading-relaxed text-muted">
+            There is no account, no server and no telemetry. The app only talks to its own folder on this machine, which is why it keeps working with the network off.
+          </p>
+        </section>
+
+        <section className="rounded-xl border border-line bg-surface p-5">
+          <Keyboard className="size-5 text-accent" />
+          <h2 className="mt-3 text-sm font-semibold text-fg">Shortcuts</h2>
+          <dl className="mt-3 space-y-2">
+            {SHORTCUTS.map(([key, label]) => (
+              <div key={key} className="flex items-center justify-between gap-3">
+                <dt className="text-sm text-muted">{label}</dt>
+                <dd><kbd className="num rounded border border-line bg-app px-1.5 py-0.5 text-[11px] text-fg">{key}</kbd></dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      </div>
+
+      <section className="mt-4 rounded-xl border border-line bg-surface">
+        <h2 className="flex items-center gap-2 border-b border-line px-5 py-4 text-sm font-semibold text-fg">
+          <LifeBuoy className="size-4 text-accent" /> Common questions
+        </h2>
+        <div className="divide-y divide-line">
+          {FAQ.map((item) => (
+            <details key={item.q} className="group px-5 py-3.5">
+              <summary className="cursor-pointer select-none list-none text-sm font-medium text-fg marker:hidden">
+                <span className="inline-block transition group-open:rotate-90">›</span>
+                <span className="ml-2">{item.q}</span>
+              </summary>
+              <p className="ml-5 mt-2 text-sm leading-relaxed text-muted">{item.a}</p>
+            </details>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-4 grid grid-cols-2 gap-4">
+        <div className="rounded-xl border border-line bg-surface p-5">
+          <Upload className="size-5 text-accent" />
+          <h2 className="mt-3 text-sm font-semibold text-fg">Importing from your broker</h2>
+          <p className="mt-1.5 text-sm leading-relaxed text-muted">
+            Open Trades, choose Import CSV and download the template to see the exact column names. Common broker headings such as qty, ticker, commission and realized pnl are recognised automatically, and any rows that cannot be read are listed before you commit the import.
+          </p>
+        </div>
+        <div className="rounded-xl border border-line bg-surface p-5">
+          <FolderOpen className="size-5 text-accent" />
+          <h2 className="mt-3 text-sm font-semibold text-fg">Starting the app again later</h2>
+          <p className="mt-1.5 text-sm leading-relaxed text-muted">
+            Double-click start.bat in the Sniper Journal folder, or run npm run dev from a terminal there, then open localhost:3000. Close the window when you are done; your data stays in the folder.
+          </p>
+        </div>
+      </section>
+    </>
+  );
+}

@@ -1,0 +1,113 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------
+   Design tokens. Dark is the default; .light on <html> overrides.
+   --------------------------------------------------------------- */
+:root {
+  --app: #0b1120;
+  --surface: #131a2a;
+  --raised: #1a2336;
+  --line: #222c42;
+  --line-strong: #34405b;
+  --fg: #e6eaf2;
+  --muted: #8b97ad;
+  --faint: #5c6882;
+  --accent: #818cf8;
+  --accent-strong: #6366f1;
+  --profit: #34d399;
+  --loss: #f43f5e;
+  --warn: #f59e0b;
+}
+
+:root.light {
+  --app: #f6f7fb;
+  --surface: #ffffff;
+  --raised: #f1f3f9;
+  --line: #e2e8f0;
+  --line-strong: #cbd5e1;
+  --fg: #0f172a;
+  --muted: #64748b;
+  --faint: #94a3b8;
+  --accent: #4f46e5;
+  --accent-strong: #4f46e5;
+  --profit: #059669;
+  --loss: #e11d48;
+  --warn: #d97706;
+}
+
+@theme inline {
+  --color-app: var(--app);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-profit: var(--profit);
+  --color-loss: var(--loss);
+  --color-warn: var(--warn);
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, 'SF Mono', Menlo, monospace;
+}
+
+/* Monospace with aligned digits — used on every financial figure */
+@utility num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  letter-spacing: -0.01em;
+}
+
+@layer base {
+  * { border-color: var(--line); }
+  html, body {
+    background: var(--app);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: color-mix(in srgb, var(--accent) 35%, transparent); }
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.6);
+    cursor: pointer;
+  }
+  :root.light input[type="date"]::-webkit-calendar-picker-indicator,
+  :root.light input[type="datetime-local"]::-webkit-calendar-picker-indicator { filter: none; }
+  input[type="checkbox"] { accent-color: var(--accent-strong); }
+}
+
+/* thin themed scrollbars */
+* { scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 999px; border: 3px solid var(--app); }
+::-webkit-scrollbar-thumb:hover { background: var(--faint); }
+
+@keyframes pop {
+  from { opacity: 0; transform: translateY(-4px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.animate-pop { animation: pop 140ms ease-out; }
+
+/* the equity line gets a soft glow, as specified */
+.glow-line path.recharts-curve { filter: drop-shadow(0 0 6px color-mix(in srgb, var(--profit) 55%, transparent)); }
+.recharts-cartesian-axis-tick text { font-size: 11px; }
+.recharts-surface:focus { outline: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+@media print {
+  aside, header { display: none !important; }
+  main { overflow: visible !important; }
+}
