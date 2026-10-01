@@ -2,6 +2,9 @@
 title Sniper Journal
 cd /d "%~dp0"
 
+set "HERE=%~dp0"
+if "%HERE:~-1%"=="\" set "HERE=%HERE:~0,-1%"
+
 echo.
 echo   ============================================
 echo     SNIPER JOURNAL
@@ -19,7 +22,10 @@ if errorlevel 1 (
   exit /b 1
 )
 
-if not exist "node_modules\" (
+set "FIRSTRUN="
+if not exist "node_modules\" set "FIRSTRUN=1"
+
+if defined FIRSTRUN (
   echo   First run: installing components. This takes a few minutes.
   echo.
   call npm install
@@ -42,6 +48,15 @@ if not exist ".next\BUILD_ID" (
     pause
     exit /b 1
   )
+  echo.
+)
+
+rem After the first install, put a shortcut on the desktop so the app is one
+rem double-click away. Only on the first run, so a deleted shortcut stays deleted.
+if defined FIRSTRUN (
+  echo   Adding a shortcut to your desktop...
+  powershell -NoProfile -ExecutionPolicy Bypass -File "%HERE%\assets\make-shortcut.ps1" -Root "%HERE%"
+  if errorlevel 1 echo   You can add one later by running create-shortcut.bat.
   echo.
 )
 

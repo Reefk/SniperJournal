@@ -58,6 +58,7 @@ data/               your journal and its backups, created at runtime
 | Which CSV column names are recognised | `ALIASES` in `src/lib/csv.ts` |
 | How partial fills are combined into one trade | `src/lib/merge.ts` |
 | Chart image upload, scaling and storage | `src/lib/screenshots.ts`, `src/app/api/screenshot/` |
+| The app icon | `assets/icon.svg`, then rebuild `sniper-journal.ico` and `src/app/icon.png` from it |
 | The trade entry form | `src/components/trades/TradeFormModal.tsx` |
 | Trading session hours | `src/lib/sessions.ts` |
 | The generated test data | `src/lib/sample.ts` |

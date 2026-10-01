@@ -14,9 +14,17 @@ unless you explicitly ask for it.
    Your journal file lives inside it, so avoid the Downloads folder.
 3. **Double-click `start.bat`.** The first run installs the components it needs
    and takes a few minutes. Later runs start in a couple of seconds.
-4. Your browser opens at <http://localhost:3000>.
+4. Your browser opens at <http://localhost:3000>, and a **Sniper Journal icon
+   appears on your desktop**. From then on, that icon is how you open the app.
 
-On macOS or Linux, run `./start.sh` instead.
+The desktop shortcut is created once, on that first run, so if you delete it on
+purpose it stays deleted. To get it back — or after moving the folder somewhere
+else — double-click `create-shortcut.bat`. You can also drag the desktop icon
+onto your taskbar to pin it.
+
+On macOS or Linux, run `./start.sh` instead. The desktop shortcut is a Windows
+thing; elsewhere, keep a bookmark to <http://localhost:3000> and run `./start.sh`
+when you want the app up.
 
 A black console window stays open while the app runs. Keep it open while you
 are using the journal and close it when you are finished.
