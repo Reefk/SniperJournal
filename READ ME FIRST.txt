@@ -1,0 +1,42 @@
+SNIPER JOURNAL
+==============
+
+BEFORE YOU UNZIP - one checkbox saves you every security warning:
+
+  1. Right-click the file  sniper-journal.zip
+  2. Choose  Properties
+  3. At the bottom of the General tab, tick  Unblock
+  4. Click  OK , then extract the folder
+
+Windows marks everything that arrives from the internet. Unblocking the
+ZIP first means nothing inside it is marked, so nothing warns you.
+
+If you already extracted it without doing that, no harm done - carry on
+below and accept the one warning. The installer clears the mark for you,
+so you will not see it again.
+
+
+TO INSTALL
+----------
+
+  1. Install Node.js (LTS) from  https://nodejs.org
+  2. Move this folder somewhere permanent, such as  C:\SniperJournal
+     Your trades are saved inside it, so avoid the Downloads folder.
+  3. Double-click  INSTALLER.bat
+     If a blue "Windows protected your PC" screen appears, click
+     "More info", then "Run anyway".
+
+That is it. A Sniper Journal icon appears on your desktop - use it to
+open the app from now on.
+
+
+WHERE YOUR DATA LIVES
+---------------------
+
+  data\journal.json     your trades
+  data\screenshots\     chart images
+  data\backups\         a dated copy, kept for 30 days
+
+Nothing is uploaded anywhere. The app works with the internet off.
+
+Full instructions are in README.md.

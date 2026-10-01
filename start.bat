@@ -2,9 +2,6 @@
 title Sniper Journal
 cd /d "%~dp0"
 
-set "HERE=%~dp0"
-if "%HERE:~-1%"=="\" set "HERE=%HERE:~0,-1%"
-
 echo.
 echo   ============================================
 echo     SNIPER JOURNAL
@@ -13,29 +10,19 @@ echo.
 
 where node >nul 2>nul
 if errorlevel 1 (
-  echo   Node.js is not installed.
-  echo.
-  echo   Install the LTS version from https://nodejs.org
-  echo   then double-click this file again.
+  echo   Node.js is not installed. Get the LTS version from
+  echo   https://nodejs.org, then run INSTALLER.bat once.
   echo.
   pause
   exit /b 1
 )
 
-set "FIRSTRUN="
-if not exist "node_modules\" set "FIRSTRUN=1"
-
-if defined FIRSTRUN (
-  echo   First run: installing components. This takes a few minutes.
+if not exist "node_modules\" (
+  echo   This copy has not been set up yet.
+  echo   Close this window and double-click INSTALLER.bat first.
   echo.
-  call npm install
-  if errorlevel 1 (
-    echo.
-    echo   Install failed. Check your internet connection and try again.
-    pause
-    exit /b 1
-  )
-  echo.
+  pause
+  exit /b 1
 )
 
 if not exist ".next\BUILD_ID" (
@@ -44,23 +31,15 @@ if not exist ".next\BUILD_ID" (
   call npm run build
   if errorlevel 1 (
     echo.
-    echo   Build failed.
+    echo   Build failed. Try running INSTALLER.bat again.
+    echo.
     pause
     exit /b 1
   )
   echo.
 )
 
-rem After the first install, put a shortcut on the desktop so the app is one
-rem double-click away. Only on the first run, so a deleted shortcut stays deleted.
-if defined FIRSTRUN (
-  echo   Adding a shortcut to your desktop...
-  powershell -NoProfile -ExecutionPolicy Bypass -File "%HERE%\assets\make-shortcut.ps1" -Root "%HERE%"
-  if errorlevel 1 echo   You can add one later by running create-shortcut.bat.
-  echo.
-)
-
-echo   Starting at http://localhost:3000
+echo   Opening at http://localhost:3000
 echo   Your journal is saved in the "data" folder next to this file.
 echo.
 echo   Keep this window open while you use the app.

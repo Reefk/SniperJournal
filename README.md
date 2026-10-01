@@ -8,23 +8,41 @@ unless you explicitly ask for it.
 
 ## Setting it up (once)
 
+**Before unzipping**, right-click `sniper-journal.zip`, choose **Properties**,
+tick **Unblock** at the bottom of the General tab, and click OK. Windows marks
+everything that arrives from the internet; clearing it on the ZIP means nothing
+inside is marked, and no security warning appears at all. It is one checkbox and
+it saves the whole dance below.
+
 1. **Install Node.js.** Get the LTS version from <https://nodejs.org> and accept
    the default options in the installer.
 2. **Unzip this folder** somewhere permanent, such as `C:\SniperJournal`.
    Your journal file lives inside it, so avoid the Downloads folder.
-3. **Double-click `start.bat`.** The first run installs the components it needs
-   and takes a few minutes. Later runs start in a couple of seconds.
-4. Your browser opens at <http://localhost:3000>, and a **Sniper Journal icon
-   appears on your desktop**. From then on, that icon is how you open the app.
+3. **Double-click `INSTALLER.bat`.** It takes a few minutes: it installs what the
+   app needs, builds it, clears the download mark from every file, and puts a
+   shortcut on your desktop.
+4. The app opens at <http://localhost:3000> and a **Sniper Journal icon appears
+   on your desktop**. From then on, that icon is how you open it. You will not
+   need the installer again.
+
+### If you skipped the Unblock step
+
+You will see one blue screen saying *Windows protected your PC* when you run the
+installer. Click **More info**, then **Run anyway**. That is the only time: part
+of the installer's job is clearing that mark from every file in the folder, so
+the desktop icon and the launcher open straight away afterwards.
+
+The warning is not about anything being wrong with the app. Windows shows it for
+any script it has not seen signed by a paid-for certificate, which this is not.
 
 The desktop shortcut is created once, on that first run, so if you delete it on
 purpose it stays deleted. To get it back — or after moving the folder somewhere
 else — double-click `create-shortcut.bat`. You can also drag the desktop icon
 onto your taskbar to pin it.
 
-On macOS or Linux, run `./start.sh` instead. The desktop shortcut is a Windows
-thing; elsewhere, keep a bookmark to <http://localhost:3000> and run `./start.sh`
-when you want the app up.
+On macOS or Linux there is no installer: run `./start.sh`, which sets itself up
+on the first run. The desktop shortcut is a Windows thing; elsewhere, keep a
+bookmark to <http://localhost:3000>.
 
 A black console window stays open while the app runs. Keep it open while you
 are using the journal and close it when you are finished.
@@ -202,7 +220,11 @@ journal useful. Two ways to add it:
 ## Troubleshooting
 
 **The window closes immediately.** Node.js is probably not installed. Install it
-from <https://nodejs.org> and try again.
+from <https://nodejs.org> and run `INSTALLER.bat` again.
+
+**A security warning keeps coming back.** Run `INSTALLER.bat` once more — it
+clears the download mark from every file in the folder. If it still appears,
+right-click the file, choose Properties, and tick Unblock.
 
 **"Port 3000 is already in use".** Another program is using that port, or a
 previous copy of the app is still running. Close the other console window, or
@@ -211,6 +233,9 @@ edit the `dev` and `start` lines in `package.json` to use a different port.
 **The sidebar says "Saved in browser".** The app could not reach its own data
 folder, so it is holding your changes in the browser instead. Restart it with
 `start.bat`; your work is written to disk as soon as it can be.
+
+**The launcher says it has not been set up.** You opened `start.bat` before
+`INSTALLER.bat`. Run the installer first.
 
 **Nothing appears in the statistics.** Statistics only count closed trades that
 are complete. Check that the trade has an exit price, that it is not marked

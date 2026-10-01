@@ -33,6 +33,10 @@ const FAQ: Array<{ q: string; a: string }> = [
     a: 'Your result divided by the money you had at risk between entry and stop loss. Trades logged without a stop cannot be measured in R, which is why the risk and R:R statistics ask you to record one.',
   },
   {
+    q: 'Why did Windows warn me the first time?',
+    a: 'Windows marks every file that arrives from the internet and warns before running a script it has not seen signed by a paid-for certificate. Part of the installer\'s job is clearing that mark from every file in the app folder, which is why the warning appears once and then never again. You can avoid it entirely next time by ticking Unblock in the ZIP file\'s properties before extracting it.',
+  },
+  {
     q: 'Can I run this on more than one computer?',
     a: 'Each installation keeps its own file. To move your journal, download a backup from one machine and restore it on the other from Settings.',
   },
@@ -108,7 +112,7 @@ export function SupportView() {
           <FolderOpen className="size-5 text-accent" />
           <h2 className="mt-3 text-sm font-semibold text-fg">Starting the app again later</h2>
           <p className="mt-1.5 text-sm leading-relaxed text-muted">
-            Double-click start.bat in the Sniper Journal folder, or run npm run dev from a terminal there, then open localhost:3000. Close the window when you are done; your data stays in the folder.
+            Use the Sniper Journal icon on your desktop. If it is missing, run create-shortcut.bat in the app folder to put it back, or open start.bat directly. Close the black window when you are done; your data stays in the folder.
           </p>
         </div>
       </section>
