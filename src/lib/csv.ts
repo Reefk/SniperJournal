@@ -1,6 +1,7 @@
 import type { Account, Setup, Trade, TradeInput } from './types';
 import { detectSession } from './sessions';
 import { grossPnl, isClosed, isIncomplete, missingDetails, netPnl, rMultiple } from './trade-math';
+import { mergeIssue, mergeTrades } from './merge';
 import { pad2, toNumberOrNull, uid } from './utils';
 
 export const CSV_COLUMNS = [
@@ -193,6 +194,8 @@ export interface ImportResult {
   incomplete: number;
   /** true when the file pairs a buy fill with a sell fill instead of naming a side */
   pairedFills: boolean;
+  /** how many rows were folded into a larger position because they shared an entry fill */
+  combined: number;
   recognised: string[];
   ignored: string[];
 }
@@ -204,11 +207,11 @@ export interface ImportResult {
  */
 export function importTradesFromCsv(
   text: string,
-  ctx: { accountId: string; accounts: Account[]; setups: Setup[]; existing?: Trade[] },
+  ctx: { accountId: string; accounts: Account[]; setups: Setup[]; existing?: Trade[]; combinePartials?: boolean },
 ): ImportResult {
   const empty: ImportResult = {
     trades: [], newSetups: [], errors: [], duplicates: 0, incomplete: 0,
-    pairedFills: false, recognised: [], ignored: [],
+    pairedFills: false, combined: 0, recognised: [], ignored: [],
   };
 
   const rows = parseCsv(text);
@@ -239,11 +242,15 @@ export function importTradesFromCsv(
   const now = new Date().toISOString();
   const setupsByName = new Map(ctx.setups.map((s) => [s.name.toLowerCase(), s]));
   const accountsByName = new Map(ctx.accounts.map((a) => [a.name.toLowerCase(), a]));
-  const seenIds = new Set((ctx.existing ?? []).map((t) => t.externalId).filter((v): v is string => Boolean(v)));
+  const seenIds = new Set(
+    (ctx.existing ?? []).flatMap((t) => (t.externalId ? t.externalId.split('|') : [])),
+  );
 
   const errors: string[] = [];
   const newSetups: Setup[] = [];
   const trades: Trade[] = [];
+  /** trade id -> the fill that opened the position, used to regroup partial exits */
+  const openingFill = new Map<string, string>();
   let duplicates = 0;
 
   rows.slice(1).forEach((row, index) => {
@@ -353,16 +360,49 @@ export function importTradesFromCsv(
 
     const trade: Trade = { ...input, id: uid(), createdAt: now, updatedAt: now };
     trade.needsReview = isIncomplete(trade) || undefined;
+
+    // the fill that opened the position is the buy on a long and the sell on a short
+    const opener = trade.side === 'LONG' ? buyFill : sellFill;
+    if (opener) openingFill.set(trade.id, opener);
+
     trades.push(trade);
   });
 
+  // ---- put scaled-out positions back together ---------------------------
+  let finalTrades = trades;
+  let combined = 0;
+
+  if (ctx.combinePartials !== false && openingFill.size > 0) {
+    const groups = new Map<string, Trade[]>();
+    const loose: Trade[] = [];
+
+    for (const t of trades) {
+      const opener = openingFill.get(t.id);
+      if (!opener) { loose.push(t); continue; }
+      const key = `${t.accountId}|${t.symbol}|${t.side}|${opener}`;
+      groups.set(key, [...(groups.get(key) ?? []), t]);
+    }
+
+    const merged: Trade[] = [];
+    for (const group of groups.values()) {
+      if (group.length > 1 && mergeIssue(group) === null) {
+        merged.push(mergeTrades(group));
+        combined += group.length;
+      } else {
+        merged.push(...group);
+      }
+    }
+    finalTrades = [...merged, ...loose];
+  }
+
   return {
-    trades,
+    trades: finalTrades,
     newSetups,
     errors,
     duplicates,
-    incomplete: trades.filter((t) => t.needsReview).length,
+    incomplete: finalTrades.filter((t) => t.needsReview).length,
     pairedFills,
+    combined,
     recognised,
     ignored,
   };

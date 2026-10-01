@@ -56,6 +56,7 @@ data/               your journal and its backups, created at runtime
 | The Sniper Score axes and how they are scored | `sniperScore()` in `src/lib/stats.ts` |
 | The wording and rules of the AI insights | `src/lib/insights.ts` |
 | Which CSV column names are recognised | `ALIASES` in `src/lib/csv.ts` |
+| How partial fills are combined into one trade | `src/lib/merge.ts` |
 | The trade entry form | `src/components/trades/TradeFormModal.tsx` |
 | Trading session hours | `src/lib/sessions.ts` |
 | The generated test data | `src/lib/sample.ts` |

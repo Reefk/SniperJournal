@@ -6,6 +6,7 @@ import {
 import type { Account, JournalData, Resource, Setup, Trade, TradeInput, Settings, Profile } from '@/lib/types';
 import { generateSampleData } from '@/lib/sample';
 import { isIncomplete, netPnl } from '@/lib/trade-math';
+import { mergeIssue, mergeTrades as combineTrades } from '@/lib/merge';
 import { uid } from '@/lib/utils';
 
 const LOCAL_KEY = 'sniper-journal:v1';
@@ -58,6 +59,8 @@ interface Actions {
   deleteTrades: (ids: string[]) => void;
   /** apply the same handful of fields to several trades at once */
   patchTrades: (ids: string[], patch: Partial<Trade>) => void;
+  /** fold partial fills of one position back into a single trade */
+  mergeTrades: (ids: string[]) => string | null;
   setExcluded: (ids: string[], excluded: boolean) => void;
   importTrades: (trades: Trade[], newSetups: Setup[]) => void;
   addAccount: (name: string, startingBalance: number) => void;
@@ -101,6 +104,7 @@ export function JournalProvider({ children }: { children: ReactNode }) {
   const diskAvailable = useRef(true);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const firstLoad = useRef(true);
+  const dataRef = useRef<JournalData>(createDefaultData());
 
   // ---- load: prefer whichever copy is newer, disk or this browser ----
   useEffect(() => {
@@ -168,6 +172,9 @@ export function JournalProvider({ children }: { children: ReactNode }) {
     return () => { if (timer.current) clearTimeout(timer.current); };
   }, [data, ready]);
 
+  // the merge action needs to read the trades it is folding together
+  useEffect(() => { dataRef.current = data; }, [data]);
+
   // ---- theme on <html> ----
   useEffect(() => {
     const root = document.documentElement;
@@ -217,6 +224,18 @@ export function JournalProvider({ children }: { children: ReactNode }) {
     setExcluded: (ids, excluded) => {
       const set = new Set(ids);
       mutate((d) => ({ ...d, trades: d.trades.map((t) => (set.has(t.id) ? { ...t, excluded } : t)) }));
+    },
+    mergeTrades: (ids) => {
+      const set = new Set(ids);
+      const legs = dataRef.current.trades.filter((t) => set.has(t.id));
+      const issue = mergeIssue(legs);
+      if (issue) return issue;
+      const merged = combineTrades(legs);
+      mutate((d) => ({
+        ...d,
+        trades: [...d.trades.filter((t) => !set.has(t.id)), merged],
+      }));
+      return null;
     },
     importTrades: (trades, newSetups) => {
       mutate((d) => ({ ...d, trades: [...d.trades, ...trades], setups: [...d.setups, ...newSetups] }));

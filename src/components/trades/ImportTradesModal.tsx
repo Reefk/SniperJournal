@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { CircleAlert, CircleCheck, FileSpreadsheet, Info, TriangleAlert, Upload } from 'lucide-react';
+import { CircleAlert, CircleCheck, FileSpreadsheet, Info, Merge, TriangleAlert, Upload } from 'lucide-react';
 import { useJournal } from '@/store/JournalProvider';
 import { useUI } from '@/store/UIProvider';
 import { CSV_COLUMNS, csvTemplate, describeGaps, importTradesFromCsv } from '@/lib/csv';
@@ -34,14 +34,17 @@ function ImportBody({ onClose }: { onClose: () => void }) {
   const [text, setText] = useState('');
   const [fileName, setFileName] = useState('');
   const [dragging, setDragging] = useState(false);
+  const [combinePartials, setCombinePartials] = useState(true);
   const currency = data.settings.currency;
 
   const result = useMemo(
     () =>
       text
-        ? importTradesFromCsv(text, { accountId, accounts: data.accounts, setups: data.setups, existing: data.trades })
+        ? importTradesFromCsv(text, {
+            accountId, accounts: data.accounts, setups: data.setups, existing: data.trades, combinePartials,
+          })
         : null,
-    [text, accountId, data.accounts, data.setups, data.trades],
+    [text, accountId, data.accounts, data.setups, data.trades, combinePartials],
   );
 
   const readFile = async (file: File | undefined) => {
@@ -101,10 +104,35 @@ function ImportBody({ onClose }: { onClose: () => void }) {
                 <span className="num">{result.incomplete}</span> need details before they count
               </span>
             )}
+            {result.combined > 0 && (
+              <span className="flex items-center gap-2 text-muted">
+                <Merge className="size-4 text-accent" />
+                <span className="num">{result.combined}</span> partial fills folded into whole positions
+              </span>
+            )}
             {result.newSetups.length > 0 && (
               <span className="text-muted">{result.newSetups.length} new playbook setups will be created</span>
             )}
           </div>
+
+          {result.pairedFills && (
+            <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-line px-4 py-3 text-sm">
+              <input
+                type="checkbox"
+                className="mt-0.5 size-4 shrink-0"
+                checked={combinePartials}
+                onChange={(e) => setCombinePartials(e.target.checked)}
+              />
+              <span>
+                <span className="text-fg">Combine partial exits into one trade</span>
+                <span className="mt-0.5 block text-xs leading-relaxed text-muted">
+                  When you scale out, the broker writes one row per exit. With this on, rows that share an entry fill become a
+                  single position: the sizes add up, the prices become size-weighted averages, and the P&amp;L stays exactly the
+                  sum of the parts.
+                </span>
+              </span>
+            </label>
+          )}
 
           {result.pairedFills && result.trades.length > 0 && (
             <p className="flex items-start gap-2 rounded-lg border border-accent/25 bg-accent/5 px-4 py-2.5 text-xs leading-relaxed text-muted">
@@ -143,7 +171,12 @@ function ImportBody({ onClose }: { onClose: () => void }) {
                           <StatusBadge tone="warn">no date</StatusBadge>
                         )}
                       </td>
-                      <td className="px-3 py-2 font-semibold text-fg">{t.symbol}</td>
+                      <td className="px-3 py-2 font-semibold text-fg">
+                        {t.symbol}
+                        {(t.fillCount ?? 1) > 1 && (
+                          <span className="ml-1.5 text-[11px] font-normal text-accent">{t.fillCount} fills</span>
+                        )}
+                      </td>
                       <td className="px-3 py-2"><SideBadge side={t.side} /></td>
                       <td className="num px-3 py-2 text-right text-fg">{t.quantity || '—'}</td>
                       <td className="num px-3 py-2 text-right text-muted">{t.entryPrice ? formatPrice(t.entryPrice) : '—'}</td>

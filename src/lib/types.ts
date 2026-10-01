@@ -44,8 +44,11 @@ export interface Trade {
   excluded?: boolean;
   /** imported without everything the statistics need; waiting for you to fill the gaps */
   needsReview?: boolean;
-  /** the broker's own id for this fill pair, used to avoid importing it twice */
+  /** the broker's own id for this fill pair, used to avoid importing it twice.
+   *  A merged trade keeps every part's id, separated by | */
   externalId?: string;
+  /** how many partial fills were combined into this trade, when more than one */
+  fillCount?: number;
   isSample?: boolean;
   createdAt: string;
   updatedAt: string;

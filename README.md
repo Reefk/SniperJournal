@@ -129,6 +129,32 @@ no direction column — are handled directly:
 - `buyFillId` and `sellFillId` are remembered, so **re-importing the same export
   adds nothing twice**. Exporting your whole history every week is safe.
 
+### Scaling out: partial fills become one trade
+
+If you open 5 contracts and close them in three pieces, the broker writes three
+rows. Left alone that reads as three trades, your trade count is wrong and the
+size on each one is only a fraction of the position you actually held.
+
+The import dialog has **Combine partial exits into one trade**, on by default.
+Rows that share an entry fill are folded back into a single position:
+
+- the quantities add up, so 2 + 2 + 1 becomes one trade of 5
+- entry and exit become **size-weighted averages**, so the price reflects what
+  you really paid and really got
+- the P&L stays **exactly** the sum of the parts, to the cent
+- the hold time runs from the first entry to the last exit
+- the row is labelled *3 fills*, so you can always see it was a scale-out
+
+If your broker gives each piece its own entry id, or you want to combine trades
+the importer could not see belong together, tick the rows in the Trades table
+and choose **Merge into one**. You get a summary of the resulting trade before
+anything changes. Merging cannot be undone, but re-importing the original CSV
+brings the separate parts back.
+
+Trades can only be merged when they share a symbol, a direction and an account,
+and are either all closed or all open — otherwise the result would quietly lose
+a realised profit.
+
 ### Filling in what the broker did not record
 
 A broker export has prices and times but none of the context that makes a

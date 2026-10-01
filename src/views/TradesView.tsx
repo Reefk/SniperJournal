@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowDown, ArrowLeftRight, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, Download, Eye, EyeOff,
-  FlaskConical, Pencil, Plus, RotateCcw, Search, SquarePen, Trash2, TriangleAlert, Upload,
+  FlaskConical, Merge, Pencil, Plus, RotateCcw, Search, SquarePen, Trash2, TriangleAlert, Upload,
 } from 'lucide-react';
 import type { Trade } from '@/lib/types';
 import { useJournal } from '@/store/JournalProvider';
@@ -11,7 +11,7 @@ import { useUI } from '@/store/UIProvider';
 import { computeStats } from '@/lib/stats';
 import { SESSIONS } from '@/lib/sessions';
 import { tradesToCsv } from '@/lib/csv';
-import { formatDate, formatNumber, formatPct, formatPrice, formatTime } from '@/lib/format';
+import { formatDate, formatMoney, formatNumber, formatPct, formatPrice, formatTime } from '@/lib/format';
 import { isClosed, isIncomplete, matchesSearch, missingDetails, netPnl, outcome, rMultiple } from '@/lib/trade-math';
 import { cn, dateKey, downloadFile } from '@/lib/utils';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -20,6 +20,7 @@ import { Input, Select, inputClass } from '@/components/ui/Field';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { PnlValue, SideBadge, StatusBadge } from '@/components/ui/StatusBadge';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { mergeIssue, mergeTrades as previewMerge } from '@/lib/merge';
 import { ImportTradesModal } from '@/components/trades/ImportTradesModal';
 import { BulkDetailsModal } from '@/components/trades/BulkDetailsModal';
 
@@ -114,6 +115,39 @@ export function TradesView() {
   useEffect(() => {
     if (headerCheckbox.current) headerCheckbox.current.indeterminate = someSelected && !allOnPageSelected;
   }, [someSelected, allOnPageSelected]);
+
+  const mergeSelected = async () => {
+    const legs = accountTrades.filter((t) => selected.has(t.id));
+    const issue = mergeIssue(legs);
+    if (issue) { toast(issue, 'error'); return; }
+
+    const preview = previewMerge(legs);
+    const ok = await confirm({
+      title: `Merge ${legs.length} parts into one trade?`,
+      message: (
+        <>
+          These look like one position you scaled out of. Merging gives you a single{' '}
+          <strong className="text-fg">{preview.symbol} {preview.side.toLowerCase()}</strong> of{' '}
+          <strong className="text-fg">{formatNumber(preview.quantity, 4)}</strong>, entered around{' '}
+          <span className="num">{formatPrice(preview.entryPrice)}</span>
+          {preview.exitPrice != null && <> and exited around <span className="num">{formatPrice(preview.exitPrice)}</span></>}, worth{' '}
+          <strong className="text-fg">{formatMoney(netPnl(preview), currency, { sign: true })}</strong> — the same as the parts
+          added together.
+          <br /><br />
+          <span className="text-faint">
+            This cannot be undone, though re-importing the original CSV brings the separate parts back.
+          </span>
+        </>
+      ),
+      confirmLabel: `Merge into one trade`,
+    });
+    if (!ok) return;
+
+    const failed = actions.mergeTrades([...selected]);
+    if (failed) { toast(failed, 'error'); return; }
+    setSelected(new Set());
+    toast(`${legs.length} parts merged into one trade`);
+  };
 
   const deleteIds = async (ids: string[]) => {
     const ok = await confirm({
@@ -283,6 +317,11 @@ export function TradesView() {
           <span className="text-fg"><span className="num font-semibold">{selected.size}</span> selected</span>
           <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>Clear</Button>
           <div className="ml-auto flex gap-2">
+            {selected.size > 1 && (
+              <Button size="sm" onClick={mergeSelected}>
+                <Merge className="size-3.5" /> Merge into one
+              </Button>
+            )}
             <Button size="sm" onClick={() => setBulkEditing(true)}>
               <SquarePen className="size-3.5" /> Add details
             </Button>
@@ -386,9 +425,11 @@ export function TradesView() {
                           <span className="font-semibold text-fg">{t.symbol}</span>
                           {isIncomplete(t) && <StatusBadge tone="warn">needs details</StatusBadge>}
                         </div>
-                        {t.setupId && setupNames.get(t.setupId) && (
-                          <div className="max-w-[170px] truncate text-xs text-faint">{setupNames.get(t.setupId)}</div>
-                        )}
+                        <div className="flex max-w-[190px] items-center gap-1.5 truncate text-xs text-faint">
+                          {(t.fillCount ?? 1) > 1 && <span className="text-accent">{t.fillCount} fills</span>}
+                          {(t.fillCount ?? 1) > 1 && t.setupId && setupNames.get(t.setupId) && <span>·</span>}
+                          {t.setupId && setupNames.get(t.setupId) && <span className="truncate">{setupNames.get(t.setupId)}</span>}
+                        </div>
                       </td>
                       <td className={cn('px-3 py-2.5', dim)}><SideBadge side={t.side} /></td>
                       <td className={cn('num px-3 py-2.5 text-right text-fg', dim)}>{t.quantity > 0 ? formatNumber(t.quantity, 4) : '—'}</td>
