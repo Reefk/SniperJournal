@@ -80,13 +80,21 @@ export function GlobalSearch() {
                 <li key={t.id}>
                   <button
                     type="button"
-                    onClick={() => { openTradeForm({ trade: t }); inputRef.current?.blur(); }}
+                    onClick={() => {
+                      openTradeForm({ trade: t });
+                      inputRef.current?.blur();
+                    }}
                     className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left transition hover:bg-raised"
                   >
                     <span className="w-16 truncate font-semibold text-fg">{t.symbol}</span>
                     <SideBadge side={t.side} />
                     <span className="flex-1 truncate text-xs text-muted">{formatDate(t.openedAt)}</span>
-                    <PnlValue value={netPnl(t)} open={!isClosed(t)} currency={data.settings.currency} className="text-sm" />
+                    <PnlValue
+                      value={netPnl(t)}
+                      open={!isClosed(t)}
+                      currency={data.settings.currency}
+                      className="text-sm"
+                    />
                   </button>
                 </li>
               ))}

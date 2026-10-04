@@ -1,3 +1,5 @@
+import { storage } from './storage';
+
 export function cn(...parts: Array<string | false | null | undefined>): string {
   return parts.filter(Boolean).join(' ');
 }
@@ -39,19 +41,16 @@ export const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0)
 export function toNumberOrNull(value: string | number | null | undefined): number | null {
   if (typeof value === 'number') return Number.isFinite(value) ? value : null;
   if (value == null) return null;
-  const cleaned = String(value).trim().replace(/[\s,_]/g, '');
+  const cleaned = String(value)
+    .trim()
+    .replace(/[\s,_]/g, '');
   if (!cleaned) return null;
   const n = Number(cleaned);
   return Number.isFinite(n) ? n : null;
 }
 
 export function downloadFile(filename: string, content: string, mime = 'application/json') {
-  const url = URL.createObjectURL(new Blob([content], { type: `${mime};charset=utf-8` }));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  // Delegates to the platform: a download on a PC, the share sheet on a phone.
+  // Deliberately fire-and-forget so the many call sites stay synchronous.
+  void storage.exportFile(filename, content, mime);
 }

@@ -23,7 +23,11 @@ interface TradeFormState {
 }
 
 type ToastKind = 'success' | 'error' | 'info';
-interface Toast { id: string; message: string; kind: ToastKind }
+interface Toast {
+  id: string;
+  message: string;
+  kind: ToastKind;
+}
 
 interface UIContextValue {
   tradeForm: TradeFormState;
@@ -52,7 +56,9 @@ export function UIProvider({ children }: { children: ReactNode }) {
 
   const confirm = useCallback((options: ConfirmOptions) => {
     setConfirmState({ ...options, id: uid() });
-    return new Promise<boolean>((resolve) => { resolver.current = resolve; });
+    return new Promise<boolean>((resolve) => {
+      resolver.current = resolve;
+    });
   }, []);
 
   const settle = useCallback((result: boolean) => {
@@ -111,7 +117,12 @@ export function UIProvider({ children }: { children: ReactNode }) {
                 t.kind === 'error' ? 'border-loss/40' : t.kind === 'info' ? 'border-accent/40' : 'border-profit/40',
               )}
             >
-              <Icon className={cn('size-4', t.kind === 'error' ? 'text-loss' : t.kind === 'info' ? 'text-accent' : 'text-profit')} />
+              <Icon
+                className={cn(
+                  'size-4',
+                  t.kind === 'error' ? 'text-loss' : t.kind === 'info' ? 'text-accent' : 'text-profit',
+                )}
+              />
               <span className="text-fg">{t.message}</span>
             </div>
           );

@@ -42,7 +42,7 @@ const FAQ: Array<{ q: string; a: string }> = [
   },
   {
     q: 'Why did Windows warn me the first time?',
-    a: 'Windows marks every file that arrives from the internet and warns before running a script it has not seen signed by a paid-for certificate. Part of the installer\'s job is clearing that mark from every file in the app folder, which is why the warning appears once and then never again. You can avoid it entirely next time by ticking Unblock in the ZIP file\'s properties before extracting it.',
+    a: "Windows marks every file that arrives from the internet and warns before running a script it has not seen signed by a paid-for certificate. Part of the installer's job is clearing that mark from every file in the app folder, which is why the warning appears once and then never again. You can avoid it entirely next time by ticking Unblock in the ZIP file's properties before extracting it.",
   },
   {
     q: 'Can I run this on more than one computer?',
@@ -66,14 +66,19 @@ export function SupportView() {
               ? 'The app cannot reach its file right now, so changes are being kept in this browser only. They will be written to disk as soon as it is reachable again.'
               : 'Saved automatically a moment after every change.'}
           </p>
-          {filePath && <p className="num mt-3 break-all rounded-md border border-line bg-app px-3 py-2 text-xs text-muted">{filePath}</p>}
+          {filePath && (
+            <p className="num mt-3 break-all rounded-md border border-line bg-app px-3 py-2 text-xs text-muted">
+              {filePath}
+            </p>
+          )}
         </section>
 
         <section className="rounded-xl border border-line bg-surface p-5">
           <ShieldCheck className="size-5 text-profit" />
           <h2 className="mt-3 text-sm font-semibold text-fg">Nothing leaves this PC</h2>
           <p className="mt-1.5 text-sm leading-relaxed text-muted">
-            There is no account, no server and no telemetry. The app only talks to its own folder on this machine, which is why it keeps working with the network off.
+            There is no account, no server and no telemetry. The app only talks to its own folder on this machine, which
+            is why it keeps working with the network off.
           </p>
         </section>
 
@@ -84,7 +89,9 @@ export function SupportView() {
             {SHORTCUTS.map(([key, label]) => (
               <div key={key} className="flex items-center justify-between gap-3">
                 <dt className="text-sm text-muted">{label}</dt>
-                <dd><kbd className="num rounded border border-line bg-app px-1.5 py-0.5 text-[11px] text-fg">{key}</kbd></dd>
+                <dd>
+                  <kbd className="num rounded border border-line bg-app px-1.5 py-0.5 text-[11px] text-fg">{key}</kbd>
+                </dd>
               </div>
             ))}
           </dl>
@@ -113,14 +120,18 @@ export function SupportView() {
           <Upload className="size-5 text-accent" />
           <h2 className="mt-3 text-sm font-semibold text-fg">Importing from your broker</h2>
           <p className="mt-1.5 text-sm leading-relaxed text-muted">
-            Open Trades, choose Import CSV and download the template to see the exact column names. Common broker headings such as qty, ticker, commission and realized pnl are recognised automatically, and any rows that cannot be read are listed before you commit the import.
+            Open Trades, choose Import CSV and download the template to see the exact column names. Common broker
+            headings such as qty, ticker, commission and realized pnl are recognised automatically, and any rows that
+            cannot be read are listed before you commit the import.
           </p>
         </div>
         <div className="rounded-xl border border-line bg-surface p-5">
           <FolderOpen className="size-5 text-accent" />
           <h2 className="mt-3 text-sm font-semibold text-fg">Opening the app</h2>
           <p className="mt-1.5 text-sm leading-relaxed text-muted">
-            It is already open, in a sense: the app runs in the background from the moment you sign in to Windows. Click the Sniper Journal icon on your desktop, or the installed app icon, and it appears. If the icon is missing, run create-shortcut.bat in the app folder.
+            It is already open, in a sense: the app runs in the background from the moment you sign in to Windows. Click
+            the Sniper Journal icon on your desktop, or the installed app icon, and it appears. If the icon is missing,
+            run create-shortcut.bat in the app folder.
           </p>
         </div>
       </section>

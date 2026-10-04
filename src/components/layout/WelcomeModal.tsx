@@ -36,7 +36,12 @@ export function WelcomeModal() {
 
   return (
     <Modal open onClose={() => undefined} size="md" closeOnBackdrop={false}>
-      <form onSubmit={(e) => { e.preventDefault(); finish(false); }}>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          finish(false);
+        }}
+      >
         <div className="flex items-center gap-3 pb-1 pt-2">
           <LogoMark size={40} />
           <div>
@@ -54,19 +59,35 @@ export function WelcomeModal() {
           </Field>
           <Field label="Currency">
             <Select value={currency} onChange={(e) => setCurrency(e.target.value)}>
-              {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              {CURRENCIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
             </Select>
           </Field>
           <Field label="Starting balance" hint="used for the equity curve and drawdown" className="col-span-2">
-            <Input inputMode="decimal" className="num" value={balance} onChange={(e) => setBalance(e.target.value)} placeholder="0.00" />
+            <Input
+              inputMode="decimal"
+              className="num"
+              value={balance}
+              onChange={(e) => setBalance(e.target.value)}
+              placeholder="0.00"
+            />
           </Field>
         </div>
 
         <div className="mt-6 flex items-center justify-between gap-3 border-t border-line pt-4">
-          <button type="button" onClick={() => finish(true)} className="text-sm text-muted underline-offset-4 transition hover:text-fg hover:underline">
+          <button
+            type="button"
+            onClick={() => finish(true)}
+            className="text-sm text-muted underline-offset-4 transition hover:text-fg hover:underline"
+          >
             Explore with test data first
           </button>
-          <Button variant="primary" type="submit">Start journaling</Button>
+          <Button variant="primary" type="submit">
+            Start journaling
+          </Button>
         </div>
       </form>
     </Modal>

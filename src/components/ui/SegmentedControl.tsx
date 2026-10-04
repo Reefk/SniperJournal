@@ -2,7 +2,10 @@ import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 export function SegmentedControl<T extends string>({
-  options, value, onChange, className,
+  options,
+  value,
+  onChange,
+  className,
 }: {
   options: ReadonlyArray<{ value: T; label: ReactNode }>;
   value: T;

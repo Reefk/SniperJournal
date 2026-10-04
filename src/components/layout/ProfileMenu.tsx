@@ -12,7 +12,12 @@ export function ProfileMenu() {
   const { toast } = useUI();
   const router = useRouter();
   const name = data.profile.name.trim();
-  const initials = name.split(/\s+/).map((p) => p[0]).join('').slice(0, 2).toUpperCase();
+  const initials = name
+    .split(/\s+/)
+    .map((p) => p[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <Popover
@@ -36,11 +41,34 @@ export function ProfileMenu() {
             <div className="text-xs text-muted">Journal stored on this PC</div>
           </div>
           <MenuDivider />
-          <MenuItem icon={Settings} onClick={() => { close(); router.push('/settings'); }}>Settings</MenuItem>
-          <MenuItem icon={Download} onClick={() => { exportBackup(data); close(); toast('Backup downloaded'); }}>
+          <MenuItem
+            icon={Settings}
+            onClick={() => {
+              close();
+              router.push('/settings');
+            }}
+          >
+            Settings
+          </MenuItem>
+          <MenuItem
+            icon={Download}
+            onClick={() => {
+              exportBackup(data);
+              close();
+              toast('Backup downloaded');
+            }}
+          >
             Download backup
           </MenuItem>
-          <MenuItem icon={LifeBuoy} onClick={() => { close(); router.push('/support'); }}>Help & shortcuts</MenuItem>
+          <MenuItem
+            icon={LifeBuoy}
+            onClick={() => {
+              close();
+              router.push('/support');
+            }}
+          >
+            Help & shortcuts
+          </MenuItem>
         </div>
       )}
     </Popover>

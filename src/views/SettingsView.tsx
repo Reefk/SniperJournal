@@ -33,14 +33,20 @@ export function SettingsView() {
   const restore = async (file: File | undefined) => {
     if (!file) return;
     const { data: parsed, error } = parseBackup(await file.text());
-    if (!parsed) { toast(error ?? 'Could not read that file', 'error'); return; }
+    if (!parsed) {
+      toast(error ?? 'Could not read that file', 'error');
+      return;
+    }
     const ok = await confirm({
       title: 'Restore this backup?',
       message: `The backup holds ${parsed.trades.length} trades. Restoring replaces everything currently in your journal.`,
       confirmLabel: 'Replace my journal',
       tone: 'danger',
     });
-    if (ok) { actions.replaceAll(parsed); toast('Journal restored'); }
+    if (ok) {
+      actions.replaceAll(parsed);
+      toast('Journal restored');
+    }
   };
 
   const deleteAccount = async (id: string, name: string) => {
@@ -53,7 +59,10 @@ export function SettingsView() {
       confirmLabel: 'Delete account',
       tone: 'danger',
     });
-    if (ok) { actions.deleteAccount(id); toast('Account deleted'); }
+    if (ok) {
+      actions.deleteAccount(id);
+      toast('Account deleted');
+    }
   };
 
   return (
@@ -64,15 +73,26 @@ export function SettingsView() {
         <Section title="Profile and display">
           <div className="grid grid-cols-3 gap-4">
             <Field label="Your name">
-              <Input value={data.profile.name} onChange={(e) => actions.updateProfile({ name: e.target.value })} placeholder="Shown in the header" />
+              <Input
+                value={data.profile.name}
+                onChange={(e) => actions.updateProfile({ name: e.target.value })}
+                placeholder="Shown in the header"
+              />
             </Field>
             <Field label="Currency" hint="used for every figure">
               <Select value={currency} onChange={(e) => actions.updateSettings({ currency: e.target.value })}>
-                {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                {CURRENCIES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
               </Select>
             </Field>
             <Field label="Theme">
-              <Select value={data.settings.theme} onChange={(e) => actions.updateSettings({ theme: e.target.value as 'dark' | 'light' })}>
+              <Select
+                value={data.settings.theme}
+                onChange={(e) => actions.updateSettings({ theme: e.target.value as 'dark' | 'light' })}
+              >
                 <option value="dark">Dark</option>
                 <option value="light">Light</option>
               </Select>
@@ -80,7 +100,10 @@ export function SettingsView() {
           </div>
         </Section>
 
-        <Section title="Risk limits" description="Used by the signals on the AI Insights page. Leave blank to turn a limit off.">
+        <Section
+          title="Risk limits"
+          description="Used by the signals on the AI Insights page. Leave blank to turn a limit off."
+        >
           <div className="grid grid-cols-2 gap-4">
             <Field label="Maximum loss in a day" hint={currency}>
               <Input
@@ -120,13 +143,17 @@ export function SettingsView() {
                     className="num w-32"
                     inputMode="decimal"
                     value={account.startingBalance}
-                    onChange={(e) => actions.updateAccount(account.id, { startingBalance: toNumberOrNull(e.target.value) ?? 0 })}
+                    onChange={(e) =>
+                      actions.updateAccount(account.id, { startingBalance: toNumberOrNull(e.target.value) ?? 0 })
+                    }
                     aria-label="Starting balance"
                   />
                 </div>
                 <div className="ml-auto flex items-center gap-4">
                   <div className="text-right">
-                    <div className="num text-sm font-medium text-fg">{formatMoney(balances[account.id] ?? 0, currency)}</div>
+                    <div className="num text-sm font-medium text-fg">
+                      {formatMoney(balances[account.id] ?? 0, currency)}
+                    </div>
                     <div className="text-[11px] text-faint">
                       {data.trades.filter((t) => t.accountId === account.id).length} trades
                     </div>
@@ -157,15 +184,29 @@ export function SettingsView() {
             }}
           >
             <Field label="Add an account" className="max-w-xs flex-1">
-              <Input value={newAccount} onChange={(e) => setNewAccount(e.target.value)} placeholder="e.g. Prop firm challenge" />
+              <Input
+                value={newAccount}
+                onChange={(e) => setNewAccount(e.target.value)}
+                placeholder="e.g. Prop firm challenge"
+              />
             </Field>
-            <Button type="submit"><Plus className="size-4" /> Add</Button>
+            <Button type="submit">
+              <Plus className="size-4" /> Add
+            </Button>
           </form>
         </Section>
 
-        <Section title="Backups" description="Your journal already saves to disk automatically. These are for moving it, or keeping a copy elsewhere.">
+        <Section
+          title="Backups"
+          description="Your journal already saves to disk automatically. These are for moving it, or keeping a copy elsewhere."
+        >
           <div className="flex flex-wrap gap-2">
-            <Button onClick={() => { exportBackup(data); toast('Backup downloaded'); }}>
+            <Button
+              onClick={() => {
+                exportBackup(data);
+                toast('Backup downloaded');
+              }}
+            >
               <Download className="size-4" /> Download a backup
             </Button>
             <Button onClick={() => fileInput.current?.click()}>
@@ -176,18 +217,30 @@ export function SettingsView() {
               type="file"
               accept="application/json,.json"
               className="sr-only"
-              onChange={(e) => { void restore(e.target.files?.[0]); e.target.value = ''; }}
+              onChange={(e) => {
+                void restore(e.target.files?.[0]);
+                e.target.value = '';
+              }}
             />
           </div>
           <p className="mt-3 text-xs leading-relaxed text-faint">
-            A dated copy is also written into the data/backups folder automatically, once on each day you make changes. The last 30 are kept.
-            Chart images are saved as files in data/screenshots rather than inside the backup, so copy that folder too if you are moving to another computer.
+            A dated copy is also written into the data/backups folder automatically, once on each day you make changes.
+            The last 30 are kept. Chart images are saved as files in data/screenshots rather than inside the backup, so
+            copy that folder too if you are moving to another computer.
           </p>
         </Section>
 
-        <Section title="Test data" description="Generated trades for trying the app out. They are flagged separately and never mix into your own records.">
+        <Section
+          title="Test data"
+          description="Generated trades for trying the app out. They are flagged separately and never mix into your own records."
+        >
           <div className="flex flex-wrap items-center gap-2">
-            <Button onClick={() => { actions.loadSampleData(); toast('Test data loaded'); }}>
+            <Button
+              onClick={() => {
+                actions.loadSampleData();
+                toast('Test data loaded');
+              }}
+            >
               <FlaskConical className="size-4" /> {sampleCount > 0 ? 'Regenerate test data' : 'Load test data'}
             </Button>
             <Button
@@ -200,7 +253,10 @@ export function SettingsView() {
                   confirmLabel: 'Remove test data',
                   tone: 'danger',
                 });
-                if (ok) { actions.clearSampleData(); toast('Test data removed'); }
+                if (ok) {
+                  actions.clearSampleData();
+                  toast('Test data removed');
+                }
               }}
             >
               <Trash2 className="size-4" /> Remove test data
@@ -219,7 +275,10 @@ export function SettingsView() {
                 confirmLabel: 'Erase my journal',
                 tone: 'danger',
               });
-              if (ok) { actions.resetAll(); toast('Journal erased'); }
+              if (ok) {
+                actions.resetAll();
+                toast('Journal erased');
+              }
             }}
           >
             <RotateCcw className="size-4" /> Erase all data

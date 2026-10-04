@@ -3,8 +3,17 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  ArrowLeftRight, BookOpen, BrainCircuit, CalendarDays, FileBarChart, LayoutDashboard,
-  LibraryBig, LifeBuoy, Moon, Settings, Sun,
+  ArrowLeftRight,
+  BookOpen,
+  BrainCircuit,
+  CalendarDays,
+  FileBarChart,
+  LayoutDashboard,
+  LibraryBig,
+  LifeBuoy,
+  Moon,
+  Settings,
+  Sun,
 } from 'lucide-react';
 import { useJournal, type SaveStatus } from '@/store/JournalProvider';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
@@ -82,7 +91,11 @@ export function Sidebar() {
           Settings
         </Link>
 
-        <div className="grid grid-cols-2 rounded-lg border border-line bg-app p-0.5" role="group" aria-label="Color theme">
+        <div
+          className="grid grid-cols-2 rounded-lg border border-line bg-app p-0.5"
+          role="group"
+          aria-label="Color theme"
+        >
           {(['dark', 'light'] as const).map((mode) => {
             const Icon = mode === 'dark' ? Moon : Sun;
             return (
@@ -111,7 +124,10 @@ export function Sidebar() {
             />
             {online ? 'Online' : 'Offline'}
           </span>
-          <span className={cn(saveStatus === 'error' ? 'text-loss' : 'text-faint')} title="Where your journal is stored">
+          <span
+            className={cn(saveStatus === 'error' ? 'text-loss' : 'text-faint')}
+            title="Where your journal is stored"
+          >
             {SAVE_LABEL[saveStatus]}
           </span>
         </div>

@@ -92,9 +92,6 @@ export function statTrades(trades: Trade[]): Trade[] {
 
 export function matchesSearch(t: Trade, term: string, setupNames?: Map<string, string>): boolean {
   if (!term) return true;
-  const setup = t.setupId ? setupNames?.get(t.setupId) ?? '' : '';
-  return [t.symbol, t.side, t.notes ?? '', t.session ?? '', setup, ...t.tags]
-    .join(' ')
-    .toLowerCase()
-    .includes(term);
+  const setup = t.setupId ? (setupNames?.get(t.setupId) ?? '') : '';
+  return [t.symbol, t.side, t.notes ?? '', t.session ?? '', setup, ...t.tags].join(' ').toLowerCase().includes(term);
 }

@@ -2,7 +2,12 @@ import type { ReactNode } from 'react';
 
 /** Donut indicator. value is 0..1; the track can be tinted to show the other side. */
 export function RingProgress({
-  value, size = 58, stroke = 6, color = 'var(--profit)', track = 'var(--line)', children,
+  value,
+  size = 58,
+  stroke = 6,
+  color = 'var(--profit)',
+  track = 'var(--line)',
+  children,
 }: {
   value: number;
   size?: number;

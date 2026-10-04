@@ -70,8 +70,12 @@ export function BulkDetailsModal({ ids, onClose }: { ids: string[]; onClose: () 
       description="Anything you leave untouched stays as it is on each trade."
       footer={
         <>
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button variant="primary" onClick={apply}>Apply to {count}</Button>
+          <Button variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={apply}>
+            Apply to {count}
+          </Button>
         </>
       }
     >
@@ -81,24 +85,44 @@ export function BulkDetailsModal({ ids, onClose }: { ids: string[]; onClose: () 
             <Select value={setupId} onChange={(e) => setSetupId(e.target.value)}>
               <option value={KEEP}>Leave unchanged</option>
               <option value="">No setup</option>
-              {data.setups.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              {data.setups.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
             </Select>
           </Field>
           <Field label="Session">
             <Select value={session} onChange={(e) => setSession(e.target.value)}>
               <option value={KEEP}>Leave unchanged</option>
               <option value="">None</option>
-              {SESSIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+              {SESSIONS.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
             </Select>
           </Field>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <Field label="Fees per trade" hint="leave blank to keep">
-            <Input inputMode="decimal" className="num" value={fees} onChange={(e) => setFees(e.target.value)} placeholder="e.g. 1.24" />
+            <Input
+              inputMode="decimal"
+              className="num"
+              value={fees}
+              onChange={(e) => setFees(e.target.value)}
+              placeholder="e.g. 1.24"
+            />
           </Field>
           <Field label="Leverage" hint="leave blank to keep">
-            <Input inputMode="decimal" className="num" value={leverage} onChange={(e) => setLeverage(e.target.value)} placeholder="e.g. 10" />
+            <Input
+              inputMode="decimal"
+              className="num"
+              value={leverage}
+              onChange={(e) => setLeverage(e.target.value)}
+              placeholder="e.g. 10"
+            />
           </Field>
         </div>
 
@@ -106,16 +130,26 @@ export function BulkDetailsModal({ ids, onClose }: { ids: string[]; onClose: () 
           <TagInput value={tags} onChange={setTags} suggestions={tagSuggestions} />
         </Field>
         <label className="flex items-center gap-2 text-xs text-muted">
-          <input type="checkbox" className="size-3.5" checked={replaceTags} onChange={(e) => setReplaceTags(e.target.checked)} />
+          <input
+            type="checkbox"
+            className="size-3.5"
+            checked={replaceTags}
+            onChange={(e) => setReplaceTags(e.target.checked)}
+          />
           Replace existing tags instead of adding to them
         </label>
 
         <Field label="Notes" hint="leave blank to keep each trade's own note">
-          <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Applied to every selected trade" />
+          <Textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Applied to every selected trade"
+          />
         </Field>
 
         <p className="text-xs leading-relaxed text-faint">
-          Prices, quantities and times are different on every trade, so those are edited one at a time — click a row to open it.
+          Prices, quantities and times are different on every trade, so those are edited one at a time — click a row to
+          open it.
         </p>
       </div>
     </Modal>

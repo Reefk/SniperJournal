@@ -5,7 +5,13 @@ import { InfoTip } from './InfoTip';
 export type MetricTone = 'profit' | 'loss' | 'accent' | 'neutral';
 
 export function toneText(tone: MetricTone): string {
-  return tone === 'profit' ? 'text-profit' : tone === 'loss' ? 'text-loss' : tone === 'accent' ? 'text-accent' : 'text-fg';
+  return tone === 'profit'
+    ? 'text-profit'
+    : tone === 'loss'
+      ? 'text-loss'
+      : tone === 'accent'
+        ? 'text-accent'
+        : 'text-fg';
 }
 
 export function toneFor(value: number): MetricTone {
@@ -24,9 +30,23 @@ interface MetricCardProps {
 }
 
 /** Headline metric, with room for a ring or sparkline on the right */
-export function MetricCard({ label, value, sub, icon: Icon, tone = 'neutral', aside, info, className }: MetricCardProps) {
+export function MetricCard({
+  label,
+  value,
+  sub,
+  icon: Icon,
+  tone = 'neutral',
+  aside,
+  info,
+  className,
+}: MetricCardProps) {
   return (
-    <div className={cn('flex items-center justify-between gap-4 rounded-xl border border-line bg-surface px-5 py-4', className)}>
+    <div
+      className={cn(
+        'flex items-center justify-between gap-4 rounded-xl border border-line bg-surface px-5 py-4',
+        className,
+      )}
+    >
       <div className="min-w-0">
         <div className="flex items-center gap-1.5 text-[13px] text-muted">
           {Icon && <Icon className="size-3.5 text-faint" />}
@@ -42,7 +62,13 @@ export function MetricCard({ label, value, sub, icon: Icon, tone = 'neutral', as
 }
 
 /** Compact metric for the secondary strip */
-export function MetricCell({ label, value, sub, info, tone = 'neutral' }: Omit<MetricCardProps, 'aside' | 'icon' | 'className'>) {
+export function MetricCell({
+  label,
+  value,
+  sub,
+  info,
+  tone = 'neutral',
+}: Omit<MetricCardProps, 'aside' | 'icon' | 'className'>) {
   return (
     <div className="min-w-0 bg-surface px-4 py-3.5">
       <div className="flex items-center gap-1 text-xs text-muted">
@@ -58,7 +84,12 @@ export function MetricCell({ label, value, sub, info, tone = 'neutral' }: Omit<M
 /** Eight secondary metrics in one divided container: calmer than eight cards */
 export function MetricStrip({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn('grid grid-cols-4 gap-px overflow-hidden rounded-xl border border-line bg-line 2xl:grid-cols-8', className)}>
+    <div
+      className={cn(
+        'grid grid-cols-4 gap-px overflow-hidden rounded-xl border border-line bg-line 2xl:grid-cols-8',
+        className,
+      )}
+    >
       {children}
     </div>
   );

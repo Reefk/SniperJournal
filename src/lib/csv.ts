@@ -5,8 +5,23 @@ import { mergeIssue, mergeTrades } from './merge';
 import { pad2, toNumberOrNull, uid } from './utils';
 
 export const CSV_COLUMNS = [
-  'symbol', 'side', 'opened_at', 'closed_at', 'quantity', 'entry_price', 'exit_price',
-  'stop_loss', 'take_profit', 'fees', 'multiplier', 'leverage', 'session', 'setup', 'tags', 'notes', 'account',
+  'symbol',
+  'side',
+  'opened_at',
+  'closed_at',
+  'quantity',
+  'entry_price',
+  'exit_price',
+  'stop_loss',
+  'take_profit',
+  'fees',
+  'multiplier',
+  'leverage',
+  'session',
+  'setup',
+  'tags',
+  'notes',
+  'account',
 ] as const;
 
 /**
@@ -15,47 +30,129 @@ export const CSV_COLUMNS = [
  * and `Bought Timestamp` as `boughttimestamp`.
  */
 const ALIASES: Record<string, string> = {
-  symbol: 'symbol', ticker: 'symbol', pair: 'symbol', instrument: 'symbol', asset: 'symbol', market: 'symbol', contract: 'symbol',
-  side: 'side', direction: 'side', type: 'side', action: 'side', buysell: 'side', position: 'side',
+  symbol: 'symbol',
+  ticker: 'symbol',
+  pair: 'symbol',
+  instrument: 'symbol',
+  asset: 'symbol',
+  market: 'symbol',
+  contract: 'symbol',
+  side: 'side',
+  direction: 'side',
+  type: 'side',
+  action: 'side',
+  buysell: 'side',
+  position: 'side',
 
-  openedat: 'opened_at', opentime: 'opened_at', entrytime: 'opened_at', entrydate: 'opened_at', date: 'opened_at',
-  datetime: 'opened_at', time: 'opened_at', opendate: 'opened_at', entrytimestamp: 'opened_at',
-  closedat: 'closed_at', closetime: 'closed_at', exittime: 'closed_at', exitdate: 'closed_at', closedate: 'closed_at',
+  openedat: 'opened_at',
+  opentime: 'opened_at',
+  entrytime: 'opened_at',
+  entrydate: 'opened_at',
+  date: 'opened_at',
+  datetime: 'opened_at',
+  time: 'opened_at',
+  opendate: 'opened_at',
+  entrytimestamp: 'opened_at',
+  closedat: 'closed_at',
+  closetime: 'closed_at',
+  exittime: 'closed_at',
+  exitdate: 'closed_at',
+  closedate: 'closed_at',
   exittimestamp: 'closed_at',
 
-  quantity: 'quantity', qty: 'quantity', size: 'quantity', volume: 'quantity', shares: 'quantity',
-  contracts: 'quantity', lots: 'quantity', filledqty: 'quantity',
+  quantity: 'quantity',
+  qty: 'quantity',
+  size: 'quantity',
+  volume: 'quantity',
+  shares: 'quantity',
+  contracts: 'quantity',
+  lots: 'quantity',
+  filledqty: 'quantity',
 
-  entryprice: 'entry_price', entry: 'entry_price', openprice: 'entry_price', priceopen: 'entry_price', avgentryprice: 'entry_price',
-  exitprice: 'exit_price', exit: 'exit_price', closeprice: 'exit_price', priceclose: 'exit_price', avgexitprice: 'exit_price',
+  entryprice: 'entry_price',
+  entry: 'entry_price',
+  openprice: 'entry_price',
+  priceopen: 'entry_price',
+  avgentryprice: 'entry_price',
+  exitprice: 'exit_price',
+  exit: 'exit_price',
+  closeprice: 'exit_price',
+  priceclose: 'exit_price',
+  avgexitprice: 'exit_price',
 
   // paired buy/sell fill exports (Tradovate, NinjaTrader and similar)
-  buyprice: 'buy_price', sellprice: 'sell_price', avgbuyprice: 'buy_price', avgsellprice: 'sell_price',
-  boughttimestamp: 'bought_at', soldtimestamp: 'sold_at',
-  buytimestamp: 'bought_at', selltimestamp: 'sold_at',
-  buytime: 'bought_at', selltime: 'sold_at',
-  buyfillid: 'buy_fill_id', sellfillid: 'sell_fill_id',
+  buyprice: 'buy_price',
+  sellprice: 'sell_price',
+  avgbuyprice: 'buy_price',
+  avgsellprice: 'sell_price',
+  boughttimestamp: 'bought_at',
+  soldtimestamp: 'sold_at',
+  buytimestamp: 'bought_at',
+  selltimestamp: 'sold_at',
+  buytime: 'bought_at',
+  selltime: 'sold_at',
+  buyfillid: 'buy_fill_id',
+  sellfillid: 'sell_fill_id',
   ticksize: 'tick_size',
 
-  stoploss: 'stop_loss', stop: 'stop_loss', sl: 'stop_loss',
-  takeprofit: 'take_profit', target: 'take_profit', tp: 'take_profit',
-  fees: 'fees', fee: 'fees', commission: 'fees', commissions: 'fees', cost: 'fees', charges: 'fees',
-  multiplier: 'multiplier', contractsize: 'multiplier', pointvalue: 'multiplier',
-  leverage: 'leverage', lev: 'leverage',
-  session: 'session', marketsession: 'session',
-  setup: 'setup', strategy: 'setup', playbook: 'setup', system: 'setup',
-  tags: 'tags', tag: 'tags', labels: 'tags',
-  notes: 'notes', note: 'notes', comment: 'notes', comments: 'notes', description: 'notes',
-  account: 'account', portfolio: 'account',
+  stoploss: 'stop_loss',
+  stop: 'stop_loss',
+  sl: 'stop_loss',
+  takeprofit: 'take_profit',
+  target: 'take_profit',
+  tp: 'take_profit',
+  fees: 'fees',
+  fee: 'fees',
+  commission: 'fees',
+  commissions: 'fees',
+  cost: 'fees',
+  charges: 'fees',
+  multiplier: 'multiplier',
+  contractsize: 'multiplier',
+  pointvalue: 'multiplier',
+  leverage: 'leverage',
+  lev: 'leverage',
+  session: 'session',
+  marketsession: 'session',
+  setup: 'setup',
+  strategy: 'setup',
+  playbook: 'setup',
+  system: 'setup',
+  tags: 'tags',
+  tag: 'tags',
+  labels: 'tags',
+  notes: 'notes',
+  note: 'notes',
+  comment: 'notes',
+  comments: 'notes',
+  description: 'notes',
+  account: 'account',
+  portfolio: 'account',
 
-  pnl: 'pnl', profit: 'pnl', netpnl: 'pnl', realizedpnl: 'pnl', grosspnl: 'pnl',
-  'profit/loss': 'pnl', profitloss: 'pnl', result: 'pnl', gain: 'pnl',
+  pnl: 'pnl',
+  profit: 'pnl',
+  netpnl: 'pnl',
+  realizedpnl: 'pnl',
+  grosspnl: 'pnl',
+  'profit/loss': 'pnl',
+  profitloss: 'pnl',
+  result: 'pnl',
+  gain: 'pnl',
 
-  id: 'external_id', tradeid: 'external_id', orderid: 'external_id', positionid: 'external_id',
+  id: 'external_id',
+  tradeid: 'external_id',
+  orderid: 'external_id',
+  positionid: 'external_id',
   duration: 'duration',
 };
 
-const normalizeHeader = (h: string) => ALIASES[h.trim().toLowerCase().replace(/[\s._\-/]/g, '')] ?? '';
+const normalizeHeader = (h: string) =>
+  ALIASES[
+    h
+      .trim()
+      .toLowerCase()
+      .replace(/[\s._\-/]/g, '')
+  ] ?? '';
 
 export function csvTemplate(): string {
   const today = new Date();
@@ -77,15 +174,29 @@ export function tradesToCsv(trades: Trade[], setups: Setup[], accounts: Account[
   const header = [...CSV_COLUMNS, 'gross_pnl', 'net_pnl', 'r_multiple'];
   const rows = trades.map((t) =>
     [
-      t.symbol, t.side, t.openedAt.replace('T', ' '), t.closedAt?.replace('T', ' ') ?? '',
-      t.quantity, t.entryPrice, t.exitPrice ?? '', t.stopLoss ?? '', t.takeProfit ?? '',
-      t.fees ?? 0, t.multiplier ?? 1, t.leverage ?? '', t.session ?? '',
-      t.setupId ? setupNames.get(t.setupId) ?? '' : '', t.tags.join('|'), t.notes ?? '',
+      t.symbol,
+      t.side,
+      t.openedAt.replace('T', ' '),
+      t.closedAt?.replace('T', ' ') ?? '',
+      t.quantity,
+      t.entryPrice,
+      t.exitPrice ?? '',
+      t.stopLoss ?? '',
+      t.takeProfit ?? '',
+      t.fees ?? 0,
+      t.multiplier ?? 1,
+      t.leverage ?? '',
+      t.session ?? '',
+      t.setupId ? (setupNames.get(t.setupId) ?? '') : '',
+      t.tags.join('|'),
+      t.notes ?? '',
       accountNames.get(t.accountId) ?? '',
       isClosed(t) ? grossPnl(t).toFixed(2) : '',
       isClosed(t) ? netPnl(t).toFixed(2) : '',
       rMultiple(t)?.toFixed(2) ?? '',
-    ].map(esc).join(','),
+    ]
+      .map(esc)
+      .join(','),
   );
   return [header.join(','), ...rows].join('\n');
 }
@@ -105,17 +216,28 @@ export function parseCsv(text: string): string[][] {
     const ch = clean[i];
     if (quoted) {
       if (ch === '"') {
-        if (clean[i + 1] === '"') { field += '"'; i++; }
-        else quoted = false;
+        if (clean[i + 1] === '"') {
+          field += '"';
+          i++;
+        } else quoted = false;
       } else field += ch;
       continue;
     }
     if (ch === '"') quoted = true;
-    else if (ch === delimiter) { row.push(field); field = ''; }
-    else if (ch === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
-    else field += ch;
+    else if (ch === delimiter) {
+      row.push(field);
+      field = '';
+    } else if (ch === '\n') {
+      row.push(field);
+      rows.push(row);
+      row = [];
+      field = '';
+    } else field += ch;
   }
-  if (field || row.length) { row.push(field); rows.push(row); }
+  if (field || row.length) {
+    row.push(field);
+    rows.push(row);
+  }
   return rows.filter((r) => r.some((c) => c.trim()));
 }
 
@@ -124,9 +246,15 @@ function parseMoney(raw: string): number | null {
   let s = raw.trim();
   if (!s) return null;
   let negative = false;
-  if (/^\(.*\)$/.test(s)) { negative = true; s = s.slice(1, -1); }
+  if (/^\(.*\)$/.test(s)) {
+    negative = true;
+    s = s.slice(1, -1);
+  }
   s = s.replace(/[$€£₪¥\s]/g, '');
-  if (/^-/.test(s)) { negative = true; s = s.slice(1); }
+  if (/^-/.test(s)) {
+    negative = true;
+    s = s.slice(1);
+  }
   if (/,\d{1,2}$/.test(s) && !/\.\d/.test(s)) s = s.replace(/\./g, '').replace(',', '.');
   else s = s.replace(/,/g, '');
   const n = Number(s);
@@ -210,8 +338,15 @@ export function importTradesFromCsv(
   ctx: { accountId: string; accounts: Account[]; setups: Setup[]; existing?: Trade[]; combinePartials?: boolean },
 ): ImportResult {
   const empty: ImportResult = {
-    trades: [], newSetups: [], errors: [], duplicates: 0, incomplete: 0,
-    pairedFills: false, combined: 0, recognised: [], ignored: [],
+    trades: [],
+    newSetups: [],
+    errors: [],
+    duplicates: 0,
+    incomplete: 0,
+    pairedFills: false,
+    combined: 0,
+    recognised: [],
+    ignored: [],
   };
 
   const rows = parseCsv(text);
@@ -220,7 +355,10 @@ export function importTradesFromCsv(
   const rawHeaders = rows[0];
   const headers = rawHeaders.map(normalizeHeader);
   const recognised = [...new Set(headers.filter(Boolean))];
-  const ignored = rawHeaders.filter((_, i) => !headers[i]).map((h) => h.trim()).filter(Boolean);
+  const ignored = rawHeaders
+    .filter((_, i) => !headers[i])
+    .map((h) => h.trim())
+    .filter(Boolean);
 
   if (!headers.includes('symbol')) {
     return {
@@ -242,9 +380,7 @@ export function importTradesFromCsv(
   const now = new Date().toISOString();
   const setupsByName = new Map(ctx.setups.map((s) => [s.name.toLowerCase(), s]));
   const accountsByName = new Map(ctx.accounts.map((a) => [a.name.toLowerCase(), a]));
-  const seenIds = new Set(
-    (ctx.existing ?? []).flatMap((t) => (t.externalId ? t.externalId.split('|') : [])),
-  );
+  const seenIds = new Set((ctx.existing ?? []).flatMap((t) => (t.externalId ? t.externalId.split('|') : [])));
 
   const errors: string[] = [];
   const newSetups: Setup[] = [];
@@ -256,7 +392,10 @@ export function importTradesFromCsv(
   rows.slice(1).forEach((row, index) => {
     const line = index + 2;
     const symbol = col(row, 'symbol').toUpperCase();
-    if (!symbol) { errors.push(`Row ${line}: no symbol, so the row was skipped.`); return; }
+    if (!symbol) {
+      errors.push(`Row ${line}: no symbol, so the row was skipped.`);
+      return;
+    }
 
     // ---- direction, times and prices -------------------------------------
     let side = parseSide(col(row, 'side'));
@@ -272,8 +411,7 @@ export function importTradesFromCsv(
       const soldParts = parseDateTimeParts(col(row, 'sold_at'));
 
       // whichever fill happened first is the one that opened the position
-      const soldFirst =
-        boughtParts && soldParts ? soldParts.sortKey < boughtParts.sortKey : false;
+      const soldFirst = boughtParts && soldParts ? soldParts.sortKey < boughtParts.sortKey : false;
       side = side ?? (soldFirst ? 'SHORT' : 'LONG');
 
       openedParts = openedParts ?? (soldFirst ? soldParts : boughtParts);
@@ -300,7 +438,8 @@ export function importTradesFromCsv(
 
       if (multiplier == null && move != null && Math.abs(move) > 1e-9) {
         const derived = reportedPnl / move;
-        const snapped = Math.abs(derived - Math.round(derived)) < 0.005 ? Math.round(derived) : Number(derived.toFixed(4));
+        const snapped =
+          Math.abs(derived - Math.round(derived)) < 0.005 ? Math.round(derived) : Number(derived.toFixed(4));
         if (snapped > 0 && Math.abs(move * snapped - reportedPnl) < 0.01) multiplier = snapped;
         else manualPnl = reportedPnl;
       } else if (multiplier == null) {
@@ -328,9 +467,11 @@ export function importTradesFromCsv(
     // ---- skip anything already imported ----------------------------------
     const buyFill = col(row, 'buy_fill_id');
     const sellFill = col(row, 'sell_fill_id');
-    const externalId =
-      buyFill || sellFill ? `${buyFill}:${sellFill}` : col(row, 'external_id') || undefined;
-    if (externalId && seenIds.has(externalId)) { duplicates += 1; return; }
+    const externalId = buyFill || sellFill ? `${buyFill}:${sellFill}` : col(row, 'external_id') || undefined;
+    if (externalId && seenIds.has(externalId)) {
+      duplicates += 1;
+      return;
+    }
     if (externalId) seenIds.add(externalId);
 
     const openedAt = openedParts?.value ?? '';
@@ -352,7 +493,10 @@ export function importTradesFromCsv(
       leverage: parseMoney(col(row, 'leverage')),
       session: col(row, 'session') || (openedAt ? detectSession(openedAt) : undefined),
       setupId,
-      tags: col(row, 'tags').split(/[|;]/).map((t) => t.trim()).filter(Boolean),
+      tags: col(row, 'tags')
+        .split(/[|;]/)
+        .map((t) => t.trim())
+        .filter(Boolean),
       notes: col(row, 'notes') || undefined,
       excluded: false,
       externalId,
@@ -378,7 +522,10 @@ export function importTradesFromCsv(
 
     for (const t of trades) {
       const opener = openingFill.get(t.id);
-      if (!opener) { loose.push(t); continue; }
+      if (!opener) {
+        loose.push(t);
+        continue;
+      }
       const key = `${t.accountId}|${t.symbol}|${t.side}|${opener}`;
       groups.set(key, [...(groups.get(key) ?? []), t]);
     }

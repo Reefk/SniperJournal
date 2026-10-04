@@ -53,7 +53,10 @@ export function ClockDisplay() {
             <MenuItem
               key={z.id}
               selected={z.id === zone.id}
-              onClick={() => { actions.updateSettings({ timezone: z.id }); close(); }}
+              onClick={() => {
+                actions.updateSettings({ timezone: z.id });
+                close();
+              }}
               trailing={<span className="num text-xs text-muted">{timeIn(z.id, now, false)}</span>}
             >
               {z.label}

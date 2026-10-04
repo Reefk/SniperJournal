@@ -30,7 +30,9 @@ export function ImportTradesModal({ open, onClose }: { open: boolean; onClose: (
 function ImportBody({ onClose }: { onClose: () => void }) {
   const { data, actions } = useJournal();
   const { toast } = useUI();
-  const [accountId, setAccountId] = useState(data.activeAccountId === 'all' ? data.accounts[0].id : data.activeAccountId);
+  const [accountId, setAccountId] = useState(
+    data.activeAccountId === 'all' ? data.accounts[0].id : data.activeAccountId,
+  );
   const [text, setText] = useState('');
   const [fileName, setFileName] = useState('');
   const [dragging, setDragging] = useState(false);
@@ -41,7 +43,11 @@ function ImportBody({ onClose }: { onClose: () => void }) {
     () =>
       text
         ? importTradesFromCsv(text, {
-            accountId, accounts: data.accounts, setups: data.setups, existing: data.trades, combinePartials,
+            accountId,
+            accounts: data.accounts,
+            setups: data.setups,
+            existing: data.trades,
+            combinePartials,
           })
         : null,
     [text, accountId, data.accounts, data.setups, data.trades, combinePartials],
@@ -60,7 +66,11 @@ function ImportBody({ onClose }: { onClose: () => void }) {
       <div className="grid grid-cols-[1fr_auto] items-end gap-3">
         <Field label="Import into account" hint="a matching account column overrides this">
           <Select value={accountId} onChange={(e) => setAccountId(e.target.value)}>
-            {data.accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+            {data.accounts.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
+              </option>
+            ))}
           </Select>
         </Field>
         <Button onClick={() => downloadFile('sniper-journal-template.csv', csvTemplate(), 'text/csv')}>
@@ -69,9 +79,16 @@ function ImportBody({ onClose }: { onClose: () => void }) {
       </div>
 
       <label
-        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragging(true);
+        }}
         onDragLeave={() => setDragging(false)}
-        onDrop={(e) => { e.preventDefault(); setDragging(false); void readFile(e.dataTransfer.files[0]); }}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragging(false);
+          void readFile(e.dataTransfer.files[0]);
+        }}
         className={cn(
           'flex cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed px-6 py-8 text-center transition',
           dragging ? 'border-accent bg-accent/5' : 'border-line-strong hover:border-accent/60',
@@ -82,7 +99,12 @@ function ImportBody({ onClose }: { onClose: () => void }) {
         <span className="mt-1 text-xs text-faint">
           Works with Tradovate performance exports and most broker reports, as well as the template above.
         </span>
-        <input type="file" accept=".csv,text/csv" className="sr-only" onChange={(e) => void readFile(e.target.files?.[0])} />
+        <input
+          type="file"
+          accept=".csv,text/csv"
+          className="sr-only"
+          onChange={(e) => void readFile(e.target.files?.[0])}
+        />
       </label>
 
       {result && (
@@ -126,9 +148,9 @@ function ImportBody({ onClose }: { onClose: () => void }) {
               <span>
                 <span className="text-fg">Combine partial exits into one trade</span>
                 <span className="mt-0.5 block text-xs leading-relaxed text-muted">
-                  When you scale out, the broker writes one row per exit. With this on, rows that share an entry fill become a
-                  single position: the sizes add up, the prices become size-weighted averages, and the P&amp;L stays exactly the
-                  sum of the parts.
+                  When you scale out, the broker writes one row per exit. With this on, rows that share an entry fill
+                  become a single position: the sizes add up, the prices become size-weighted averages, and the P&amp;L
+                  stays exactly the sum of the parts.
                 </span>
               </span>
             </label>
@@ -138,9 +160,10 @@ function ImportBody({ onClose }: { onClose: () => void }) {
             <p className="flex items-start gap-2 rounded-lg border border-accent/25 bg-accent/5 px-4 py-2.5 text-xs leading-relaxed text-muted">
               <Info className="mt-px size-3.5 shrink-0 text-accent" />
               <span>
-                This export pairs a buy fill with a sell fill instead of naming a direction, so the fill that happened first
-                is treated as the entry. Where the file reports a P&amp;L, the contract multiplier is worked out from it, which
-                is how a 2-lot MNQ trade comes out at $2 a point. Check a row or two below before importing.
+                This export pairs a buy fill with a sell fill instead of naming a direction, so the fill that happened
+                first is treated as the entry. Where the file reports a P&amp;L, the contract multiplier is worked out
+                from it, which is how a 2-lot MNQ trade comes out at $2 a point. Check a row or two below before
+                importing.
               </span>
             </p>
           )}
@@ -165,7 +188,8 @@ function ImportBody({ onClose }: { onClose: () => void }) {
                       <td className="whitespace-nowrap px-3 py-2 text-muted">
                         {t.openedAt ? (
                           <>
-                            {formatShortDate(t.openedAt)} <span className="num text-xs text-faint">{formatTime(t.openedAt)}</span>
+                            {formatShortDate(t.openedAt)}{' '}
+                            <span className="num text-xs text-faint">{formatTime(t.openedAt)}</span>
                           </>
                         ) : (
                           <StatusBadge tone="warn">no date</StatusBadge>
@@ -177,9 +201,13 @@ function ImportBody({ onClose }: { onClose: () => void }) {
                           <span className="ml-1.5 text-[11px] font-normal text-accent">{t.fillCount} fills</span>
                         )}
                       </td>
-                      <td className="px-3 py-2"><SideBadge side={t.side} /></td>
+                      <td className="px-3 py-2">
+                        <SideBadge side={t.side} />
+                      </td>
                       <td className="num px-3 py-2 text-right text-fg">{t.quantity || '—'}</td>
-                      <td className="num px-3 py-2 text-right text-muted">{t.entryPrice ? formatPrice(t.entryPrice) : '—'}</td>
+                      <td className="num px-3 py-2 text-right text-muted">
+                        {t.entryPrice ? formatPrice(t.entryPrice) : '—'}
+                      </td>
                       <td className="num px-3 py-2 text-right text-muted">{formatPrice(t.exitPrice)}</td>
                       <td className="px-3 py-2 text-right">
                         {t.needsReview ? (
@@ -202,8 +230,8 @@ function ImportBody({ onClose }: { onClose: () => void }) {
 
           {result.ignored.length > 0 && (
             <p className="text-xs text-faint">
-              Columns not used: <span className="num">{result.ignored.join(', ')}</span>. Nothing was lost — those simply have
-              no place in the journal.
+              Columns not used: <span className="num">{result.ignored.join(', ')}</span>. Nothing was lost — those
+              simply have no place in the journal.
             </p>
           )}
 
@@ -214,14 +242,18 @@ function ImportBody({ onClose }: { onClose: () => void }) {
                   <CircleAlert className="mt-px size-3.5 shrink-0" /> {err}
                 </p>
               ))}
-              {result.errors.length > 30 && <p className="text-xs text-muted">…and {result.errors.length - 30} more.</p>}
+              {result.errors.length > 30 && (
+                <p className="text-xs text-muted">…and {result.errors.length - 30} more.</p>
+              )}
             </div>
           )}
         </>
       )}
 
       <details className="text-xs text-muted">
-        <summary className="cursor-pointer select-none text-sm text-muted hover:text-fg">Which columns are understood</summary>
+        <summary className="cursor-pointer select-none text-sm text-muted hover:text-fg">
+          Which columns are understood
+        </summary>
         <div className="mt-2 space-y-2 leading-relaxed">
           <p>
             Only <span className="num text-fg">symbol</span> is required. Everything else is optional:{' '}
@@ -230,19 +262,21 @@ function ImportBody({ onClose }: { onClose: () => void }) {
           <p>
             Broker wording is recognised too — <span className="num">qty</span>, <span className="num">ticker</span>,{' '}
             <span className="num">commission</span>, <span className="num">realized pnl</span>, and the paired{' '}
-            <span className="num">buyPrice / sellPrice / boughtTimestamp / soldTimestamp</span> columns that futures platforms
-            export. Separate several tags with a | character.
+            <span className="num">buyPrice / sellPrice / boughtTimestamp / soldTimestamp</span> columns that futures
+            platforms export. Separate several tags with a | character.
           </p>
           <p>
             Rows that are missing a date, quantity or entry price still import. They are marked{' '}
-            <span className="text-warn">needs details</span>, kept out of every statistic, and listed at the top of the Trades
-            page so you can complete them by hand.
+            <span className="text-warn">needs details</span>, kept out of every statistic, and listed at the top of the
+            Trades page so you can complete them by hand.
           </p>
         </div>
       </details>
 
       <div className="-mx-5 -mb-4 flex justify-end gap-2 border-t border-line px-5 py-3">
-        <Button variant="ghost" onClick={onClose}>Cancel</Button>
+        <Button variant="ghost" onClick={onClose}>
+          Cancel
+        </Button>
         <Button
           variant="primary"
           disabled={!result?.trades.length}

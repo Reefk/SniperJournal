@@ -1,0 +1,17 @@
+Paste this as your first message to Claude Code in VS Code.
+--------------------------------------------------------------------
+
+I want to turn this project into an iPhone app where the journal is stored
+locally on the phone, using Capacitor. The full brief is in MOBILE-PLAN.md.
+
+Please read MOBILE-PLAN.md and DEVELOPING.md first, then do Phase 1 only:
+the Capacitor shell, the mobile static build, and the native storage
+implementation in src/lib/storage/capacitor.ts.
+
+Important constraints from the brief:
+- Do not modify anything in src/lib except the new storage file.
+- The desktop app must still build and run when you are finished.
+- Every platform difference goes through pick() in src/lib/storage/index.ts.
+- Run `npm run typecheck` and `npm run build` before telling me it is done.
+
+Stop after Phase 1 and tell me what to verify before we continue.

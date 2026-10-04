@@ -59,7 +59,10 @@ export async function POST(request: Request) {
 
     const ext = Object.keys(TYPES).find((e) => TYPES[e] === file.type);
     if (!ext) {
-      return NextResponse.json({ ok: false, error: 'Only PNG, JPEG, WebP and GIF images can be saved.' }, { status: 400 });
+      return NextResponse.json(
+        { ok: false, error: 'Only PNG, JPEG, WebP and GIF images can be saved.' },
+        { status: 400 },
+      );
     }
 
     await fs.mkdir(DIR, { recursive: true });

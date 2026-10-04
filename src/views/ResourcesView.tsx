@@ -25,7 +25,14 @@ export function ResourcesView() {
     return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   }, [data.resources]);
 
-  const blank = (): Resource => ({ id: uid(), title: '', url: '', category: CATEGORIES[0], notes: '', createdAt: new Date().toISOString() });
+  const blank = (): Resource => ({
+    id: uid(),
+    title: '',
+    url: '',
+    category: CATEGORIES[0],
+    notes: '',
+    createdAt: new Date().toISOString(),
+  });
 
   const remove = async (resource: Resource) => {
     const ok = await confirm({
@@ -34,7 +41,10 @@ export function ResourcesView() {
       confirmLabel: 'Remove',
       tone: 'danger',
     });
-    if (ok) { actions.deleteResource(resource.id); toast('Resource removed'); }
+    if (ok) {
+      actions.deleteResource(resource.id);
+      toast('Resource removed');
+    }
   };
 
   return (
@@ -42,7 +52,11 @@ export function ResourcesView() {
       <PageHeader
         title="Resources"
         description="Your own shortlist of tools, feeds and reading. Nothing is added for you."
-        actions={<Button variant="primary" onClick={() => setEditing(blank())}><Plus className="size-4" /> Add resource</Button>}
+        actions={
+          <Button variant="primary" onClick={() => setEditing(blank())}>
+            <Plus className="size-4" /> Add resource
+          </Button>
+        }
       />
 
       {data.resources.length === 0 ? (
@@ -50,7 +64,11 @@ export function ResourcesView() {
           icon={LibraryBig}
           title="No resources saved"
           description="Keep the handful of links you actually open every session in one place: your charting platform, your economic calendar, the broker statement page, a book you are working through."
-          actions={<Button variant="primary" onClick={() => setEditing(blank())}><Plus className="size-4" /> Add your first resource</Button>}
+          actions={
+            <Button variant="primary" onClick={() => setEditing(blank())}>
+              <Plus className="size-4" /> Add your first resource
+            </Button>
+          }
         />
       ) : (
         <div className="space-y-6">
@@ -63,8 +81,23 @@ export function ResourcesView() {
                     <div className="flex items-start gap-2">
                       <h3 className="min-w-0 flex-1 truncate text-sm font-medium text-fg">{r.title}</h3>
                       <div className="flex shrink-0 gap-0.5 opacity-0 transition group-hover:opacity-100">
-                        <Button size="icon" variant="ghost" onClick={() => setEditing(r)} aria-label={`Edit ${r.title}`}><Pencil className="size-3.5" /></Button>
-                        <Button size="icon" variant="ghost" className="hover:bg-loss/10 hover:text-loss" onClick={() => remove(r)} aria-label={`Remove ${r.title}`}><Trash2 className="size-3.5" /></Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => setEditing(r)}
+                          aria-label={`Edit ${r.title}`}
+                        >
+                          <Pencil className="size-3.5" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="hover:bg-loss/10 hover:text-loss"
+                          onClick={() => remove(r)}
+                          aria-label={`Remove ${r.title}`}
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
                       </div>
                     </div>
                     {r.notes && <p className="mt-1.5 line-clamp-3 text-xs leading-relaxed text-muted">{r.notes}</p>}
@@ -88,11 +121,21 @@ export function ResourcesView() {
       )}
 
       {editing && (
-        <Modal open onClose={() => setEditing(null)} closeOnBackdrop={false} size="md" title={editing.title ? 'Edit resource' : 'Add resource'}>
+        <Modal
+          open
+          onClose={() => setEditing(null)}
+          closeOnBackdrop={false}
+          size="md"
+          title={editing.title ? 'Edit resource' : 'Add resource'}
+        >
           <ResourceForm
             resource={editing}
             onCancel={() => setEditing(null)}
-            onSave={(next) => { actions.upsertResource(next); setEditing(null); toast('Resource saved'); }}
+            onSave={(next) => {
+              actions.upsertResource(next);
+              setEditing(null);
+              toast('Resource saved');
+            }}
           />
         </Modal>
       )}
@@ -100,7 +143,15 @@ export function ResourcesView() {
   );
 }
 
-function ResourceForm({ resource, onSave, onCancel }: { resource: Resource; onSave: (r: Resource) => void; onCancel: () => void }) {
+function ResourceForm({
+  resource,
+  onSave,
+  onCancel,
+}: {
+  resource: Resource;
+  onSave: (r: Resource) => void;
+  onCancel: () => void;
+}) {
   const [draft, setDraft] = useState(resource);
   const [error, setError] = useState('');
 
@@ -108,31 +159,59 @@ function ResourceForm({ resource, onSave, onCancel }: { resource: Resource; onSa
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        if (!draft.title.trim()) { setError('Give it a title'); return; }
+        if (!draft.title.trim()) {
+          setError('Give it a title');
+          return;
+        }
         const url = draft.url?.trim();
-        onSave({ ...draft, title: draft.title.trim(), url: url ? (/^https?:\/\//.test(url) ? url : `https://${url}`) : undefined });
+        onSave({
+          ...draft,
+          title: draft.title.trim(),
+          url: url ? (/^https?:\/\//.test(url) ? url : `https://${url}`) : undefined,
+        });
       }}
       className="space-y-4"
     >
       <Field label="Title" error={error}>
-        <Input autoFocus value={draft.title} onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))} placeholder="e.g. TradingView" />
+        <Input
+          autoFocus
+          value={draft.title}
+          onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
+          placeholder="e.g. TradingView"
+        />
       </Field>
       <div className="grid grid-cols-[1fr_180px] gap-3">
         <Field label="Link" hint="optional">
-          <Input value={draft.url ?? ''} onChange={(e) => setDraft((d) => ({ ...d, url: e.target.value }))} placeholder="tradingview.com" />
+          <Input
+            value={draft.url ?? ''}
+            onChange={(e) => setDraft((d) => ({ ...d, url: e.target.value }))}
+            placeholder="tradingview.com"
+          />
         </Field>
         <Field label="Category">
           <Select value={draft.category} onChange={(e) => setDraft((d) => ({ ...d, category: e.target.value }))}>
-            {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            {CATEGORIES.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
           </Select>
         </Field>
       </div>
       <Field label="Notes" hint="optional">
-        <Textarea value={draft.notes ?? ''} onChange={(e) => setDraft((d) => ({ ...d, notes: e.target.value }))} placeholder="What you use it for" />
+        <Textarea
+          value={draft.notes ?? ''}
+          onChange={(e) => setDraft((d) => ({ ...d, notes: e.target.value }))}
+          placeholder="What you use it for"
+        />
       </Field>
       <div className="-mx-5 -mb-4 flex justify-end gap-2 border-t border-line px-5 py-3">
-        <Button variant="ghost" onClick={onCancel}>Cancel</Button>
-        <Button variant="primary" type="submit">Save</Button>
+        <Button variant="ghost" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button variant="primary" type="submit">
+          Save
+        </Button>
       </div>
     </form>
   );

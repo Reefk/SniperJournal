@@ -34,7 +34,18 @@ const SYMBOLS = [
   { symbol: 'ES', price: 5720, tick: 0.25, decimals: 2, mult: 50 },
 ];
 
-const TAGS = ['planned', 'breakout', 'pullback', 'news', 'fomo', 'early entry', 'moved stop', 'A+ setup', 'tired', 'oversized'];
+const TAGS = [
+  'planned',
+  'breakout',
+  'pullback',
+  'news',
+  'fomo',
+  'early entry',
+  'moved stop',
+  'A+ setup',
+  'tired',
+  'oversized',
+];
 
 export function sampleSetups(): Setup[] {
   return [
@@ -42,7 +53,12 @@ export function sampleSetups(): Setup[] {
       id: uid(),
       name: 'Opening Range Breakout',
       description: 'Break and hold of the first 15 minute range, taken only in the direction of the daily trend.',
-      rules: ['Wait for the first 15 minutes to complete', 'Enter on the retest, not the first push', 'Stop below the range mid', 'Target 2R or the prior day high'],
+      rules: [
+        'Wait for the first 15 minutes to complete',
+        'Enter on the retest, not the first push',
+        'Stop below the range mid',
+        'Target 2R or the prior day high',
+      ],
       color: '#6366f1',
       isSample: true,
     },
@@ -50,7 +66,12 @@ export function sampleSetups(): Setup[] {
       id: uid(),
       name: 'VWAP Reclaim',
       description: 'Price loses VWAP, flushes, then reclaims it with volume.',
-      rules: ['Must reclaim within 30 minutes of losing it', 'Volume on the reclaim candle above average', 'Stop under the flush low', 'Scale half at 1R'],
+      rules: [
+        'Must reclaim within 30 minutes of losing it',
+        'Volume on the reclaim candle above average',
+        'Stop under the flush low',
+        'Scale half at 1R',
+      ],
       color: '#34d399',
       isSample: true,
     },
@@ -58,7 +79,12 @@ export function sampleSetups(): Setup[] {
       id: uid(),
       name: 'Trend Pullback',
       description: 'Buying the first controlled pullback into a rising moving average.',
-      rules: ['Higher highs and higher lows on the 5 minute', 'Pullback on falling volume', 'Entry on the reversal candle close', 'No entry in the last hour'],
+      rules: [
+        'Higher highs and higher lows on the 5 minute',
+        'Pullback on falling volume',
+        'Entry on the reversal candle close',
+        'No entry in the last hour',
+      ],
       color: '#f59e0b',
       isSample: true,
     },
@@ -100,7 +126,8 @@ export function generateSampleData(accountId: string): { trades: Trade[]; setups
 
         // a positive but imperfect edge, so the sample looks like a real trader
         const roll = rand();
-        const rMultipleOutcome = roll < 0.47 ? rr * (0.75 + rand() * 0.45) : roll < 0.56 ? (rand() - 0.5) * 0.3 : -(0.75 + rand() * 0.4);
+        const rMultipleOutcome =
+          roll < 0.47 ? rr * (0.75 + rand() * 0.45) : roll < 0.56 ? (rand() - 0.5) * 0.3 : -(0.75 + rand() * 0.4);
         const exitPrice = Number((entry + stopDistance * rMultipleOutcome * dir).toFixed(spec.decimals));
 
         // size each position off a target risk, the way a real plan would,
@@ -108,10 +135,13 @@ export function generateSampleData(accountId: string): { trades: Trade[]; setups
         const targetRisk = 140 + rand() * 260;
         const rawQty = targetRisk / (stopDistance * spec.mult);
         const quantity =
-          spec.symbol === 'ES' ? Math.max(1, Math.round(rawQty))
-          : spec.symbol === 'BTCUSD' ? Math.max(0.01, Number(rawQty.toFixed(3)))
-          : spec.symbol === 'EURUSD' ? Math.max(1000, Math.round(rawQty / 1000) * 1000)
-          : Math.max(5, Math.round(rawQty));
+          spec.symbol === 'ES'
+            ? Math.max(1, Math.round(rawQty))
+            : spec.symbol === 'BTCUSD'
+              ? Math.max(0.01, Number(rawQty.toFixed(3)))
+              : spec.symbol === 'EURUSD'
+                ? Math.max(1000, Math.round(rawQty / 1000) * 1000)
+                : Math.max(5, Math.round(rawQty));
 
         const tags: string[] = [];
         if (rand() > 0.55) tags.push(TAGS[Math.floor(rand() * TAGS.length)]);

@@ -3,7 +3,11 @@ import { cn } from '@/lib/utils';
 
 /** An invitation to act — never a placeholder pretending to be data */
 export function EmptyState({
-  icon: Icon, title, description, actions, className,
+  icon: Icon,
+  title,
+  description,
+  actions,
+  className,
 }: {
   icon: ComponentType<{ className?: string }>;
   title: string;
@@ -12,7 +16,12 @@ export function EmptyState({
   className?: string;
 }) {
   return (
-    <div className={cn('flex flex-col items-center justify-center rounded-xl border border-dashed border-line-strong/70 px-6 py-14 text-center', className)}>
+    <div
+      className={cn(
+        'flex flex-col items-center justify-center rounded-xl border border-dashed border-line-strong/70 px-6 py-14 text-center',
+        className,
+      )}
+    >
       <div className="grid size-11 place-items-center rounded-full border border-line bg-raised">
         <Icon className="size-5 text-muted" />
       </div>

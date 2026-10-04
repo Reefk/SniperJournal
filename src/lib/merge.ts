@@ -49,13 +49,19 @@ export function mergeTrades(trades: Trade[]): Trade {
   const allClosed = legs.every(isClosed);
 
   const entryDecimals = decimalsOf(legs.map((t) => t.entryPrice));
-  const entryPrice = weightedAverage(legs.map((t) => ({ price: t.entryPrice, quantity: t.quantity })), entryDecimals);
+  const entryPrice = weightedAverage(
+    legs.map((t) => ({ price: t.entryPrice, quantity: t.quantity })),
+    entryDecimals,
+  );
 
   const exitLegs = legs.filter((t) => t.exitPrice != null);
   const everyLegHasExit = allClosed && exitLegs.length === legs.length;
   const exitDecimals = exitLegs.length ? decimalsOf(exitLegs.map((t) => t.exitPrice as number)) : entryDecimals;
   const exitPrice = everyLegHasExit
-    ? weightedAverage(exitLegs.map((t) => ({ price: t.exitPrice as number, quantity: t.quantity })), exitDecimals)
+    ? weightedAverage(
+        exitLegs.map((t) => ({ price: t.exitPrice as number, quantity: t.quantity })),
+        exitDecimals,
+      )
     : null;
 
   const fees = legs.reduce((a, t) => a + (t.fees || 0), 0);
@@ -71,12 +77,17 @@ export function mergeTrades(trades: Trade[]): Trade {
       exitPrice != null &&
       multiplier != null &&
       legs.every((t) => t.manualPnl == null) &&
-      Math.abs((exitPrice - entryPrice) * quantity * multiplier * (first.side === 'LONG' ? 1 : -1) - grossTotal) < 0.005;
+      Math.abs((exitPrice - entryPrice) * quantity * multiplier * (first.side === 'LONG' ? 1 : -1) - grossTotal) <
+        0.005;
     if (!reproducible) manualPnl = grossTotal;
   }
 
   const closedAt = allClosed
-    ? legs.map((t) => t.closedAt).filter(Boolean).sort().at(-1)
+    ? legs
+        .map((t) => t.closedAt)
+        .filter(Boolean)
+        .sort()
+        .at(-1)
     : undefined;
 
   const withReview = legs.find((t) => t.review && Object.values(t.review).some((v) => v != null));
@@ -89,7 +100,11 @@ export function mergeTrades(trades: Trade[]): Trade {
     entryPrice,
     exitPrice,
     closedAt: closedAt ?? undefined,
-    openedAt: legs.map((t) => t.openedAt).filter(Boolean).sort()[0] ?? first.openedAt,
+    openedAt:
+      legs
+        .map((t) => t.openedAt)
+        .filter(Boolean)
+        .sort()[0] ?? first.openedAt,
     fees,
     multiplier: multiplier ?? first.multiplier ?? 1,
     manualPnl,

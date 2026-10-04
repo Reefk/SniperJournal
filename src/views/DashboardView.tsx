@@ -3,8 +3,20 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
-  Activity, CalendarRange, Flame, FlaskConical, Gauge, Plus, Receipt, Scale, Sigma,
-  Target, TrendingUp, Trophy, Upload, Wallet,
+  Activity,
+  CalendarRange,
+  Flame,
+  FlaskConical,
+  Gauge,
+  Plus,
+  Receipt,
+  Scale,
+  Sigma,
+  Target,
+  TrendingUp,
+  Trophy,
+  Upload,
+  Wallet,
 } from 'lucide-react';
 import { useJournal } from '@/store/JournalProvider';
 import { useUI } from '@/store/UIProvider';
@@ -129,7 +141,11 @@ export function DashboardView() {
               sub={`${stats.wins}W · ${stats.losses}L${stats.breakeven ? ` · ${stats.breakeven}BE` : ''}`}
               info="The share of closed trades that finished above break-even after fees."
               aside={
-                <RingProgress value={stats.winRate / 100} color="var(--profit)" track="color-mix(in srgb, var(--loss) 35%, transparent)">
+                <RingProgress
+                  value={stats.winRate / 100}
+                  color="var(--profit)"
+                  track="color-mix(in srgb, var(--loss) 35%, transparent)"
+                >
                   <span className="num text-[11px] font-semibold text-fg">{Math.round(stats.winRate)}%</span>
                 </RingProgress>
               }
@@ -185,7 +201,11 @@ export function DashboardView() {
               label="Commissions"
               value={formatMoney(stats.fees, currency)}
               tone={stats.fees > 0 ? 'loss' : 'neutral'}
-              sub={stats.grossProfit > 0 ? `${((stats.fees / stats.grossProfit) * 100).toFixed(0)}% of gross profit` : 'paid in fees'}
+              sub={
+                stats.grossProfit > 0
+                  ? `${((stats.fees / stats.grossProfit) * 100).toFixed(0)}% of gross profit`
+                  : 'paid in fees'
+              }
               info="Everything you paid your broker across these trades."
             />
             <MetricCell
@@ -196,7 +216,11 @@ export function DashboardView() {
             <MetricCell
               label="Max streak"
               value={`${stats.maxWinStreak}W / ${stats.maxLossStreak}L`}
-              sub={stats.currentStreak === 0 ? 'no active streak' : `currently ${Math.abs(stats.currentStreak)}${stats.currentStreak > 0 ? 'W' : 'L'}`}
+              sub={
+                stats.currentStreak === 0
+                  ? 'no active streak'
+                  : `currently ${Math.abs(stats.currentStreak)}${stats.currentStreak > 0 ? 'W' : 'L'}`
+              }
               info="The longest run of consecutive wins and consecutive losses."
             />
             <MetricCell
@@ -231,7 +255,9 @@ export function DashboardView() {
               }
               actions={
                 <div className="text-right">
-                  <div className={`num text-lg font-semibold ${stats.net > 0 ? 'text-profit' : stats.net < 0 ? 'text-loss' : 'text-fg'}`}>
+                  <div
+                    className={`num text-lg font-semibold ${stats.net > 0 ? 'text-profit' : stats.net < 0 ? 'text-loss' : 'text-fg'}`}
+                  >
                     {formatMoney(equityNow, currency)}
                   </div>
                   <div className="text-[11px] text-faint">current balance</div>
@@ -246,9 +272,7 @@ export function DashboardView() {
               title="Sniper Score"
               subtitle={score.overall == null ? 'Rate your trades to build this' : `${score.overall} / 100 overall`}
               actions={
-                score.overall != null && (
-                  <div className="num text-lg font-semibold text-accent">{score.overall}</div>
-                )
+                score.overall != null && <div className="num text-lg font-semibold text-accent">{score.overall}</div>
               }
             >
               <SniperScoreChart score={score} />
@@ -307,7 +331,11 @@ export function DashboardView() {
               value={formatMoney(-stats.maxDrawdown, currency)}
               tone={stats.maxDrawdown > 0 ? 'loss' : 'neutral'}
               icon={Gauge}
-              sub={stats.maxDrawdownPct != null ? `${stats.maxDrawdownPct.toFixed(1)}% from peak` : 'Set a starting balance for %'}
+              sub={
+                stats.maxDrawdownPct != null
+                  ? `${stats.maxDrawdownPct.toFixed(1)}% from peak`
+                  : 'Set a starting balance for %'
+              }
               info="The deepest fall from a peak in your equity curve."
             />
             <MetricCard
@@ -326,7 +354,8 @@ export function DashboardView() {
         <div className="mt-4 flex items-center gap-3 rounded-xl border border-accent/25 bg-accent/5 px-5 py-3 text-sm">
           <Wallet className="size-4 shrink-0 text-accent" />
           <span className="text-fg">
-            You have {accountTrades.filter((t) => !isClosed(t)).length} open {accountTrades.filter((t) => !isClosed(t)).length === 1 ? 'position' : 'positions'}.
+            You have {accountTrades.filter((t) => !isClosed(t)).length} open{' '}
+            {accountTrades.filter((t) => !isClosed(t)).length === 1 ? 'position' : 'positions'}.
             <span className="text-muted"> They are excluded from statistics until you add an exit price.</span>
           </span>
           <Link href="/trades" className="ml-auto text-xs text-accent underline-offset-4 hover:underline">

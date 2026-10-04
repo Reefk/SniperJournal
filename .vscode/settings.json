@@ -1,0 +1,31 @@
+{
+  // Use the TypeScript that ships with this project, not VS Code's own copy.
+  // Without this, the editor can disagree with `npm run typecheck`.
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.codeActionsOnSave": { "source.fixAll.eslint": "explicit" },
+  "editor.tabSize": 2,
+  "files.eol": "\n",
+
+  // Tailwind v4 keeps its config in CSS, so the editor needs pointing at it
+  // for class-name completion to work.
+  "tailwindCSS.experimental.configFile": "src/app/globals.css",
+  "tailwindCSS.includeLanguages": { "typescriptreact": "javascript" },
+  "editor.quickSuggestions": { "strings": "on" },
+
+  // These are generated or private: hiding them keeps search results clean.
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/.next": true,
+    "**/data": true,
+    "package-lock.json": true
+  },
+  "files.watcherExclude": { "**/.next/**": true, "**/node_modules/**": true },
+
+  // The Windows launchers must keep CRLF or cmd.exe mis-parses them.
+  "[bat]": { "files.eol": "\r\n" },
+  "[powershell]": { "files.eol": "\r\n" }
+}

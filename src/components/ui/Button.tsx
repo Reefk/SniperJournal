@@ -23,7 +23,8 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-  { variant = 'secondary', size = 'md', className, type = 'button', ...rest }, ref,
+  { variant = 'secondary', size = 'md', className, type = 'button', ...rest },
+  ref,
 ) {
   return (
     <button
@@ -31,7 +32,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       type={type}
       className={cn(
         'inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-md font-medium transition disabled:pointer-events-none disabled:opacity-50',
-        VARIANTS[variant], SIZES[size], className,
+        VARIANTS[variant],
+        SIZES[size],
+        className,
       )}
       {...rest}
     />

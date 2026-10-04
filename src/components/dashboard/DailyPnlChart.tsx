@@ -1,6 +1,16 @@
 'use client';
 
-import { Bar, BarChart, CartesianGrid, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
 import type { DayAgg } from '@/lib/stats';
 import { formatAxisMoney, formatShortDate } from '@/lib/format';
 import { useChartTheme } from '@/hooks/useChartTheme';

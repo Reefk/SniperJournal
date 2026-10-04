@@ -113,7 +113,9 @@ export function buildSignals(trades: Trade[], settings: Settings, now = new Date
     const twoWeeks = new Date(now);
     twoWeeks.setDate(twoWeeks.getDate() - 14);
     const thisWeek = days.filter((d) => d.day > dateKey(weekAgo)).reduce((a, d) => a + d.net, 0);
-    const lastWeek = days.filter((d) => d.day > dateKey(twoWeeks) && d.day <= dateKey(weekAgo)).reduce((a, d) => a + d.net, 0);
+    const lastWeek = days
+      .filter((d) => d.day > dateKey(twoWeeks) && d.day <= dateKey(weekAgo))
+      .reduce((a, d) => a + d.net, 0);
     if (lastWeek !== 0 || thisWeek !== 0) {
       const better = thisWeek > lastWeek;
       signals.push({
@@ -183,7 +185,13 @@ export function buildInsights(trades: Trade[], setups: Setup[], settings: Settin
     });
   }
 
-  const weekdays = strongest(groupTrades(closed, (t) => String(parseLocal(t.openedAt).getDay()), (k) => WEEKDAYS[(Number(k) + 6) % 7]));
+  const weekdays = strongest(
+    groupTrades(
+      closed,
+      (t) => String(parseLocal(t.openedAt).getDay()),
+      (k) => WEEKDAYS[(Number(k) + 6) % 7],
+    ),
+  );
   if (weekdays.best && weekdays.worst && weekdays.worst.net < 0 && weekdays.best.key !== weekdays.worst.key) {
     out.push({
       id: 'weekday',
@@ -208,7 +216,13 @@ export function buildInsights(trades: Trade[], setups: Setup[], settings: Settin
     });
   }
 
-  const setupGroups = strongest(groupTrades(closed, (t) => t.setupId, (k) => setupNames.get(k) ?? 'Unknown setup'));
+  const setupGroups = strongest(
+    groupTrades(
+      closed,
+      (t) => t.setupId,
+      (k) => setupNames.get(k) ?? 'Unknown setup',
+    ),
+  );
   if (setupGroups.best && setupGroups.worst && setupGroups.best.key !== setupGroups.worst.key) {
     out.push({
       id: 'setup',

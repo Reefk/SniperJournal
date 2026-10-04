@@ -4,6 +4,36 @@ Sniper Journal is an ordinary Next.js project in TypeScript. Everything you see
 in the app is in `src/`, about 6,700 lines, no build tricks and no generated
 code. Edit a file, save, and the browser updates.
 
+## Opening it in VS Code
+
+Get **Visual Studio Code** from <https://code.visualstudio.com> — not Visual
+Studio, which is a different product built for C# and C++ and does not handle a
+Next.js project well.
+
+1. Open VS Code
+2. **File → Open Folder**, and pick the `sniper-journal` folder
+3. When it offers the recommended extensions, accept — they are Tailwind
+   class-name completion, ESLint, and Prettier
+4. Open a terminal inside VS Code with **Ctrl + `**
+
+This folder already carries its own VS Code settings: the editor uses the same
+TypeScript as `npm run typecheck`, so it never disagrees with the build, and
+Tailwind completion is pointed at `globals.css`, which is where Tailwind v4 keeps
+its configuration.
+
+**Stop the background app before you start editing.** Double-click `stop.bat`,
+or run it from the terminal. The installed copy runs a server on port 3000 and
+writes to the same `data/journal.json` — leaving it running means two servers
+fighting over the port and over your journal. Turn it back on with the desktop
+icon when you are done.
+
+Useful while you work:
+
+- **Ctrl + Shift + B** — typecheck the whole project
+- **F5** — start the dev server and attach a debugger
+- **Ctrl + P** — jump to any file by name
+- **F2** on a symbol — rename it everywhere safely
+
 ## Running it while you edit
 
 ```
@@ -47,21 +77,21 @@ data/               your journal and its backups, created at runtime
 
 ## The parts you are most likely to want to change
 
-| What you want to change | File |
-| --- | --- |
-| Colours, fonts, dark and light themes | `src/app/globals.css` |
-| Which items appear in the sidebar | `src/components/layout/Sidebar.tsx` |
-| How P&L, R multiples and risk are calculated | `src/lib/trade-math.ts` |
-| Win rate, profit factor, expectancy, SQN, drawdown | `src/lib/stats.ts` |
-| The Sniper Score axes and how they are scored | `sniperScore()` in `src/lib/stats.ts` |
-| The wording and rules of the AI insights | `src/lib/insights.ts` |
-| Which CSV column names are recognised | `ALIASES` in `src/lib/csv.ts` |
-| How partial fills are combined into one trade | `src/lib/merge.ts` |
-| Chart image upload, scaling and storage | `src/lib/screenshots.ts`, `src/app/api/screenshot/` |
-| The app icon | `assets/icon.svg`, then rebuild `sniper-journal.ico` and `src/app/icon.png` from it |
-| The trade entry form | `src/components/trades/TradeFormModal.tsx` |
-| Trading session hours | `src/lib/sessions.ts` |
-| The generated test data | `src/lib/sample.ts` |
+| What you want to change                            | File                                                                                |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Colours, fonts, dark and light themes              | `src/app/globals.css`                                                               |
+| Which items appear in the sidebar                  | `src/components/layout/Sidebar.tsx`                                                 |
+| How P&L, R multiples and risk are calculated       | `src/lib/trade-math.ts`                                                             |
+| Win rate, profit factor, expectancy, SQN, drawdown | `src/lib/stats.ts`                                                                  |
+| The Sniper Score axes and how they are scored      | `sniperScore()` in `src/lib/stats.ts`                                               |
+| The wording and rules of the AI insights           | `src/lib/insights.ts`                                                               |
+| Which CSV column names are recognised              | `ALIASES` in `src/lib/csv.ts`                                                       |
+| How partial fills are combined into one trade      | `src/lib/merge.ts`                                                                  |
+| Chart image upload, scaling and storage            | `src/lib/screenshots.ts`, `src/app/api/screenshot/`                                 |
+| The app icon                                       | `assets/icon.svg`, then rebuild `sniper-journal.ico` and `src/app/icon.png` from it |
+| The trade entry form                               | `src/components/trades/TradeFormModal.tsx`                                          |
+| Trading session hours                              | `src/lib/sessions.ts`                                                               |
+| The generated test data                            | `src/lib/sample.ts`                                                                 |
 
 ### Changing the colours
 
@@ -100,9 +130,16 @@ anything an existing `journal.json` does not have yet.
 you type in the form
   → JournalProvider updates its state
   → the whole journal is written to localStorage immediately
-  → 350ms later it is PUT to /api/journal
-  → the route writes data/journal.json (to a temp file first, then renames)
+  → 350ms later it goes to storage.writeJournal()
+  → on a PC that is a PUT to /api/journal, which writes data/journal.json
+    (to a temp file first, then renames)
 ```
+
+Every read and write — the journal, chart images, exported files — goes through
+the one interface in `src/lib/storage/types.ts`. Nothing else in the app touches
+the filesystem or the network. Supporting a new platform means writing one file
+that implements that interface and returning it from `pick()` in
+`src/lib/storage/index.ts`; see `MOBILE-PLAN.md` for the iPhone version.
 
 Nothing is fetched from anywhere. Every number on every screen is computed from
 that one object in memory, which is why the app works offline.

@@ -74,13 +74,40 @@ export interface Stats {
 }
 
 const EMPTY_STATS = (startingBalance: number): Stats => ({
-  total: 0, wins: 0, losses: 0, breakeven: 0, open: 0,
-  winRate: 0, lossRate: 0, net: 0, gross: 0, grossProfit: 0, grossLoss: 0, fees: 0,
-  profitFactor: null, avgWin: 0, avgLoss: 0, payoff: null, expectancy: 0, expectancyR: null,
-  avgR: null, sqn: null, maxWinStreak: 0, maxLossStreak: 0, currentStreak: 0,
-  bestDay: null, worstDay: null, activeDays: 0, avgDaily: 0,
-  largestWin: 0, largestLoss: 0, maxDrawdown: 0, maxDrawdownPct: null,
-  avgHoldMinutes: null, avgWinHold: null, avgLossHold: null,
+  total: 0,
+  wins: 0,
+  losses: 0,
+  breakeven: 0,
+  open: 0,
+  winRate: 0,
+  lossRate: 0,
+  net: 0,
+  gross: 0,
+  grossProfit: 0,
+  grossLoss: 0,
+  fees: 0,
+  profitFactor: null,
+  avgWin: 0,
+  avgLoss: 0,
+  payoff: null,
+  expectancy: 0,
+  expectancyR: null,
+  avgR: null,
+  sqn: null,
+  maxWinStreak: 0,
+  maxLossStreak: 0,
+  currentStreak: 0,
+  bestDay: null,
+  worstDay: null,
+  activeDays: 0,
+  avgDaily: 0,
+  largestWin: 0,
+  largestLoss: 0,
+  maxDrawdown: 0,
+  maxDrawdownPct: null,
+  avgHoldMinutes: null,
+  avgWinHold: null,
+  avgLossHold: null,
   equity: [{ index: 0, label: 'Start', equity: startingBalance, net: 0, peak: startingBalance }],
   days: [],
 });
@@ -109,7 +136,10 @@ export function computeStats(allTrades: Trade[], startingBalance = 0): Stats {
   const winRate = (winPnls.length / closed.length) * 100;
 
   // streaks
-  let maxWinStreak = 0, maxLossStreak = 0, run = 0, currentStreak = 0;
+  let maxWinStreak = 0,
+    maxLossStreak = 0,
+    run = 0,
+    currentStreak = 0;
   for (const p of pnls) {
     if (p > 0) run = run > 0 ? run + 1 : 1;
     else if (p < 0) run = run < 0 ? run - 1 : -1;
@@ -149,8 +179,14 @@ export function computeStats(allTrades: Trade[], startingBalance = 0): Stats {
   const sortedDays = [...days].sort((a, b) => a.net - b.net);
 
   const holds = closed.map(holdMinutes).filter((m): m is number => m != null);
-  const winHolds = closed.filter((t) => netPnl(t) > 0).map(holdMinutes).filter((m): m is number => m != null);
-  const lossHolds = closed.filter((t) => netPnl(t) < 0).map(holdMinutes).filter((m): m is number => m != null);
+  const winHolds = closed
+    .filter((t) => netPnl(t) > 0)
+    .map(holdMinutes)
+    .filter((m): m is number => m != null);
+  const lossHolds = closed
+    .filter((t) => netPnl(t) < 0)
+    .map(holdMinutes)
+    .filter((m): m is number => m != null);
 
   return {
     total: closed.length,
@@ -240,7 +276,10 @@ export function sniperScore(trades: Trade[], stats: Stats): SniperScore {
     axis: 'Profit factor',
     score: enough && pf != null ? clamp100(Number.isFinite(pf) ? (pf / 3) * 100 : 100) : 0,
     rated: enough && pf != null,
-    detail: pf == null ? 'Needs at least 5 closed trades' : `${Number.isFinite(pf) ? pf.toFixed(2) : '∞'} earned per unit lost`,
+    detail:
+      pf == null
+        ? 'Needs at least 5 closed trades'
+        : `${Number.isFinite(pf) ? pf.toFixed(2) : '∞'} earned per unit lost`,
   });
 
   const withStops = closed.filter((t) => t.stopLoss != null);
@@ -279,7 +318,10 @@ export function sniperScore(trades: Trade[], stats: Stats): SniperScore {
       axis: label,
       score: values.length ? clamp100((mean(values) / 5) * 100) : 0,
       rated: values.length >= 3,
-      detail: values.length >= 3 ? `${mean(values).toFixed(1)} of 5 across ${values.length} trades` : 'Rate at least 3 trades when you log them',
+      detail:
+        values.length >= 3
+          ? `${mean(values).toFixed(1)} of 5 across ${values.length} trades`
+          : 'Rate at least 3 trades when you log them',
     });
   }
 
@@ -303,7 +345,11 @@ export interface GroupStat {
 }
 
 /** Break results down by symbol, session, weekday, setup or tag */
-export function groupTrades(trades: Trade[], keyOf: (t: Trade) => string | string[] | undefined, labelOf?: (key: string) => string): GroupStat[] {
+export function groupTrades(
+  trades: Trade[],
+  keyOf: (t: Trade) => string | string[] | undefined,
+  labelOf?: (key: string) => string,
+): GroupStat[] {
   const map = new Map<string, Trade[]>();
   for (const t of statTrades(trades)) {
     const raw = keyOf(t);

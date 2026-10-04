@@ -1,6 +1,8 @@
+import { storage } from './storage';
+
 /** Where the app serves a saved chart image from */
 export function screenshotSrc(name: string): string {
-  return `/api/screenshot?name=${encodeURIComponent(name)}`;
+  return storage.imageSrc(name);
 }
 
 /**
@@ -15,13 +17,19 @@ async function shrink(file: File): Promise<Blob> {
   try {
     const bitmap = await createImageBitmap(file);
     const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height));
-    if (scale === 1 && file.size < 900_000) { bitmap.close(); return file; }
+    if (scale === 1 && file.size < 900_000) {
+      bitmap.close();
+      return file;
+    }
 
     const canvas = document.createElement('canvas');
     canvas.width = Math.round(bitmap.width * scale);
     canvas.height = Math.round(bitmap.height * scale);
     const ctx = canvas.getContext('2d');
-    if (!ctx) { bitmap.close(); return file; }
+    if (!ctx) {
+      bitmap.close();
+      return file;
+    }
     ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
     bitmap.close();
 
@@ -45,7 +53,8 @@ export async function uploadScreenshot(file: File): Promise<UploadResult> {
 
   const blob = await shrink(file);
   const form = new FormData();
-  const ext = blob.type === 'image/webp' ? 'webp' : blob.type === 'image/png' ? 'png' : blob.type === 'image/gif' ? 'gif' : 'jpg';
+  const ext =
+    blob.type === 'image/webp' ? 'webp' : blob.type === 'image/png' ? 'png' : blob.type === 'image/gif' ? 'gif' : 'jpg';
   form.append('file', new File([blob], `chart.${ext}`, { type: blob.type }));
 
   try {
@@ -60,7 +69,7 @@ export async function uploadScreenshot(file: File): Promise<UploadResult> {
 
 export async function deleteScreenshot(name: string): Promise<void> {
   try {
-    await fetch(`/api/screenshot?name=${encodeURIComponent(name)}`, { method: 'DELETE' });
+    await storage.deleteImage(name);
   } catch {
     // an orphaned file is harmless
   }

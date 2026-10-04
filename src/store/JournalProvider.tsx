@@ -1,13 +1,12 @@
 'use client';
 
-import {
-  createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode,
-} from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Account, JournalData, Resource, Setup, Trade, TradeInput, Settings, Profile } from '@/lib/types';
 import { generateSampleData } from '@/lib/sample';
 import { isIncomplete, netPnl } from '@/lib/trade-math';
 import { mergeIssue, mergeTrades as combineTrades } from '@/lib/merge';
 import { deleteScreenshot } from '@/lib/screenshots';
+import { storage } from '@/lib/storage';
 import { uid } from '@/lib/utils';
 
 const LOCAL_KEY = 'sniper-journal:v1';
@@ -113,10 +112,8 @@ export function JournalProvider({ children }: { children: ReactNode }) {
     (async () => {
       let fromDisk: JournalData | null = null;
       try {
-        const res = await fetch('/api/journal', { cache: 'no-store' });
-        const json = await res.json();
-        if (json?.ok) fromDisk = json.data ?? null;
-        else diskAvailable.current = false;
+        await storage.init();
+        fromDisk = await storage.readJournal();
       } catch {
         diskAvailable.current = false;
       }
@@ -131,8 +128,10 @@ export function JournalProvider({ children }: { children: ReactNode }) {
 
       const winner =
         fromDisk && fromBrowser
-          ? (fromBrowser.updatedAt ?? '') > (fromDisk.updatedAt ?? '') ? fromBrowser : fromDisk
-          : fromDisk ?? fromBrowser;
+          ? (fromBrowser.updatedAt ?? '') > (fromDisk.updatedAt ?? '')
+            ? fromBrowser
+            : fromDisk
+          : (fromDisk ?? fromBrowser);
 
       if (!cancelled) {
         setData(normalize(winner));
@@ -140,41 +139,49 @@ export function JournalProvider({ children }: { children: ReactNode }) {
         setReady(true);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // ---- save: debounced, to disk and to the browser mirror ----
   useEffect(() => {
     if (!ready) return;
-    if (firstLoad.current) { firstLoad.current = false; return; }
+    if (firstLoad.current) {
+      firstLoad.current = false;
+      return;
+    }
 
-    try { localStorage.setItem(LOCAL_KEY, JSON.stringify(data)); } catch { /* quota */ }
+    try {
+      localStorage.setItem(LOCAL_KEY, JSON.stringify(data));
+    } catch {
+      /* quota */
+    }
 
-    if (!diskAvailable.current) { setSaveStatus('browser'); return; }
+    if (!diskAvailable.current) {
+      setSaveStatus('browser');
+      return;
+    }
     setSaveStatus('saving');
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(async () => {
       try {
-        const res = await fetch('/api/journal', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data),
-        });
-        const json = await res.json();
-        if (json?.ok) {
-          setFilePath(json.path ?? null);
-          setSaveStatus('saved');
-        } else setSaveStatus('error');
+        setFilePath(await storage.writeJournal(data));
+        setSaveStatus('saved');
       } catch {
         diskAvailable.current = false;
         setSaveStatus('browser');
       }
     }, 350);
-    return () => { if (timer.current) clearTimeout(timer.current); };
+    return () => {
+      if (timer.current) clearTimeout(timer.current);
+    };
   }, [data, ready]);
 
   // the merge action needs to read the trades it is folding together
-  useEffect(() => { dataRef.current = data; }, [data]);
+  useEffect(() => {
+    dataRef.current = data;
+  }, [data]);
 
   // ---- theme on <html> ----
   useEffect(() => {
@@ -187,150 +194,153 @@ export function JournalProvider({ children }: { children: ReactNode }) {
     setData((prev) => ({ ...fn(prev), updatedAt: new Date().toISOString() }));
   }, []);
 
-  const actions = useMemo<Actions>(() => ({
-    addTrade: (input) => {
-      const now = new Date().toISOString();
-      mutate((d) => ({ ...d, trades: [...d.trades, { ...input, id: uid(), createdAt: now, updatedAt: now }] }));
-    },
-    updateTrade: (id, input) => {
-      const now = new Date().toISOString();
-      mutate((d) => ({
-        ...d,
-        trades: d.trades.map((t) => {
-          if (t.id !== id) return t;
-          const next: Trade = { ...t, ...input, id, createdAt: t.createdAt, updatedAt: now };
-          // the gaps are filled or they are not; the flag follows the trade
-          next.needsReview = isIncomplete(next) ? true : undefined;
-          return next;
-        }),
-      }));
-    },
-    patchTrades: (ids, patch) => {
-      const set = new Set(ids);
-      const now = new Date().toISOString();
-      mutate((d) => ({
-        ...d,
-        trades: d.trades.map((t) => {
-          if (!set.has(t.id)) return t;
-          const next: Trade = { ...t, ...patch, id: t.id, createdAt: t.createdAt, updatedAt: now };
-          next.needsReview = isIncomplete(next) ? true : undefined;
-          return next;
-        }),
-      }));
-    },
-    deleteTrades: (ids) => {
-      const set = new Set(ids);
-      // a deleted trade should not leave its chart behind in the data folder
-      for (const t of dataRef.current.trades) {
-        if (set.has(t.id) && t.screenshotFile) void deleteScreenshot(t.screenshotFile);
-      }
-      mutate((d) => ({ ...d, trades: d.trades.filter((t) => !set.has(t.id)) }));
-    },
-    setExcluded: (ids, excluded) => {
-      const set = new Set(ids);
-      mutate((d) => ({ ...d, trades: d.trades.map((t) => (set.has(t.id) ? { ...t, excluded } : t)) }));
-    },
-    mergeTrades: (ids) => {
-      const set = new Set(ids);
-      const legs = dataRef.current.trades.filter((t) => set.has(t.id));
-      const issue = mergeIssue(legs);
-      if (issue) return issue;
-      const merged = combineTrades(legs);
-      mutate((d) => ({
-        ...d,
-        trades: [...d.trades.filter((t) => !set.has(t.id)), merged],
-      }));
-      return null;
-    },
-    importTrades: (trades, newSetups) => {
-      mutate((d) => ({ ...d, trades: [...d.trades, ...trades], setups: [...d.setups, ...newSetups] }));
-    },
-    addAccount: (name, startingBalance) => {
-      const account: Account = { id: uid(), name, startingBalance, createdAt: new Date().toISOString() };
-      mutate((d) => ({ ...d, accounts: [...d.accounts, account], activeAccountId: account.id }));
-    },
-    updateAccount: (id, patch) => {
-      mutate((d) => ({ ...d, accounts: d.accounts.map((a) => (a.id === id ? { ...a, ...patch } : a)) }));
-    },
-    deleteAccount: (id) => {
-      mutate((d) => {
-        const accounts = d.accounts.filter((a) => a.id !== id);
-        if (!accounts.length) return d;
-        return {
+  const actions = useMemo<Actions>(
+    () => ({
+      addTrade: (input) => {
+        const now = new Date().toISOString();
+        mutate((d) => ({ ...d, trades: [...d.trades, { ...input, id: uid(), createdAt: now, updatedAt: now }] }));
+      },
+      updateTrade: (id, input) => {
+        const now = new Date().toISOString();
+        mutate((d) => ({
           ...d,
-          accounts,
-          trades: d.trades.filter((t) => t.accountId !== id),
-          activeAccountId: d.activeAccountId === id ? accounts[0].id : d.activeAccountId,
-        };
-      });
-    },
-    setActiveAccount: (id) => mutate((d) => ({ ...d, activeAccountId: id })),
-    upsertSetup: (setup) => {
-      mutate((d) => ({
-        ...d,
-        setups: d.setups.some((s) => s.id === setup.id)
-          ? d.setups.map((s) => (s.id === setup.id ? setup : s))
-          : [...d.setups, setup],
-      }));
-    },
-    deleteSetup: (id) => {
-      mutate((d) => ({
-        ...d,
-        setups: d.setups.filter((s) => s.id !== id),
-        trades: d.trades.map((t) => (t.setupId === id ? { ...t, setupId: undefined } : t)),
-      }));
-    },
-    upsertResource: (resource) => {
-      mutate((d) => ({
-        ...d,
-        resources: d.resources.some((r) => r.id === resource.id)
-          ? d.resources.map((r) => (r.id === resource.id ? resource : r))
-          : [...d.resources, resource],
-      }));
-    },
-    deleteResource: (id) => mutate((d) => ({ ...d, resources: d.resources.filter((r) => r.id !== id) })),
-    updateSettings: (patch) => mutate((d) => ({ ...d, settings: { ...d.settings, ...patch } })),
-    updateProfile: (patch) => mutate((d) => ({ ...d, profile: { ...d.profile, ...patch } })),
-    completeOnboarding: ({ name, accountName, startingBalance, currency }) => {
-      mutate((d) => ({
-        ...d,
-        onboarded: true,
-        profile: { ...d.profile, name },
-        settings: { ...d.settings, currency },
-        accounts: d.accounts.map((a, i) => (i === 0 ? { ...a, name: accountName, startingBalance } : a)),
-      }));
-    },
-    loadSampleData: () => {
-      mutate((d) => {
-        const accountId = d.activeAccountId === 'all' ? d.accounts[0].id : d.activeAccountId;
-        const { trades, setups } = generateSampleData(accountId);
-        const withoutOldSample = {
+          trades: d.trades.map((t) => {
+            if (t.id !== id) return t;
+            const next: Trade = { ...t, ...input, id, createdAt: t.createdAt, updatedAt: now };
+            // the gaps are filled or they are not; the flag follows the trade
+            next.needsReview = isIncomplete(next) ? true : undefined;
+            return next;
+          }),
+        }));
+      },
+      patchTrades: (ids, patch) => {
+        const set = new Set(ids);
+        const now = new Date().toISOString();
+        mutate((d) => ({
+          ...d,
+          trades: d.trades.map((t) => {
+            if (!set.has(t.id)) return t;
+            const next: Trade = { ...t, ...patch, id: t.id, createdAt: t.createdAt, updatedAt: now };
+            next.needsReview = isIncomplete(next) ? true : undefined;
+            return next;
+          }),
+        }));
+      },
+      deleteTrades: (ids) => {
+        const set = new Set(ids);
+        // a deleted trade should not leave its chart behind in the data folder
+        for (const t of dataRef.current.trades) {
+          if (set.has(t.id) && t.screenshotFile) void deleteScreenshot(t.screenshotFile);
+        }
+        mutate((d) => ({ ...d, trades: d.trades.filter((t) => !set.has(t.id)) }));
+      },
+      setExcluded: (ids, excluded) => {
+        const set = new Set(ids);
+        mutate((d) => ({ ...d, trades: d.trades.map((t) => (set.has(t.id) ? { ...t, excluded } : t)) }));
+      },
+      mergeTrades: (ids) => {
+        const set = new Set(ids);
+        const legs = dataRef.current.trades.filter((t) => set.has(t.id));
+        const issue = mergeIssue(legs);
+        if (issue) return issue;
+        const merged = combineTrades(legs);
+        mutate((d) => ({
+          ...d,
+          trades: [...d.trades.filter((t) => !set.has(t.id)), merged],
+        }));
+        return null;
+      },
+      importTrades: (trades, newSetups) => {
+        mutate((d) => ({ ...d, trades: [...d.trades, ...trades], setups: [...d.setups, ...newSetups] }));
+      },
+      addAccount: (name, startingBalance) => {
+        const account: Account = { id: uid(), name, startingBalance, createdAt: new Date().toISOString() };
+        mutate((d) => ({ ...d, accounts: [...d.accounts, account], activeAccountId: account.id }));
+      },
+      updateAccount: (id, patch) => {
+        mutate((d) => ({ ...d, accounts: d.accounts.map((a) => (a.id === id ? { ...a, ...patch } : a)) }));
+      },
+      deleteAccount: (id) => {
+        mutate((d) => {
+          const accounts = d.accounts.filter((a) => a.id !== id);
+          if (!accounts.length) return d;
+          return {
+            ...d,
+            accounts,
+            trades: d.trades.filter((t) => t.accountId !== id),
+            activeAccountId: d.activeAccountId === id ? accounts[0].id : d.activeAccountId,
+          };
+        });
+      },
+      setActiveAccount: (id) => mutate((d) => ({ ...d, activeAccountId: id })),
+      upsertSetup: (setup) => {
+        mutate((d) => ({
+          ...d,
+          setups: d.setups.some((s) => s.id === setup.id)
+            ? d.setups.map((s) => (s.id === setup.id ? setup : s))
+            : [...d.setups, setup],
+        }));
+      },
+      deleteSetup: (id) => {
+        mutate((d) => ({
+          ...d,
+          setups: d.setups.filter((s) => s.id !== id),
+          trades: d.trades.map((t) => (t.setupId === id ? { ...t, setupId: undefined } : t)),
+        }));
+      },
+      upsertResource: (resource) => {
+        mutate((d) => ({
+          ...d,
+          resources: d.resources.some((r) => r.id === resource.id)
+            ? d.resources.map((r) => (r.id === resource.id ? resource : r))
+            : [...d.resources, resource],
+        }));
+      },
+      deleteResource: (id) => mutate((d) => ({ ...d, resources: d.resources.filter((r) => r.id !== id) })),
+      updateSettings: (patch) => mutate((d) => ({ ...d, settings: { ...d.settings, ...patch } })),
+      updateProfile: (patch) => mutate((d) => ({ ...d, profile: { ...d.profile, ...patch } })),
+      completeOnboarding: ({ name, accountName, startingBalance, currency }) => {
+        mutate((d) => ({
+          ...d,
+          onboarded: true,
+          profile: { ...d.profile, name },
+          settings: { ...d.settings, currency },
+          accounts: d.accounts.map((a, i) => (i === 0 ? { ...a, name: accountName, startingBalance } : a)),
+        }));
+      },
+      loadSampleData: () => {
+        mutate((d) => {
+          const accountId = d.activeAccountId === 'all' ? d.accounts[0].id : d.activeAccountId;
+          const { trades, setups } = generateSampleData(accountId);
+          const withoutOldSample = {
+            trades: d.trades.filter((t) => !t.isSample),
+            setups: d.setups.filter((s) => !s.isSample),
+          };
+          // give the demo account a starting balance so the equity curve and
+          // drawdown percentages have something to be measured against
+          const accounts = d.accounts.map((a) =>
+            a.id === accountId && a.startingBalance === 0 ? { ...a, startingBalance: 25000 } : a,
+          );
+          return {
+            ...d,
+            accounts,
+            trades: [...withoutOldSample.trades, ...trades],
+            setups: [...withoutOldSample.setups, ...setups],
+          };
+        });
+      },
+      clearSampleData: () => {
+        mutate((d) => ({
+          ...d,
           trades: d.trades.filter((t) => !t.isSample),
           setups: d.setups.filter((s) => !s.isSample),
-        };
-        // give the demo account a starting balance so the equity curve and
-        // drawdown percentages have something to be measured against
-        const accounts = d.accounts.map((a) =>
-          a.id === accountId && a.startingBalance === 0 ? { ...a, startingBalance: 25000 } : a,
-        );
-        return {
-          ...d,
-          accounts,
-          trades: [...withoutOldSample.trades, ...trades],
-          setups: [...withoutOldSample.setups, ...setups],
-        };
-      });
-    },
-    clearSampleData: () => {
-      mutate((d) => ({
-        ...d,
-        trades: d.trades.filter((t) => !t.isSample),
-        setups: d.setups.filter((s) => !s.isSample),
-      }));
-    },
-    replaceAll: (next) => setData({ ...normalize(next), updatedAt: new Date().toISOString() }),
-    resetAll: () => setData({ ...createDefaultData(), onboarded: true }),
-  }), [mutate]);
+        }));
+      },
+      replaceAll: (next) => setData({ ...normalize(next), updatedAt: new Date().toISOString() }),
+      resetAll: () => setData({ ...createDefaultData(), onboarded: true }),
+    }),
+    [mutate],
+  );
 
   const value = useMemo<JournalContextValue>(() => {
     const isAll = data.activeAccountId === 'all';
@@ -351,10 +361,10 @@ export function JournalProvider({ children }: { children: ReactNode }) {
       actions,
       accountTrades,
       activeAccount,
-      activeLabel: isAll ? 'All accounts' : activeAccount?.name ?? 'Portfolio',
+      activeLabel: isAll ? 'All accounts' : (activeAccount?.name ?? 'Portfolio'),
       startingBalance: isAll
         ? data.accounts.reduce((a, acc) => a + acc.startingBalance, 0)
-        : activeAccount?.startingBalance ?? 0,
+        : (activeAccount?.startingBalance ?? 0),
       balances,
       sampleCount: data.trades.filter((t) => t.isSample).length,
     };

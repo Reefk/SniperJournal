@@ -13,7 +13,9 @@ import { Button } from '@/components/ui/Button';
  * pasting it is the fastest way to do this.
  */
 export function ChartImage({
-  file, onChange, onError,
+  file,
+  onChange,
+  onError,
 }: {
   file?: string;
   onChange: (name: string | undefined) => void;
@@ -30,7 +32,10 @@ export function ChartImage({
     const previous = file;
     const { name, error } = await uploadScreenshot(picked);
     setBusy(false);
-    if (error || !name) { onError(error ?? 'Could not save the image.'); return; }
+    if (error || !name) {
+      onError(error ?? 'Could not save the image.');
+      return;
+    }
     onChange(name);
     if (previous) void deleteScreenshot(previous);
   };
@@ -79,9 +84,16 @@ export function ChartImage({
         <button
           type="button"
           onClick={() => input.current?.click()}
-          onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragging(true);
+          }}
           onDragLeave={() => setDragging(false)}
-          onDrop={(e) => { e.preventDefault(); setDragging(false); void accept(imageFromTransfer(e.dataTransfer.items)); }}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragging(false);
+            void accept(imageFromTransfer(e.dataTransfer.items));
+          }}
           className={cn(
             'flex w-full flex-col items-center justify-center rounded-md border border-dashed px-4 py-7 text-center transition',
             dragging ? 'border-accent bg-accent/5' : 'border-line-strong hover:border-accent/60',
@@ -102,14 +114,21 @@ export function ChartImage({
         type="file"
         accept="image/png,image/jpeg,image/webp,image/gif"
         className="sr-only"
-        onChange={(e) => { void accept(e.target.files?.[0]); e.target.value = ''; }}
+        onChange={(e) => {
+          void accept(e.target.files?.[0]);
+          e.target.value = '';
+        }}
       />
 
       <Modal open={zoomed} onClose={() => setZoomed(false)} size="xl" title="Chart">
         {file && (
           <div className="space-y-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={screenshotSrc(file)} alt="Chart for this trade" className="max-h-[70vh] w-full rounded-md object-contain" />
+            <img
+              src={screenshotSrc(file)}
+              alt="Chart for this trade"
+              className="max-h-[70vh] w-full rounded-md object-contain"
+            />
             <a
               href={screenshotSrc(file)}
               target="_blank"

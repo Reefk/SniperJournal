@@ -5,7 +5,10 @@ import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function Popover({
-  trigger, children, align = 'end', className,
+  trigger,
+  children,
+  align = 'end',
+  className,
 }: {
   trigger: (props: { open: boolean; toggle: () => void }) => ReactNode;
   children: (close: () => void) => ReactNode;
@@ -17,8 +20,12 @@ export function Popover({
 
   useEffect(() => {
     if (!open) return;
-    const onDown = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    const onDown = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
     document.addEventListener('mousedown', onDown);
     document.addEventListener('keydown', onKey);
     return () => {
@@ -31,10 +38,13 @@ export function Popover({
     <div ref={ref} className="relative">
       {trigger({ open, toggle: () => setOpen((o) => !o) })}
       {open && (
-        <div className={cn(
-          'animate-pop absolute top-full z-40 mt-2 rounded-lg border border-line bg-surface p-1 shadow-2xl shadow-black/40',
-          align === 'end' ? 'right-0' : 'left-0', className,
-        )}>
+        <div
+          className={cn(
+            'animate-pop absolute top-full z-40 mt-2 rounded-lg border border-line bg-surface p-1 shadow-2xl shadow-black/40',
+            align === 'end' ? 'right-0' : 'left-0',
+            className,
+          )}
+        >
           {children(() => setOpen(false))}
         </div>
       )}
@@ -43,7 +53,12 @@ export function Popover({
 }
 
 export function MenuItem({
-  icon: Icon, children, onClick, selected, danger, trailing,
+  icon: Icon,
+  children,
+  onClick,
+  selected,
+  danger,
+  trailing,
 }: {
   icon?: ComponentType<{ className?: string }>;
   children: ReactNode;

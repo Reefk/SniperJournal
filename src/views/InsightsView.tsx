@@ -1,9 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import {
-  BrainCircuit, CircleAlert, CircleCheck, Info, Lightbulb, Plus, TriangleAlert,
-} from 'lucide-react';
+import { BrainCircuit, CircleAlert, CircleCheck, Info, Lightbulb, Plus, TriangleAlert } from 'lucide-react';
 import { useJournal } from '@/store/JournalProvider';
 import { useUI } from '@/store/UIProvider';
 import { buildInsights, buildSignals, MIN_TRADES_FOR_INSIGHTS, type Tone } from '@/lib/insights';
@@ -30,7 +28,10 @@ export function InsightsView() {
 
   const closedCount = statTrades(accountTrades).length;
   const signals = useMemo(() => buildSignals(accountTrades, data.settings), [accountTrades, data.settings]);
-  const insights = useMemo(() => buildInsights(accountTrades, data.setups, data.settings), [accountTrades, data.setups, data.settings]);
+  const insights = useMemo(
+    () => buildInsights(accountTrades, data.setups, data.settings),
+    [accountTrades, data.setups, data.settings],
+  );
   const stats = useMemo(() => computeStats(accountTrades), [accountTrades]);
   const score = useMemo(() => sniperScore(accountTrades, stats), [accountTrades, stats]);
 
@@ -39,7 +40,14 @@ export function InsightsView() {
     return [
       { title: 'By symbol', rows: groupTrades(closed, (t) => t.symbol).slice(0, 6) },
       { title: 'By session', rows: groupTrades(closed, (t) => t.session).slice(0, 6) },
-      { title: 'By weekday', rows: groupTrades(closed, (t) => String(parseLocal(t.openedAt).getDay()), (k) => WEEKDAYS[(Number(k) + 6) % 7]).slice(0, 7) },
+      {
+        title: 'By weekday',
+        rows: groupTrades(
+          closed,
+          (t) => String(parseLocal(t.openedAt).getDay()),
+          (k) => WEEKDAYS[(Number(k) + 6) % 7],
+        ).slice(0, 7),
+      },
       { title: 'By tag', rows: groupTrades(closed, (t) => t.tags).slice(0, 6) },
     ].filter((b) => b.rows.length > 0);
   }, [accountTrades]);
@@ -47,12 +55,23 @@ export function InsightsView() {
   if (closedCount < MIN_TRADES_FOR_INSIGHTS) {
     return (
       <>
-        <PageHeader title="AI Insights & Signals" description="Patterns found in your own trades, not generic advice." />
+        <PageHeader
+          title="AI Insights & Signals"
+          description="Patterns found in your own trades, not generic advice."
+        />
         <EmptyState
           icon={BrainCircuit}
-          title={closedCount === 0 ? 'Nothing to analyse yet' : `${MIN_TRADES_FOR_INSIGHTS - closedCount} more closed trades needed`}
+          title={
+            closedCount === 0
+              ? 'Nothing to analyse yet'
+              : `${MIN_TRADES_FOR_INSIGHTS - closedCount} more closed trades needed`
+          }
           description={`This page reads your journal and reports what it finds: which session pays you, whether you revenge trade, whether you hold losers longer than winners. It stays quiet until there are at least ${MIN_TRADES_FOR_INSIGHTS} closed trades, because anything less is noise rather than a pattern.`}
-          actions={<Button variant="primary" onClick={() => openTradeForm()}><Plus className="size-4" /> Log a trade</Button>}
+          actions={
+            <Button variant="primary" onClick={() => openTradeForm()}>
+              <Plus className="size-4" /> Log a trade
+            </Button>
+          }
         />
       </>
     );
@@ -96,7 +115,9 @@ export function InsightsView() {
               <article key={insight.id} className="rounded-xl border border-line bg-surface p-5">
                 <div className="flex items-center gap-2">
                   <Icon className={cn('size-4 shrink-0', style.text)} />
-                  <span className="rounded border border-line px-1.5 py-0.5 text-[11px] font-medium text-muted">{insight.category}</span>
+                  <span className="rounded border border-line px-1.5 py-0.5 text-[11px] font-medium text-muted">
+                    {insight.category}
+                  </span>
                   {insight.metric && <span className="num ml-auto text-xs text-faint">{insight.metric}</span>}
                 </div>
                 <h3 className="mt-3 text-[15px] font-semibold leading-snug text-fg">{insight.title}</h3>
@@ -119,7 +140,12 @@ export function InsightsView() {
                       <td className="max-w-[120px] truncate px-2 py-2 text-fg">{row.label}</td>
                       <td className="num px-1 py-2 text-right text-xs text-faint">{row.trades}×</td>
                       <td className="num px-1 py-2 text-right text-xs text-muted">{formatPct(row.winRate, 0)}</td>
-                      <td className={cn('num px-2 py-2 text-right font-medium', row.net > 0 ? 'text-profit' : row.net < 0 ? 'text-loss' : 'text-muted')}>
+                      <td
+                        className={cn(
+                          'num px-2 py-2 text-right font-medium',
+                          row.net > 0 ? 'text-profit' : row.net < 0 ? 'text-loss' : 'text-muted',
+                        )}
+                      >
                         {formatMoney(row.net, currency, { sign: true, compact: true })}
                       </td>
                     </tr>
@@ -135,7 +161,9 @@ export function InsightsView() {
         <div className="flex items-center gap-2">
           <Lightbulb className="size-4 text-accent" />
           <h2 className="text-sm font-semibold text-fg">Sniper Score breakdown</h2>
-          {score.overall != null && <span className="num ml-auto text-sm font-semibold text-accent">{score.overall} / 100</span>}
+          {score.overall != null && (
+            <span className="num ml-auto text-sm font-semibold text-accent">{score.overall} / 100</span>
+          )}
         </div>
         <div className="mt-4 space-y-2.5">
           {score.axes.map((axis) => (
@@ -144,7 +172,10 @@ export function InsightsView() {
               <div className="h-1.5 overflow-hidden rounded-full bg-line">
                 <div
                   className="h-full rounded-full transition-all duration-700"
-                  style={{ width: `${axis.rated ? axis.score : 0}%`, background: axis.rated ? 'var(--accent)' : 'var(--line-strong)' }}
+                  style={{
+                    width: `${axis.rated ? axis.score : 0}%`,
+                    background: axis.rated ? 'var(--accent)' : 'var(--line-strong)',
+                  }}
                 />
               </div>
               <span className={cn('num w-32 text-right text-xs', axis.rated ? 'text-fg' : 'text-faint')}>

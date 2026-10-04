@@ -170,7 +170,11 @@ export function TradeFormModal() {
       closeOnBackdrop={false}
       size="xl"
       title={editing ? `Edit ${editing.symbol} trade` : 'Log a trade'}
-      description={editing ? 'Changes are saved to your journal immediately.' : 'Leave the exit price empty if the position is still open.'}
+      description={
+        editing
+          ? 'Changes are saved to your journal immediately.'
+          : 'Leave the exit price empty if the position is still open.'
+      }
     >
       <TradeForm key={tradeForm.nonce} trade={editing} defaults={tradeForm.defaults} onDone={closeTradeForm} />
     </Modal>
@@ -184,8 +188,8 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
   const fallbackAccount = data.activeAccountId === 'all' ? data.accounts[0].id : data.activeAccountId;
   const [form, setForm] = useState<FormState>(() => initialState(fallbackAccount, trade, defaults));
   const [errors, setErrors] = useState<Errors>({});
-  const [showAdvanced, setShowAdvanced] = useState(
-    () => Boolean(trade && (trade.manualPnl != null || (trade.multiplier && trade.multiplier !== 1) || trade.screenshotUrl)),
+  const [showAdvanced, setShowAdvanced] = useState(() =>
+    Boolean(trade && (trade.manualPnl != null || (trade.multiplier && trade.multiplier !== 1) || trade.screenshotUrl)),
   );
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => {
@@ -214,13 +218,18 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
   const entry = toNumberOrNull(form.entryPrice);
   const stop = toNumberOrNull(form.stopLoss);
   const stopWarning =
-    entry != null && stop != null && ((form.side === 'LONG' && stop >= entry) || (form.side === 'SHORT' && stop <= entry))
+    entry != null &&
+    stop != null &&
+    ((form.side === 'LONG' && stop >= entry) || (form.side === 'SHORT' && stop <= entry))
       ? `Your stop is ${form.side === 'LONG' ? 'above' : 'below'} the entry for a ${form.side.toLowerCase()}`
       : null;
 
   const save = (addAnother: boolean) => {
     const result = validate(form, trade);
-    if (!result.input) { setErrors(result.errors); return; }
+    if (!result.input) {
+      setErrors(result.errors);
+      return;
+    }
     if (trade) {
       actions.updateTrade(trade.id, result.input);
       toast(`${result.input.symbol} trade updated`);
@@ -230,7 +239,13 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
     actions.addTrade(result.input);
     toast(`${result.input.symbol} trade saved`);
     if (addAnother) {
-      setForm((f) => ({ ...initialState(f.accountId), side: f.side, setupId: f.setupId, fees: f.fees, multiplier: f.multiplier }));
+      setForm((f) => ({
+        ...initialState(f.accountId),
+        side: f.side,
+        setupId: f.setupId,
+        fees: f.fees,
+        multiplier: f.multiplier,
+      }));
       setErrors({});
     } else onDone();
   };
@@ -243,13 +258,25 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
       confirmLabel: 'Delete trade',
       tone: 'danger',
     });
-    if (ok) { actions.deleteTrades([trade.id]); toast('Trade deleted'); onDone(); }
+    if (ok) {
+      actions.deleteTrades([trade.id]);
+      toast('Trade deleted');
+      onDone();
+    }
   };
 
   return (
     <form
-      onSubmit={(e) => { e.preventDefault(); save(false); }}
-      onKeyDown={(e) => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); save(false); } }}
+      onSubmit={(e) => {
+        e.preventDefault();
+        save(false);
+      }}
+      onKeyDown={(e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+          e.preventDefault();
+          save(false);
+        }
+      }}
     >
       <div className="grid grid-cols-[minmax(0,1fr)_300px] gap-6">
         {/* --------------- left: the trade --------------- */}
@@ -265,11 +292,19 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
                 invalid={Boolean(errors.symbol)}
                 className="font-semibold uppercase"
               />
-              <datalist id="sj-symbols">{symbols.map((s) => <option key={s} value={s} />)}</datalist>
+              <datalist id="sj-symbols">
+                {symbols.map((s) => (
+                  <option key={s} value={s} />
+                ))}
+              </datalist>
             </Field>
             <Field label="Account">
               <Select value={form.accountId} onChange={(e) => set('accountId', e.target.value)}>
-                {data.accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                {data.accounts.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
+                ))}
               </Select>
             </Field>
             <Field label="Side">
@@ -286,7 +321,9 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
                       className={cn(
                         'flex items-center justify-center gap-1 rounded px-3 text-xs font-semibold transition',
                         active
-                          ? s === 'LONG' ? 'bg-profit/15 text-profit ring-1 ring-profit/30' : 'bg-loss/15 text-loss ring-1 ring-loss/30'
+                          ? s === 'LONG'
+                            ? 'bg-profit/15 text-profit ring-1 ring-profit/30'
+                            : 'bg-loss/15 text-loss ring-1 ring-loss/30'
                           : 'text-muted hover:text-fg',
                       )}
                     >
@@ -301,34 +338,85 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
 
           <div className="grid grid-cols-2 gap-3">
             <Field label="Entry time" error={errors.openedAt}>
-              <Input type="datetime-local" className="num" value={form.openedAt} onChange={(e) => set('openedAt', e.target.value)} invalid={Boolean(errors.openedAt)} />
+              <Input
+                type="datetime-local"
+                className="num"
+                value={form.openedAt}
+                onChange={(e) => set('openedAt', e.target.value)}
+                invalid={Boolean(errors.openedAt)}
+              />
             </Field>
             <Field label="Exit time" hint="optional" error={errors.closedAt}>
-              <Input type="datetime-local" className="num" value={form.closedAt} onChange={(e) => set('closedAt', e.target.value)} invalid={Boolean(errors.closedAt)} />
+              <Input
+                type="datetime-local"
+                className="num"
+                value={form.closedAt}
+                onChange={(e) => set('closedAt', e.target.value)}
+                invalid={Boolean(errors.closedAt)}
+              />
             </Field>
           </div>
 
           <div className="grid grid-cols-3 gap-3">
             <Field label="Quantity" error={errors.quantity}>
-              <Input inputMode="decimal" className="num" value={form.quantity} onChange={(e) => set('quantity', e.target.value)} placeholder="0" invalid={Boolean(errors.quantity)} />
+              <Input
+                inputMode="decimal"
+                className="num"
+                value={form.quantity}
+                onChange={(e) => set('quantity', e.target.value)}
+                placeholder="0"
+                invalid={Boolean(errors.quantity)}
+              />
             </Field>
             <Field label="Entry price" error={errors.entryPrice}>
-              <Input inputMode="decimal" className="num" value={form.entryPrice} onChange={(e) => set('entryPrice', e.target.value)} placeholder="0.00" invalid={Boolean(errors.entryPrice)} />
+              <Input
+                inputMode="decimal"
+                className="num"
+                value={form.entryPrice}
+                onChange={(e) => set('entryPrice', e.target.value)}
+                placeholder="0.00"
+                invalid={Boolean(errors.entryPrice)}
+              />
             </Field>
             <Field label="Exit price" hint="empty = open" error={errors.exitPrice}>
-              <Input inputMode="decimal" className="num" value={form.exitPrice} onChange={(e) => set('exitPrice', e.target.value)} placeholder="0.00" disabled={form.pnlMode === 'manual'} />
+              <Input
+                inputMode="decimal"
+                className="num"
+                value={form.exitPrice}
+                onChange={(e) => set('exitPrice', e.target.value)}
+                placeholder="0.00"
+                disabled={form.pnlMode === 'manual'}
+              />
             </Field>
           </div>
 
           <div className="grid grid-cols-3 gap-3">
             <Field label="Stop loss" hint="optional" error={errors.stopLoss}>
-              <Input inputMode="decimal" className="num" value={form.stopLoss} onChange={(e) => set('stopLoss', e.target.value)} placeholder="0.00" />
+              <Input
+                inputMode="decimal"
+                className="num"
+                value={form.stopLoss}
+                onChange={(e) => set('stopLoss', e.target.value)}
+                placeholder="0.00"
+              />
             </Field>
             <Field label="Take profit" hint="optional" error={errors.takeProfit}>
-              <Input inputMode="decimal" className="num" value={form.takeProfit} onChange={(e) => set('takeProfit', e.target.value)} placeholder="0.00" />
+              <Input
+                inputMode="decimal"
+                className="num"
+                value={form.takeProfit}
+                onChange={(e) => set('takeProfit', e.target.value)}
+                placeholder="0.00"
+              />
             </Field>
             <Field label="Fees & commissions" error={errors.fees}>
-              <Input inputMode="decimal" className="num" value={form.fees} onChange={(e) => set('fees', e.target.value)} placeholder="0.00" />
+              <Input
+                inputMode="decimal"
+                className="num"
+                value={form.fees}
+                onChange={(e) => set('fees', e.target.value)}
+                placeholder="0.00"
+              />
             </Field>
           </div>
           {stopWarning && (
@@ -341,19 +429,38 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
             <Field label="Setup" hint={data.setups.length ? undefined : 'add in Playbook'}>
               <Select value={form.setupId} onChange={(e) => set('setupId', e.target.value)}>
                 <option value="">No setup</option>
-                {data.setups.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                {data.setups.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
               </Select>
             </Field>
             <Field label="Session" hint={!form.sessionTouched && form.session ? 'from entry time' : undefined}>
-              <Select value={form.session} onChange={(e) => setForm((f) => ({ ...f, session: e.target.value, sessionTouched: true }))}>
+              <Select
+                value={form.session}
+                onChange={(e) => setForm((f) => ({ ...f, session: e.target.value, sessionTouched: true }))}
+              >
                 <option value="">None</option>
-                {SESSIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+                {SESSIONS.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
               </Select>
             </Field>
             <Field label="Leverage" hint="optional">
               <div className="relative">
-                <Input inputMode="decimal" className="num pr-7" value={form.leverage} onChange={(e) => set('leverage', e.target.value)} placeholder="1" />
-                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-faint">×</span>
+                <Input
+                  inputMode="decimal"
+                  className="num pr-7"
+                  value={form.leverage}
+                  onChange={(e) => set('leverage', e.target.value)}
+                  placeholder="1"
+                />
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-faint">
+                  ×
+                </span>
               </div>
             </Field>
           </div>
@@ -363,7 +470,11 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
           </Field>
 
           <Field label="Notes">
-            <Textarea value={form.notes} onChange={(e) => set('notes', e.target.value)} placeholder="Why you took it, how you managed it, what you would do differently" />
+            <Textarea
+              value={form.notes}
+              onChange={(e) => set('notes', e.target.value)}
+              placeholder="Why you took it, how you managed it, what you would do differently"
+            />
           </Field>
 
           <div className="rounded-lg border border-line">
@@ -379,24 +490,45 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
             {showAdvanced && (
               <div className="grid grid-cols-3 gap-3 border-t border-line p-3">
                 <Field label="Contract multiplier" hint="1 = shares" error={errors.multiplier}>
-                  <Input inputMode="decimal" className="num" value={form.multiplier} onChange={(e) => set('multiplier', e.target.value)} placeholder="1" />
+                  <Input
+                    inputMode="decimal"
+                    className="num"
+                    value={form.multiplier}
+                    onChange={(e) => set('multiplier', e.target.value)}
+                    placeholder="1"
+                  />
                 </Field>
                 <Field label="P&L calculation">
                   <SegmentedControl
                     className="flex h-9 w-full [&>button]:flex-1 [&>button]:justify-center"
                     value={form.pnlMode}
                     onChange={(v) => set('pnlMode', v)}
-                    options={[{ value: 'auto', label: 'From prices' }, { value: 'manual', label: 'Manual' }]}
+                    options={[
+                      { value: 'auto', label: 'From prices' },
+                      { value: 'manual', label: 'Manual' },
+                    ]}
                   />
                 </Field>
                 <Field label="Gross P&L" hint="before fees" error={errors.manualPnl}>
-                  <Input inputMode="decimal" className="num" value={form.manualPnl} onChange={(e) => set('manualPnl', e.target.value)} placeholder="0.00" disabled={form.pnlMode !== 'manual'} />
+                  <Input
+                    inputMode="decimal"
+                    className="num"
+                    value={form.manualPnl}
+                    onChange={(e) => set('manualPnl', e.target.value)}
+                    placeholder="0.00"
+                    disabled={form.pnlMode !== 'manual'}
+                  />
                 </Field>
                 <p className="col-span-3 text-xs leading-relaxed text-faint">
-                  Multiplier examples: ES = 50, NQ = 20, MES = 5, one standard forex lot = 100,000 units. Use manual P&L when copying the figure straight from your broker is simpler.
+                  Multiplier examples: ES = 50, NQ = 20, MES = 5, one standard forex lot = 100,000 units. Use manual P&L
+                  when copying the figure straight from your broker is simpler.
                 </p>
                 <Field label="Chart link" hint="instead of, or alongside, an uploaded image" className="col-span-3">
-                  <Input value={form.screenshotUrl} onChange={(e) => set('screenshotUrl', e.target.value)} placeholder="https://www.tradingview.com/x/…" />
+                  <Input
+                    value={form.screenshotUrl}
+                    onChange={(e) => set('screenshotUrl', e.target.value)}
+                    placeholder="https://www.tradingview.com/x/…"
+                  />
                 </Field>
               </div>
             )}
@@ -407,21 +539,25 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
         <div className="space-y-4">
           <div className="rounded-lg border border-line bg-app p-4">
             <div className="text-xs text-muted">{closed ? 'Net P&L' : 'Position'}</div>
-            <div className={cn(
-              'num mt-1 text-[30px] font-semibold leading-9',
-              !closed ? 'text-accent' : net > 0 ? 'text-profit' : net < 0 ? 'text-loss' : 'text-fg',
-            )}>
+            <div
+              className={cn(
+                'num mt-1 text-[30px] font-semibold leading-9',
+                !closed ? 'text-accent' : net > 0 ? 'text-profit' : net < 0 ? 'text-loss' : 'text-fg',
+              )}
+            >
               {closed ? formatMoney(net, currency, { sign: true }) : 'Open'}
             </div>
             <dl className="mt-4 space-y-2 text-sm">
-              {([
-                ['Gross P&L', closed ? formatMoney(grossPnl(preview), currency, { sign: true }) : '—'],
-                ['Fees', formatMoney(-(preview.fees || 0), currency)],
-                ['R multiple', r == null ? '—' : `${r >= 0 ? '+' : ''}${r.toFixed(2)}R`],
-                ['Risk', risk == null ? '—' : formatMoney(risk, currency)],
-                ['Planned R:R', rr == null ? '—' : `1:${formatRatio(rr)}`],
-                ['Hold time', formatDuration(holdMinutes(preview))],
-              ] as const).map(([label, value]) => (
+              {(
+                [
+                  ['Gross P&L', closed ? formatMoney(grossPnl(preview), currency, { sign: true }) : '—'],
+                  ['Fees', formatMoney(-(preview.fees || 0), currency)],
+                  ['R multiple', r == null ? '—' : `${r >= 0 ? '+' : ''}${r.toFixed(2)}R`],
+                  ['Risk', risk == null ? '—' : formatMoney(risk, currency)],
+                  ['Planned R:R', rr == null ? '—' : `1:${formatRatio(rr)}`],
+                  ['Hold time', formatDuration(holdMinutes(preview))],
+                ] as const
+              ).map(([label, value]) => (
                 <div key={label} className="flex items-center justify-between">
                   <dt className="text-muted">{label}</dt>
                   <dd className="num text-fg">{value}</dd>
@@ -455,9 +591,17 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
           </Button>
         )}
         <span className="ml-auto mr-2 text-xs text-faint">Ctrl + Enter to save</span>
-        <Button variant="ghost" onClick={onDone}>Cancel</Button>
-        {!trade && <Button variant="secondary" onClick={() => save(true)}>Save and log another</Button>}
-        <Button variant="primary" type="submit">{trade ? 'Save changes' : 'Save trade'}</Button>
+        <Button variant="ghost" onClick={onDone}>
+          Cancel
+        </Button>
+        {!trade && (
+          <Button variant="secondary" onClick={() => save(true)}>
+            Save and log another
+          </Button>
+        )}
+        <Button variant="primary" type="submit">
+          {trade ? 'Save changes' : 'Save trade'}
+        </Button>
       </div>
     </form>
   );

@@ -50,7 +50,10 @@ export function CalendarView() {
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
   const monthPrefix = `${cursor.year}-${pad2(cursor.month + 1)}`;
-  const monthTrades = useMemo(() => accountTrades.filter((t) => tradeDay(t).startsWith(monthPrefix)), [accountTrades, monthPrefix]);
+  const monthTrades = useMemo(
+    () => accountTrades.filter((t) => tradeDay(t).startsWith(monthPrefix)),
+    [accountTrades, monthPrefix],
+  );
   const stats = useMemo(() => computeStats(monthTrades), [monthTrades]);
   const dayMap = useMemo(() => new Map(aggregateDays(monthTrades).map((d) => [d.day, d])), [monthTrades]);
   const cells = useMemo(() => monthGrid(cursor.year, cursor.month), [cursor]);
@@ -77,7 +80,7 @@ export function CalendarView() {
     return [...set].sort().reverse();
   }, [accountTrades]);
 
-  const selectedTrades = selectedDay ? tradesByDay.get(selectedDay) ?? [] : [];
+  const selectedTrades = selectedDay ? (tradesByDay.get(selectedDay) ?? []) : [];
   const todayKey = dateKey(today);
 
   return (
@@ -88,12 +91,20 @@ export function CalendarView() {
         actions={
           <>
             <div className="flex items-center gap-1 rounded-lg border border-line bg-surface p-0.5">
-              <Button size="icon" variant="ghost" onClick={() => move(-1)} aria-label="Previous month"><ChevronLeft className="size-4" /></Button>
-              <span className="min-w-[150px] px-2 text-center text-sm font-medium text-fg">{formatMonthKey(cursor.year, cursor.month)}</span>
-              <Button size="icon" variant="ghost" onClick={() => move(1)} aria-label="Next month"><ChevronRight className="size-4" /></Button>
+              <Button size="icon" variant="ghost" onClick={() => move(-1)} aria-label="Previous month">
+                <ChevronLeft className="size-4" />
+              </Button>
+              <span className="min-w-[150px] px-2 text-center text-sm font-medium text-fg">
+                {formatMonthKey(cursor.year, cursor.month)}
+              </span>
+              <Button size="icon" variant="ghost" onClick={() => move(1)} aria-label="Next month">
+                <ChevronRight className="size-4" />
+              </Button>
             </div>
             <Button onClick={() => setCursor({ year: today.getFullYear(), month: today.getMonth() })}>Today</Button>
-            <Button variant="primary" onClick={() => openTradeForm()}><Plus className="size-4" /> Log trade</Button>
+            <Button variant="primary" onClick={() => openTradeForm()}>
+              <Plus className="size-4" /> Log trade
+            </Button>
           </>
         }
       />
@@ -103,14 +114,30 @@ export function CalendarView() {
           icon={CalendarDays}
           title="Your trading calendar is empty"
           description="Once you log trades, each day fills in with its net profit or loss and the number of trades you took, so streaks and problem days become obvious at a glance."
-          actions={<Button variant="primary" onClick={() => openTradeForm()}><Plus className="size-4" /> Log a trade</Button>}
+          actions={
+            <Button variant="primary" onClick={() => openTradeForm()}>
+              <Plus className="size-4" /> Log a trade
+            </Button>
+          }
         />
       ) : (
         <>
           <div className="grid grid-cols-4 gap-4">
-            <MetricCard label="Monthly net P&L" value={formatMoney(stats.net, currency, { sign: true })} tone={toneFor(stats.net)} />
-            <MetricCard label="Total trades" value={stats.total} sub={stats.open > 0 ? `${stats.open} still open` : undefined} />
-            <MetricCard label="Active days" value={stats.activeDays} sub={`${stats.days.filter((d) => d.net > 0).length} green, ${stats.days.filter((d) => d.net < 0).length} red`} />
+            <MetricCard
+              label="Monthly net P&L"
+              value={formatMoney(stats.net, currency, { sign: true })}
+              tone={toneFor(stats.net)}
+            />
+            <MetricCard
+              label="Total trades"
+              value={stats.total}
+              sub={stats.open > 0 ? `${stats.open} still open` : undefined}
+            />
+            <MetricCard
+              label="Active days"
+              value={stats.activeDays}
+              sub={`${stats.days.filter((d) => d.net > 0).length} green, ${stats.days.filter((d) => d.net < 0).length} red`}
+            />
             <MetricCard
               label="Win rate this month"
               value={stats.total ? formatPct(stats.winRate) : '—'}
@@ -121,7 +148,9 @@ export function CalendarView() {
           <div className="mt-4 overflow-hidden rounded-xl border border-line bg-surface">
             <div className="grid grid-cols-7 border-b border-line bg-app/40">
               {WEEKDAYS.map((d) => (
-                <div key={d} className="px-3 py-2.5 text-center text-xs font-medium text-muted">{d}</div>
+                <div key={d} className="px-3 py-2.5 text-center text-xs font-medium text-muted">
+                  {d}
+                </div>
               ))}
             </div>
             <div className="grid grid-cols-7">
@@ -145,15 +174,26 @@ export function CalendarView() {
                       hasTrades && agg && agg.net < 0 && 'bg-loss/[0.07]',
                     )}
                   >
-                    <span className={cn(
-                      'absolute left-2.5 top-2 text-xs',
-                      isToday ? 'grid size-5 place-items-center rounded-full bg-accent-strong font-semibold text-white' : cell.inMonth ? 'text-muted' : 'text-faint/60',
-                    )}>
+                    <span
+                      className={cn(
+                        'absolute left-2.5 top-2 text-xs',
+                        isToday
+                          ? 'grid size-5 place-items-center rounded-full bg-accent-strong font-semibold text-white'
+                          : cell.inMonth
+                            ? 'text-muted'
+                            : 'text-faint/60',
+                      )}
+                    >
                       {cell.day}
                     </span>
                     {hasTrades && agg && (
                       <>
-                        <span className={cn('num text-[17px] font-semibold', agg.net > 0 ? 'text-profit' : agg.net < 0 ? 'text-loss' : 'text-muted')}>
+                        <span
+                          className={cn(
+                            'num text-[17px] font-semibold',
+                            agg.net > 0 ? 'text-profit' : agg.net < 0 ? 'text-loss' : 'text-muted',
+                          )}
+                        >
                           {formatMoney(agg.net, currency, { sign: true, compact: Math.abs(agg.net) >= 10000 })}
                         </span>
                         <span className="text-[10px] font-medium uppercase tracking-wide text-faint">
@@ -195,7 +235,11 @@ export function CalendarView() {
         title={selectedDay ? formatDate(selectedDay) : ''}
         description={
           selectedDay
-            ? `${selectedTrades.length} ${selectedTrades.length === 1 ? 'trade' : 'trades'} · net ${formatMoney(selectedTrades.reduce((a, t) => a + netPnl(t), 0), currency, { sign: true })}`
+            ? `${selectedTrades.length} ${selectedTrades.length === 1 ? 'trade' : 'trades'} · net ${formatMoney(
+                selectedTrades.reduce((a, t) => a + netPnl(t), 0),
+                currency,
+                { sign: true },
+              )}`
             : undefined
         }
       >
@@ -204,14 +248,22 @@ export function CalendarView() {
             <li key={t.id}>
               <button
                 type="button"
-                onClick={() => { setSelectedDay(null); openTradeForm({ trade: t }); }}
+                onClick={() => {
+                  setSelectedDay(null);
+                  openTradeForm({ trade: t });
+                }}
                 className="flex w-full items-center gap-3 rounded-md px-2 py-2.5 text-left transition hover:bg-raised"
               >
                 <span className="w-20 shrink-0 truncate font-semibold text-fg">{t.symbol}</span>
                 <SideBadge side={t.side} />
-                <span className="num flex-1 truncate text-xs text-faint">{t.openedAt.slice(11, 16)}{t.closedAt ? ` – ${t.closedAt.slice(11, 16)}` : ''}</span>
+                <span className="num flex-1 truncate text-xs text-faint">
+                  {t.openedAt.slice(11, 16)}
+                  {t.closedAt ? ` – ${t.closedAt.slice(11, 16)}` : ''}
+                </span>
                 {t.tags.slice(0, 2).map((tag) => (
-                  <span key={tag} className="rounded bg-raised px-1.5 py-0.5 text-[11px] text-muted ring-1 ring-line">{tag}</span>
+                  <span key={tag} className="rounded bg-raised px-1.5 py-0.5 text-[11px] text-muted ring-1 ring-line">
+                    {tag}
+                  </span>
                 ))}
                 <PnlValue value={netPnl(t)} open={!isClosed(t)} currency={currency} />
               </button>

@@ -63,8 +63,18 @@ export function formatRatio(value: number | null | undefined, decimals = 2): str
 }
 
 export const MONTHS_LONG = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
 ];
 export const MONTHS_SHORT = MONTHS_LONG.map((m) => m.slice(0, 3));
 /** Monday-first, as the calendar grid is laid out */

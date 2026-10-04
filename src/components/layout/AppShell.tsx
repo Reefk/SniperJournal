@@ -26,7 +26,10 @@ export function AppShell({ children }: { children: ReactNode }) {
     const onKey = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey || isTypingTarget(e.target)) return;
       if (document.querySelector('[data-modal-root]')) return;
-      if (e.key === 'n' || e.key === 'N') { e.preventDefault(); openTradeForm(); }
+      if (e.key === 'n' || e.key === 'N') {
+        e.preventDefault();
+        openTradeForm();
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -50,7 +53,10 @@ export function AppShell({ children }: { children: ReactNode }) {
       confirmLabel: 'Remove test data',
       tone: 'danger',
     });
-    if (ok) { actions.clearSampleData(); toast('Test data removed'); }
+    if (ok) {
+      actions.clearSampleData();
+      toast('Test data removed');
+    }
   };
 
   return (

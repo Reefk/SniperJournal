@@ -1,4 +1,10 @@
-import { forwardRef, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
+import {
+  forwardRef,
+  type InputHTMLAttributes,
+  type ReactNode,
+  type SelectHTMLAttributes,
+  type TextareaHTMLAttributes,
+} from 'react';
 import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -6,8 +12,18 @@ export const inputClass =
   'h-9 w-full rounded-md border border-line bg-app px-3 text-sm text-fg placeholder:text-faint transition focus:border-accent/70 focus:outline-none focus:ring-2 focus:ring-accent/20 disabled:opacity-60';
 
 export function Field({
-  label, hint, error, children, className,
-}: { label: ReactNode; hint?: ReactNode; error?: string; children: ReactNode; className?: string }) {
+  label,
+  hint,
+  error,
+  children,
+  className,
+}: {
+  label: ReactNode;
+  hint?: ReactNode;
+  error?: string;
+  children: ReactNode;
+  className?: string;
+}) {
   return (
     <div className={cn('min-w-0', className)}>
       <div className="mb-1.5 flex items-baseline justify-between gap-2 text-xs">
@@ -27,7 +43,8 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
 );
 
 export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSelectElement>>(function Select(
-  { className, children, ...rest }, ref,
+  { className, children, ...rest },
+  ref,
 ) {
   return (
     <div className={cn('relative', className)}>
@@ -40,7 +57,14 @@ export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSel
 });
 
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<HTMLTextAreaElement>>(function Textarea(
-  { className, ...rest }, ref,
+  { className, ...rest },
+  ref,
 ) {
-  return <textarea ref={ref} className={cn(inputClass, 'h-auto min-h-[84px] resize-y py-2 leading-relaxed', className)} {...rest} />;
+  return (
+    <textarea
+      ref={ref}
+      className={cn(inputClass, 'h-auto min-h-[84px] resize-y py-2 leading-relaxed', className)}
+      {...rest}
+    />
+  );
 });

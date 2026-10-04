@@ -1,0 +1,6 @@
+.next
+node_modules
+data
+package-lock.json
+*.ico
+*.png

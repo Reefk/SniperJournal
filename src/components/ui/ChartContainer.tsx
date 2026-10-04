@@ -2,7 +2,14 @@ import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 export function ChartContainer({
-  title, subtitle, actions, children, className, bodyClassName, empty, emptyText,
+  title,
+  subtitle,
+  actions,
+  children,
+  className,
+  bodyClassName,
+  empty,
+  emptyText,
 }: {
   title: ReactNode;
   subtitle?: ReactNode;
@@ -27,7 +34,9 @@ export function ChartContainer({
           <div className="grid h-full min-h-[180px] place-items-center px-6 text-center text-sm leading-relaxed text-faint">
             {emptyText ?? 'No data yet'}
           </div>
-        ) : children}
+        ) : (
+          children
+        )}
       </div>
     </section>
   );

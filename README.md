@@ -24,14 +24,14 @@ it saves the whole dance below.
 4. The app opens, and from then on it is simply there. **No black window to keep
    open, nothing to close.** It starts with Windows and waits for you.
 5. **Install it as a proper app** (worth the ten seconds): in Chrome, click the
-   three dots at the top right → *Cast, save and share* → **Install page as
+   three dots at the top right → _Cast, save and share_ → **Install page as
    app**. Sniper Journal then gets its own window with no address bar, its own
    icon in the Start menu and on the taskbar, and behaves like any other
    installed program.
 
 ### If you skipped the Unblock step
 
-You will see one blue screen saying *Windows protected your PC* when you run the
+You will see one blue screen saying _Windows protected your PC_ when you run the
 installer. Click **More info**, then **Run anyway**. That is the only time: part
 of the installer's job is clearing that mark from every file in the folder, so
 the desktop icon and the launcher open straight away afterwards.
@@ -48,13 +48,13 @@ else — double-click `create-shortcut.bat`.
 The server is the app. It runs hidden, with no console window, and starts when
 you sign in to Windows, so <http://localhost:3000> always answers.
 
-| If you want to | Double-click |
-| --- | --- |
-| Open the app | the desktop icon, or the installed app's icon |
-| Shut it down | `stop.bat` |
-| Stop it starting with Windows | `autostart-off.bat` |
-| Turn that back on | `autostart-on.bat` |
-| Watch the server while it runs | `stop.bat`, then `start.bat` |
+| If you want to                 | Double-click                                  |
+| ------------------------------ | --------------------------------------------- |
+| Open the app                   | the desktop icon, or the installed app's icon |
+| Shut it down                   | `stop.bat`                                    |
+| Stop it starting with Windows  | `autostart-off.bat`                           |
+| Turn that back on              | `autostart-on.bat`                            |
+| Watch the server while it runs | `stop.bat`, then `start.bat`                  |
 
 Stopping it never loses anything: your journal is written to disk within a third
 of a second of every change.
@@ -74,12 +74,12 @@ are using the journal and close it when you are finished.
 
 ## Where your data lives
 
-| What | Where |
-| --- | --- |
-| Your journal | `data/journal.json` |
-| Chart screenshots | `data/screenshots/` |
-| Automatic daily backups | `data/backups/` (the last 30 are kept) |
-| Manual backups | wherever you save them, from the profile menu |
+| What                    | Where                                         |
+| ----------------------- | --------------------------------------------- |
+| Your journal            | `data/journal.json`                           |
+| Chart screenshots       | `data/screenshots/`                           |
+| Automatic daily backups | `data/backups/` (the last 30 are kept)        |
+| Manual backups          | wherever you save them, from the profile menu |
 
 `data/journal.json` is plain text. You can copy it, put it in Dropbox or
 OneDrive, or move it to another computer. To move your journal, use
@@ -114,27 +114,27 @@ entries are never touched.
 
 ## What each page does
 
-| Page | What it is for |
-| --- | --- |
-| **Dashboard** | Net profit, win rate, profit factor, average R:R, expectancy, SQN, equity curve, daily P&L and your Sniper Score. |
-| **Calendar** | A month at a glance: each day shows its net P&L and trade count. Click a day to see the trades behind the number. |
-| **The Playbook** | The setups you allow yourself to trade and their rules, with the real performance of each one underneath. |
-| **Trades** | The full table, with filters for pair, session, leverage, setup, date, direction and result. Click a row to edit it. |
-| **AI Insights & Signals** | Patterns found in your own trades: your best session, revenge trading, holding losers too long, fee drag, and more. |
-| **Resources** | Your own shortlist of tools and links. |
-| **Support** | How the app works, where your data is, and the keyboard shortcuts. |
-| **Reports** | A printable summary, month by month and per symbol and setup. |
+| Page                      | What it is for                                                                                                       |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| **Dashboard**             | Net profit, win rate, profit factor, average R:R, expectancy, SQN, equity curve, daily P&L and your Sniper Score.    |
+| **Calendar**              | A month at a glance: each day shows its net P&L and trade count. Click a day to see the trades behind the number.    |
+| **The Playbook**          | The setups you allow yourself to trade and their rules, with the real performance of each one underneath.            |
+| **Trades**                | The full table, with filters for pair, session, leverage, setup, date, direction and result. Click a row to edit it. |
+| **AI Insights & Signals** | Patterns found in your own trades: your best session, revenge trading, holding losers too long, fee drag, and more.  |
+| **Resources**             | Your own shortlist of tools and links.                                                                               |
+| **Support**               | How the app works, where your data is, and the keyboard shortcuts.                                                   |
+| **Reports**               | A printable summary, month by month and per symbol and setup.                                                        |
 
 ---
 
 ## Keyboard shortcuts
 
-| Key | Action |
-| --- | --- |
-| `N` | Log a new trade |
-| `Ctrl + K` or `/` | Jump to search |
-| `Ctrl + Enter` | Save the trade form |
-| `Esc` | Close a dialog |
+| Key               | Action              |
+| ----------------- | ------------------- |
+| `N`               | Log a new trade     |
+| `Ctrl + K` or `/` | Jump to search      |
+| `Ctrl + Enter`    | Save the trade form |
+| `Esc`             | Close a dialog      |
 
 ---
 
@@ -144,7 +144,7 @@ entries are never touched.
   kept out of the statistics until you close them.
 - **Record a stop loss.** It is what lets the app measure your risk, your R
   multiples and your true reward-to-risk ratio.
-- **Futures and forex:** open *Futures, forex and manual P&L* in the trade form
+- **Futures and forex:** open _Futures, forex and manual P&L_ in the trade form
   and set the contract multiplier. ES is 50, NQ is 20, MES is 5, and one
   standard forex lot is 100,000 units. If it is easier, switch P&L to manual and
   paste the number straight from your broker.
@@ -193,7 +193,7 @@ Rows that share an entry fill are folded back into a single position:
   you really paid and really got
 - the P&L stays **exactly** the sum of the parts, to the cent
 - the hold time runs from the first entry to the last exit
-- the row is labelled *3 fills*, so you can always see it was a scale-out
+- the row is labelled _3 fills_, so you can always see it was a scale-out
 
 If your broker gives each piece its own entry id, or you want to combine trades
 the importer could not see belong together, tick the rows in the Trades table
@@ -223,8 +223,8 @@ images, so copy `data/screenshots/` as well when moving to another computer, and
 deleting a trade deletes its image with it.
 
 If you would rather link to a chart you host elsewhere, such as a TradingView
-snapshot, there is still a **Chart link** field under *Futures, forex and manual
-P&L*. You can use either, or both.
+snapshot, there is still a **Chart link** field under _Futures, forex and manual
+P&L_. You can use either, or both.
 
 ### Filling in what the broker did not record
 
@@ -266,7 +266,7 @@ folder, so it is holding your changes in the browser instead. Restart it with
 
 **Nothing appears in the statistics.** Statistics only count closed trades that
 are complete. Check that the trade has an exit price, that it is not marked
-*needs details*, and that you have not excluded it with the eye icon.
+_needs details_, and that you have not excluded it with the eye icon.
 
 **An imported trade shows the wrong direction.** In paired buy/sell exports the
 direction comes from which fill happened first. If your file has both fills at

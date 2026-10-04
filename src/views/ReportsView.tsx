@@ -43,10 +43,19 @@ export function ReportsView() {
   const bySymbol = useMemo(() => groupTrades(closed, (t) => t.symbol), [closed]);
   const bySetup = useMemo(() => {
     const names = new Map(data.setups.map((s) => [s.id, s.name]));
-    return groupTrades(closed, (t) => t.setupId, (k) => names.get(k) ?? 'Unknown');
+    return groupTrades(
+      closed,
+      (t) => t.setupId,
+      (k) => names.get(k) ?? 'Unknown',
+    );
   }, [closed, data.setups]);
   const byWeekday = useMemo(
-    () => groupTrades(closed, (t) => String(parseLocal(t.openedAt).getDay()), (k) => WEEKDAYS[(Number(k) + 6) % 7]),
+    () =>
+      groupTrades(
+        closed,
+        (t) => String(parseLocal(t.openedAt).getDay()),
+        (k) => WEEKDAYS[(Number(k) + 6) % 7],
+      ),
     [closed],
   );
 
@@ -66,7 +75,14 @@ export function ReportsView() {
   const Row = ({ label, value, tone }: { label: string; value: string; tone?: 'profit' | 'loss' }) => (
     <div className="flex items-baseline justify-between gap-4 border-b border-line py-2 last:border-0">
       <span className="text-sm text-muted">{label}</span>
-      <span className={cn('num text-sm font-medium', tone === 'profit' ? 'text-profit' : tone === 'loss' ? 'text-loss' : 'text-fg')}>{value}</span>
+      <span
+        className={cn(
+          'num text-sm font-medium',
+          tone === 'profit' ? 'text-profit' : tone === 'loss' ? 'text-loss' : 'text-fg',
+        )}
+      >
+        {value}
+      </span>
     </div>
   );
 
@@ -80,13 +96,19 @@ export function ReportsView() {
             <SegmentedControl value={range} onChange={setRange} options={RANGE_OPTIONS} />
             <Button
               onClick={() => {
-                downloadFile(`sniper-journal-trades-${dateKey(new Date())}.csv`, tradesToCsv(inRange, data.setups, data.accounts), 'text/csv');
+                downloadFile(
+                  `sniper-journal-trades-${dateKey(new Date())}.csv`,
+                  tradesToCsv(inRange, data.setups, data.accounts),
+                  'text/csv',
+                );
                 toast(`Exported ${inRange.length} trades`);
               }}
             >
               <Download className="size-4" /> Export CSV
             </Button>
-            <Button onClick={() => window.print()}><Printer className="size-4" /> Print</Button>
+            <Button onClick={() => window.print()}>
+              <Printer className="size-4" /> Print
+            </Button>
           </>
         }
       />
@@ -94,7 +116,11 @@ export function ReportsView() {
       <div className="grid grid-cols-3 gap-4">
         <section className="rounded-xl border border-line bg-surface px-5 py-4">
           <h3 className="mb-2 text-sm font-semibold text-fg">Results</h3>
-          <Row label="Net profit" value={formatMoney(stats.net, currency, { sign: true })} tone={stats.net > 0 ? 'profit' : stats.net < 0 ? 'loss' : undefined} />
+          <Row
+            label="Net profit"
+            value={formatMoney(stats.net, currency, { sign: true })}
+            tone={stats.net > 0 ? 'profit' : stats.net < 0 ? 'loss' : undefined}
+          />
           <Row label="Gross profit" value={formatMoney(stats.grossProfit, currency)} />
           <Row label="Gross loss" value={formatMoney(-stats.grossLoss, currency)} />
           <Row label="Commissions" value={formatMoney(stats.fees, currency)} />
@@ -114,17 +140,32 @@ export function ReportsView() {
 
         <section className="rounded-xl border border-line bg-surface px-5 py-4">
           <h3 className="mb-2 text-sm font-semibold text-fg">Risk</h3>
-          <Row label="Max drawdown" value={formatMoney(-stats.maxDrawdown, currency)} tone={stats.maxDrawdown > 0 ? 'loss' : undefined} />
-          <Row label="Drawdown from peak" value={stats.maxDrawdownPct != null ? formatPct(stats.maxDrawdownPct) : 'set a starting balance'} />
+          <Row
+            label="Max drawdown"
+            value={formatMoney(-stats.maxDrawdown, currency)}
+            tone={stats.maxDrawdown > 0 ? 'loss' : undefined}
+          />
+          <Row
+            label="Drawdown from peak"
+            value={stats.maxDrawdownPct != null ? formatPct(stats.maxDrawdownPct) : 'set a starting balance'}
+          />
           <Row label="Largest win" value={formatMoney(stats.largestWin, currency, { sign: true })} tone="profit" />
           <Row label="Largest loss" value={formatMoney(stats.largestLoss, currency, { sign: true })} tone="loss" />
-          <Row label="System quality (SQN)" value={stats.sqn == null ? '—' : `${stats.sqn.toFixed(2)} · ${sqnLabel(stats.sqn)}`} />
+          <Row
+            label="System quality (SQN)"
+            value={stats.sqn == null ? '—' : `${stats.sqn.toFixed(2)} · ${sqnLabel(stats.sqn)}`}
+          />
           <Row label="Average hold time" value={formatDuration(stats.avgHoldMinutes)} />
         </section>
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-4">
-        <ChartContainer title="Month by month" bodyClassName="px-2 pb-3 pt-1" empty={months.length === 0} emptyText="No closed trades in this range.">
+        <ChartContainer
+          title="Month by month"
+          bodyClassName="px-2 pb-3 pt-1"
+          empty={months.length === 0}
+          emptyText="No closed trades in this range."
+        >
           <table className="w-full text-sm">
             <thead>
               <tr className="text-xs text-muted">
@@ -139,10 +180,19 @@ export function ReportsView() {
                 const [y, m] = key.split('-').map(Number);
                 return (
                   <tr key={key} className="border-t border-line">
-                    <td className="px-3 py-2 text-fg">{MONTHS_SHORT[m - 1]} {y}</td>
+                    <td className="px-3 py-2 text-fg">
+                      {MONTHS_SHORT[m - 1]} {y}
+                    </td>
                     <td className="num px-3 py-2 text-right text-muted">{agg.trades}</td>
-                    <td className="num px-3 py-2 text-right text-muted">{formatPct((agg.wins / agg.trades) * 100, 0)}</td>
-                    <td className={cn('num px-3 py-2 text-right font-medium', agg.net > 0 ? 'text-profit' : agg.net < 0 ? 'text-loss' : 'text-muted')}>
+                    <td className="num px-3 py-2 text-right text-muted">
+                      {formatPct((agg.wins / agg.trades) * 100, 0)}
+                    </td>
+                    <td
+                      className={cn(
+                        'num px-3 py-2 text-right font-medium',
+                        agg.net > 0 ? 'text-profit' : agg.net < 0 ? 'text-loss' : 'text-muted',
+                      )}
+                    >
                       {formatMoney(agg.net, currency, { sign: true })}
                     </td>
                   </tr>
@@ -157,31 +207,38 @@ export function ReportsView() {
             { title: 'Best and worst symbols', rows: bySymbol },
             { title: 'Playbook setups', rows: bySetup },
             { title: 'Day of the week', rows: byWeekday },
-          ].filter((b) => b.rows.length > 0).map((b) => (
-            <ChartContainer key={b.title} title={b.title} bodyClassName="px-2 pb-3 pt-1">
-              <table className="w-full text-sm">
-                <tbody>
-                  {b.rows.slice(0, 6).map((row) => (
-                    <tr key={row.key} className="border-b border-line last:border-0">
-                      <td className="max-w-[160px] truncate px-3 py-2 text-fg">{row.label}</td>
-                      <td className="num px-2 py-2 text-right text-xs text-faint">{row.trades}×</td>
-                      <td className="num px-2 py-2 text-right text-xs text-muted">{formatPct(row.winRate, 0)}</td>
-                      <td className={cn('num px-3 py-2 text-right font-medium', row.net > 0 ? 'text-profit' : row.net < 0 ? 'text-loss' : 'text-muted')}>
-                        {formatMoney(row.net, currency, { sign: true, compact: true })}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </ChartContainer>
-          ))}
+          ]
+            .filter((b) => b.rows.length > 0)
+            .map((b) => (
+              <ChartContainer key={b.title} title={b.title} bodyClassName="px-2 pb-3 pt-1">
+                <table className="w-full text-sm">
+                  <tbody>
+                    {b.rows.slice(0, 6).map((row) => (
+                      <tr key={row.key} className="border-b border-line last:border-0">
+                        <td className="max-w-[160px] truncate px-3 py-2 text-fg">{row.label}</td>
+                        <td className="num px-2 py-2 text-right text-xs text-faint">{row.trades}×</td>
+                        <td className="num px-2 py-2 text-right text-xs text-muted">{formatPct(row.winRate, 0)}</td>
+                        <td
+                          className={cn(
+                            'num px-3 py-2 text-right font-medium',
+                            row.net > 0 ? 'text-profit' : row.net < 0 ? 'text-loss' : 'text-muted',
+                          )}
+                        >
+                          {formatMoney(row.net, currency, { sign: true, compact: true })}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </ChartContainer>
+            ))}
         </div>
       </div>
 
       {stats.bestDay && stats.worstDay && (
         <p className="mt-4 text-xs text-faint">
-          Best day {formatDate(stats.bestDay.day)} at {formatMoney(stats.bestDay.net, currency, { sign: true })}; worst day{' '}
-          {formatDate(stats.worstDay.day)} at {formatMoney(stats.worstDay.net, currency, { sign: true })}.
+          Best day {formatDate(stats.bestDay.day)} at {formatMoney(stats.bestDay.net, currency, { sign: true })}; worst
+          day {formatDate(stats.worstDay.day)} at {formatMoney(stats.worstDay.net, currency, { sign: true })}.
         </p>
       )}
     </>
