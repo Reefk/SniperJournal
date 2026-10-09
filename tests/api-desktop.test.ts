@@ -1,7 +1,8 @@
-import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
+import { spawn } from 'node:child_process';
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync, mkdirSync, existsSync, promises as fsp } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
  * The desktop server's API routes, run against a throwaway folder: the
@@ -63,6 +64,79 @@ describe('/api/journal', () => {
     const saved = file();
     expect(bodies.some((body) => JSON.stringify(body) === JSON.stringify(saved))).toBe(true);
     expect(readdirSync(join(root, 'data')).filter((f) => f.endsWith('.tmp'))).toEqual([]);
+  });
+
+  describe('when something else briefly holds the journal (antivirus, OneDrive)', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+    const failing = (code: string, times: number) => {
+      const rename = fsp.rename;
+      let left = times;
+      return vi.spyOn(fsp, 'rename').mockImplementation(async (from, to) => {
+        if (left-- > 0) throw Object.assign(new Error(`${code}: rename`), { code });
+        return rename(from, to);
+      });
+    };
+
+    it.each(['EPERM', 'EBUSY', 'EACCES'])('a rename refused with %s is tried again, and the save goes through', async (code) => {
+      await put(valid(1));
+      const rename = failing(code, 2);
+      const res = await put(valid(2));
+      expect(res.status).toBe(200);
+      expect(rename).toHaveBeenCalledTimes(3);
+      expect(file()).toEqual(valid(2));
+    });
+
+    it('a file held for too long fails the save, keeps the journal as it was, and leaves no temp file', async () => {
+      await put(valid(1));
+      failing('EBUSY', Infinity);
+      const res = await put(valid(2));
+      expect(res.status).toBe(500);
+      expect(file()).toEqual(valid(1));
+      expect(readdirSync(join(root, 'data')).filter((f) => f.endsWith('.tmp'))).toEqual([]);
+    });
+
+    it('any other error is not retried', async () => {
+      await put(valid(1));
+      const rename = failing('ENOSPC', 1);
+      expect((await put(valid(2))).status).toBe(500);
+      expect(rename).toHaveBeenCalledTimes(1);
+      expect(file()).toEqual(valid(1));
+    });
+
+    // the real thing: Windows refuses to replace a file that another program
+    // has open without delete sharing, which is how scanners open files
+    it.runIf(process.platform === 'win32')('a real lock held for half a second does not fail the save', async () => {
+      await put(valid(1));
+      const target = join(root, 'data', 'journal.json');
+      const locker = spawn('powershell', [
+        '-NoProfile',
+        '-Command',
+        `$f = [IO.File]::Open('${target}', 'Open', 'Read', 'Read'); 'locked'; Start-Sleep -Milliseconds 500; $f.Close()`,
+      ]);
+      await new Promise((resolve) => locker.stdout.once('data', resolve));
+      const res = await put(valid(2));
+      if (locker.exitCode === null) await new Promise((resolve) => locker.once('exit', resolve));
+      expect(res.status).toBe(200);
+      expect(file()).toEqual(valid(2));
+    }, 20000);
+  });
+
+  it('the new journal is flushed to the disk before it replaces the old one', async () => {
+    await put(valid(1));
+    const probe = await fsp.open(join(root, 'data', 'probe'), 'w');
+    const handle = Object.getPrototypeOf(probe);
+    await probe.close();
+    const sync = vi.spyOn(handle, 'sync');
+    const rename = vi.spyOn(fsp, 'rename');
+    try {
+      expect((await put(valid(2))).status).toBe(200);
+      expect(sync).toHaveBeenCalled();
+      expect(sync.mock.invocationCallOrder[0]).toBeLessThan(rename.mock.invocationCallOrder[0]);
+    } finally {
+      vi.restoreAllMocks();
+    }
   });
 
   it.each([

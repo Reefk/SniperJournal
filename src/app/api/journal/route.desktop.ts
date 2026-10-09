@@ -44,6 +44,54 @@ async function prune(prefix: string, keep: number) {
   }
 }
 
+/** write a file and wait until its bytes are on the disk, not just handed to the system */
+async function writeDurably(file: string, text: string) {
+  const handle = await fs.open(file, 'w');
+  try {
+    await handle.writeFile(text, 'utf8');
+    await handle.sync();
+  } finally {
+    await handle.close();
+  }
+}
+
+/**
+ * What Windows answers while antivirus or a sync tool (OneDrive) has the
+ * journal open for a moment. Worth waiting out; anything else is not.
+ */
+const HELD = new Set(['EPERM', 'EBUSY', 'EACCES']);
+const RENAME_RETRIES_MS = [50, 100, 200, 400, 800];
+
+async function renamePatiently(from: string, to: string) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await fs.rename(from, to);
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code ?? '';
+      if (!HELD.has(code) || attempt >= RENAME_RETRIES_MS.length) throw err;
+      await new Promise((resolve) => setTimeout(resolve, RENAME_RETRIES_MS[attempt]));
+    }
+  }
+}
+
+/**
+ * On Linux and macOS a rename is only on the disk once its folder is.
+ * Windows offers no way to flush a folder, and its renames do not need it.
+ */
+async function syncFolder(dir: string) {
+  if (process.platform === 'win32') return;
+  try {
+    const handle = await fs.open(dir, 'r');
+    try {
+      await handle.sync();
+    } finally {
+      await handle.close();
+    }
+  } catch {
+    // some filesystems refuse; the journal is already in place either way
+  }
+}
+
 /**
  * Saves are written one at a time. Two that overlap (a slow disk, two tabs)
  * would otherwise interleave their writes and could leave a half-written
@@ -133,8 +181,9 @@ export async function PUT(request: Request) {
       if (existing) await rollBackup(existing);
 
       // write to a temp file first so a crash mid-write cannot corrupt the journal
-      await fs.writeFile(tmp, JSON.stringify(data, null, 2), 'utf8');
-      await fs.rename(tmp, FILE);
+      await writeDurably(tmp, JSON.stringify(data, null, 2));
+      await renamePatiently(tmp, FILE);
+      await syncFolder(DATA_DIR);
 
       return NextResponse.json({ ok: true, path: FILE });
     } catch {
