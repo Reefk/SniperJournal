@@ -152,6 +152,9 @@ entries are never touched.
   paste the number straight from your broker.
 - **The eye icon** in the trades table keeps a trade in your journal but leaves
   it out of every statistic, which is useful for a mistake fill or a test trade.
+  It is left out of the account balance too, unless you tick **Count excluded
+  trades in the balance** in Settings → Accounts, so the balance matches your
+  broker's statement. The statistics leave it out either way.
 - **Trades marked "needs details"** are imported rows that are still missing a
   date, a quantity or an entry price. They never count towards a statistic until
   you complete them, so your numbers are never built on half a trade.

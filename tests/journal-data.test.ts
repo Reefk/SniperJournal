@@ -55,6 +55,15 @@ describe('normalize: loading a journal', () => {
     expect(j.resources).toEqual([]);
   });
 
+  it('"count excluded trades in the balance" is off unless set, kept as set, and survives a backup', () => {
+    const withSetting = (value: unknown) => journal({ settings: { ...base, countExcludedInBalance: value as boolean } });
+    expect(normalize(journal()).settings.countExcludedInBalance).toBeUndefined();
+    expect(normalize(withSetting(true)).settings.countExcludedInBalance).toBe(true);
+    expect(normalize(withSetting(false)).settings.countExcludedInBalance).toBe(false);
+    expect(normalize(withSetting('yes')).settings.countExcludedInBalance).toBeUndefined();
+    expect(parseBackup(JSON.stringify(withSetting(true))).data?.settings.countExcludedInBalance).toBe(true);
+  });
+
   it('values of the wrong type are replaced instead of crashing a screen', () => {
     const j = normalize(
       journal({

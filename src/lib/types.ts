@@ -84,6 +84,11 @@ export interface Settings {
   timezone: string;
   maxDailyLoss?: number | null;
   maxTradesPerDay?: number | null;
+  /**
+   * Whether trades excluded from the statistics still count toward the
+   * account balance. Absent or false (the default): they do not.
+   */
+  countExcludedInBalance?: boolean;
 }
 
 export interface Profile {

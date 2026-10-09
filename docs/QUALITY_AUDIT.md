@@ -426,6 +426,7 @@ No Critical findings were made.
   - The E2E journey checks that the sidebar balance equals the curve's current balance at 5 points: after import, edit, delete, restore, and a server restart.
 - **Fix:** One `selectors.ts` (`realised`, `accountBalances`, `openingBalance`) is used by every screen.
 - **Product decision for the owner:** Excluded trades now count toward neither the statistics nor the balance. That matches what "exclude from stats" suggests, but it changes the sidebar figure for anyone who has excluded trades.
+- **Decided 2026-10-09:** The owner chose a setting, Settings → Accounts → "Count excluded trades in the balance". It is off by default, which keeps the behaviour above. When on, the sidebar, Settings and Dashboard balances count excluded trades; the statistics, equity curve and drawdown never do, and the Dashboard marks such a balance "incl. excluded trades".
 - **Status:** Fixed and Verified.
 
 ### SJ-17: Form labels not associated with inputs
@@ -714,7 +715,7 @@ The tests in `tests/stats.test.ts` use a hand-calculated mixed record, boundary 
 | Max drawdown | realised only, trade by trade, from the balance when the range opens (SJ-20). |
 | SQN | mean ÷ sample SD × √N over R values when at least 5 and at least half the trades have a stop, otherwise over money (SJ-15). |
 | Counted trades | closed, not excluded, and complete. "Open" = not excluded and not closed (SJ-19). |
-| Balance | starting balance + realised net of counted trades (SJ-16). |
+| Balance | starting balance + realised net of counted trades (SJ-16); plus excluded trades when the owner's setting "Count excluded trades in the balance" is on (off by default). |
 
 Also covered:
 
@@ -1003,7 +1004,7 @@ A build that compiles is not evidence of readiness. These items are.
 | Warn about possible duplicate trades on import (fingerprint), skipped by default | SJ-27 | M |
 | Join separate Date and Time columns | SJ-28 | S |
 | Adopt AA-compliant colour tokens | SJ-29 | S |
-| Owner confirms "excluded trades don't count toward balance" | SJ-16 | XS |
+| ~~Owner confirms "excluded trades don't count toward balance"~~ Done 2026-10-09: a Settings option, off by default | SJ-16 | XS |
 | ESLint with `eslint-config-next` (hook rules) | SJ-30 | S |
 
 ### P2: next iterations

@@ -404,8 +404,9 @@ export function JournalProvider({ children }: { children: ReactNode }) {
     const accountTrades = isAll ? data.trades : data.trades.filter((t) => t.accountId === data.activeAccountId);
     const activeAccount = data.accounts.find((a) => a.id === data.activeAccountId) ?? null;
 
-    // counted like every statistic, so it matches the end of the equity curve
-    const balances = accountBalances(data);
+    // counted like every statistic, so it matches the end of the equity curve,
+    // unless Settings says excluded trades count toward the balance too
+    const balances = accountBalances(data, data.settings.countExcludedInBalance === true);
 
     return {
       data,

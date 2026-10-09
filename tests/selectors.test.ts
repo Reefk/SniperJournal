@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { splitByRange } from '@/lib/ranges';
 import { computeStats } from '@/lib/stats';
-import { accountBalances, openingBalance, realised } from '@/store/selectors';
+import { accountBalances, excludedRealised, openingBalance, realised } from '@/store/selectors';
 import { pnl, seeded, trade } from './helpers';
 
 const accounts = [
@@ -27,6 +27,34 @@ describe('balances agree with the statistics', () => {
       ],
     });
     expect(balances).toEqual({ acc1: 1100, acc2: 49750 });
+  });
+
+  it('excluded trades count toward the balance only when the setting says so; the statistics never change', () => {
+    const trades = [
+      pnl(100, { accountId: 'acc1' }),
+      pnl(999, { accountId: 'acc1', excluded: true }),
+      trade({ accountId: 'acc1', exitPrice: null, closedAt: undefined, excluded: true }), // open: never counted
+      trade({ accountId: 'acc1', entryPrice: 0, exitPrice: 5000, excluded: true }), // incomplete: never counted
+      pnl(-50, { accountId: 'acc2', excluded: true }),
+    ];
+    expect(accountBalances({ accounts, trades })).toEqual({ acc1: 1100, acc2: 50000 });
+    expect(accountBalances({ accounts, trades }, false)).toEqual({ acc1: 1100, acc2: 50000 });
+    expect(accountBalances({ accounts, trades }, true)).toEqual({ acc1: 2099, acc2: 49950 });
+    const acc1 = trades.filter((t) => t.accountId === 'acc1');
+    expect(computeStats(acc1, 1000).net).toBe(100);
+    expect(computeStats(acc1, 1000).equity.at(-1)?.equity).toBe(1100);
+  });
+
+  it('only closed, complete, excluded trades make up the excluded P&L', () => {
+    expect(
+      excludedRealised([
+        pnl(10, { excluded: true }),
+        pnl(-4, { excluded: true }),
+        pnl(500), // counted in the statistics already
+        trade({ exitPrice: null, closedAt: undefined, excluded: true }),
+        trade({ entryPrice: 0, exitPrice: 50, excluded: true }),
+      ]),
+    ).toBe(6);
   });
 
   it('the account balance is exactly where the all-time equity curve ends', () => {

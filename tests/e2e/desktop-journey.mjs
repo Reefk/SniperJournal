@@ -219,6 +219,18 @@ async function journey() {
     check(`${label}: sidebar balance equals the equity curve's current balance`, sidebar.includes(money(10000 + expectNet)) && text.includes(money(10000 + expectNet)));
   };
   await dashboard(111, 75, 'after import');
+  // waits that end in a PASS or FAIL rather than stopping the run
+  const seen = (expression, label, timeout) => b.until(expression, label, timeout).then(() => true, () => false);
+  const journalOnDisk = () => JSON.parse(readFileSync(join(work, 'data', 'journal.json'), 'utf8'));
+  const savedSoon = async (test) => {
+    for (let i = 0; i < 50; i++) {
+      try {
+        if (test(journalOnDisk())) return true;
+      } catch {}
+      await sleep(100);
+    }
+    return false;
+  };
 
   // ---- 4. edit -------------------------------------------------------------
   await b.run(`$nav('/trades'); true`);
@@ -320,9 +332,8 @@ async function journey() {
   const windows = process.platform === 'win32';
   if (windows) {
     const note = 'written while the file was held';
-    const onDisk = () => JSON.parse(readFileSync(join(work, 'data', 'journal.json'), 'utf8')).trades.some((t) => t.notes === note);
+    const onDisk = () => journalOnDisk().trades.some((t) => t.notes === note);
     const status = `document.querySelector('aside').innerText`;
-    const seen = (expression, label, timeout) => b.until(expression, label, timeout).then(() => true, () => false);
     const { released } = await holdJournal(6000, 'Read'); // longer than the server's own retries
     await b.run(`$nav('/trades'); true`);
     await b.until(`[...document.querySelectorAll('tbody tr')].some((r) => r.innerText.includes('AAPL'))`, 'trades table');
@@ -336,6 +347,37 @@ async function journey() {
     check('once the file is free the change is saved, with no further edit', await seen(`${status}.includes('Saved to disk')`, 'saving recovered', 20000));
     check('and it is in the file on disk', onDisk());
   }
+
+  // ---- 8c. excluded trades and the balance (Settings → Accounts) ------------
+  const eye = (symbol, state) =>
+    `[...document.querySelectorAll('tbody tr')].find((r) => r.innerText.includes('${symbol}')).querySelector('button[title^="${state} in statistics"], button[title^="${state} from statistics"]').click(); true`;
+  const balanceBox = `[...document.querySelectorAll('label')].find((l) => l.textContent.startsWith('Count excluded trades in the balance'))?.querySelector('input[type=checkbox]')`;
+  const sidebarShows = (v) => `document.querySelector('aside').innerText.includes(${JSON.stringify(money(v))})`;
+  await b.run(`$nav('/trades'); true`);
+  await b.until(`[...document.querySelectorAll('tbody tr')].some((r) => r.innerText.includes('AAPL'))`, 'trades table');
+  await b.run(eye('AAPL', 'Included'));
+  await dashboard(44, 100, 'AAPL (+$99) excluded; by default the balance leaves it out too');
+  await b.run(`$nav('/settings'); true`);
+  await b.until(`!!${balanceBox}`, 'balance setting');
+  check('"Count excluded trades in the balance" starts off', await b.run(`${balanceBox}.checked === false`));
+  await b.run(`${balanceBox}.click(); true`);
+  check('turned on, the sidebar balance counts the excluded trade', await seen(sidebarShows(10143), 'balance with AAPL', 5000));
+  check('the setting is saved in the journal file', await savedSoon((j) => j.settings.countExcludedInBalance === true));
+  await b.run(`$nav('/'); true`);
+  await b.until(`!!$t('All')`, 'dashboard');
+  await b.run(`$t('All').click(); true`);
+  await b.until(`$text().includes('Net profit')`, 'metrics');
+  const withExcluded = await b.run(`$text()`);
+  check('the statistics still leave it out (net profit +$44.00)', withExcluded.includes(`+${money(44)}`));
+  check('the dashboard balance counts it, and says so', withExcluded.includes(money(10143)) && withExcluded.includes('incl. excluded trades'));
+  await b.run(`$nav('/settings'); true`);
+  await b.until(`!!${balanceBox}`, 'balance setting');
+  await b.run(`${balanceBox}.click(); true`);
+  check('turned off again, the balance leaves it out', await seen(sidebarShows(10044), 'balance without AAPL', 5000));
+  await b.run(`$nav('/trades'); true`);
+  await b.until(`[...document.querySelectorAll('tbody tr')].some((r) => r.innerText.includes('AAPL'))`, 'trades table');
+  await b.run(eye('AAPL', 'Excluded'));
+  await dashboard(143, 100, 'AAPL included again');
   await b.close();
 
   // ---- 9. restart: the journal comes back from disk, not from the browser ---

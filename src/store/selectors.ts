@@ -1,5 +1,5 @@
 import type { JournalData, Trade } from '@/lib/types';
-import { netPnl, statTrades } from '@/lib/trade-math';
+import { isClosed, isIncomplete, netPnl, statTrades } from '@/lib/trade-math';
 
 /**
  * Realised P&L counted the way every statistic counts it: closed, complete
@@ -11,18 +11,32 @@ import { netPnl, statTrades } from '@/lib/trade-math';
  *   - an imported row that is still missing its entry price or size, whose
  *     price-based P&L would be meaningless (an ES exit at 5000 against a
  *     missing entry reads as +$250,000);
- *   - a trade you excluded, which the app promises to leave out of every
- *     figure.
+ *   - a trade you excluded, which every statistic leaves out (and the
+ *     balance too, unless Settings counts it there; see accountBalances).
  */
 export function realised(trades: Trade[]): number {
   return statTrades(trades).reduce((a, t) => a + netPnl(t), 0);
 }
 
-/** starting balance plus realised P&L, per account */
-export function accountBalances(data: Pick<JournalData, 'accounts' | 'trades'>): Record<string, number> {
+/**
+ * Realised P&L of the closed, complete trades you excluded from the
+ * statistics. Settings can count these toward the balance; the statistics
+ * themselves never do.
+ */
+export function excludedRealised(trades: Trade[]): number {
+  return trades.filter((t) => t.excluded && isClosed(t) && !isIncomplete(t)).reduce((a, t) => a + netPnl(t), 0);
+}
+
+/**
+ * Starting balance plus realised P&L, per account. Excluded trades count
+ * only when `countExcluded` is on (Settings → Accounts); then the balance no
+ * longer equals the end of the equity curve, which stays a statistic.
+ */
+export function accountBalances(data: Pick<JournalData, 'accounts' | 'trades'>, countExcluded = false): Record<string, number> {
   const balances: Record<string, number> = {};
   for (const account of data.accounts) {
-    balances[account.id] = account.startingBalance + realised(data.trades.filter((t) => t.accountId === account.id));
+    const trades = data.trades.filter((t) => t.accountId === account.id);
+    balances[account.id] = account.startingBalance + realised(trades) + (countExcluded ? excludedRealised(trades) : 0);
   }
   return balances;
 }

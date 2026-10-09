@@ -91,6 +91,8 @@ export function cleanSettings(v: unknown, base: Settings): Settings {
     timezone: typeof s.timezone === 'string' && validZone(s.timezone) ? s.timezone : base.timezone,
     maxDailyLoss: 'maxDailyLoss' in s ? nullableNum(s.maxDailyLoss) : base.maxDailyLoss,
     maxTradesPerDay: 'maxTradesPerDay' in s ? nullableNum(s.maxTradesPerDay) : base.maxTradesPerDay,
+    // absent until it is first changed, which reads as off
+    countExcludedInBalance: optBool(s.countExcludedInBalance),
   };
 }
 

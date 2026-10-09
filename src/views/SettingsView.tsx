@@ -211,6 +211,22 @@ export function SettingsView() {
               <Plus className="size-4" /> Add
             </Button>
           </form>
+          <label className="mt-4 flex cursor-pointer items-start gap-2.5 rounded-lg border border-line px-4 py-3 text-sm">
+            <input
+              type="checkbox"
+              className="mt-0.5 size-4 shrink-0"
+              checked={data.settings.countExcludedInBalance === true}
+              onChange={(e) => actions.updateSettings({ countExcludedInBalance: e.target.checked })}
+            />
+            <span>
+              <span className="text-fg">Count excluded trades in the balance</span>
+              <span className="mt-0.5 block text-xs leading-relaxed text-muted">
+                Off: a trade you exclude with the eye icon is left out of the balance as well as the statistics. On:
+                the balance counts it, so it matches your broker&apos;s statement. Win rate, net profit, the equity
+                curve and drawdown always leave excluded trades out.
+              </span>
+            </span>
+          </label>
         </Section>
 
         <Section

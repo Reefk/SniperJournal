@@ -24,7 +24,7 @@ import { computeStats, sniperScore, sqnLabel } from '@/lib/stats';
 import { RANGE_OPTIONS, splitByRange, type RangeKey } from '@/lib/ranges';
 import { formatDate, formatDuration, formatMoney, formatPct, formatRatio } from '@/lib/format';
 import { isClosed, tradeTimestamp } from '@/lib/trade-math';
-import { openingBalance } from '@/store/selectors';
+import { excludedRealised, openingBalance } from '@/store/selectors';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { MetricCard, MetricCell, MetricStrip, toneFor } from '@/components/ui/MetricCard';
@@ -49,6 +49,13 @@ export function DashboardView() {
   const { inRange, before } = useMemo(() => splitByRange(accountTrades, range), [accountTrades, range]);
   // the curve starts from whatever the balance already was when the range began
   const opening = useMemo(() => openingBalance(startingBalance, before), [startingBalance, before]);
+  // the balance may also count trades left out of the statistics (Settings);
+  // the equity curve, being a statistic, never does
+  const countExcluded = data.settings.countExcludedInBalance === true;
+  const excludedNet = useMemo(
+    () => (countExcluded ? excludedRealised(before) + excludedRealised(inRange) : 0),
+    [countExcluded, before, inRange],
+  );
   const stats = useMemo(() => computeStats(inRange, opening), [inRange, opening]);
   const score = useMemo(() => sniperScore(inRange, stats), [inRange, stats]);
   const recent = useMemo(
@@ -89,7 +96,7 @@ export function DashboardView() {
   const pf = stats.profitFactor;
   const pfRing = pf == null ? 0 : Number.isFinite(pf) ? Math.min(pf / 4, 1) : 1;
   const rrRing = stats.payoff == null ? 0 : Math.min(Number.isFinite(stats.payoff) ? stats.payoff / 3 : 1, 1);
-  const equityNow = opening + stats.net;
+  const balanceNow = opening + stats.net + excludedNet;
 
   return (
     <>
@@ -130,7 +137,7 @@ export function DashboardView() {
               value={formatMoney(stats.net, currency, { sign: true })}
               tone={toneFor(stats.net)}
               icon={TrendingUp}
-              sub={`Balance ${formatMoney(equityNow, currency)}`}
+              sub={`Balance ${formatMoney(balanceNow, currency)}`}
               info="Total profit after fees and commissions, across every closed trade in the selected range."
             />
             <MetricCard
@@ -257,9 +264,11 @@ export function DashboardView() {
                   <div
                     className={`num text-lg font-semibold ${stats.net > 0 ? 'text-profit' : stats.net < 0 ? 'text-loss' : 'text-fg'}`}
                   >
-                    {formatMoney(equityNow, currency)}
+                    {formatMoney(balanceNow, currency)}
                   </div>
-                  <div className="text-[11px] text-faint">current balance</div>
+                  <div className="text-[11px] text-faint">
+                    {excludedNet !== 0 ? 'current balance, incl. excluded trades' : 'current balance'}
+                  </div>
                 </div>
               }
             >
