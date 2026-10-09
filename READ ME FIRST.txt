@@ -39,4 +39,4 @@ WHERE YOUR DATA LIVES
 
 Nothing is uploaded anywhere. The app works with the internet off.
 
-Full instructions are in README.md.
+Full instructions are in docs\user-guide.md.

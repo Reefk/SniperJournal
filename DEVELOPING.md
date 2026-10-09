@@ -139,7 +139,8 @@ Every read and write — the journal, chart images, exported files — goes thro
 the one interface in `src/lib/storage/types.ts`. Nothing else in the app touches
 the filesystem or the network. Supporting a new platform means writing one file
 that implements that interface and returning it from `pick()` in
-`src/lib/storage/index.ts`; see `MOBILE-PLAN.md` for the iPhone version.
+`src/lib/storage/index.ts`; `src/lib/storage/capacitor.ts`, the Android app's
+storage, is the worked example.
 
 Nothing is fetched from anywhere. Every number on every screen is computed from
 that one object in memory, which is why the app works offline.
