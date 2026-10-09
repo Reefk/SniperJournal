@@ -5,6 +5,7 @@ import { useJournal } from '@/store/JournalProvider';
 import { useUI } from '@/store/UIProvider';
 import { CURRENCIES } from '@/lib/format';
 import { toNumberOrNull } from '@/lib/utils';
+import { storage } from '@/lib/storage';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Field, Input, Select } from '@/components/ui/Field';
@@ -35,7 +36,7 @@ export function WelcomeModal() {
   };
 
   return (
-    <Modal open onClose={() => undefined} size="md" closeOnBackdrop={false}>
+    <Modal open onClose={() => undefined} size="md" closeOnBackdrop={false} phone="full">
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -46,13 +47,23 @@ export function WelcomeModal() {
           <LogoMark size={40} />
           <div>
             <h2 className="text-lg font-semibold text-fg">Set up your journal</h2>
-            <p className="text-sm text-muted">Everything you enter is saved on this computer.</p>
+            <p className="text-sm text-muted">
+              Everything you enter is saved on this {storage.kind === 'native' ? 'phone' : 'computer'}.
+            </p>
           </div>
         </div>
 
+        {storage.kind === 'native' && (
+          // the one thing a phone does differently that can cost you your journal
+          <p className="mt-4 rounded-lg border border-warn/30 bg-warn/10 px-3 py-2.5 text-xs leading-relaxed text-fg">
+            Your journal lives only inside this app. Uninstalling it deletes your trades, so back it up now and then
+            from <span className="font-medium">More → Back up your journal</span>.
+          </p>
+        )}
+
         <div className="mt-5 grid grid-cols-2 gap-4">
           <Field label="Your name" hint="optional" className="col-span-2">
-            <Input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Shown in the header" />
+            <Input autoFocus={storage.kind === 'web'} value={name} onChange={(e) => setName(e.target.value)} placeholder="Shown in the header" />
           </Field>
           <Field label="Account name">
             <Input value={accountName} onChange={(e) => setAccountName(e.target.value)} />

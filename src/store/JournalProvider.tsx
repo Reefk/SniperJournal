@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { SystemBars, SystemBarsStyle } from '@capacitor/core';
 import type { Account, JournalData, Resource, Setup, Trade, TradeInput, Settings, Profile } from '@/lib/types';
 import { generateSampleData } from '@/lib/sample';
 import { isIncomplete, netPnl } from '@/lib/trade-math';
@@ -8,8 +9,25 @@ import { mergeIssue, mergeTrades as combineTrades } from '@/lib/merge';
 import { deleteScreenshot } from '@/lib/screenshots';
 import { storage } from '@/lib/storage';
 import { uid } from '@/lib/utils';
+import { cleanAccounts, cleanResources, cleanSettings, cleanSetups, cleanTrades } from './sanitize';
 
 const LOCAL_KEY = 'sniper-journal:v1';
+
+/**
+ * On a PC the journal is mirrored into the browser on every change, in case
+ * the app is closed before the server has written it. A phone app writes to
+ * its own folder, so the mirror would only double the memory used; there it
+ * is kept only as a fallback while that folder cannot be written.
+ */
+const MIRROR_ALWAYS = storage.kind === 'web';
+
+function writeMirror(data: JournalData) {
+  try {
+    localStorage.setItem(LOCAL_KEY, JSON.stringify(data));
+  } catch {
+    /* quota */
+  }
+}
 
 export type SaveStatus = 'saved' | 'saving' | 'browser' | 'error';
 
@@ -30,26 +48,33 @@ export function createDefaultData(): JournalData {
   };
 }
 
-/** Fills in anything an older or hand-edited file is missing */
-function normalize(input: Partial<JournalData> | null): JournalData {
+/**
+ * Fills in anything an older or hand-edited file is missing, and replaces any
+ * value of the wrong type (see store/sanitize.ts) so that a damaged journal or
+ * backup cannot crash the app every time it opens.
+ */
+function normalize(raw: unknown): JournalData {
   const base = createDefaultData();
-  if (!input) return base;
-  const accounts = Array.isArray(input.accounts) && input.accounts.length ? input.accounts : base.accounts;
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return base;
+  const input = raw as Partial<Record<keyof JournalData, unknown>>;
+  const cleaned = cleanAccounts(input.accounts);
+  const accounts = cleaned.length ? cleaned : base.accounts;
   const activeAccountId =
     input.activeAccountId === 'all' || accounts.some((a) => a.id === input.activeAccountId)
       ? (input.activeAccountId as string)
       : accounts[0].id;
+  const profile = input.profile && typeof input.profile === 'object' ? (input.profile as Partial<Profile>) : {};
   return {
     version: 1,
-    updatedAt: input.updatedAt ?? base.updatedAt,
+    updatedAt: typeof input.updatedAt === 'string' ? input.updatedAt : base.updatedAt,
     onboarded: Boolean(input.onboarded),
-    profile: { ...base.profile, ...(input.profile ?? {}) },
-    settings: { ...base.settings, ...(input.settings ?? {}) },
+    profile: { ...base.profile, ...profile, name: typeof profile.name === 'string' ? profile.name : base.profile.name },
+    settings: cleanSettings(input.settings, base.settings),
     accounts,
     activeAccountId,
-    trades: (input.trades ?? []).map((t) => ({ ...t, tags: t.tags ?? [], fees: t.fees ?? 0 })),
-    setups: (input.setups ?? []).map((s) => ({ ...s, rules: s.rules ?? [] })),
-    resources: input.resources ?? [],
+    trades: cleanTrades(input.trades),
+    setups: cleanSetups(input.setups),
+    resources: cleanResources(input.resources),
   };
 }
 
@@ -144,6 +169,25 @@ export function JournalProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  const persist = useCallback(async (snapshot: JournalData) => {
+    try {
+      setFilePath(await storage.writeJournal(snapshot));
+      setSaveStatus('saved');
+      if (!MIRROR_ALWAYS) {
+        // the folder has it now; a leftover fallback copy would only go stale
+        try {
+          localStorage.removeItem(LOCAL_KEY);
+        } catch {
+          /* ignore */
+        }
+      }
+    } catch {
+      diskAvailable.current = false;
+      if (!MIRROR_ALWAYS) writeMirror(snapshot);
+      setSaveStatus('browser');
+    }
+  }, []);
+
   // ---- save: debounced, to disk and to the browser mirror ----
   useEffect(() => {
     if (!ready) return;
@@ -152,11 +196,7 @@ export function JournalProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    try {
-      localStorage.setItem(LOCAL_KEY, JSON.stringify(data));
-    } catch {
-      /* quota */
-    }
+    if (MIRROR_ALWAYS || !diskAvailable.current) writeMirror(data);
 
     if (!diskAvailable.current) {
       setSaveStatus('browser');
@@ -164,19 +204,28 @@ export function JournalProvider({ children }: { children: ReactNode }) {
     }
     setSaveStatus('saving');
     if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(async () => {
-      try {
-        setFilePath(await storage.writeJournal(data));
-        setSaveStatus('saved');
-      } catch {
-        diskAvailable.current = false;
-        setSaveStatus('browser');
-      }
+    timer.current = setTimeout(() => {
+      timer.current = null;
+      void persist(data);
     }, 350);
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
-  }, [data, ready]);
+  }, [data, ready, persist]);
+
+  // a phone can suspend the app the moment it leaves the screen, so a save
+  // still waiting out its 350ms is written straight away instead
+  useEffect(() => {
+    const flush = () => {
+      if (!timer.current) return;
+      if (document.visibilityState !== 'hidden') return;
+      clearTimeout(timer.current);
+      timer.current = null;
+      void persist(dataRef.current);
+    };
+    document.addEventListener('visibilitychange', flush);
+    return () => document.removeEventListener('visibilitychange', flush);
+  }, [persist]);
 
   // the merge action needs to read the trades it is folding together
   useEffect(() => {
@@ -188,6 +237,12 @@ export function JournalProvider({ children }: { children: ReactNode }) {
     const root = document.documentElement;
     root.classList.toggle('light', data.settings.theme === 'light');
     root.style.colorScheme = data.settings.theme;
+    // on a phone the status bar icons sit on the app's own background
+    if (storage.kind === 'native') {
+      void SystemBars.setStyle({
+        style: data.settings.theme === 'light' ? SystemBarsStyle.Light : SystemBarsStyle.Dark,
+      }).catch(() => undefined);
+    }
   }, [data.settings.theme]);
 
   const mutate = useCallback((fn: (draft: JournalData) => JournalData) => {

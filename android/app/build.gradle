@@ -1,0 +1,100 @@
+apply plugin: 'com.android.application'
+
+// The upload key, for the build Google Play accepts. Copy
+// keystore.properties.example to android/keystore.properties and fill it in —
+// that file and the .jks itself are gitignored, and never leave this machine.
+// Without it the release build still runs, it just comes out unsigned.
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.withInputStream { keystoreProperties.load(it) }
+}
+
+// The version lives in package.json, so `npm version patch|minor|major` is the
+// one step that bumps it. Google Play needs versionCode to grow with every
+// upload, and deriving it from the version guarantees that: 1.2.3 -> 10203.
+def appVersion = new groovy.json.JsonSlurper().parse(rootProject.file('../package.json')).version as String
+def versionParts = appVersion.tokenize('.-+').take(3).collect { it as int }
+if (versionParts.size() != 3 || versionParts[1] > 99 || versionParts[2] > 99) {
+    throw new GradleException("package.json version '${appVersion}' must be major.minor.patch, with minor and patch below 100")
+}
+def appVersionCode = versionParts[0] * 10000 + versionParts[1] * 100 + versionParts[2]
+
+android {
+    namespace = "com.sniperjournal.app"
+    compileSdk = rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "com.sniperjournal.app"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode appVersionCode
+        versionName appVersion
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    signingConfigs {
+        if (keystoreProperties.containsKey('storeFile')) {
+            release {
+                storeFile rootProject.file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
+    }
+    buildTypes {
+        release {
+            if (signingConfigs.findByName('release') != null) {
+                signingConfig signingConfigs.release
+            }
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+// A store build must never point at the dev server. That setting only exists
+// while working on the UI (CAP_LIVE_URL, see capacitor.config.ts), and a
+// release carrying it would load nothing on anyone's phone.
+gradle.taskGraph.whenReady { graph ->
+    if (graph.allTasks.any { it.project == project && it.name.endsWith('Release') }) {
+        def config = file('src/main/assets/capacitor.config.json')
+        if (config.exists() && new groovy.json.JsonSlurper().parse(config).server?.url) {
+            throw new GradleException('capacitor.config.json still points at a dev server. ' +
+                'Run "npx cap sync android" without CAP_LIVE_URL set, or use "npm run bundle".')
+        }
+    }
+}
+
+apply from: 'capacitor.build.gradle'
+
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}

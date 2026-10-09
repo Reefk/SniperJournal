@@ -1,5 +1,9 @@
 import type { MetadataRoute } from 'next';
 
+// the same for everyone, so it can be written out once at build time — which
+// the mobile static export requires
+export const dynamic = 'force-static';
+
 /**
  * Lets Chrome install Sniper Journal as a real app: its own window with no
  * address bar, its own icon in the Start menu and on the taskbar.

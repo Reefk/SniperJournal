@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
+import { refuseForeign } from '../local-only';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -29,6 +30,8 @@ function safeName(raw: string | null): string | null {
 }
 
 export async function GET(request: Request) {
+  const refused = refuseForeign(request);
+  if (refused) return refused;
   const name = safeName(new URL(request.url).searchParams.get('name'));
   if (!name) return new NextResponse('Not found', { status: 404 });
 
@@ -39,6 +42,9 @@ export async function GET(request: Request) {
       headers: {
         'Content-Type': TYPES[ext] ?? 'application/octet-stream',
         'Cache-Control': 'private, max-age=31536000, immutable',
+        // the type was only ever claimed by whoever uploaded it; never let a
+        // browser second-guess it into something runnable such as HTML
+        'X-Content-Type-Options': 'nosniff',
       },
     });
   } catch {
@@ -47,6 +53,8 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const refused = refuseForeign(request);
+  if (refused) return refused;
   try {
     const form = await request.formData();
     const file = form.get('file');
@@ -76,6 +84,8 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const refused = refuseForeign(request);
+  if (refused) return refused;
   const name = safeName(new URL(request.url).searchParams.get('name'));
   if (!name) return NextResponse.json({ ok: false, error: 'Unknown image.' }, { status: 400 });
   await fs.unlink(path.join(DIR, name)).catch(() => undefined);

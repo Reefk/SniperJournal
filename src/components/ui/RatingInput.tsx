@@ -21,7 +21,7 @@ export function RatingInput({
             aria-checked={value === n}
             onClick={() => onChange(value === n ? undefined : n)}
             className={cn(
-              'num h-7 w-7 rounded text-xs font-semibold transition',
+              'num size-9 rounded text-xs font-semibold transition md:size-7',
               value && n <= value
                 ? 'bg-accent-strong text-white'
                 : 'border border-line bg-app text-faint hover:text-fg',

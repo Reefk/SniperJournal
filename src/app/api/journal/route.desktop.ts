@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
+import { refuseForeign } from '../local-only';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -36,7 +37,9 @@ async function rollBackup(contents: string) {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const refused = refuseForeign(request);
+  if (refused) return refused;
   try {
     const text = await fs.readFile(FILE, 'utf8');
     return NextResponse.json({ ok: true, data: JSON.parse(text) });
@@ -49,6 +52,8 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
+  const refused = refuseForeign(request);
+  if (refused) return refused;
   let payload: unknown;
   try {
     payload = await request.json();

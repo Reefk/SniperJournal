@@ -87,14 +87,19 @@ export function CalendarView() {
     <>
       <PageHeader
         title="Performance Calendar"
-        description={`${activeLabel} · click any day to see the trades behind the number`}
+        description={
+          <>
+            {activeLabel} · <span className="md:hidden">tap</span>
+            <span className="max-md:hidden">click</span> any day to see the trades behind the number
+          </>
+        }
         actions={
           <>
-            <div className="flex items-center gap-1 rounded-lg border border-line bg-surface p-0.5">
+            <div className="flex items-center gap-1 rounded-lg border border-line bg-surface p-0.5 max-md:flex-1">
               <Button size="icon" variant="ghost" onClick={() => move(-1)} aria-label="Previous month">
                 <ChevronLeft className="size-4" />
               </Button>
-              <span className="min-w-[150px] px-2 text-center text-sm font-medium text-fg">
+              <span className="min-w-[150px] px-2 text-center text-sm font-medium text-fg max-md:min-w-0 max-md:flex-1">
                 {formatMonthKey(cursor.year, cursor.month)}
               </span>
               <Button size="icon" variant="ghost" onClick={() => move(1)} aria-label="Next month">
@@ -102,7 +107,7 @@ export function CalendarView() {
               </Button>
             </div>
             <Button onClick={() => setCursor({ year: today.getFullYear(), month: today.getMonth() })}>Today</Button>
-            <Button variant="primary" onClick={() => openTradeForm()}>
+            <Button variant="primary" className="max-md:hidden" onClick={() => openTradeForm()}>
               <Plus className="size-4" /> Log trade
             </Button>
           </>
@@ -122,7 +127,7 @@ export function CalendarView() {
         />
       ) : (
         <>
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
             <MetricCard
               label="Monthly net P&L"
               value={formatMoney(stats.net, currency, { sign: true })}
@@ -148,7 +153,7 @@ export function CalendarView() {
           <div className="mt-4 overflow-hidden rounded-xl border border-line bg-surface">
             <div className="grid grid-cols-7 border-b border-line bg-app/40">
               {WEEKDAYS.map((d) => (
-                <div key={d} className="px-3 py-2.5 text-center text-xs font-medium text-muted">
+                <div key={d} className="py-2 text-center text-[11px] font-medium text-muted md:px-3 md:py-2.5 md:text-xs">
                   {d}
                 </div>
               ))}
@@ -165,7 +170,7 @@ export function CalendarView() {
                     disabled={!hasTrades}
                     onClick={() => setSelectedDay(cell.key)}
                     className={cn(
-                      'relative flex h-[104px] flex-col items-center justify-center gap-1 border-b border-r border-line p-2 text-center transition',
+                      'relative flex h-16 flex-col items-center justify-end gap-1 border-b border-r border-line px-0.5 pb-2 text-center transition md:h-[104px] md:justify-center md:p-2',
                       i % 7 === 6 && 'border-r-0',
                       i >= cells.length - 7 && 'border-b-0',
                       !cell.inMonth && 'bg-app/40',
@@ -176,7 +181,7 @@ export function CalendarView() {
                   >
                     <span
                       className={cn(
-                        'absolute left-2.5 top-2 text-xs',
+                        'absolute left-1.5 top-1 text-[11px] md:left-2.5 md:top-2 md:text-xs',
                         isToday
                           ? 'grid size-5 place-items-center rounded-full bg-accent-strong font-semibold text-white'
                           : cell.inMonth
@@ -190,13 +195,19 @@ export function CalendarView() {
                       <>
                         <span
                           className={cn(
-                            'num text-[17px] font-semibold',
+                            'num max-w-full truncate text-[10px] font-semibold md:text-[17px]',
                             agg.net > 0 ? 'text-profit' : agg.net < 0 ? 'text-loss' : 'text-muted',
                           )}
                         >
-                          {formatMoney(agg.net, currency, { sign: true, compact: Math.abs(agg.net) >= 10000 })}
+                          {/* a phone cell is a seventh of the screen: always the short form there */}
+                          <span className="md:hidden">
+                            {formatMoney(agg.net, currency, { sign: true, compact: true })}
+                          </span>
+                          <span className="max-md:hidden">
+                            {formatMoney(agg.net, currency, { sign: true, compact: Math.abs(agg.net) >= 10000 })}
+                          </span>
                         </span>
-                        <span className="text-[10px] font-medium uppercase tracking-wide text-faint">
+                        <span className="text-[10px] font-medium uppercase tracking-wide text-faint max-md:hidden">
                           {agg.trades} {agg.trades === 1 ? 'trade' : 'trades'}
                         </span>
                       </>
@@ -261,7 +272,10 @@ export function CalendarView() {
                   {t.closedAt ? ` – ${t.closedAt.slice(11, 16)}` : ''}
                 </span>
                 {t.tags.slice(0, 2).map((tag) => (
-                  <span key={tag} className="rounded bg-raised px-1.5 py-0.5 text-[11px] text-muted ring-1 ring-line">
+                  <span
+                    key={tag}
+                    className="rounded bg-raised px-1.5 py-0.5 text-[11px] text-muted ring-1 ring-line max-md:hidden"
+                  >
                     {tag}
                   </span>
                 ))}

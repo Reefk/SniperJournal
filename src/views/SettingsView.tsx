@@ -7,6 +7,7 @@ import { useUI } from '@/store/UIProvider';
 import { exportBackup, parseBackup } from '@/lib/backup';
 import { CURRENCIES, formatMoney } from '@/lib/format';
 import { toNumberOrNull } from '@/lib/utils';
+import { storage } from '@/lib/storage';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Field, Input, Select } from '@/components/ui/Field';
@@ -14,14 +15,16 @@ import { Field, Input, Select } from '@/components/ui/Field';
 function Section({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
   return (
     <section className="rounded-xl border border-line bg-surface">
-      <header className="border-b border-line px-5 py-4">
+      <header className="border-b border-line px-4 py-4 md:px-5">
         <h2 className="text-sm font-semibold text-fg">{title}</h2>
         {description && <p className="mt-0.5 text-sm text-muted">{description}</p>}
       </header>
-      <div className="px-5 py-4">{children}</div>
+      <div className="px-4 py-4 md:px-5">{children}</div>
     </section>
   );
 }
+
+const native = storage.kind === 'native';
 
 export function SettingsView() {
   const { data, actions, balances, sampleCount } = useJournal();
@@ -71,7 +74,7 @@ export function SettingsView() {
 
       <div className="grid max-w-5xl gap-4">
         <Section title="Profile and display">
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <Field label="Your name">
               <Input
                 value={data.profile.name}
@@ -104,7 +107,7 @@ export function SettingsView() {
           title="Risk limits"
           description="Used by the signals on the AI Insights page. Leave blank to turn a limit off."
         >
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <Field label="Maximum loss in a day" hint={currency}>
               <Input
                 inputMode="decimal"
@@ -129,16 +132,17 @@ export function SettingsView() {
         <Section title="Accounts" description="Each account keeps its own trades, balance and statistics.">
           <ul className="divide-y divide-line">
             {data.accounts.map((account) => (
-              <li key={account.id} className="flex items-center gap-3 py-3 first:pt-0">
+              // phone: name and balance on the first line, the starting balance below
+              <li key={account.id} className="flex flex-wrap items-center gap-3 py-3 first:pt-0 md:flex-nowrap">
                 <Wallet className="size-4 shrink-0 text-faint" />
                 <Input
-                  className="max-w-[220px]"
+                  className="min-w-0 flex-1 md:max-w-[220px]"
                   value={account.name}
                   onChange={(e) => actions.updateAccount(account.id, { name: e.target.value })}
                   aria-label="Account name"
                 />
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted">Starting balance</span>
+                <div className="flex items-center gap-2 max-md:order-last max-md:w-full max-md:pl-7">
+                  <span className="text-xs text-muted max-md:whitespace-nowrap">Starting balance</span>
                   <Input
                     className="num w-32"
                     inputMode="decimal"
@@ -204,10 +208,11 @@ export function SettingsView() {
             <Button
               onClick={() => {
                 exportBackup(data);
-                toast('Backup downloaded');
+                // a phone opens its share sheet instead, which speaks for itself
+                if (!native) toast('Backup downloaded');
               }}
             >
-              <Download className="size-4" /> Download a backup
+              <Download className="size-4" /> {native ? 'Back up your journal' : 'Download a backup'}
             </Button>
             <Button onClick={() => fileInput.current?.click()}>
               <Upload className="size-4" /> Restore from a backup
@@ -223,11 +228,19 @@ export function SettingsView() {
               }}
             />
           </div>
-          <p className="mt-3 text-xs leading-relaxed text-faint">
-            A dated copy is also written into the data/backups folder automatically, once on each day you make changes.
-            The last 30 are kept. Chart images are saved as files in data/screenshots rather than inside the backup, so
-            copy that folder too if you are moving to another computer.
-          </p>
+          {native ? (
+            <p className="mt-3 text-xs leading-relaxed text-faint">
+              A dated copy is also kept inside the app automatically, once on each day you make changes, and the last 30
+              are kept. Those copies are deleted along with the app, though, so save a backup to Drive, email or your
+              files now and then. Chart images are not included in the backup.
+            </p>
+          ) : (
+            <p className="mt-3 text-xs leading-relaxed text-faint">
+              A dated copy is also written into the data/backups folder automatically, once on each day you make
+              changes. The last 30 are kept. Chart images are saved as files in data/screenshots rather than inside the
+              backup, so copy that folder too if you are moving to another computer.
+            </p>
+          )}
         </Section>
 
         <Section

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The launch screen, on phones older than Android 12 — newer ones draw the
+     launcher icon themselves (see windowSplashScreenBackground in styles.xml).
+     The logo is centred rather than stretched, so one drawing covers every
+     screen shape; scripts/make-icons.mjs writes splash_logo.png per density. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/sniperBackground"/>
+    <item>
+        <bitmap
+            android:src="@drawable/splash_logo"
+            android:gravity="center"/>
+    </item>
+</layer-list>

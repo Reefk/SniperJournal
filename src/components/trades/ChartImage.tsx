@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ExternalLink, ImagePlus, LoaderCircle, Maximize2, Trash2 } from 'lucide-react';
 import { deleteScreenshot, imageFromTransfer, screenshotSrc, uploadScreenshot } from '@/lib/screenshots';
 import { cn } from '@/lib/utils';
+import { storage } from '@/lib/storage';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 
@@ -61,14 +62,25 @@ export function ChartImage({
     <div className="rounded-lg border border-line p-4">
       <div className="mb-2.5 flex items-baseline justify-between gap-2">
         <span className="text-sm font-medium text-fg">Chart</span>
-        <span className="text-xs text-faint">{file ? 'saved with your journal' : 'click, drop or paste'}</span>
+        <span className="text-xs text-faint">
+          {file ? (
+            'saved with your journal'
+          ) : (
+            <>
+              <span className="md:hidden">tap to add one</span>
+              <span className="max-md:hidden">click, drop or paste</span>
+            </>
+          )}
+        </span>
       </div>
 
       {file ? (
         <div className="group relative overflow-hidden rounded-md border border-line">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={screenshotSrc(file)} alt="Chart for this trade" className="block max-h-44 w-full object-cover" />
-          <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/55 opacity-0 transition group-hover:opacity-100">
+          {/* no hover on a touch screen: there the buttons sit along the bottom, always visible */}
+          <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/55 opacity-0 transition group-hover:opacity-100 max-md:top-auto max-md:py-2 max-md:opacity-100">
+
             <Button size="sm" variant="secondary" onClick={() => setZoomed(true)}>
               <Maximize2 className="size-3.5" /> View
             </Button>
@@ -105,7 +117,7 @@ export function ChartImage({
             <ImagePlus className="size-5 text-muted" />
           )}
           <span className="mt-2 text-xs text-muted">{busy ? 'Saving…' : 'Add a screenshot of the setup'}</span>
-          <span className="mt-0.5 text-[11px] text-faint">Ctrl + V pastes one straight in</span>
+          <span className="mt-0.5 text-[11px] text-faint max-md:hidden">Ctrl + V pastes one straight in</span>
         </button>
       )}
 
@@ -129,14 +141,17 @@ export function ChartImage({
               alt="Chart for this trade"
               className="max-h-[70vh] w-full rounded-md object-contain"
             />
-            <a
-              href={screenshotSrc(file)}
-              target="_blank"
-              rel="noreferrer noopener"
-              className="inline-flex items-center gap-1.5 text-xs text-accent underline-offset-4 hover:underline"
-            >
-              <ExternalLink className="size-3.5" /> Open the full size image
-            </a>
+            {/* the phone app's image address only works inside the app, so no new tab there */}
+            {storage.kind === 'web' && (
+              <a
+                href={screenshotSrc(file)}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="inline-flex items-center gap-1.5 text-xs text-accent underline-offset-4 hover:underline"
+              >
+                <ExternalLink className="size-3.5" /> Open the full size image
+              </a>
+            )}
           </div>
         )}
       </Modal>

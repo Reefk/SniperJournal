@@ -12,7 +12,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Field, Input } from '@/components/ui/Field';
 
-export function AccountSwitcher({ variant }: { variant: 'card' | 'pill' }) {
+export function AccountSwitcher({ variant, align }: { variant: 'card' | 'pill'; align?: 'start' | 'end' }) {
   const { data, actions, balances, activeLabel } = useJournal();
   const { toast } = useUI();
   const [creating, setCreating] = useState(false);
@@ -25,7 +25,7 @@ export function AccountSwitcher({ variant }: { variant: 'card' | 'pill' }) {
   return (
     <>
       <Popover
-        align={variant === 'card' ? 'start' : 'end'}
+        align={align ?? (variant === 'card' ? 'start' : 'end')}
         className={variant === 'card' ? 'w-[224px]' : 'w-64'}
         trigger={({ toggle, open }) =>
           variant === 'card' ? (
@@ -49,10 +49,10 @@ export function AccountSwitcher({ variant }: { variant: 'card' | 'pill' }) {
               type="button"
               onClick={toggle}
               aria-expanded={open}
-              className="flex h-9 items-center gap-2 rounded-md border border-line bg-app pl-2.5 pr-2 text-sm transition hover:border-line-strong"
+              className="flex h-10 items-center gap-2 rounded-md border border-line bg-app pl-2.5 pr-2 text-sm transition hover:border-line-strong md:h-9"
             >
               <Wallet className="size-3.5 text-faint" />
-              <span className="max-w-[160px] truncate text-fg">{activeLabel}</span>
+              <span className="max-w-[96px] truncate text-fg md:max-w-[160px]">{activeLabel}</span>
               <ChevronsUpDown className="size-3.5 text-faint" />
             </button>
           )

@@ -87,7 +87,7 @@ export function InsightsView() {
       {signals.length > 0 && (
         <section className="mb-5">
           <h2 className="mb-2.5 text-sm font-semibold text-fg">Live signals</h2>
-          <div className="grid grid-cols-2 gap-3 2xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
             {signals.map((s) => {
               const style = TONE_STYLES[s.tone];
               const Icon = style.icon;
@@ -107,12 +107,12 @@ export function InsightsView() {
 
       <section>
         <h2 className="mb-2.5 text-sm font-semibold text-fg">What your journal says</h2>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {insights.map((insight) => {
             const style = TONE_STYLES[insight.tone];
             const Icon = style.icon;
             return (
-              <article key={insight.id} className="rounded-xl border border-line bg-surface p-5">
+              <article key={insight.id} className="rounded-xl border border-line bg-surface p-4 md:p-5">
                 <div className="flex items-center gap-2">
                   <Icon className={cn('size-4 shrink-0', style.text)} />
                   <span className="rounded border border-line px-1.5 py-0.5 text-[11px] font-medium text-muted">
@@ -130,7 +130,7 @@ export function InsightsView() {
 
       <section className="mt-5">
         <h2 className="mb-2.5 text-sm font-semibold text-fg">Where the money comes from</h2>
-        <div className="grid grid-cols-2 gap-4 2xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-4">
           {breakdowns.map((b) => (
             <ChartContainer key={b.title} title={b.title} bodyClassName="px-2 pb-3 pt-2">
               <table className="w-full text-sm">
@@ -157,7 +157,7 @@ export function InsightsView() {
         </div>
       </section>
 
-      <section className="mt-5 rounded-xl border border-line bg-surface p-5">
+      <section className="mt-5 rounded-xl border border-line bg-surface p-4 md:p-5">
         <div className="flex items-center gap-2">
           <Lightbulb className="size-4 text-accent" />
           <h2 className="text-sm font-semibold text-fg">Sniper Score breakdown</h2>
@@ -167,7 +167,7 @@ export function InsightsView() {
         </div>
         <div className="mt-4 space-y-2.5">
           {score.axes.map((axis) => (
-            <div key={axis.axis} className="grid grid-cols-[120px_1fr_auto] items-center gap-3">
+            <div key={axis.axis} className="grid grid-cols-[96px_1fr_auto] items-center gap-3 md:grid-cols-[120px_1fr_auto]">
               <span className="truncate text-sm text-muted">{axis.axis}</span>
               <div className="h-1.5 overflow-hidden rounded-full bg-line">
                 <div
@@ -178,7 +178,7 @@ export function InsightsView() {
                   }}
                 />
               </div>
-              <span className={cn('num w-32 text-right text-xs', axis.rated ? 'text-fg' : 'text-faint')}>
+              <span className={cn('num w-16 text-right text-xs md:w-32', axis.rated ? 'text-fg' : 'text-faint')}>
                 {axis.rated ? Math.round(axis.score) : 'not rated'}
               </span>
             </div>

@@ -37,7 +37,7 @@ export function TagInput({
               type="button"
               onClick={() => onChange(value.filter((t) => t !== tag))}
               aria-label={`Remove tag ${tag}`}
-              className="rounded hover:bg-accent/20"
+              className="rounded hover:bg-accent/20 max-md:-my-1 max-md:p-1"
             >
               <X className="size-3" />
             </button>
@@ -45,7 +45,12 @@ export function TagInput({
         ))}
         <input
           value={draft}
-          onChange={(e) => setDraft(e.target.value)}
+          onChange={(e) => {
+            // a phone keyboard does not report the comma key, only the text it typed
+            const next = e.target.value;
+            if (next.endsWith(',')) add(next);
+            else setDraft(next);
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ',') {
               e.preventDefault();
@@ -65,7 +70,7 @@ export function TagInput({
               type="button"
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => add(s)}
-              className="rounded border border-line px-1.5 py-0.5 text-[11px] text-muted transition hover:border-accent/50 hover:text-fg"
+              className="rounded border border-line px-2 py-1 text-[12px] text-muted transition hover:border-accent/50 hover:text-fg md:px-1.5 md:py-0.5 md:text-[11px]"
             >
               + {s}
             </button>

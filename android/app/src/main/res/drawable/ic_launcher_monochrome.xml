@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The launcher icon as a flat silhouette, for phones set to themed icons:
+     Android throws away these colours and tints the shape with the wallpaper's.
+     Same drawing as scripts/make-icons.mjs, on the same 1024-unit square; the
+     group shrinks it into the middle 72 of the adaptive icon's 108dp. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="1024"
+    android:viewportHeight="1024">
+    <group
+        android:pivotX="512"
+        android:pivotY="512"
+        android:scaleX="0.8326"
+        android:scaleY="0.8326">
+        <path
+            android:pathData="M216,512 A296,296 0 1,1 808,512 A296,296 0 1,1 216,512"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="46"
+            android:strokeLineCap="round" />
+        <path
+            android:pathData="M512,92 V176 M512,932 V848 M92,512 H176 M932,512 H848"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="46"
+            android:strokeLineCap="round" />
+        <path
+            android:pathData="M356,668 L668,356"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="50"
+            android:strokeLineCap="round" />
+        <path
+            android:pathData="M560,356 H668 V464"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="50"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+    </group>
+</vector>

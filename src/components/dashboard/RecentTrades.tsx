@@ -19,10 +19,12 @@ export function RecentTrades({ trades, currency }: { trades: Trade[]; currency: 
             className="grid w-full grid-cols-[1fr_auto] items-center gap-3 rounded-md px-3 py-2.5 text-left transition hover:bg-raised"
           >
             <div className="flex min-w-0 items-center gap-2.5">
-              <span className="w-[72px] shrink-0 truncate font-semibold text-fg">{t.symbol}</span>
+              <span className="w-16 shrink-0 truncate font-semibold text-fg md:w-[72px]">{t.symbol}</span>
               <SideBadge side={t.side} />
               <span className="num truncate text-xs text-faint">
-                {formatShortDate(t.openedAt)} · {formatTime(t.openedAt)}
+                {formatShortDate(t.openedAt)}
+                {/* a phone row has room for the day, not the time as well */}
+                <span className="max-md:hidden"> · {formatTime(t.openedAt)}</span>
               </span>
             </div>
             <PnlValue value={netPnl(t)} open={!isClosed(t)} currency={currency} className="text-sm" />

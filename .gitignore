@@ -7,3 +7,4 @@ data/*.json
 data/backups
 .DS_Store
 data/screenshots
+.next-desktop

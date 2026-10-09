@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Sniper Journal's own dark background, shown behind the status and
+         gesture bars on phones whose webview does not draw under them -->
+    <color name="sniperBackground">#0B1120</color>
+</resources>

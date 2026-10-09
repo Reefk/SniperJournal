@@ -39,6 +39,7 @@ export function Popover({
       {trigger({ open, toggle: () => setOpen((o) => !o) })}
       {open && (
         <div
+          data-popover
           className={cn(
             'animate-pop absolute top-full z-40 mt-2 rounded-lg border border-line bg-surface p-1 shadow-2xl shadow-black/40',
             align === 'end' ? 'right-0' : 'left-0',
@@ -72,7 +73,7 @@ export function MenuItem({
       type="button"
       onClick={onClick}
       className={cn(
-        'flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm transition',
+        'flex w-full items-center gap-2.5 rounded-md px-2.5 py-3 text-left text-sm transition md:py-2',
         danger ? 'text-loss hover:bg-loss/10' : 'text-fg hover:bg-raised',
       )}
     >

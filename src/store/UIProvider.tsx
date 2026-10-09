@@ -105,7 +105,8 @@ export function UIProvider({ children }: { children: ReactNode }) {
         <p className="text-sm leading-relaxed text-muted">{confirmState?.message}</p>
       </Modal>
 
-      <div className="pointer-events-none fixed bottom-5 left-1/2 z-[60] flex -translate-x-1/2 flex-col items-center gap-2">
+      {/* on a phone, clear of the tab bar at the bottom */}
+      <div className="pointer-events-none fixed bottom-5 left-1/2 z-[60] flex -translate-x-1/2 flex-col items-center gap-2 max-md:bottom-[calc(5rem_+_var(--safe-area-inset-bottom,0px))] max-md:w-[calc(100%_-_2rem)]">
         {toasts.map((t) => {
           const Icon = t.kind === 'error' ? CircleAlert : t.kind === 'info' ? Info : CircleCheck;
           return (

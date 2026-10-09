@@ -9,6 +9,7 @@ import { detectSession, SESSIONS } from '@/lib/sessions';
 import { formatDuration, formatMoney, formatRatio } from '@/lib/format';
 import { grossPnl, holdMinutes, isClosed, netPnl, plannedRR, riskAmount, rMultiple } from '@/lib/trade-math';
 import { cn, toLocalInput, toNumberOrNull } from '@/lib/utils';
+import { storage } from '@/lib/storage';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Field, Input, Select, Textarea } from '@/components/ui/Field';
@@ -169,6 +170,7 @@ export function TradeFormModal() {
       onClose={closeTradeForm}
       closeOnBackdrop={false}
       size="xl"
+      phone="full"
       title={editing ? `Edit ${editing.symbol} trade` : 'Log a trade'}
       description={
         editing
@@ -278,13 +280,14 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
         }
       }}
     >
-      <div className="grid grid-cols-[minmax(0,1fr)_300px] gap-6">
+      {/* phone: one column, with the live result first so it stays in view while typing */}
+      <div className="flex flex-col gap-4 md:grid md:grid-cols-[minmax(0,1fr)_300px] md:gap-6">
         {/* --------------- left: the trade --------------- */}
         <div className="space-y-4">
-          <div className="grid grid-cols-[1.1fr_1fr_auto] gap-3">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-[1.1fr_1fr_auto]">
             <Field label="Symbol" error={errors.symbol}>
               <Input
-                autoFocus={!trade}
+                autoFocus={!trade && storage.kind === 'web'}
                 list="sj-symbols"
                 value={form.symbol}
                 onChange={(e) => set('symbol', e.target.value.toUpperCase())}
@@ -307,8 +310,8 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
                 ))}
               </Select>
             </Field>
-            <Field label="Side">
-              <div className="grid h-9 grid-cols-2 rounded-md border border-line bg-app p-0.5">
+            <Field label="Side" className="col-span-2 md:col-span-1">
+              <div className="grid h-10 grid-cols-2 rounded-md border border-line bg-app p-0.5 md:h-9">
                 {(['LONG', 'SHORT'] as const).map((s) => {
                   const active = form.side === s;
                   const Icon = s === 'LONG' ? ArrowUpRight : ArrowDownRight;
@@ -336,7 +339,7 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
             </Field>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <Field label="Entry time" error={errors.openedAt}>
               <Input
                 type="datetime-local"
@@ -378,7 +381,11 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
                 invalid={Boolean(errors.entryPrice)}
               />
             </Field>
-            <Field label="Exit price" hint="empty = open" error={errors.exitPrice}>
+            <Field
+              label="Exit price"
+              hint={<span className="max-md:hidden">empty = open</span>}
+              error={errors.exitPrice}
+            >
               <Input
                 inputMode="decimal"
                 className="num"
@@ -409,7 +416,14 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
                 placeholder="0.00"
               />
             </Field>
-            <Field label="Fees & commissions" error={errors.fees}>
+            <Field
+              label={
+                <>
+                  Fees<span className="max-md:hidden"> & commissions</span>
+                </>
+              }
+              error={errors.fees}
+            >
               <Input
                 inputMode="decimal"
                 className="num"
@@ -488,7 +502,7 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
               <ChevronDown className={cn('size-4 transition', showAdvanced && 'rotate-180')} />
             </button>
             {showAdvanced && (
-              <div className="grid grid-cols-3 gap-3 border-t border-line p-3">
+              <div className="grid grid-flow-row-dense grid-cols-2 gap-3 border-t border-line p-3 md:grid-flow-row md:grid-cols-3">
                 <Field label="Contract multiplier" hint="1 = shares" error={errors.multiplier}>
                   <Input
                     inputMode="decimal"
@@ -498,9 +512,9 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
                     placeholder="1"
                   />
                 </Field>
-                <Field label="P&L calculation">
+                <Field label="P&L calculation" className="col-span-2 md:col-span-1">
                   <SegmentedControl
-                    className="flex h-9 w-full [&>button]:flex-1 [&>button]:justify-center"
+                    className="flex h-10 w-full md:h-9 [&>button]:flex-1 [&>button]:justify-center"
                     value={form.pnlMode}
                     onChange={(v) => set('pnlMode', v)}
                     options={[
@@ -519,11 +533,15 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
                     disabled={form.pnlMode !== 'manual'}
                   />
                 </Field>
-                <p className="col-span-3 text-xs leading-relaxed text-faint">
+                <p className="col-span-2 text-xs leading-relaxed text-faint md:col-span-3">
                   Multiplier examples: ES = 50, NQ = 20, MES = 5, one standard forex lot = 100,000 units. Use manual P&L
                   when copying the figure straight from your broker is simpler.
                 </p>
-                <Field label="Chart link" hint="instead of, or alongside, an uploaded image" className="col-span-3">
+                <Field
+                  label="Chart link"
+                  hint="instead of, or alongside, an uploaded image"
+                  className="col-span-2 md:col-span-3"
+                >
                   <Input
                     value={form.screenshotUrl}
                     onChange={(e) => set('screenshotUrl', e.target.value)}
@@ -536,18 +554,19 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
         </div>
 
         {/* --------------- right: live result --------------- */}
-        <div className="space-y-4">
-          <div className="rounded-lg border border-line bg-app p-4">
+        {/* on a phone this column dissolves: the result goes first, the chart and review after the form */}
+        <div className="max-md:contents md:space-y-4">
+          <div className="rounded-lg border border-line bg-app p-3 max-md:order-first md:p-4">
             <div className="text-xs text-muted">{closed ? 'Net P&L' : 'Position'}</div>
             <div
               className={cn(
-                'num mt-1 text-[30px] font-semibold leading-9',
+                'num mt-1 text-2xl font-semibold leading-8 md:text-[30px] md:leading-9',
                 !closed ? 'text-accent' : net > 0 ? 'text-profit' : net < 0 ? 'text-loss' : 'text-fg',
               )}
             >
               {closed ? formatMoney(net, currency, { sign: true }) : 'Open'}
             </div>
-            <dl className="mt-4 space-y-2 text-sm">
+            <dl className="mt-3 grid grid-cols-2 gap-x-5 gap-y-1.5 text-xs md:mt-4 md:block md:space-y-2 md:text-sm">
               {(
                 [
                   ['Gross P&L', closed ? formatMoney(grossPnl(preview), currency, { sign: true }) : '—'],
@@ -584,19 +603,24 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
         </div>
       </div>
 
-      <div className="-mx-5 -mb-4 mt-5 flex items-center gap-2 border-t border-line px-5 py-3">
+      {/* on a phone the buttons stay pinned to the bottom while the form scrolls */}
+      <div className="-mx-5 -mb-4 mt-5 flex items-center gap-2 border-t border-line px-5 py-3 max-md:pb-safe-3 max-md:sticky max-md:bottom-[-1rem] max-md:bg-surface">
         {trade && (
           <Button variant="ghost" className="text-loss hover:bg-loss/10 hover:text-loss" onClick={remove}>
             <Trash2 className="size-4" /> Delete
           </Button>
         )}
-        <span className="ml-auto mr-2 text-xs text-faint">Ctrl + Enter to save</span>
-        <Button variant="ghost" onClick={onDone}>
+        <span className="flex-1 md:hidden" />
+        <span className="ml-auto mr-2 text-xs text-faint max-md:hidden">Ctrl + Enter to save</span>
+        <Button variant="ghost" className="max-md:hidden" onClick={onDone}>
           Cancel
         </Button>
         {!trade && (
           <Button variant="secondary" onClick={() => save(true)}>
-            Save and log another
+            <span>
+              Save<span className="max-md:hidden"> and log another</span>
+              <span className="md:hidden"> + next</span>
+            </span>
           </Button>
         )}
         <Button variant="primary" type="submit">

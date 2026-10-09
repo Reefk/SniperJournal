@@ -98,7 +98,7 @@ export function DashboardView() {
       <PageHeader
         title="Dashboard"
         description={
-          <span className="flex items-center gap-2">
+          <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
             {activeLabel}
             <span className="text-faint">·</span>
             <span className="num">{closedInRange}</span> closed {closedInRange === 1 ? 'trade' : 'trades'} in range
@@ -108,7 +108,8 @@ export function DashboardView() {
         actions={
           <>
             <SegmentedControl value={range} onChange={setRange} options={RANGE_OPTIONS} />
-            <Button variant="primary" onClick={() => openTradeForm()}>
+            {/* a phone already has Log trade in the header */}
+            <Button variant="primary" className="max-md:hidden" onClick={() => openTradeForm()}>
               <Plus className="size-4" /> Log trade
             </Button>
           </>
@@ -125,7 +126,7 @@ export function DashboardView() {
       ) : (
         <>
           {/* ---------- headline metrics ---------- */}
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-4 md:gap-4">
             <MetricCard
               label="Net profit"
               value={formatMoney(stats.net, currency, { sign: true })}
@@ -244,9 +245,9 @@ export function DashboardView() {
           </MetricStrip>
 
           {/* ---------- charts ---------- */}
-          <div className="mt-4 grid grid-cols-3 gap-4">
+          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
             <ChartContainer
-              className="col-span-2 h-[340px]"
+              className="h-[280px] md:col-span-2 md:h-[340px]"
               title="Equity curve"
               subtitle={
                 stats.maxDrawdown > 0
@@ -268,7 +269,7 @@ export function DashboardView() {
             </ChartContainer>
 
             <ChartContainer
-              className="h-[340px]"
+              className="h-[320px] md:h-[340px]"
               title="Sniper Score"
               subtitle={score.overall == null ? 'Rate your trades to build this' : `${score.overall} / 100 overall`}
               actions={
@@ -284,9 +285,9 @@ export function DashboardView() {
             </ChartContainer>
           </div>
 
-          <div className="mt-4 grid grid-cols-3 gap-4">
+          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
             <ChartContainer
-              className="col-span-2 h-[300px]"
+              className="h-[240px] md:col-span-2 md:h-[300px]"
               title="Daily P&L"
               subtitle={`${stats.days.filter((d) => d.net > 0).length} green days, ${stats.days.filter((d) => d.net < 0).length} red`}
               empty={stats.days.length === 0}
@@ -296,7 +297,7 @@ export function DashboardView() {
             </ChartContainer>
 
             <ChartContainer
-              className="h-[300px]"
+              className="md:h-[300px]"
               title="Recent trades"
               subtitle="Your last five, newest first"
               bodyClassName="px-0 pt-1"
@@ -311,7 +312,7 @@ export function DashboardView() {
           </div>
 
           {/* ---------- footer stats ---------- */}
-          <div className="mt-4 grid grid-cols-4 gap-4">
+          <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
             <MetricCard
               label="Largest win"
               value={formatMoney(stats.largestWin, currency, { sign: true })}
@@ -351,7 +352,7 @@ export function DashboardView() {
 
       {/* open positions reminder */}
       {accountTrades.some((t) => !isClosed(t)) && (
-        <div className="mt-4 flex items-center gap-3 rounded-xl border border-accent/25 bg-accent/5 px-5 py-3 text-sm">
+        <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-accent/25 bg-accent/5 px-4 py-3 text-sm md:flex-nowrap md:px-5">
           <Wallet className="size-4 shrink-0 text-accent" />
           <span className="text-fg">
             You have {accountTrades.filter((t) => !isClosed(t)).length} open{' '}

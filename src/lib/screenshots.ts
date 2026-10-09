@@ -47,22 +47,20 @@ export interface UploadResult {
   error?: string;
 }
 
-/** Saves an image into data/screenshots and returns the name to store on the trade */
+/** Saves an image into the screenshots folder and returns the name to store on the trade */
 export async function uploadScreenshot(file: File): Promise<UploadResult> {
   if (!file.type.startsWith('image/')) return { error: 'That file is not an image.' };
 
   const blob = await shrink(file);
-  const form = new FormData();
   const ext =
     blob.type === 'image/webp' ? 'webp' : blob.type === 'image/png' ? 'png' : blob.type === 'image/gif' ? 'gif' : 'jpg';
-  form.append('file', new File([blob], `chart.${ext}`, { type: blob.type }));
 
   try {
-    const res = await fetch('/api/screenshot', { method: 'POST', body: form });
-    const json = await res.json();
-    if (json?.ok && json.name) return { name: json.name as string };
-    return { error: json?.error ?? 'Could not save the image.' };
-  } catch {
+    return { name: await storage.saveImage(blob, ext) };
+  } catch (err) {
+    // a plain Error carries the storage's own explanation; anything else
+    // (a failed fetch, an unreadable reply) means the folder was unreachable
+    if (err instanceof Error && err.name === 'Error' && err.message) return { error: err.message };
     return { error: 'Images can only be saved while the app can reach its data folder.' };
   }
 }

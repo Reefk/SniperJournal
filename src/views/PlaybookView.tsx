@@ -8,6 +8,7 @@ import { useUI } from '@/store/UIProvider';
 import { groupTrades } from '@/lib/stats';
 import { formatMoney, formatPct, formatRatio } from '@/lib/format';
 import { uid } from '@/lib/utils';
+import { storage } from '@/lib/storage';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -84,7 +85,7 @@ export function PlaybookView() {
           }
         />
       ) : (
-        <div className="grid grid-cols-2 gap-4 2xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3">
           {data.setups.map((setup) => {
             const perf = performance.get(setup.id);
             return (
@@ -227,24 +228,24 @@ function SetupEditor({
         }}
         className="space-y-4"
       >
-        <div className="grid grid-cols-[1fr_auto] gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_auto]">
           <Field label="Setup name" error={error}>
             <Input
-              autoFocus
+              autoFocus={storage.kind === 'web'}
               value={draft.name}
               onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
               placeholder="e.g. Opening Range Breakout"
             />
           </Field>
           <Field label="Colour">
-            <div className="flex h-9 items-center gap-1.5">
+            <div className="flex h-10 items-center gap-2.5 md:h-9 md:gap-1.5">
               {COLORS.map((c) => (
                 <button
                   key={c}
                   type="button"
                   aria-label={`Use colour ${c}`}
                   onClick={() => setDraft((d) => ({ ...d, color: c }))}
-                  className="size-6 rounded-full transition"
+                  className="size-8 rounded-full transition md:size-6"
                   style={{
                     background: c,
                     outline: draft.color === c ? '2px solid var(--fg)' : 'none',

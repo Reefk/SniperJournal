@@ -18,6 +18,7 @@ import {
   Plus,
   RotateCcw,
   Search,
+  SlidersHorizontal,
   SquarePen,
   Trash2,
   TriangleAlert,
@@ -79,6 +80,7 @@ export function TradesView() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [importing, setImporting] = useState(false);
   const [bulkEditing, setBulkEditing] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
 
   // a search submitted from the header lands here
   useEffect(() => {
@@ -238,7 +240,7 @@ export function TradesView() {
           >
             <Download className="size-4" /> Export CSV
           </Button>
-          <Button variant="primary" onClick={() => openTradeForm()}>
+          <Button variant="primary" className="max-md:hidden" onClick={() => openTradeForm()}>
             <Plus className="size-4" /> Log trade
           </Button>
         </>
@@ -306,7 +308,7 @@ export function TradesView() {
           <span className="text-fg">
             <span className="num font-semibold">{needsDetails.length}</span>{' '}
             {needsDetails.length === 1 ? 'trade is' : 'trades are'} missing something.
-            <span className="text-muted"> They stay out of every statistic until you fill the gaps.</span>
+            <span className="text-muted max-md:hidden"> They stay out of every statistic until you fill the gaps.</span>
           </span>
           <Button size="sm" className="ml-auto" onClick={() => update('result', 'NEEDS')}>
             Show them
@@ -315,9 +317,10 @@ export function TradesView() {
       )}
 
       {/* ---------- filters ---------- */}
+      {/* on a phone everything but the search folds away behind one button */}
       <div className="mb-3 rounded-xl border border-line bg-surface p-3">
         <div className="flex flex-wrap items-center gap-2">
-          <div className="relative w-64">
+          <div className="relative min-w-[55%] flex-1 md:w-64 md:min-w-0 md:flex-none">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-faint" />
             <Input
               value={filters.q}
@@ -327,8 +330,13 @@ export function TradesView() {
               aria-label="Search trades"
             />
           </div>
+          <Button className="md:hidden" aria-expanded={showFilters} onClick={() => setShowFilters((s) => !s)}>
+            <SlidersHorizontal className="size-4" />
+            Filters
+            {activeFilterCount > 0 && <span className="num text-accent">{activeFilterCount}</span>}
+          </Button>
           <Select
-            className="w-36"
+            className={cn('w-[calc(50%_-_0.25rem)] md:w-36', !showFilters && 'max-md:hidden')}
             value={filters.symbol}
             onChange={(e) => update('symbol', e.target.value)}
             aria-label="Pair"
@@ -341,7 +349,7 @@ export function TradesView() {
             ))}
           </Select>
           <Select
-            className="w-40"
+            className={cn('w-[calc(50%_-_0.25rem)] md:w-40', !showFilters && 'max-md:hidden')}
             value={filters.session}
             onChange={(e) => update('session', e.target.value)}
             aria-label="Session"
@@ -354,7 +362,7 @@ export function TradesView() {
             ))}
           </Select>
           <Select
-            className="w-36"
+            className={cn('w-[calc(50%_-_0.25rem)] md:w-36', !showFilters && 'max-md:hidden')}
             value={filters.leverage}
             onChange={(e) => update('leverage', e.target.value)}
             aria-label="Leverage"
@@ -368,7 +376,7 @@ export function TradesView() {
           </Select>
           {data.setups.length > 0 && (
             <Select
-              className="w-44"
+              className={cn('w-[calc(50%_-_0.25rem)] md:w-44', !showFilters && 'max-md:hidden')}
               value={filters.setup}
               onChange={(e) => update('setup', e.target.value)}
               aria-label="Setup"
@@ -381,12 +389,14 @@ export function TradesView() {
               ))}
             </Select>
           )}
-          <div className="flex items-center gap-1.5">
+          <div className={cn('flex items-center gap-1.5 max-md:w-full', !showFilters && 'max-md:hidden')}>
+            {/* an empty date box on a phone shows nothing at all, so say what it is */}
+            <span className="text-faint md:hidden">From</span>
             <input
               type="date"
               value={filters.from}
               onChange={(e) => update('from', e.target.value)}
-              className={cn(inputClass, 'num w-[150px]')}
+              className={cn(inputClass, 'num w-[150px] max-md:min-w-0 max-md:flex-1')}
               aria-label="From date"
             />
             <span className="text-faint">to</span>
@@ -394,13 +404,14 @@ export function TradesView() {
               type="date"
               value={filters.to}
               onChange={(e) => update('to', e.target.value)}
-              className={cn(inputClass, 'num w-[150px]')}
+              className={cn(inputClass, 'num w-[150px] max-md:min-w-0 max-md:flex-1')}
               aria-label="To date"
             />
           </div>
         </div>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <SegmentedControl
+            className={cn(!showFilters && 'max-md:hidden')}
             value={filters.side}
             onChange={(v) => update('side', v)}
             options={[
@@ -424,6 +435,7 @@ export function TradesView() {
             ]}
           />
           <SegmentedControl
+            className={cn('max-md:flex-wrap', !showFilters && 'max-md:hidden')}
             value={filters.result}
             onChange={(v) => update('result', v)}
             options={[
@@ -458,7 +470,7 @@ export function TradesView() {
               {activeFilterCount === 1 ? 'filter' : 'filters'}
             </Button>
           )}
-          <div className="ml-auto flex items-center gap-5 pr-1 text-xs text-muted">
+          <div className="ml-auto flex items-center gap-5 pr-1 text-xs text-muted max-md:w-full max-md:justify-between max-md:pl-1">
             <span>
               <span className="num text-fg">{filtered.length}</span> shown
             </span>
@@ -474,14 +486,14 @@ export function TradesView() {
 
       {/* ---------- bulk actions ---------- */}
       {selected.size > 0 && (
-        <div className="animate-pop mb-3 flex items-center gap-2 rounded-lg border border-accent/30 bg-accent/10 px-4 py-2 text-sm">
+        <div className="animate-pop mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-accent/30 bg-accent/10 px-4 py-2 text-sm md:flex-nowrap">
           <span className="text-fg">
             <span className="num font-semibold">{selected.size}</span> selected
           </span>
           <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
             Clear
           </Button>
-          <div className="ml-auto flex gap-2">
+          <div className="ml-auto flex flex-wrap gap-2 max-md:w-full md:flex-nowrap">
             {selected.size > 1 && (
               <Button size="sm" onClick={mergeSelected}>
                 <Merge className="size-3.5" /> Merge into one
@@ -525,7 +537,83 @@ export function TradesView() {
             </Button>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          {/* phone: ten columns cannot fit, so each trade is a card */}
+          <ul className="divide-y divide-line md:hidden">
+            {rows.map((t) => {
+              const r = rMultiple(t);
+              const setupName = t.setupId ? setupNames.get(t.setupId) : undefined;
+              const fills = t.fillCount ?? 1;
+              return (
+                <li key={t.id} className={cn('flex items-start gap-1 py-1 pl-1 pr-0.5', selected.has(t.id) && 'bg-accent/5')}>
+                  <label className="grid size-11 shrink-0 cursor-pointer place-items-center">
+                    <input
+                      type="checkbox"
+                      className="size-[18px] cursor-pointer"
+                      checked={selected.has(t.id)}
+                      aria-label={`Select ${t.symbol} trade`}
+                      onChange={() =>
+                        setSelected((s) => {
+                          const next = new Set(s);
+                          if (next.has(t.id)) next.delete(t.id);
+                          else next.add(t.id);
+                          return next;
+                        })
+                      }
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => openTradeForm({ trade: t })}
+                    className={cn('min-w-0 flex-1 py-2.5 text-left', t.excluded && 'opacity-50')}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="truncate font-semibold text-fg">{t.symbol}</span>
+                      <SideBadge side={t.side} />
+                      {(t.screenshotFile || t.screenshotUrl) && (
+                        <ImageIcon className="size-3.5 shrink-0 text-faint" aria-label="Has a chart" />
+                      )}
+                      <span className="ml-auto shrink-0">
+                        {isIncomplete(t) ? (
+                          <StatusBadge tone="warn">needs details</StatusBadge>
+                        ) : (
+                          <PnlValue value={netPnl(t)} open={!isClosed(t)} currency={currency} />
+                        )}
+                      </span>
+                    </div>
+                    <div className="mt-1 flex items-center gap-1.5 text-xs text-faint">
+                      <span className="shrink-0">{formatDate(t.openedAt)}</span>
+                      <span className="num shrink-0">{formatTime(t.openedAt)}</span>
+                      {setupName && <span className="truncate">· {setupName}</span>}
+                      {r != null && !isIncomplete(t) && (
+                        <span className="num ml-auto shrink-0">{`${r >= 0 ? '+' : ''}${r.toFixed(2)}R`}</span>
+                      )}
+                    </div>
+                    {(t.tags.length > 0 || fills > 1) && (
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        {fills > 1 && <span className="px-0.5 text-[11px] text-accent">{fills} fills</span>}
+                        {t.tags.slice(0, 3).map((tag) => (
+                          <span key={tag} className="rounded bg-raised px-1.5 py-0.5 text-[11px] text-muted ring-1 ring-line">
+                            {tag}
+                          </span>
+                        ))}
+                        {t.tags.length > 3 && <span className="px-1 text-[11px] text-faint">+{t.tags.length - 3}</span>}
+                      </div>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => actions.setExcluded([t.id], !t.excluded)}
+                    aria-label={t.excluded ? 'Include in statistics' : 'Exclude from statistics'}
+                    className={cn('grid size-11 shrink-0 place-items-center', t.excluded ? 'text-warn' : 'text-faint')}
+                  >
+                    {t.excluded ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+          <div className="overflow-x-auto max-md:hidden">
             <table className="w-full text-sm">
               <thead className="border-b border-line bg-app/50 text-xs text-muted">
                 <tr>
@@ -692,6 +780,7 @@ export function TradesView() {
               </tbody>
             </table>
           </div>
+          </>
         )}
 
         {pageCount > 1 && (
@@ -731,8 +820,9 @@ export function TradesView() {
       </div>
 
       <p className="mt-3 text-xs text-faint">
-        Click any row to edit that trade. The eye icon keeps a trade in your journal but leaves it out of the
-        statistics.
+        <span className="md:hidden">Tap a trade to edit it.</span>
+        <span className="max-md:hidden">Click any row to edit that trade.</span> The eye icon keeps a trade in your
+        journal but leaves it out of the statistics.
       </p>
 
       <ImportTradesModal open={importing} onClose={() => setImporting(false)} />

@@ -10,6 +10,7 @@ import { tradesToCsv } from '@/lib/csv';
 import { formatDate, formatDuration, formatMoney, formatPct, formatRatio, MONTHS_SHORT, WEEKDAYS } from '@/lib/format';
 import { netPnl, statTrades, tradeDay } from '@/lib/trade-math';
 import { cn, dateKey, downloadFile, parseLocal } from '@/lib/utils';
+import { storage } from '@/lib/storage';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
@@ -106,14 +107,17 @@ export function ReportsView() {
             >
               <Download className="size-4" /> Export CSV
             </Button>
-            <Button onClick={() => window.print()}>
-              <Printer className="size-4" /> Print
-            </Button>
+            {/* the phone's webview has no print dialog; the CSV export is the way out there */}
+            {storage.kind === 'web' && (
+              <Button onClick={() => window.print()}>
+                <Printer className="size-4" /> Print
+              </Button>
+            )}
           </>
         }
       />
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <section className="rounded-xl border border-line bg-surface px-5 py-4">
           <h3 className="mb-2 text-sm font-semibold text-fg">Results</h3>
           <Row
@@ -159,7 +163,7 @@ export function ReportsView() {
         </section>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-4">
+      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
         <ChartContainer
           title="Month by month"
           bodyClassName="px-2 pb-3 pt-1"
@@ -215,7 +219,7 @@ export function ReportsView() {
                   <tbody>
                     {b.rows.slice(0, 6).map((row) => (
                       <tr key={row.key} className="border-b border-line last:border-0">
-                        <td className="max-w-[160px] truncate px-3 py-2 text-fg">{row.label}</td>
+                        <td className="max-w-[130px] truncate px-3 py-2 text-fg md:max-w-[160px]">{row.label}</td>
                         <td className="num px-2 py-2 text-right text-xs text-faint">{row.trades}×</td>
                         <td className="num px-2 py-2 text-right text-xs text-muted">{formatPct(row.winRate, 0)}</td>
                         <td

@@ -11,10 +11,11 @@ const VARIANTS: Record<Variant, string> = {
   danger: 'border border-loss/30 bg-loss/10 text-loss hover:bg-loss/20',
 };
 
+// a finger needs more room than a pointer: larger below md, unchanged above
 const SIZES: Record<Size, string> = {
-  sm: 'h-8 gap-1.5 px-2.5 text-xs',
-  md: 'h-9 gap-2 px-3.5 text-sm',
-  icon: 'size-8',
+  sm: 'h-9 gap-1.5 px-2.5 text-xs md:h-8',
+  md: 'h-10 gap-2 px-3.5 text-sm md:h-9',
+  icon: 'size-11 md:size-8',
 };
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {

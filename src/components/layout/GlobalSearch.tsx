@@ -8,6 +8,8 @@ import { useUI } from '@/store/UIProvider';
 import { formatDate } from '@/lib/format';
 import { isClosed, matchesSearch, netPnl, tradeTimestamp } from '@/lib/trade-math';
 import { PnlValue, SideBadge } from '@/components/ui/StatusBadge';
+import { Button } from '@/components/ui/Button';
+import { cn } from '@/lib/utils';
 
 export function GlobalSearch() {
   const { accountTrades, data } = useJournal();
@@ -15,6 +17,7 @@ export function GlobalSearch() {
   const router = useRouter();
   const [query, setQuery] = useState('');
   const [focused, setFocused] = useState(false);
+  const [phoneOpen, setPhoneOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -47,25 +50,49 @@ export function GlobalSearch() {
   };
 
   return (
-    <div className="relative w-[380px]">
-      <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-faint" />
-      <input
-        ref={inputRef}
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && query.trim()) showAll();
-          if (e.key === 'Escape') inputRef.current?.blur();
-        }}
-        placeholder="Search symbols, tags, notes, setups"
+    <>
+      {/* a phone has no room for the box, so an icon opens it over the header */}
+      <Button
+        size="icon"
+        variant="ghost"
+        className="ml-auto md:hidden"
         aria-label="Search trades"
-        className="h-9 w-full rounded-md border border-line bg-app pl-9 pr-16 text-sm text-fg placeholder:text-faint transition focus:border-accent/70 focus:outline-none focus:ring-2 focus:ring-accent/20"
-      />
-      <kbd className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded border border-line px-1.5 py-px text-[10px] text-faint">
-        Ctrl K
-      </kbd>
+        onClick={() => {
+          setPhoneOpen(true);
+          requestAnimationFrame(() => inputRef.current?.focus());
+        }}
+      >
+        <Search className="size-5" />
+      </Button>
+      <div
+        className={cn(
+          'md:contents',
+          phoneOpen ? 'absolute inset-x-0 bottom-0 z-40 flex h-14 items-center gap-1 bg-surface pl-3 pr-1' : 'hidden',
+        )}
+      >
+        <div className="relative w-full md:w-[380px]">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-faint" />
+          <input
+            ref={inputRef}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onFocus={() => setFocused(true)}
+            onBlur={() => {
+              setFocused(false);
+              setPhoneOpen(false);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && query.trim()) showAll();
+              if (e.key === 'Escape') inputRef.current?.blur();
+            }}
+            placeholder="Search symbols, tags, notes, setups"
+            aria-label="Search trades"
+            enterKeyHint="search"
+            className="h-10 w-full rounded-md border border-line bg-app pl-9 pr-3 text-sm text-fg placeholder:text-faint transition focus:border-accent/70 focus:outline-none focus:ring-2 focus:ring-accent/20 md:h-9 md:pr-16"
+          />
+          <kbd className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded border border-line px-1.5 py-px text-[10px] text-faint max-md:hidden">
+            Ctrl K
+          </kbd>
 
       {focused && query.trim() && (
         <div
@@ -84,7 +111,7 @@ export function GlobalSearch() {
                       openTradeForm({ trade: t });
                       inputRef.current?.blur();
                     }}
-                    className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left transition hover:bg-raised"
+                    className="flex w-full items-center gap-3 rounded-md px-3 py-3 text-left transition hover:bg-raised md:py-2"
                   >
                     <span className="w-16 truncate font-semibold text-fg">{t.symbol}</span>
                     <SideBadge side={t.side} />
@@ -110,6 +137,12 @@ export function GlobalSearch() {
           </button>
         </div>
       )}
-    </div>
+        </div>
+        {/* blurring the box closes it; the button is there to be seen */}
+        <Button size="sm" variant="ghost" className="md:hidden" onClick={() => setPhoneOpen(false)}>
+          Cancel
+        </Button>
+      </div>
+    </>
   );
 }

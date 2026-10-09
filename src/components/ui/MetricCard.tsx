@@ -43,17 +43,24 @@ export function MetricCard({
   return (
     <div
       className={cn(
-        'flex items-center justify-between gap-4 rounded-xl border border-line bg-surface px-5 py-4',
+        'flex items-center justify-between gap-3 rounded-xl border border-line bg-surface px-4 py-3.5 md:gap-4 md:px-5 md:py-4',
         className,
       )}
     >
       <div className="min-w-0">
         <div className="flex items-center gap-1.5 text-[13px] text-muted">
-          {Icon && <Icon className="size-3.5 text-faint" />}
-          {label}
+          {Icon && <Icon className="size-3.5 shrink-0 text-faint" />}
+          <span className="truncate">{label}</span>
           {info && <InfoTip text={info} />}
         </div>
-        <div className={cn('num mt-2 truncate text-[27px] font-semibold leading-8', toneText(tone))}>{value}</div>
+        <div
+          className={cn(
+            'num mt-1.5 truncate text-[21px] font-semibold leading-7 md:mt-2 md:text-[27px] md:leading-8',
+            toneText(tone),
+          )}
+        >
+          {value}
+        </div>
         {sub && <div className="mt-1.5 truncate text-xs text-muted">{sub}</div>}
       </div>
       {aside && <div className="shrink-0">{aside}</div>}
@@ -86,7 +93,7 @@ export function MetricStrip({ children, className }: { children: ReactNode; clas
   return (
     <div
       className={cn(
-        'grid grid-cols-4 gap-px overflow-hidden rounded-xl border border-line bg-line 2xl:grid-cols-8',
+        'grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-line bg-line md:grid-cols-4 2xl:grid-cols-8',
         className,
       )}
     >

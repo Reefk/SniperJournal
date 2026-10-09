@@ -54,6 +54,24 @@
 }
 
 /* Monospace with aligned digits — used on every financial figure */
+/* Room for a phone's status bar and gesture bar. In the Android app Capacitor
+   sets --safe-area-inset-* (0 when it already keeps the page clear of them);
+   elsewhere env() applies, which is 0 on a PC. */
+@utility pt-safe {
+  padding-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+}
+@utility pb-safe {
+  padding-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+}
+/* the header's 3.5rem, plus the status bar it sits under on a phone */
+@utility h-header {
+  height: calc(3.5rem + var(--safe-area-inset-top, env(safe-area-inset-top, 0px)));
+}
+/* pb-safe-4: the usual 1rem, or the gesture bar's height if that is more */
+@utility pb-safe-* {
+  padding-bottom: max(--spacing(--value(integer)), var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
+}
+
 @utility num {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
@@ -85,12 +103,15 @@
   input[type="checkbox"] { accent-color: var(--accent-strong); }
 }
 
-/* thin themed scrollbars */
-* { scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
-::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 999px; border: 3px solid var(--app); }
-::-webkit-scrollbar-thumb:hover { background: var(--faint); }
+/* thin themed scrollbars; a phone keeps its own, which float over the page
+   instead of taking width from it */
+@media (min-width: 48rem) {
+  * { scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 999px; border: 3px solid var(--app); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--faint); }
+}
 
 @keyframes pop {
   from { opacity: 0; transform: translateY(-4px) scale(0.985); }

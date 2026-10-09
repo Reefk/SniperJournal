@@ -6,6 +6,7 @@ import type { Resource } from '@/lib/types';
 import { useJournal } from '@/store/JournalProvider';
 import { useUI } from '@/store/UIProvider';
 import { uid } from '@/lib/utils';
+import { safeLink } from '@/store/sanitize';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -75,12 +76,13 @@ export function ResourcesView() {
           {grouped.map(([category, items]) => (
             <section key={category}>
               <h2 className="mb-2.5 text-sm font-semibold text-fg">{category}</h2>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
                 {items.map((r) => (
                   <article key={r.id} className="group flex flex-col rounded-xl border border-line bg-surface p-4">
                     <div className="flex items-start gap-2">
                       <h3 className="min-w-0 flex-1 truncate text-sm font-medium text-fg">{r.title}</h3>
-                      <div className="flex shrink-0 gap-0.5 opacity-0 transition group-hover:opacity-100">
+                      {/* a phone has no hover to reveal them, so they are always there */}
+                      <div className="-my-2 flex shrink-0 gap-0.5 transition md:my-0 md:opacity-0 md:group-hover:opacity-100">
                         <Button
                           size="icon"
                           variant="ghost"
@@ -101,15 +103,16 @@ export function ResourcesView() {
                       </div>
                     </div>
                     {r.notes && <p className="mt-1.5 line-clamp-3 text-xs leading-relaxed text-muted">{r.notes}</p>}
-                    {r.url && (
+                    {/* only ever an http(s) link: a javascript: one would run inside the app */}
+                    {safeLink(r.url) && (
                       <a
-                        href={r.url}
+                        href={safeLink(r.url)}
                         target="_blank"
                         rel="noreferrer noopener"
                         className="mt-3 inline-flex items-center gap-1.5 truncate text-xs text-accent underline-offset-4 hover:underline"
                       >
                         <ExternalLink className="size-3.5 shrink-0" />
-                        <span className="truncate">{r.url.replace(/^https?:\/\//, '')}</span>
+                        <span className="truncate">{r.url?.replace(/^https?:\/\//, '')}</span>
                       </a>
                     )}
                   </article>
@@ -180,7 +183,7 @@ function ResourceForm({
           placeholder="e.g. TradingView"
         />
       </Field>
-      <div className="grid grid-cols-[1fr_180px] gap-3">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_180px]">
         <Field label="Link" hint="optional">
           <Input
             value={draft.url ?? ''}

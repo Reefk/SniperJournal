@@ -63,7 +63,7 @@ function ImportBody({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-[1fr_auto] items-end gap-3">
+      <div className="grid grid-cols-1 items-end gap-3 md:grid-cols-[1fr_auto]">
         <Field label="Import into account" hint="a matching account column overrides this">
           <Select value={accountId} onChange={(e) => setAccountId(e.target.value)}>
             {data.accounts.map((a) => (
@@ -95,7 +95,14 @@ function ImportBody({ onClose }: { onClose: () => void }) {
         )}
       >
         <Upload className="size-5 text-muted" />
-        <span className="mt-2 text-sm text-fg">{fileName || 'Drop a .csv file here, or click to choose one'}</span>
+        <span className="mt-2 text-sm text-fg">
+          {fileName || (
+            <>
+              <span className="md:hidden">Tap to choose a .csv file</span>
+              <span className="max-md:hidden">Drop a .csv file here, or click to choose one</span>
+            </>
+          )}
+        </span>
         <span className="mt-1 text-xs text-faint">
           Works with Tradovate performance exports and most broker reports, as well as the template above.
         </span>
@@ -169,8 +176,8 @@ function ImportBody({ onClose }: { onClose: () => void }) {
           )}
 
           {preview.length > 0 && (
-            <div className="overflow-hidden rounded-lg border border-line">
-              <table className="w-full text-sm">
+            <div className="overflow-hidden rounded-lg border border-line max-md:overflow-x-auto">
+              <table className="w-full whitespace-nowrap text-sm md:whitespace-normal">
                 <thead className="border-b border-line bg-app/50 text-xs text-muted">
                   <tr>
                     <th className="px-3 py-2 text-left font-medium">Date</th>

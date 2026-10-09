@@ -7,7 +7,8 @@ import { useUI } from '@/store/UIProvider';
 import { LogoMark } from '@/components/ui/Logo';
 import { Button } from '@/components/ui/Button';
 import { TradeFormModal } from '@/components/trades/TradeFormModal';
-import { Sidebar } from './Sidebar';
+import { useAndroidBack } from '@/hooks/useAndroidBack';
+import { MobileNav, Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { WelcomeModal } from './WelcomeModal';
 
@@ -20,6 +21,7 @@ function isTypingTarget(target: EventTarget | null): boolean {
 export function AppShell({ children }: { children: ReactNode }) {
   const { ready, sampleCount, actions } = useJournal();
   const { openTradeForm, confirm, toast } = useUI();
+  useAndroidBack();
 
   // N logs a new trade from anywhere
   useEffect(() => {
@@ -37,7 +39,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   if (!ready) {
     return (
-      <div className="grid h-screen place-items-center bg-app">
+      <div className="grid h-dvh place-items-center bg-app md:h-screen">
         <div className="flex flex-col items-center gap-3 text-sm text-muted">
           <LogoMark size={40} />
           Opening your journal
@@ -60,25 +62,29 @@ export function AppShell({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="flex h-screen min-w-[1180px] overflow-hidden bg-app text-fg">
+    // below md (a phone) the sidebar gives way to a tab bar at the bottom
+    <div className="flex h-dvh overflow-hidden bg-app text-fg md:h-screen md:min-w-[1180px]">
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
         <Header />
-        <main className="min-h-0 flex-1 overflow-y-auto">
+        <main className="min-h-0 flex-1 overflow-y-auto max-md:overflow-x-hidden">
           {sampleCount > 0 && (
-            <div className="flex items-center gap-3 border-b border-warn/25 bg-warn/10 px-6 py-2 text-sm">
+            <div className="flex items-center gap-3 border-b border-warn/25 bg-warn/10 px-4 py-2 text-sm md:px-6">
               <FlaskConical className="size-4 shrink-0 text-warn" />
               <span className="text-fg">
                 Test data is loaded ({sampleCount} generated trades).
-                <span className="text-muted"> Remove it before you start logging real trades.</span>
+                <span className="text-muted max-md:hidden"> Remove it before you start logging real trades.</span>
               </span>
               <Button size="sm" variant="secondary" className="ml-auto" onClick={removeSample}>
-                Remove test data
+                <span>
+                  Remove<span className="max-md:hidden"> test data</span>
+                </span>
               </Button>
             </div>
           )}
-          <div className="mx-auto max-w-[1680px] px-6 pb-12 pt-6">{children}</div>
+          <div className="mx-auto max-w-[1680px] px-4 pb-8 pt-4 md:px-6 md:pb-12 md:pt-6">{children}</div>
         </main>
+        <MobileNav />
       </div>
       <TradeFormModal />
       <WelcomeModal />

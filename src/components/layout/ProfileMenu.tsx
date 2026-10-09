@@ -5,6 +5,7 @@ import { Download, LifeBuoy, Settings, User } from 'lucide-react';
 import { useJournal } from '@/store/JournalProvider';
 import { useUI } from '@/store/UIProvider';
 import { exportBackup } from '@/lib/backup';
+import { storage } from '@/lib/storage';
 import { MenuDivider, MenuItem, Popover } from '@/components/ui/Popover';
 
 export function ProfileMenu() {
@@ -28,7 +29,7 @@ export function ProfileMenu() {
           onClick={toggle}
           aria-expanded={open}
           aria-label="Profile menu"
-          className="ml-1 grid size-9 place-items-center rounded-full border border-line bg-raised text-xs font-semibold text-fg transition hover:border-line-strong"
+          className="ml-1 grid size-10 place-items-center rounded-full md:size-9 border border-line bg-raised text-xs font-semibold text-fg transition hover:border-line-strong"
         >
           {initials || <User className="size-4 text-muted" />}
         </button>
@@ -38,7 +39,9 @@ export function ProfileMenu() {
         <div>
           <div className="px-2.5 py-2">
             <div className="truncate text-sm font-medium text-fg">{name || 'Trader'}</div>
-            <div className="text-xs text-muted">Journal stored on this PC</div>
+            <div className="text-xs text-muted">
+              Journal stored on this {storage.kind === 'native' ? 'device' : 'PC'}
+            </div>
           </div>
           <MenuDivider />
           <MenuItem
@@ -55,10 +58,11 @@ export function ProfileMenu() {
             onClick={() => {
               exportBackup(data);
               close();
-              toast('Backup downloaded');
+              // a phone opens its share sheet instead, which speaks for itself
+              if (storage.kind === 'web') toast('Backup downloaded');
             }}
           >
-            Download backup
+            {storage.kind === 'native' ? 'Back up your journal' : 'Download backup'}
           </MenuItem>
           <MenuItem
             icon={LifeBuoy}

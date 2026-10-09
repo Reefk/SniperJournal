@@ -9,7 +9,7 @@ import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export const inputClass =
-  'h-9 w-full rounded-md border border-line bg-app px-3 text-sm text-fg placeholder:text-faint transition focus:border-accent/70 focus:outline-none focus:ring-2 focus:ring-accent/20 disabled:opacity-60';
+  'h-10 md:h-9 w-full rounded-md border border-line bg-app px-3 text-sm text-fg placeholder:text-faint transition focus:border-accent/70 focus:outline-none focus:ring-2 focus:ring-accent/20 disabled:opacity-60';
 
 export function Field({
   label,
@@ -63,7 +63,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<H
   return (
     <textarea
       ref={ref}
-      className={cn(inputClass, 'h-auto min-h-[84px] resize-y py-2 leading-relaxed', className)}
+      className={cn(inputClass, 'h-auto min-h-[84px] resize-y py-2 leading-relaxed md:h-auto', className)}
       {...rest}
     />
   );

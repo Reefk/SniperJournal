@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug builds only. Working on the UI with live reload loads the pages from
+     `npm run dev` on the PC (CAP_LIVE_URL, see capacitor.config.ts), which needs
+     the network. The store build is made from release, which has no
+     permissions at all. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET" />
+</manifest>

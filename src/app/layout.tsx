@@ -16,6 +16,8 @@ export const metadata: Metadata = {
 
 /** the window chrome of the installed app follows the app's own background */
 export const viewport: Viewport = {
+  // on a phone the app draws under the status bar and pads itself (pt-safe / pb-safe)
+  viewportFit: 'cover',
   themeColor: [
     { media: '(prefers-color-scheme: dark)', color: '#0b1120' },
     { media: '(prefers-color-scheme: light)', color: '#f6f7fb' },

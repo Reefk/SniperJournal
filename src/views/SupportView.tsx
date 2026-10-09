@@ -3,6 +3,8 @@
 import { FolderOpen, HardDrive, Keyboard, LifeBuoy, ShieldCheck, Upload } from 'lucide-react';
 import { useJournal } from '@/store/JournalProvider';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { storage } from '@/lib/storage';
+import { cn } from '@/lib/utils';
 
 const SHORTCUTS = [
   ['N', 'Log a new trade'],
@@ -50,6 +52,33 @@ const FAQ: Array<{ q: string; a: string }> = [
   },
 ];
 
+/** The phone app answers the same questions, minus everything about Windows and folders */
+const PHONE_ANSWERS: Record<string, { q?: string; a: string } | null> = {
+  'Where exactly is my data kept?': {
+    a: 'In the app’s own private storage on this phone. Nothing is uploaded anywhere, there is no account, and the app works with the network off. Other apps cannot read it, and uninstalling the app deletes it, so save a backup somewhere else now and then.',
+  },
+  'What happens if I break something?': {
+    a: 'Every day that you make a change, the previous version of your journal is copied aside inside the app before the new one is written, and the last 30 daily copies are kept. You can also save a backup at any time from More → Back up your journal, and restore it from Settings.',
+  },
+  'Do I need to keep a window open for this to work?': null,
+  'Can I open it in its own window instead of a browser tab?': null,
+  'Why did Windows warn me the first time?': null,
+  'Can I run this on more than one computer?': {
+    q: 'Can I use it on more than one device?',
+    a: 'Each phone and each computer keeps its own journal. To move yours, save a backup on one device and restore it on the other from Settings.',
+  },
+};
+
+const native = storage.kind === 'native';
+
+const QUESTIONS = native
+  ? FAQ.flatMap((item) => {
+      if (!(item.q in PHONE_ANSWERS)) return [item];
+      const phone = PHONE_ANSWERS[item.q];
+      return phone ? [{ q: phone.q ?? item.q, a: phone.a }] : [];
+    })
+  : FAQ;
+
 export function SupportView() {
   const { filePath, saveStatus } = useJournal();
 
@@ -57,13 +86,15 @@ export function SupportView() {
     <>
       <PageHeader title="Support" description="How Sniper Journal works, and where your data lives." />
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <section className="rounded-xl border border-line bg-surface p-5">
           <HardDrive className="size-5 text-accent" />
           <h2 className="mt-3 text-sm font-semibold text-fg">Your journal file</h2>
           <p className="mt-1.5 text-sm leading-relaxed text-muted">
             {saveStatus === 'browser'
-              ? 'The app cannot reach its file right now, so changes are being kept in this browser only. They will be written to disk as soon as it is reachable again.'
+              ? native
+                ? 'The app cannot write its file right now, so changes are being kept temporarily. They will be written as soon as it can.'
+                : 'The app cannot reach its file right now, so changes are being kept in this browser only. They will be written to disk as soon as it is reachable again.'
               : 'Saved automatically a moment after every change.'}
           </p>
           {filePath && (
@@ -75,14 +106,15 @@ export function SupportView() {
 
         <section className="rounded-xl border border-line bg-surface p-5">
           <ShieldCheck className="size-5 text-profit" />
-          <h2 className="mt-3 text-sm font-semibold text-fg">Nothing leaves this PC</h2>
+          <h2 className="mt-3 text-sm font-semibold text-fg">Nothing leaves this {native ? 'phone' : 'PC'}</h2>
           <p className="mt-1.5 text-sm leading-relaxed text-muted">
-            There is no account, no server and no telemetry. The app only talks to its own folder on this machine, which
-            is why it keeps working with the network off.
+            There is no account, no server and no telemetry. The app only talks to its own folder on this{' '}
+            {native ? 'phone' : 'machine'}, which is why it keeps working with the network off.
           </p>
         </section>
 
-        <section className="rounded-xl border border-line bg-surface p-5">
+        {/* keyboard shortcuts mean nothing on a touch screen */}
+        <section className={cn('rounded-xl border border-line bg-surface p-5', native && 'hidden')}>
           <Keyboard className="size-5 text-accent" />
           <h2 className="mt-3 text-sm font-semibold text-fg">Shortcuts</h2>
           <dl className="mt-3 space-y-2">
@@ -103,8 +135,8 @@ export function SupportView() {
           <LifeBuoy className="size-4 text-accent" /> Common questions
         </h2>
         <div className="divide-y divide-line">
-          {FAQ.map((item) => (
-            <details key={item.q} className="group px-5 py-3.5">
+          {QUESTIONS.map((item) => (
+            <details key={item.q} className="group px-4 py-3.5 md:px-5">
               <summary className="cursor-pointer select-none list-none text-sm font-medium text-fg marker:hidden">
                 <span className="inline-block transition group-open:rotate-90">›</span>
                 <span className="ml-2">{item.q}</span>
@@ -115,7 +147,7 @@ export function SupportView() {
         </div>
       </section>
 
-      <section className="mt-4 grid grid-cols-2 gap-4">
+      <section className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className="rounded-xl border border-line bg-surface p-5">
           <Upload className="size-5 text-accent" />
           <h2 className="mt-3 text-sm font-semibold text-fg">Importing from your broker</h2>
@@ -125,7 +157,8 @@ export function SupportView() {
             cannot be read are listed before you commit the import.
           </p>
         </div>
-        <div className="rounded-xl border border-line bg-surface p-5">
+        {/* how to start the background server on Windows; a phone app just opens */}
+        <div className={cn('rounded-xl border border-line bg-surface p-5', native && 'hidden')}>
           <FolderOpen className="size-5 text-accent" />
           <h2 className="mt-3 text-sm font-semibold text-fg">Opening the app</h2>
           <p className="mt-1.5 text-sm leading-relaxed text-muted">
