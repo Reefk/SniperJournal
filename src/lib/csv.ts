@@ -131,7 +131,8 @@ export interface ImportLayout {
   canBeFills: boolean;
   /** 1-based line of the header in the file (blank lines not counted) */
   headerLine: number;
-  columns: ColumnPlan['columns'];
+  /** every column, what it is read as, and a value from it to recognise it by */
+  columns: Array<ColumnPlan['columns'][number] & { sample: string }>;
   dateOrder?: DateOrder;
   /** dates like 03/04/2026 appear and nothing in the file shows which order they are in */
   ambiguousDates: boolean;
@@ -249,7 +250,14 @@ export function importTradesFromCsv(text: string, ctx: ImportOptions): ImportRes
     rowKind,
     canBeFills,
     headerLine: table.preamble + 1,
-    columns: plan.columns,
+    columns: plan.columns.map((c) => ({
+      ...c,
+      sample:
+        table.data
+          .slice(0, 20)
+          .map((r) => (r[c.index] ?? '').trim())
+          .find(Boolean) ?? '',
+    })),
     dateOrder: order,
     ambiguousDates: detected.ambiguous,
     signature: table.header.map((h) => h.trim().toLowerCase()).join('|'),

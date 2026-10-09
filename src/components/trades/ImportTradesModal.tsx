@@ -1,16 +1,16 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CircleAlert, CircleCheck, FileSpreadsheet, Info, Merge, TriangleAlert, Upload } from 'lucide-react';
 import { useJournal } from '@/store/JournalProvider';
 import { useUI } from '@/store/UIProvider';
-import { CSV_COLUMNS, csvTemplate, describeGaps, importTradesFromCsv } from '@/lib/csv';
-import { formatMoney, formatPrice, formatShortDate, formatTime } from '@/lib/format';
+import { ROLE_LABELS, csvTemplate, describeGaps, importTradesFromCsv, type DateOrder, type Role } from '@/lib/csv';
+import { formatPrice, formatShortDate, formatTime } from '@/lib/format';
 import { isClosed, netPnl } from '@/lib/trade-math';
 import { cn, downloadFile } from '@/lib/utils';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
-import { Field, Select } from '@/components/ui/Field';
+import { Field, Input, Select } from '@/components/ui/Field';
 import { PnlValue, SideBadge, StatusBadge } from '@/components/ui/StatusBadge';
 
 export function ImportTradesModal({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -20,11 +20,46 @@ export function ImportTradesModal({ open, onClose }: { open: boolean; onClose: (
       onClose={onClose}
       size="xl"
       title="Import trades from CSV"
-      description="Drop in an export from your broker. Only a symbol column is required — anything missing can be filled in afterwards."
+      description="Drop in an export from your broker or trading platform: whole trades or individual fills. Anything missing can be filled in afterwards."
     >
       <ImportBody onClose={onClose} />
     </Modal>
   );
+}
+
+/** what you told the importer about a file, beyond what it worked out itself */
+interface Choices {
+  /** column index -> what it is */
+  mapping: Record<number, Role | ''>;
+  rowKind?: 'trades' | 'fills';
+  dateOrder?: DateOrder;
+  /** for files with no symbol column */
+  defaultSymbol: string;
+}
+const AUTOMATIC: Choices = { mapping: {}, defaultSymbol: '' };
+const tradesWord = (n: number) => `${n} ${n === 1 ? 'trade' : 'trades'}`;
+const isAutomatic = (c: Choices) => !Object.keys(c.mapping).length && !c.rowKind && !c.dateOrder && !c.defaultSymbol;
+
+/**
+ * Choices are remembered per layout of columns, on this device only, so the
+ * next export from the same broker reads the same way without asking again.
+ */
+const CHOICES_KEY = 'sniper-journal:csv-layout:';
+function rememberedChoices(signature: string): Choices | null {
+  try {
+    const raw = localStorage.getItem(CHOICES_KEY + signature);
+    return raw ? { ...AUTOMATIC, ...(JSON.parse(raw) as Partial<Choices>) } : null;
+  } catch {
+    return null;
+  }
+}
+function rememberChoices(signature: string, choices: Choices) {
+  try {
+    if (isAutomatic(choices)) localStorage.removeItem(CHOICES_KEY + signature);
+    else localStorage.setItem(CHOICES_KEY + signature, JSON.stringify(choices));
+  } catch {
+    /* storage unavailable: the choices simply are not remembered */
+  }
 }
 
 function ImportBody({ onClose }: { onClose: () => void }) {
@@ -37,6 +72,11 @@ function ImportBody({ onClose }: { onClose: () => void }) {
   const [fileName, setFileName] = useState('');
   const [dragging, setDragging] = useState(false);
   const [combinePartials, setCombinePartials] = useState(true);
+  const [choices, setChoices] = useState<Choices>(AUTOMATIC);
+  /** the layout whose remembered choices have been looked up */
+  const [lookedUp, setLookedUp] = useState('');
+  const [restored, setRestored] = useState(false);
+  const [showColumns, setShowColumns] = useState(false);
   const currency = data.settings.currency;
 
   const result = useMemo(
@@ -48,16 +88,39 @@ function ImportBody({ onClose }: { onClose: () => void }) {
             setups: data.setups,
             existing: data.trades,
             combinePartials,
+            mapping: choices.mapping,
+            rowKind: choices.rowKind,
+            dateOrder: choices.dateOrder,
+            defaultSymbol: choices.defaultSymbol,
           })
         : null,
-    [text, accountId, data.accounts, data.setups, data.trades, combinePartials],
+    [text, accountId, data.accounts, data.setups, data.trades, combinePartials, choices],
   );
+  const layout = result?.layout ?? null;
+
+  // a layout seen before reads the way it was set up last time
+  useEffect(() => {
+    if (!layout || layout.signature === lookedUp) return;
+    setLookedUp(layout.signature);
+    const saved = rememberedChoices(layout.signature);
+    setRestored(Boolean(saved));
+    if (saved) setChoices(saved);
+  }, [layout, lookedUp]);
 
   const readFile = async (file: File | undefined) => {
     if (!file) return;
     setFileName(file.name);
+    setChoices(AUTOMATIC);
+    setLookedUp('');
+    setRestored(false);
+    setShowColumns(false);
     setText(await file.text());
   };
+
+  const setRole = (index: number, role: Role | '') =>
+    setChoices((c) => ({ ...c, mapping: { ...c.mapping, [index]: role } }));
+  const noSymbolColumn = Boolean(layout && !layout.columns.some((c) => c.role === 'symbol' || c.role === 'underlying'));
+  const used = layout?.columns.filter((c) => c.role).length ?? 0;
 
   const preview = result?.trades.slice(0, 6) ?? [];
 
@@ -104,7 +167,8 @@ function ImportBody({ onClose }: { onClose: () => void }) {
           )}
         </span>
         <span className="mt-1 text-xs text-faint">
-          Works with Tradovate performance exports and most broker reports, as well as the template above.
+          Works with exports from most brokers and platforms, whole trades or individual fills, as well as the template
+          above.
         </span>
         <input
           type="file"
@@ -143,6 +207,105 @@ function ImportBody({ onClose }: { onClose: () => void }) {
               <span className="text-muted">{result.newSetups.length} new playbook setups will be created</span>
             )}
           </div>
+
+          {result.notices.length > 0 && (
+            <ul className="space-y-1 rounded-lg border border-accent/25 bg-accent/5 px-4 py-2.5 text-xs leading-relaxed text-muted">
+              {result.notices.map((notice, i) => (
+                <li key={i} className="flex items-start gap-2">
+                  <Info className="mt-px size-3.5 shrink-0 text-accent" />
+                  <span>{notice}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {layout && (
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              {(layout.canBeFills || layout.rowKind === 'fills') && (
+                <Field label="Each row is">
+                  <Select
+                    value={layout.rowKind === 'fills' ? 'fills' : 'trades'}
+                    onChange={(e) => setChoices((c) => ({ ...c, rowKind: e.target.value as 'trades' | 'fills' }))}
+                  >
+                    <option value="trades">A whole trade</option>
+                    <option value="fills">One fill (put together into trades)</option>
+                  </Select>
+                </Field>
+              )}
+              {(layout.ambiguousDates || choices.dateOrder) && (
+                <Field label="Dates like 03/04/2026 are">
+                  <Select
+                    value={layout.dateOrder ?? 'mdy'}
+                    onChange={(e) => setChoices((c) => ({ ...c, dateOrder: e.target.value as DateOrder }))}
+                  >
+                    <option value="mdy">Month first: March 4</option>
+                    <option value="dmy">Day first: 3 April</option>
+                  </Select>
+                </Field>
+              )}
+              {noSymbolColumn && (
+                <Field label="Symbol for every row" hint="this file has none">
+                  <Input
+                    value={choices.defaultSymbol}
+                    onChange={(e) => setChoices((c) => ({ ...c, defaultSymbol: e.target.value }))}
+                    placeholder="e.g. ES"
+                  />
+                </Field>
+              )}
+            </div>
+          )}
+
+          {layout && (
+            <details
+              open={showColumns || (noSymbolColumn && !choices.defaultSymbol)}
+              onToggle={(e) => setShowColumns(e.currentTarget.open)}
+              className="rounded-lg border border-line"
+            >
+              <summary className="cursor-pointer select-none px-4 py-2.5 text-sm text-muted hover:text-fg">
+                Columns: {used} of {layout.columns.length} used
+                {restored ? ', as you set them for this layout last time' : ''}
+              </summary>
+              <div className="max-h-72 space-y-2 overflow-y-auto border-t border-line px-4 py-3">
+                <p className="text-xs leading-relaxed text-faint">
+                  Change what a column is read as if the importer got it wrong. Your choices are remembered on this
+                  device for files with the same columns.
+                </p>
+                {layout.columns.map((column) => (
+                  <div key={column.index} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] items-center gap-3">
+                    <div className="min-w-0">
+                      <div className="truncate text-sm text-fg">{column.header || `Column ${column.index + 1}`}</div>
+                      <div className="num truncate text-[11px] text-faint">{column.sample || '—'}</div>
+                    </div>
+                    <Select
+                      aria-label={`What "${column.header || `column ${column.index + 1}`}" is`}
+                      value={column.role}
+                      onChange={(e) => setRole(column.index, e.target.value as Role | '')}
+                    >
+                      <option value="">Not used</option>
+                      {ROLE_LABELS.map(([role, label]) => (
+                        <option key={role} value={role}>
+                          {label}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                ))}
+                {!isAutomatic(choices) && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setChoices(AUTOMATIC);
+                      setRestored(false);
+                      if (layout) rememberChoices(layout.signature, AUTOMATIC);
+                    }}
+                  >
+                    Back to automatic
+                  </Button>
+                )}
+              </div>
+            </details>
+          )}
 
           {result.pairedFills && (
             <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-line px-4 py-3 text-sm">
@@ -263,14 +426,27 @@ function ImportBody({ onClose }: { onClose: () => void }) {
         </summary>
         <div className="mt-2 space-y-2 leading-relaxed">
           <p>
-            Only <span className="num text-fg">symbol</span> is required. Everything else is optional:{' '}
-            <span className="num">{CSV_COLUMNS.filter((c) => c !== 'symbol').join(', ')}</span>.
+            Only a <span className="text-fg">symbol</span> is required, and for a file without one (TradingView&apos;s
+            list of trades) you can type it in. Everything else is optional.
           </p>
           <p>
-            Broker wording is recognised too — <span className="num">qty</span>, <span className="num">ticker</span>,{' '}
-            <span className="num">commission</span>, <span className="num">realized pnl</span>, and the paired{' '}
-            <span className="num">buyPrice / sellPrice / boughtTimestamp / soldTimestamp</span> columns that futures
-            platforms export. Separate several tags with a | character.
+            A file can list <span className="text-fg">whole trades</span>, with the entry and the exit on one row, or{' '}
+            <span className="text-fg">individual fills</span>, one buy or sell per row. Fills are put back together by
+            following the position in each symbol: scaling in and out stays one trade, and a position still open at the
+            end of the file is imported as open.
+          </p>
+          <p>
+            Column names are recognised in the many forms brokers use — <span className="num">Qty</span>,{' '}
+            <span className="num">Filled</span>, <span className="num">Market pos.</span>,{' '}
+            <span className="num">Comm/Fee</span>, <span className="num">Net P&amp;L (USD)</span>,{' '}
+            <span className="num">Date/Time</span>, separate date and time columns — and several fee columns add up.
+            Title lines above the table and total lines below it are skipped. Anything read wrongly can be changed
+            under Columns. Separate several tags with a | character.
+          </p>
+          <p>
+            What one point is worth comes from a multiplier column, the amount against the price, or the file&apos;s
+            P&amp;L. Failing those, futures are recognised from a full contract code such as ESH6 or MNQ 03-26, and
+            options count 100 shares. The preview says whenever it worked one out this way.
           </p>
           <p>
             Rows that are missing a date, quantity or entry price still import. They are marked{' '}
@@ -289,17 +465,18 @@ function ImportBody({ onClose }: { onClose: () => void }) {
           disabled={!result?.trades.length}
           onClick={() => {
             if (!result?.trades.length) return;
+            if (layout) rememberChoices(layout.signature, choices);
             actions.importTrades(result.trades, result.newSetups);
             toast(
               result.incomplete > 0
-                ? `Imported ${result.trades.length} trades — ${result.incomplete} need details`
-                : `Imported ${result.trades.length} trades`,
+                ? `Imported ${tradesWord(result.trades.length)} — ${result.incomplete} need details`
+                : `Imported ${tradesWord(result.trades.length)}`,
               result.incomplete > 0 ? 'info' : 'success',
             );
             onClose();
           }}
         >
-          Import {result?.trades.length ? `${result.trades.length} trades` : 'trades'}
+          Import {result?.trades.length ? tradesWord(result.trades.length) : 'trades'}
         </Button>
       </div>
     </div>

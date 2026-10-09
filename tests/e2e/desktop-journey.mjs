@@ -158,6 +158,11 @@ const PAGE = `
   window.$modal = () => [...document.querySelectorAll('[data-modal-root]')].at(-1);
   window.$text = () => document.body.innerText;
   window.$nav = (href) => [...document.querySelectorAll('aside a')].find((a) => a.getAttribute('href') === href).click();
+  window.$role = (header, role) => {
+    const s = [...document.querySelectorAll('select')].find((x) => x.getAttribute('aria-label') === 'What "' + header + '" is');
+    if (s) $type(s, role);
+    return !!s;
+  };
   true;
 `;
 const money = (v) => `$${Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -175,6 +180,14 @@ writeFileSync(
   ].join('\n'),
 );
 
+// a broker's execution report: three fills that make one trade
+const fillsPath = join(work, 'fills.csv');
+writeFileSync(fillsPath, ['time,symbol,side,qty,price', '2026-03-06 09:30,NVDA,Buy,10,100', '2026-03-06 09:45,NVDA,Buy,10,102', '2026-03-06 10:00,NVDA,Sell,20,105'].join('\n'));
+// columns no importer could know, set by hand in the preview
+const oddPath = join(work, 'odd.csv');
+writeFileSync(oddPath, ['Ticker Name,Lots Traded,Buy Or Sell Flag,Fill,When', 'AMD,10,B,150,2026-03-06 11:00', 'AMD,10,S,155,2026-03-06 11:30'].join('\n'));
+const mapOdd = `$role('Ticker Name', 'symbol'); $role('Lots Traded', 'quantity'); $role('Buy Or Sell Flag', 'side'); $role('Fill', 'price'); $role('When', 'time'); true`;
+
 async function journey() {
   await startServer();
   const page = await fetch(base);
@@ -183,6 +196,18 @@ async function journey() {
   const foreign = await fetch(`${base}/api/journal`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Sec-Fetch-Site': 'cross-site' }, body: '{}' });
   check('the journal API refuses a cross-site request', foreign.status === 403);
   let b = await openBrowser();
+  // waits that end in a PASS or FAIL rather than stopping the run
+  const seen = (expression, label, timeout) => b.until(expression, label, timeout).then(() => true, () => false);
+  const journalOnDisk = () => JSON.parse(readFileSync(join(work, 'data', 'journal.json'), 'utf8'));
+  const savedSoon = async (test) => {
+    for (let i = 0; i < 50; i++) {
+      try {
+        if (test(journalOnDisk())) return true;
+      } catch {}
+      await sleep(100);
+    }
+    return false;
+  };
   await b.send('Page.navigate', { url: base });
   await b.until(`document.readyState === 'complete' && document.body.innerText.includes('Set up your journal')`, 'welcome screen');
   await b.run(PAGE);
@@ -206,6 +231,22 @@ async function journey() {
   check('4 trades in the journal', await b.run(`$text().includes('4 trades in Main Portfolio')`));
   check('"Sell Short" imported as a short', await b.run(`[...document.querySelectorAll('tbody tr')].some((r) => r.innerText.includes('ES') && r.innerText.includes('SHORT'))`));
 
+  // ---- 2b. other layouts in the preview: fills, and columns set by hand -------
+  await b.run(`$tStarts('Import CSV').click(); true`);
+  await b.until(`!!$modal()?.querySelector('input[type=file]')`, 'import dialog');
+  await b.setFile('[data-modal-root] input[type=file]', fillsPath);
+  await b.until(`/1\\s*ready to import/.test($modal().innerText)`, 'fills preview');
+  check('a file of single fills is put back together (3 fills, 1 trade)', await b.run(`$modal().innerText.includes('3 fills were put back together into 1 trade')`));
+  await b.run(`$type($field('Each row is', $modal()), 'trades'); true`);
+  check('read as whole trades instead, the same file gives 3 rows', await seen(`/3\\s*ready to import/.test($modal().innerText)`, 'whole-trade preview', 5000));
+  await b.setFile('[data-modal-root] input[type=file]', oddPath);
+  await b.until(`$modal().innerText.includes('No symbol column found')`, 'unknown columns');
+  check('columns it cannot read open the Columns panel', await b.run(`!!$modal().querySelector('details[open]')?.innerText.includes('Columns:')`));
+  await b.run(mapOdd);
+  check('columns set by hand read the file (2 fills, 1 trade)', await seen(`/1\\s*ready to import/.test($modal().innerText)`, 'mapped preview', 5000));
+  await b.run(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); true`);
+  await b.until(`!$modal()`, 'import dialog closed');
+
   // ---- 3. metrics ----------------------------------------------------------
   const dashboard = async (expectNet, expectWinRate, label) => {
     await b.run(`$nav('/'); true`);
@@ -219,18 +260,6 @@ async function journey() {
     check(`${label}: sidebar balance equals the equity curve's current balance`, sidebar.includes(money(10000 + expectNet)) && text.includes(money(10000 + expectNet)));
   };
   await dashboard(111, 75, 'after import');
-  // waits that end in a PASS or FAIL rather than stopping the run
-  const seen = (expression, label, timeout) => b.until(expression, label, timeout).then(() => true, () => false);
-  const journalOnDisk = () => JSON.parse(readFileSync(join(work, 'data', 'journal.json'), 'utf8'));
-  const savedSoon = async (test) => {
-    for (let i = 0; i < 50; i++) {
-      try {
-        if (test(journalOnDisk())) return true;
-      } catch {}
-      await sleep(100);
-    }
-    return false;
-  };
 
   // ---- 4. edit -------------------------------------------------------------
   await b.run(`$nav('/trades'); true`);
@@ -392,6 +421,27 @@ async function journey() {
   await b.run(PAGE);
   await dashboard(143, 100, `after a server restart, in a fresh browser${windows ? ', the file busy at first' : ''}`);
   await busy?.released;
+
+  // ---- 10. columns set by hand are remembered for the next file like it -------
+  await b.run(`$nav('/trades'); true`);
+  await b.until(`!!$tStarts('Import CSV')`, 'trades page');
+  const importOdd = async () => {
+    await b.run(`$tStarts('Import CSV').click(); true`);
+    await b.until(`!!$modal()?.querySelector('input[type=file]')`, 'import dialog');
+    await b.setFile('[data-modal-root] input[type=file]', oddPath);
+  };
+  await importOdd();
+  await b.until(`$modal().innerText.includes('No symbol column found')`, 'unknown columns');
+  await b.run(mapOdd);
+  await b.until(`/1\\s*ready to import/.test($modal().innerText)`, 'mapped preview');
+  await b.run(`$tStarts('Import 1 trade', $modal()).click(); true`);
+  await b.until(`!$modal()`, 'imported');
+  await importOdd();
+  check(
+    'the next file with the same columns is read the same way, without asking',
+    await seen(`/1\\s*ready to import/.test($modal().innerText) && $modal().innerText.includes('as you set them for this layout last time')`, 'remembered layout', 5000),
+  );
+  await b.run(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); true`);
   await b.close();
   await stopServer();
 }
