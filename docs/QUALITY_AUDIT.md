@@ -58,7 +58,7 @@ review and typecheck only. The serious ones were in three places:
 - Re-importing a CSV that has no trade IDs duplicates every trade.
 - Files with separate Date and Time columns lose the time.
 - Several text colours fail WCAG AA contrast.
-- The app is labelled "AI Insights" although the analysis is rule-based, which the store listing deliberately avoids saying.
+- ~~The app is labelled "AI Insights" although the analysis is rule-based.~~ Renamed to "Insights & Signals" on 2026-10-09; store screenshot `05-insights.png` still shows the old name.
 - Nothing runs the tests automatically yet: there is no CI or lint.
 
 **Release.** The evidence supports releasing to a Play closed/internal test
@@ -179,7 +179,7 @@ No Critical findings were made.
 | SJ-32 | Low | Persistence | A newer-version journal on disk is silently downgraded on load | Confirmed |
 | SJ-33 | Low | Accessibility | Dialogs do not trap Tab focus | Confirmed (code) |
 | SJ-34 | Low | Accessibility | Charts have no text alternative | Confirmed (code) |
-| SJ-35 | Low | Product / Store | UI says "AI Insights"; the analysis is rule-based and the store listing avoids "AI" | Confirmed |
+| SJ-35 | Low | Product / Store | UI says "AI Insights"; the analysis is rule-based and the store listing avoids "AI" | Fixed (2026-10-09; store screenshot 05 still to retake) |
 | SJ-36 | Low | Persistence | Screenshots: orphaned on account delete/reset; not in backups | Accepted Risk |
 | SJ-37 | Info | Persistence | Desktop `localStorage` mirror fails silently past about 5 MB | Accepted Risk |
 | SJ-38 | Info | Dependencies | 3 moderate advisories, dev-only (`@capacitor/cli`) | Accepted Risk |
@@ -625,7 +625,7 @@ No Critical findings were made.
 - **Evidence:** `docs/play-store-listing.md:103-106` deliberately says "insights rather than AI, because the analysis is rule-based calculation". `src/lib/insights.ts` contains only deterministic rules.
 - **Impact:** Store screenshots will show "AI". A reviewer could see that as a misleading claim, and it contradicts the listing.
 - **Recommended fix:** Rename to "Insights & Signals" in the four places. This is a product wording decision, so it was not changed.
-- **Status:** Confirmed.
+- **Status:** Fixed on 2026-10-09 at the owner's request. Renamed everywhere in the app and the user guide; the brain-circuit icon was replaced with a lightbulb. Store screenshot `assets/play-store/screenshots/05-insights.png` still shows "AI Insights & Signals" and must be retaken before upload.
 
 ### SJ-36: Screenshot lifecycle
 
@@ -992,7 +992,7 @@ A build that compiles is not evidence of readiness. These items are.
 
 | Item | Finding | Effort |
 |---|---|---|
-| Rename "AI Insights & Signals" to "Insights & Signals" (4 places plus the user guide) | SJ-35 | XS |
+| ~~Rename "AI Insights & Signals" to "Insights & Signals"~~ Done 2026-10-09; retake store screenshot 05 | SJ-35 | XS |
 | Test on at least one physical phone and read Play's pre-launch report | SJ-41 | S |
 | Add CI: `npm ci`, typecheck, test, build, `build:mobile` on every push | SJ-30 | S |
 

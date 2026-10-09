@@ -118,7 +118,7 @@ export function SettingsView() {
 
         <Section
           title="Risk limits"
-          description="Used by the signals on the AI Insights page. Leave blank to turn a limit off."
+          description="Used by the signals on the Insights page. Leave blank to turn a limit off."
         >
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <Field label="Maximum loss in a day" hint={currency}>

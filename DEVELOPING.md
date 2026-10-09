@@ -93,7 +93,7 @@ data/               your journal and its backups, created at runtime
 | How P&L, R multiples and risk are calculated       | `src/lib/trade-math.ts`                                                             |
 | Win rate, profit factor, expectancy, SQN, drawdown | `src/lib/stats.ts`                                                                  |
 | The Sniper Score axes and how they are scored      | `sniperScore()` in `src/lib/stats.ts`                                               |
-| The wording and rules of the AI insights           | `src/lib/insights.ts`                                                               |
+| The wording and rules of the insights              | `src/lib/insights.ts`                                                               |
 | Which CSV column names are recognised              | `ALIASES` in `src/lib/csv.ts`                                                       |
 | How partial fills are combined into one trade      | `src/lib/merge.ts`                                                                  |
 | Chart image upload, scaling and storage            | `src/lib/screenshots.ts`, `src/app/api/screenshot/`                                 |

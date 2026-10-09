@@ -101,7 +101,7 @@ you are mid-edit.
    starting balance. The starting balance is what the equity curve and the
    drawdown percentages are measured against.
 2. Press **N**, or click **Log trade**, and enter your first trade.
-3. Statistics appear as soon as you have closed trades. The AI Insights page
+3. Statistics appear as soon as you have closed trades. The Insights page
    stays quiet until there are at least five, because fewer than that is noise
    rather than a pattern.
 
@@ -122,7 +122,7 @@ entries are never touched.
 | **Calendar**              | A month at a glance: each day shows its net P&L and trade count. Click a day to see the trades behind the number.    |
 | **The Playbook**          | The setups you allow yourself to trade and their rules, with the real performance of each one underneath.            |
 | **Trades**                | The full table, with filters for pair, session, leverage, setup, date, direction and result. Click a row to edit it. |
-| **AI Insights & Signals** | Patterns found in your own trades: your best session, revenge trading, holding losers too long, fee drag, and more.  |
+| **Insights & Signals**    | Patterns found in your own trades: your best session, revenge trading, holding losers too long, fee drag, and more.  |
 | **Resources**             | Your own shortlist of tools and links.                                                                               |
 | **Support**               | How the app works, where your data is, and the keyboard shortcuts.                                                   |
 | **Reports**               | A printable summary, month by month and per symbol and setup.                                                        |

@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { BrainCircuit, CircleAlert, CircleCheck, Info, Lightbulb, Plus, TriangleAlert } from 'lucide-react';
+import { CircleAlert, CircleCheck, Info, Lightbulb, Plus, TriangleAlert } from 'lucide-react';
 import { useJournal } from '@/store/JournalProvider';
 import { useUI } from '@/store/UIProvider';
 import { buildInsights, buildSignals, MIN_TRADES_FOR_INSIGHTS, type Tone } from '@/lib/insights';
@@ -56,11 +56,11 @@ export function InsightsView() {
     return (
       <>
         <PageHeader
-          title="AI Insights & Signals"
+          title="Insights & Signals"
           description="Patterns found in your own trades, not generic advice."
         />
         <EmptyState
-          icon={BrainCircuit}
+          icon={Lightbulb}
           title={
             closedCount === 0
               ? 'Nothing to analyse yet'
@@ -80,7 +80,7 @@ export function InsightsView() {
   return (
     <>
       <PageHeader
-        title="AI Insights & Signals"
+        title="Insights & Signals"
         description={`Read from ${closedCount} closed trades. Every claim points at a number you can check in the table.`}
       />
 

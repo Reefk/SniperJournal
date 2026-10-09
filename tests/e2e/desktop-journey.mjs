@@ -256,6 +256,11 @@ async function journey() {
   await b.run(tick('AAPL'));
   await b.until(`${selectedCount} === 0`, 'selection cleared');
 
+  // ---- 5c. the insights are rules over your own trades, and say so ----------
+  await b.run(`$nav('/insights'); true`);
+  await b.until(`document.querySelector('main h1')?.textContent === 'Insights & Signals'`, 'insights page');
+  check('the Insights page and the menu make no claim to be AI', await b.run(`!/\\bAI\\b/.test(document.querySelector('main').innerText + document.querySelector('aside').innerText)`));
+
   // ---- 6. export and backup ------------------------------------------------
   await b.run(`$nav('/trades'); true`);
   await b.until(`!!$tStarts('Export CSV')`, 'export button');
