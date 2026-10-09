@@ -11,6 +11,7 @@ import { storage } from '@/lib/storage';
 import { uid } from '@/lib/utils';
 import { cleanAccounts, cleanResources, cleanSettings, cleanSetups, cleanTrades } from './sanitize';
 import { accountBalances } from './selectors';
+import { createAutosave, readPatiently } from './autosave';
 
 const LOCAL_KEY = 'sniper-journal:v1';
 
@@ -30,6 +31,22 @@ function writeMirror(data: JournalData) {
   }
 }
 
+function removeMirror() {
+  try {
+    localStorage.removeItem(LOCAL_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * saved:   the newest change is in the journal file
+ * saving:  a change is about to be written
+ * browser: a save failed; changes are kept in the browser (or, on a phone,
+ *          temporarily) and the file is tried again until it works
+ * error:   the file could not be read at startup, so it is never written
+ *          over this session; changes are kept in the browser instead
+ */
 export type SaveStatus = 'saved' | 'saving' | 'browser' | 'error';
 
 export function createDefaultData(): JournalData {
@@ -127,10 +144,26 @@ export function JournalProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
   const [filePath, setFilePath] = useState<string | null>(null);
-  const diskAvailable = useRef(true);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const diskReadable = useRef(true);
   const firstLoad = useRef(true);
   const dataRef = useRef<JournalData>(createDefaultData());
+
+  // when changes reach the file, and trying again after a failed save
+  const [autosave] = useState(() =>
+    createAutosave<JournalData>(async (snapshot) => setFilePath(await storage.writeJournal(snapshot)), {
+      saved: () => {
+        setSaveStatus('saved');
+        // the folder has it now; a leftover fallback copy would only go stale
+        if (!MIRROR_ALWAYS) removeMirror();
+      },
+      saving: () => setSaveStatus('saving'),
+      failed: (newest) => {
+        setSaveStatus('browser');
+        if (!MIRROR_ALWAYS) writeMirror(newest);
+      },
+    }),
+  );
+  useEffect(() => () => autosave.dispose(), [autosave]);
 
   // ---- load: prefer whichever copy is newer, disk or this browser ----
   useEffect(() => {
@@ -138,10 +171,14 @@ export function JournalProvider({ children }: { children: ReactNode }) {
     (async () => {
       let fromDisk: JournalData | null = null;
       try {
-        await storage.init();
-        fromDisk = await storage.readJournal();
+        fromDisk = await readPatiently(async () => {
+          await storage.init();
+          return storage.readJournal();
+        });
       } catch {
-        diskAvailable.current = false;
+        // a file that cannot be read is never written over: what is in it
+        // may be all there is. Changes stay in the browser this session.
+        diskReadable.current = false;
       }
 
       let fromBrowser: JournalData | null = null;
@@ -161,7 +198,7 @@ export function JournalProvider({ children }: { children: ReactNode }) {
 
       if (!cancelled) {
         setData(normalize(winner));
-        setSaveStatus(diskAvailable.current ? 'saved' : 'browser');
+        setSaveStatus(diskReadable.current ? 'saved' : 'error');
         setReady(true);
       }
     })();
@@ -170,26 +207,7 @@ export function JournalProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const persist = useCallback(async (snapshot: JournalData) => {
-    try {
-      setFilePath(await storage.writeJournal(snapshot));
-      setSaveStatus('saved');
-      if (!MIRROR_ALWAYS) {
-        // the folder has it now; a leftover fallback copy would only go stale
-        try {
-          localStorage.removeItem(LOCAL_KEY);
-        } catch {
-          /* ignore */
-        }
-      }
-    } catch {
-      diskAvailable.current = false;
-      if (!MIRROR_ALWAYS) writeMirror(snapshot);
-      setSaveStatus('browser');
-    }
-  }, []);
-
-  // ---- save: debounced, to disk and to the browser mirror ----
+  // ---- save: to the browser mirror at once, to disk after a short pause ----
   useEffect(() => {
     if (!ready) return;
     if (firstLoad.current) {
@@ -197,36 +215,19 @@ export function JournalProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (MIRROR_ALWAYS || !diskAvailable.current) writeMirror(data);
-
-    if (!diskAvailable.current) {
-      setSaveStatus('browser');
-      return;
-    }
-    setSaveStatus('saving');
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => {
-      timer.current = null;
-      void persist(data);
-    }, 350);
-    return () => {
-      if (timer.current) clearTimeout(timer.current);
-    };
-  }, [data, ready, persist]);
+    if (MIRROR_ALWAYS || !diskReadable.current) writeMirror(data);
+    if (diskReadable.current) autosave.change(data);
+  }, [data, ready, autosave]);
 
   // a phone can suspend the app the moment it leaves the screen, so a save
   // still waiting out its 350ms is written straight away instead
   useEffect(() => {
     const flush = () => {
-      if (!timer.current) return;
-      if (document.visibilityState !== 'hidden') return;
-      clearTimeout(timer.current);
-      timer.current = null;
-      void persist(dataRef.current);
+      if (document.visibilityState === 'hidden') autosave.flush();
     };
     document.addEventListener('visibilitychange', flush);
     return () => document.removeEventListener('visibilitychange', flush);
-  }, [persist]);
+  }, [autosave]);
 
   // the merge action needs to read the trades it is folding together
   useEffect(() => {

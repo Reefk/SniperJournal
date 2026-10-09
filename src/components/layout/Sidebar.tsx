@@ -41,8 +41,8 @@ const NAV = [
 
 const SAVE_LABEL: Record<SaveStatus, string> =
   storage.kind === 'native'
-    ? { saved: 'Saved on this device', saving: 'Saving…', browser: 'Saved temporarily', error: 'Save failed' }
-    : { saved: 'Saved to disk', saving: 'Saving…', browser: 'Saved in browser', error: 'Save failed' };
+    ? { saved: 'Saved on this device', saving: 'Saving…', browser: 'Saved temporarily', error: 'Journal file unreadable' }
+    : { saved: 'Saved to disk', saving: 'Saving…', browser: 'Saved in browser', error: 'Journal file unreadable' };
 
 /** "online" means nothing to an app that never uses the network on a phone */
 const SHOW_ONLINE = storage.kind === 'web';

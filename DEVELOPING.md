@@ -139,10 +139,18 @@ anything an existing `journal.json` does not have yet.
 you type in the form
   → JournalProvider updates its state
   → the whole journal is written to localStorage immediately
-  → 350ms later it goes to storage.writeJournal()
-  → on a PC that is a PUT to /api/journal, which writes data/journal.json
-    (to a temp file first, then renames)
+  → 350ms later it goes to storage.writeJournal()   (src/store/autosave.ts)
+  → on a PC that is a PUT to /api/journal, which writes data/journal.json:
+    one save at a time, to a temp file flushed to the disk, then renamed
+    over the journal (tried again for about 1.5s while antivirus or
+    OneDrive briefly holds the file)
+  → a save that still fails is tried again after 1s, 2s, 5s, 10s, then
+    every 30s, with the newest journal, until one succeeds
 ```
+
+A journal file that cannot be read when the app starts is tried twice more
+(after 0.5s and 1.5s). If it still cannot be read, it is never written over
+for the rest of that session, and the sidebar says "Journal file unreadable".
 
 Every read and write — the journal, chart images, exported files — goes through
 the one interface in `src/lib/storage/types.ts`. Nothing else in the app touches

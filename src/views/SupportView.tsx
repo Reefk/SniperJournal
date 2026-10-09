@@ -91,7 +91,9 @@ export function SupportView() {
           <HardDrive className="size-5 text-accent" />
           <h2 className="mt-3 text-sm font-semibold text-fg">Your journal file</h2>
           <p className="mt-1.5 text-sm leading-relaxed text-muted">
-            {saveStatus === 'browser'
+            {saveStatus === 'error'
+              ? `The journal file could not be read when the app started, so it is being left exactly as it is rather than saved over. Your changes are kept ${native ? 'temporarily' : 'in this browser'} for now. Close and reopen the app to try again. If this keeps happening, restore your latest backup in Settings.`
+              : saveStatus === 'browser'
               ? native
                 ? 'The app cannot write its file right now, so changes are being kept temporarily. They will be written as soon as it can.'
                 : 'The app cannot reach its file right now, so changes are being kept in this browser only. They will be written to disk as soon as it is reachable again.'

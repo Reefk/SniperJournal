@@ -1,7 +1,8 @@
 // End-to-end journey through the real desktop build, in a headless browser:
 // first run, CSV import, metrics, edit, delete, CSV export, backup, restore
-// (with its safety copy) and a server restart. Synthetic data only, in a
-// throwaway folder; your own data/ folder is never touched.
+// (with its safety copy), a save while another program holds the journal
+// file (Windows), and a server restart. Synthetic data only, in a throwaway
+// folder; your own data/ folder is never touched.
 //
 //   npm run build && npm run e2e
 //
@@ -52,6 +53,23 @@ const exited = (proc) => (proc.exitCode !== null || proc.signalCode !== null ? P
 async function stopServer() {
   server.kill();
   await exited(server);
+}
+
+// ---- another program holding the journal open (Windows only) ---------------
+// The way antivirus or OneDrive does: share 'Read' lets others read the file
+// but not replace it; 'None' shuts everyone out. Resolves once it is open,
+// with `released` for when it is let go. (Wrapped in an object: an async
+// function returning a bare promise only resolves once that one does.)
+const holders = new Set();
+async function holdJournal(ms, share) {
+  const file = join(work, 'data', 'journal.json');
+  const proc = spawn('powershell', ['-NoProfile', '-Command', `$f = [IO.File]::Open('${file}', 'Open', 'Read', '${share}'); 'held'; Start-Sleep -Milliseconds ${ms}; $f.Close()`]);
+  holders.add(proc);
+  await new Promise((resolve, reject) => {
+    proc.stdout.once('data', resolve);
+    proc.once('exit', (code) => reject(new Error(`could not hold the journal open (exit ${code})`)));
+  });
+  return { released: exited(proc).then(() => holders.delete(proc)) };
 }
 
 // ---- a browser with a fresh profile, driven over the DevTools protocol ------
@@ -292,16 +310,41 @@ async function journey() {
   await b.run(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); true`);
   await b.until(`!$modal()`, 'dialog closed by Escape');
   check('focus goes back to the button that opened it', await b.run(`document.activeElement === $opener`));
+
+  // ---- 8b. a save refused by a held file is tried again until it lands ------
+  const windows = process.platform === 'win32';
+  if (windows) {
+    const note = 'written while the file was held';
+    const onDisk = () => JSON.parse(readFileSync(join(work, 'data', 'journal.json'), 'utf8')).trades.some((t) => t.notes === note);
+    const status = `document.querySelector('aside').innerText`;
+    const seen = (expression, label, timeout) => b.until(expression, label, timeout).then(() => true, () => false);
+    const { released } = await holdJournal(6000, 'Read'); // longer than the server's own retries
+    await b.run(`$nav('/trades'); true`);
+    await b.until(`[...document.querySelectorAll('tbody tr')].some((r) => r.innerText.includes('AAPL'))`, 'trades table');
+    await b.run(`[...document.querySelectorAll('tbody tr')].find((r) => r.innerText.includes('AAPL')).click(); true`);
+    await b.until(`!!$modal() && !!$field('Notes', $modal())`, 'trade form');
+    await b.run(`$type($field('Notes', $modal()), ${JSON.stringify(note)}); $t('Save changes').click(); true`);
+    await b.until(`!$modal()`, 'form closed');
+    check('a save refused by a held file says the change is kept in the browser', await seen(`${status}.includes('Saved in browser')`, 'failed save shown', 10000));
+    check('meanwhile the file on disk is left as it was', !onDisk());
+    await released;
+    check('once the file is free the change is saved, with no further edit', await seen(`${status}.includes('Saved to disk')`, 'saving recovered', 20000));
+    check('and it is in the file on disk', onDisk());
+  }
   await b.close();
 
   // ---- 9. restart: the journal comes back from disk, not from the browser ---
   await stopServer();
   await startServer();
   b = await openBrowser(); // a brand new profile: no browser copy to fall back on
+  // on Windows the file is also busy for a moment just as the app opens: the
+  // app waits for it rather than starting empty
+  const busy = windows ? await holdJournal(2000, 'None') : null;
   await b.send('Page.navigate', { url: base });
   await b.until(`document.readyState === 'complete' && !!document.querySelector('aside')`, 'app after restart');
   await b.run(PAGE);
-  await dashboard(143, 100, 'after a server restart, in a fresh browser');
+  await dashboard(143, 100, `after a server restart, in a fresh browser${windows ? ', the file busy at first' : ''}`);
+  await busy?.released;
   await b.close();
   await stopServer();
 }
@@ -315,6 +358,7 @@ try {
   console.log(`FAIL  ${err.message}`);
 } finally {
   for (const close of [...browsers]) await close();
+  for (const holder of holders) holder.kill();
   if (server && server.exitCode === null && server.signalCode === null) await stopServer();
   // Windows can hold a file for a moment after its process exits
   try {
