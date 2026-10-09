@@ -6,7 +6,7 @@
 
 <p align="center">
   A private trading journal and performance dashboard.<br />
-  Runs on a Windows PC and on Android. No account, no server, no tracking.
+  Runs on a Windows PC and on Android. No account, no server, no internet
 </p>
 
 <p align="center">
