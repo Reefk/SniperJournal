@@ -63,6 +63,18 @@ it('workload timings', { timeout: 600_000 }, () => {
   for (const size of [100, 1000, 10000, 50000]) {
     const trades = journalOf(size);
     const csv = tradesToCsv(trades, [], accounts);
+    // the same trades as a broker's execution report: one row per fill
+    const fills = [
+      'time,symbol,side,qty,price,commission',
+      ...trades.flatMap((t) =>
+        t.exitPrice == null || !t.closedAt
+          ? []
+          : [
+              `${t.openedAt.replace('T', ' ')},${t.symbol},${t.side === 'LONG' ? 'Buy' : 'Sell'},${t.quantity},${t.entryPrice},${t.fees / 2}`,
+              `${t.closedAt.replace('T', ' ')},${t.symbol},${t.side === 'LONG' ? 'Sell' : 'Buy'},${t.quantity},${t.exitPrice},${t.fees / 2}`,
+            ],
+      ),
+    ].join('\n');
     const journal: JournalData = {
       version: 1,
       updatedAt: '',
@@ -83,6 +95,7 @@ it('workload timings', { timeout: 600_000 }, () => {
       sniperScore: ms(() => sniperScore(trades, computeStats(trades))),
       buildInsights: ms(() => buildInsights(trades, [], settings)),
       'CSV import': ms(() => importTradesFromCsv(csv, { accountId: 'acc1', accounts, setups: [] })),
+      'CSV import, one row per fill': ms(() => importTradesFromCsv(fills, { accountId: 'acc1', accounts, setups: [] })),
       'CSV export': ms(() => tradesToCsv(trades, [], accounts)),
       'save: stringify': ms(() => JSON.stringify(journal)),
       'launch: parse+normalize': ms(() => normalize(JSON.parse(json))),

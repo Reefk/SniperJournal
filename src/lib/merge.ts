@@ -25,7 +25,7 @@ export function mergeIssue(trades: Trade[]): string | null {
 }
 
 /** how many decimals the legs actually use, so the average is not noisier than the data */
-function decimalsOf(values: number[]): number {
+export function decimalsOf(values: number[]): number {
   return Math.min(8, Math.max(2, ...values.map((v) => (String(v).split('.')[1] ?? '').length)));
 }
 

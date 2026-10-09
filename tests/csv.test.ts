@@ -149,7 +149,7 @@ describe('import: dates and times', () => {
     expect(one(`symbol,opened_at\nAAPL,${raw}`).openedAt).toBe(expected);
   });
 
-  it('a zone suffix is ignored: times are kept as the wall-clock time written in the file', () => {
+  it('a zone suffix is read as that zone and converted to local time (UTC in these tests, so unchanged)', () => {
     expect(one('symbol,opened_at\nAAPL,2026-03-04T14:30:00Z').openedAt).toBe('2026-03-04T14:30');
   });
 
