@@ -54,6 +54,17 @@ describe('/api/journal', () => {
     expect((await (await routes.journal.GET(req('/api/journal'))).json()).data).toEqual(valid(1));
   });
 
+  it('saves that arrive together are written one at a time: every one succeeds and the file is never mixed up', async () => {
+    // a big journal takes long enough to write that the saves overlap
+    const big = (n: number) => ({ ...valid(n), trades: Array.from({ length: 20000 }, (_, i) => ({ id: `t${n}-${i}`, notes: 'x'.repeat(100) })) });
+    const bodies = Array.from({ length: 12 }, (_, n) => (n % 2 ? valid(n) : big(n)));
+    const results = await Promise.all(bodies.map((body) => put(body)));
+    expect(results.map((r) => r.status)).toEqual(bodies.map(() => 200));
+    const saved = file();
+    expect(bodies.some((body) => JSON.stringify(body) === JSON.stringify(saved))).toBe(true);
+    expect(readdirSync(join(root, 'data')).filter((f) => f.endsWith('.tmp'))).toEqual([]);
+  });
+
   it.each([
     ['malformed JSON', '{"version":1,'],
     ['the wrong version', valid(1) && { ...valid(1), version: 2 }],
