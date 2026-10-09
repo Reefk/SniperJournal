@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { X } from 'lucide-react';
+import { useFieldLink } from './Field';
 
 export function TagInput({
   value,
@@ -13,6 +14,8 @@ export function TagInput({
   suggestions: string[];
 }) {
   const [draft, setDraft] = useState('');
+  // labelled by the Field it sits in
+  const link = useFieldLink();
 
   const add = (raw: string) => {
     const tag = raw.trim().replace(/,$/, '');
@@ -44,6 +47,7 @@ export function TagInput({
           </span>
         ))}
         <input
+          {...link}
           value={draft}
           onChange={(e) => {
             // a phone keyboard does not report the comma key, only the text it typed

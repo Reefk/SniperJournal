@@ -12,10 +12,30 @@ import type { NextConfig } from 'next';
  */
 const mobile = process.env.MOBILE_BUILD === '1';
 
+/**
+ * The desktop server's pages must never load inside another site's frame,
+ * where a page could trick a click onto "Erase all data". (A static export
+ * sends no headers; the Android app is not reachable by other sites anyway.)
+ */
+const desktopHeaders: NextConfig['headers'] = async () => [
+  {
+    source: '/:path*',
+    headers: [
+      { key: 'Content-Security-Policy', value: "frame-ancestors 'none'" },
+      { key: 'X-Frame-Options', value: 'DENY' },
+      { key: 'X-Content-Type-Options', value: 'nosniff' },
+      { key: 'Referrer-Policy', value: 'no-referrer' },
+    ],
+  },
+];
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   devIndicators: false,
-  ...(mobile ? { output: 'export' } : { pageExtensions: ['desktop.ts', 'tsx', 'ts', 'jsx', 'js'] }),
+  poweredByHeader: false,
+  ...(mobile
+    ? { output: 'export' }
+    : { pageExtensions: ['desktop.ts', 'tsx', 'ts', 'jsx', 'js'], headers: desktopHeaders }),
 };
 
 export default nextConfig;

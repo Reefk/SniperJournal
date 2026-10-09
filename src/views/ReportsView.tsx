@@ -11,6 +11,7 @@ import { formatDate, formatDuration, formatMoney, formatPct, formatRatio, MONTHS
 import { netPnl, statTrades, tradeDay } from '@/lib/trade-math';
 import { cn, dateKey, downloadFile, parseLocal } from '@/lib/utils';
 import { storage } from '@/lib/storage';
+import { openingBalance } from '@/store/selectors';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
@@ -23,8 +24,13 @@ export function ReportsView() {
   const [range, setRange] = useState<RangeKey>('ALL');
   const currency = data.settings.currency;
 
-  const inRange = useMemo(() => splitByRange(accountTrades, range).inRange, [accountTrades, range]);
-  const stats = useMemo(() => computeStats(inRange, startingBalance), [inRange, startingBalance]);
+  const { inRange, before } = useMemo(() => splitByRange(accountTrades, range), [accountTrades, range]);
+  // like the dashboard: the range starts from the balance it actually started at,
+  // so its drawdown percentage matches the dashboard's for the same range
+  const stats = useMemo(
+    () => computeStats(inRange, openingBalance(startingBalance, before)),
+    [inRange, before, startingBalance],
+  );
   const closed = useMemo(() => statTrades(inRange), [inRange]);
 
   const months = useMemo(() => {

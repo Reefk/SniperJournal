@@ -2,7 +2,7 @@ import type { Account, Setup, Trade, TradeInput } from './types';
 import { detectSession } from './sessions';
 import { grossPnl, isClosed, isIncomplete, missingDetails, netPnl, rMultiple } from './trade-math';
 import { mergeIssue, mergeTrades } from './merge';
-import { pad2, toNumberOrNull, uid } from './utils';
+import { pad2, parseDecimal, uid } from './utils';
 
 export const CSV_COLUMNS = [
   'symbol',
@@ -129,11 +129,16 @@ const ALIASES: Record<string, string> = {
   account: 'account',
   portfolio: 'account',
 
+  // a P&L column that does not say is taken as gross, before commissions;
+  // one that says "net" already has them taken off
   pnl: 'pnl',
   profit: 'pnl',
-  netpnl: 'pnl',
+  netpnl: 'net_pnl',
+  netprofit: 'net_pnl',
+  netprofitloss: 'net_pnl',
   realizedpnl: 'pnl',
-  grosspnl: 'pnl',
+  grosspnl: 'gross_pnl',
+  grossprofit: 'gross_pnl',
   'profit/loss': 'pnl',
   profitloss: 'pnl',
   result: 'pnl',
@@ -164,17 +169,29 @@ export function csvTemplate(): string {
   ].join('\n');
 }
 
+/**
+ * Spreadsheet formula injection: Excel and its kin run a cell that starts
+ * with = + - @ (or a tab or carriage return) as a formula, so a note such as
+ * =HYPERLINK(...) could do something when the export is opened. Free-text
+ * cells that start that way get a leading apostrophe, which spreadsheets show
+ * as plain text; the importer takes it off again. Numbers are never touched,
+ * so -12.50 stays a number.
+ */
+const FORMULA_START = /^[=+\-@\t\r]/;
+const formulaSafe = (v: string) => (FORMULA_START.test(v) ? `'${v}` : v);
+const unescapeFormula = (v: string) => (v.startsWith("'") && FORMULA_START.test(v.slice(1)) ? v.slice(1) : v);
+
 export function tradesToCsv(trades: Trade[], setups: Setup[], accounts: Account[]): string {
   const setupNames = new Map(setups.map((s) => [s.id, s.name]));
   const accountNames = new Map(accounts.map((a) => [a.id, a.name]));
   const esc = (v: unknown) => {
     const s = v == null ? '' : String(v);
-    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
   const header = [...CSV_COLUMNS, 'gross_pnl', 'net_pnl', 'r_multiple'];
   const rows = trades.map((t) =>
     [
-      t.symbol,
+      formulaSafe(t.symbol),
       t.side,
       t.openedAt.replace('T', ' '),
       t.closedAt?.replace('T', ' ') ?? '',
@@ -186,11 +203,11 @@ export function tradesToCsv(trades: Trade[], setups: Setup[], accounts: Account[
       t.fees ?? 0,
       t.multiplier ?? 1,
       t.leverage ?? '',
-      t.session ?? '',
-      t.setupId ? (setupNames.get(t.setupId) ?? '') : '',
-      t.tags.join('|'),
-      t.notes ?? '',
-      accountNames.get(t.accountId) ?? '',
+      formulaSafe(t.session ?? ''),
+      formulaSafe(t.setupId ? (setupNames.get(t.setupId) ?? '') : ''),
+      formulaSafe(t.tags.join('|')),
+      formulaSafe(t.notes ?? ''),
+      formulaSafe(accountNames.get(t.accountId) ?? ''),
       isClosed(t) ? grossPnl(t).toFixed(2) : '',
       isClosed(t) ? netPnl(t).toFixed(2) : '',
       rMultiple(t)?.toFixed(2) ?? '',
@@ -223,7 +240,10 @@ export function parseCsv(text: string): string[][] {
       } else field += ch;
       continue;
     }
-    if (ch === '"') quoted = true;
+    // a quote only opens a quoted field at its start; one in the middle of an
+    // unquoted field (12" monitor) is just a character, and must not swallow
+    // every delimiter and line after it
+    if (ch === '"' && field === '') quoted = true;
     else if (ch === delimiter) {
       row.push(field);
       field = '';
@@ -241,7 +261,7 @@ export function parseCsv(text: string): string[][] {
   return rows.filter((r) => r.some((c) => c.trim()));
 }
 
-/** Tolerant number parsing: $1,234.50 / (120) / 1.234,50 / -$80 */
+/** Tolerant number parsing: $1,234.50 / (120) / 1.234,50 / 1,08640 / -$80 */
 function parseMoney(raw: string): number | null {
   let s = raw.trim();
   if (!s) return null;
@@ -255,10 +275,8 @@ function parseMoney(raw: string): number | null {
     negative = true;
     s = s.slice(1);
   }
-  if (/,\d{1,2}$/.test(s) && !/\.\d/.test(s)) s = s.replace(/\./g, '').replace(',', '.');
-  else s = s.replace(/,/g, '');
-  const n = Number(s);
-  if (!Number.isFinite(n)) return null;
+  const n = parseDecimal(s);
+  if (n == null) return null;
   return negative ? -n : n;
 }
 
@@ -267,33 +285,59 @@ function parseMoney(raw: string): number | null {
  * Returns the minute-precision value the journal stores plus a
  * second-precision key, which is what decides which fill came first.
  */
-function parseDateTimeParts(raw: string): { value: string; sortKey: string } | null {
+/** day-month or month-day, decided once for a whole file (see dateOrderOf) */
+type DateOrder = 'dmy' | 'mdy';
+
+const ISO_DATE = /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?)?\s*(AM|PM|am|pm)?/;
+const SLASH_DATE = /^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})(?:[ T,]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?\s*(AM|PM|am|pm)?/;
+
+/**
+ * Builds the stored value from parts, or null when they do not make a real
+ * moment: month 13, 30 February and 25:61 are refused rather than stored.
+ */
+function fromParts(
+  year: number,
+  month: number,
+  day: number,
+  hourRaw: string | undefined,
+  minuteRaw: string | undefined,
+  secondRaw: string | undefined,
+  meridiemRaw: string | undefined,
+): { value: string; sortKey: string } | null {
+  let hour = Number(hourRaw ?? 0);
+  const minute = Number(minuteRaw ?? 0);
+  const second = Number(secondRaw ?? 0);
+  const meridiem = meridiemRaw?.toUpperCase();
+  if (meridiem) {
+    if (hour < 1 || hour > 12) return null;
+    if (meridiem === 'PM' && hour < 12) hour += 12;
+    if (meridiem === 'AM' && hour === 12) hour = 0;
+  }
+  const daysInMonth = new Date(year, month, 0).getDate();
+  if (month < 1 || month > 12 || day < 1 || day > daysInMonth) return null;
+  if (hour > 23 || minute > 59 || second > 59) return null;
+  const date = `${year}-${pad2(month)}-${pad2(day)}`;
+  const hm = `${pad2(hour)}:${pad2(minute)}`;
+  return { value: `${date}T${hm}`, sortKey: `${date}T${hm}:${pad2(second)}` };
+}
+
+function parseDateTimeParts(raw: string, order?: DateOrder): { value: string; sortKey: string } | null {
   const s = raw.trim();
   if (!s) return null;
 
-  const iso = s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
-  if (iso) {
-    const day = `${iso[1]}-${pad2(Number(iso[2]))}-${pad2(Number(iso[3]))}`;
-    const hh = pad2(Number(iso[4] ?? 0));
-    const mm = pad2(Number(iso[5] ?? 0));
-    return { value: `${day}T${hh}:${mm}`, sortKey: `${day}T${hh}:${mm}:${pad2(Number(iso[6] ?? 0))}` };
-  }
+  const iso = s.match(ISO_DATE);
+  if (iso) return fromParts(Number(iso[1]), Number(iso[2]), Number(iso[3]), iso[4], iso[5], iso[6], iso[7]);
 
-  const dmy = s.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})(?:[ T,]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?\s*(AM|PM|am|pm)?/);
+  const dmy = s.match(SLASH_DATE);
   if (dmy) {
     const a = Number(dmy[1]);
     const b = Number(dmy[2]);
-    // a value above 12 in the first slot can only be the day; otherwise
-    // assume the month-first order most broker exports use
-    const [day, month] = a > 12 ? [a, b] : [b, a];
-    let hour = Number(dmy[4] ?? 0);
-    const meridiem = dmy[7]?.toUpperCase();
-    if (meridiem === 'PM' && hour < 12) hour += 12;
-    if (meridiem === 'AM' && hour === 12) hour = 0;
-    const date = `${dmy[3]}-${pad2(month)}-${pad2(day)}`;
-    const hh = pad2(hour);
-    const mm = pad2(Number(dmy[5] ?? 0));
-    return { value: `${date}T${hh}:${mm}`, sortKey: `${date}T${hh}:${mm}:${pad2(Number(dmy[6] ?? 0))}` };
+    // the file's own order when it is known; otherwise a value above 12 in
+    // the first slot can only be the day, and month-first is the default
+    // most broker exports use
+    const dayFirst = order ? order === 'dmy' : a > 12;
+    const [day, month] = dayFirst ? [a, b] : [b, a];
+    return fromParts(Number(dmy[3]), month, day, dmy[4], dmy[5], dmy[6], dmy[7]);
   }
 
   const fallback = new Date(s);
@@ -304,11 +348,32 @@ function parseDateTimeParts(raw: string): { value: string; sortKey: string } | n
   return { value: `${day}T${hh}:${mm}`, sortKey: `${day}T${hh}:${mm}:${pad2(fallback.getSeconds())}` };
 }
 
+/**
+ * One file is read with one date order. 03/04 on its own could be either, so
+ * if any date in the file has a day above 12 in the first slot, every date in
+ * it is day-first; above 12 in the second slot, month-first. Mixed or no
+ * evidence leaves each date to the per-date rule.
+ */
+function dateOrderOf(values: string[]): DateOrder | undefined {
+  let dayFirst = false;
+  let monthFirst = false;
+  for (const v of values) {
+    const m = v.trim().match(SLASH_DATE);
+    if (!m) continue;
+    if (Number(m[1]) > 12) dayFirst = true;
+    if (Number(m[2]) > 12) monthFirst = true;
+  }
+  if (dayFirst && !monthFirst) return 'dmy';
+  if (monthFirst && !dayFirst) return 'mdy';
+  return undefined;
+}
+
 function parseSide(raw: string): 'LONG' | 'SHORT' | null {
-  const s = raw.trim().toLowerCase();
+  const s = raw.trim().toLowerCase().replace(/[\s_-]+/g, ' ');
   if (!s) return null;
-  if (['long', 'buy', 'b', 'bought', 'l', '1'].includes(s)) return 'LONG';
-  if (['short', 'sell', 's', 'sold', 'sht', '-1'].includes(s)) return 'SHORT';
+  if (['long', 'buy', 'b', 'bought', 'l', '1', 'buy long', 'long buy', 'buy to open'].includes(s)) return 'LONG';
+  if (['short', 'sell', 's', 'sold', 'sht', '-1', 'sell short', 'short sell', 'sellshort', 'ss', 'sell to open'].includes(s))
+    return 'SHORT';
   return null;
 }
 
@@ -376,6 +441,17 @@ export function importTradesFromCsv(
     const i = headers.indexOf(name);
     return i === -1 ? '' : (row[i] ?? '').trim();
   };
+  // free text: a value tradesToCsv escaped against spreadsheet formulas comes back as typed
+  const textCol = (row: string[], name: string) => unescapeFormula(col(row, name));
+  // one date order for the whole file, from every date in it
+  const order = dateOrderOf(
+    rows.slice(1).flatMap((row) => ['opened_at', 'closed_at', 'bought_at', 'sold_at'].map((c) => col(row, c))),
+  );
+  const date = (row: string[], name: string) => parseDateTimeParts(col(row, name), order);
+  /** direction values that meant nothing to parseSide: value -> first row and count */
+  const unknownSides = new Map<string, { row: number; count: number }>();
+  /** multipliers of zero or less, which the trade form refuses: first row, its value and count */
+  let badMultiplier: { row: number; value: string; count: number } | null = null;
 
   const now = new Date().toISOString();
   const setupsByName = new Map(ctx.setups.map((s) => [s.name.toLowerCase(), s]));
@@ -391,24 +467,29 @@ export function importTradesFromCsv(
 
   rows.slice(1).forEach((row, index) => {
     const line = index + 2;
-    const symbol = col(row, 'symbol').toUpperCase();
+    const symbol = textCol(row, 'symbol').toUpperCase();
     if (!symbol) {
       errors.push(`Row ${line}: no symbol, so the row was skipped.`);
       return;
     }
 
     // ---- direction, times and prices -------------------------------------
-    let side = parseSide(col(row, 'side'));
-    let openedParts = parseDateTimeParts(col(row, 'opened_at'));
-    let closedParts = parseDateTimeParts(col(row, 'closed_at'));
+    const rawSide = col(row, 'side');
+    let side = parseSide(rawSide);
+    if (rawSide && !side) {
+      const seen = unknownSides.get(rawSide);
+      unknownSides.set(rawSide, seen ? { ...seen, count: seen.count + 1 } : { row: line, count: 1 });
+    }
+    let openedParts = date(row, 'opened_at');
+    let closedParts = date(row, 'closed_at');
     let entryPrice = parseMoney(col(row, 'entry_price'));
     let exitPrice = parseMoney(col(row, 'exit_price'));
 
     if (pairedFills) {
       const buyPrice = parseMoney(col(row, 'buy_price'));
       const sellPrice = parseMoney(col(row, 'sell_price'));
-      const boughtParts = parseDateTimeParts(col(row, 'bought_at'));
-      const soldParts = parseDateTimeParts(col(row, 'sold_at'));
+      const boughtParts = date(row, 'bought_at');
+      const soldParts = date(row, 'sold_at');
 
       // whichever fill happened first is the one that opened the position
       const soldFirst = boughtParts && soldParts ? soldParts.sortKey < boughtParts.sortKey : false;
@@ -421,12 +502,26 @@ export function importTradesFromCsv(
     }
 
     const quantity = parseMoney(col(row, 'quantity'));
-    const reportedPnl = parseMoney(col(row, 'pnl'));
+    const fees = parseMoney(col(row, 'fees'));
+    // The P&L before commissions. A net column has them added back, so they
+    // are not charged a second time through the fees column.
+    const netReported = parseMoney(col(row, 'net_pnl'));
+    const reportedPnl =
+      parseMoney(col(row, 'gross_pnl')) ??
+      parseMoney(col(row, 'pnl')) ??
+      (netReported != null ? netReported + (fees ?? 0) : null);
 
     // ---- contract multiplier ---------------------------------------------
     // When the file reports a P&L we can work out what one point is worth,
     // which keeps the prices and the P&L consistent if either is edited later.
     let multiplier = parseMoney(col(row, 'multiplier'));
+    if (multiplier != null && multiplier <= 0) {
+      // a negative one would turn every win into a loss; leave it out and say so
+      badMultiplier = badMultiplier
+        ? { ...badMultiplier, count: badMultiplier.count + 1 }
+        : { row: line, value: col(row, 'multiplier'), count: 1 };
+      multiplier = null;
+    }
     let manualPnl: number | null = null;
 
     if (reportedPnl != null) {
@@ -436,7 +531,10 @@ export function importTradesFromCsv(
           ? (exitPrice - entryPrice) * quantity * direction
           : null;
 
-      if (multiplier == null && move != null && Math.abs(move) > 1e-9) {
+      if (move == null) {
+        // no prices to check it against: the reported figure is the result
+        manualPnl = reportedPnl;
+      } else if (multiplier == null && Math.abs(move) > 1e-9) {
         const derived = reportedPnl / move;
         const snapped =
           Math.abs(derived - Math.round(derived)) < 0.005 ? Math.round(derived) : Number(derived.toFixed(4));
@@ -448,7 +546,7 @@ export function importTradesFromCsv(
     }
 
     // ---- playbook setup and account --------------------------------------
-    const setupName = col(row, 'setup');
+    const setupName = textCol(row, 'setup');
     let setupId: string | undefined;
     if (setupName) {
       const key = setupName.toLowerCase();
@@ -461,7 +559,7 @@ export function importTradesFromCsv(
       setupId = setup.id;
     }
 
-    const accountName = col(row, 'account');
+    const accountName = textCol(row, 'account');
     const accountId = (accountName && accountsByName.get(accountName.toLowerCase())?.id) || ctx.accountId;
 
     // ---- skip anything already imported ----------------------------------
@@ -487,17 +585,17 @@ export function importTradesFromCsv(
       exitPrice,
       stopLoss: parseMoney(col(row, 'stop_loss')),
       takeProfit: parseMoney(col(row, 'take_profit')),
-      fees: parseMoney(col(row, 'fees')) ?? 0,
+      fees: fees ?? 0,
       multiplier: multiplier ?? 1,
       manualPnl,
       leverage: parseMoney(col(row, 'leverage')),
-      session: col(row, 'session') || (openedAt ? detectSession(openedAt) : undefined),
+      session: textCol(row, 'session') || (openedAt ? detectSession(openedAt) : undefined),
       setupId,
-      tags: col(row, 'tags')
+      tags: textCol(row, 'tags')
         .split(/[|;]/)
         .map((t) => t.trim())
         .filter(Boolean),
-      notes: col(row, 'notes') || undefined,
+      notes: textCol(row, 'notes') || undefined,
       excluded: false,
       externalId,
     };
@@ -511,6 +609,24 @@ export function importTradesFromCsv(
 
     trades.push(trade);
   });
+
+  // ---- say where the direction was assumed ------------------------------
+  // a short read as a long has its P&L the wrong way round, so never guess quietly
+  for (const [value, { row, count }] of unknownSides) {
+    const more = count > 1 ? ` and ${count - 1} more` : '';
+    errors.push(
+      `Row ${row}${more}: the direction "${value}" was not recognised, so ${count > 1 ? 'they were' : 'it was'} imported as LONG. Check ${count > 1 ? 'them' : 'it'}.`,
+    );
+  }
+  if (badMultiplier) {
+    const { row, value, count } = badMultiplier;
+    errors.push(
+      `Row ${row}${count > 1 ? ` and ${count - 1} more` : ''}: the multiplier "${value}" has to be more than 0, so it was left out. Check ${count > 1 ? 'them' : 'it'}.`,
+    );
+  }
+  if (!has('side') && !pairedFills && trades.length) {
+    errors.push('There is no direction column, so every row was imported as LONG. Check any shorts.');
+  }
 
   // ---- put scaled-out positions back together ---------------------------
   let finalTrades = trades;

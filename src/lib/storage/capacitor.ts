@@ -2,7 +2,7 @@ import { Capacitor } from '@capacitor/core';
 import { Directory, Encoding, Filesystem } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import type { JournalData } from '@/lib/types';
-import type { JournalStorage } from './types';
+import { KEEP_COPIES, copyStamp, type CopyReason, type JournalStorage } from './types';
 
 /**
  * The phone implementation: the journal and its chart images live in the
@@ -10,7 +10,8 @@ import type { JournalStorage } from './types';
  * keeps in its data folder:
  *
  *   journal.json        the whole journal
- *   backups/            one copy per day, the last 30 kept
+ *   backups/            one copy per day, the last 30 kept, plus a copy made
+ *                       before each restore or erase (the last 10 of each)
  *   screenshots/        chart images, referenced by name from each trade
  *
  * Nothing here is visible to other apps, and uninstalling the app deletes it,
@@ -60,19 +61,23 @@ async function rollBackup(day: string): Promise<boolean> {
     if (await exists(target)) return true; // today's snapshot already exists
     await Filesystem.mkdir({ path: BACKUP_DIR, recursive: true, ...data }).catch(() => undefined);
     await Filesystem.copy({ from: FILE, to: target, directory: Directory.Data, toDirectory: Directory.Data });
-
-    const { files } = await Filesystem.readdir({ path: BACKUP_DIR, ...data });
-    const names = files
-      .map((f) => f.name)
-      .filter((n) => n.endsWith('.json'))
-      .sort();
-    for (const stale of names.slice(0, Math.max(0, names.length - KEEP_BACKUPS))) {
-      await Filesystem.deleteFile({ path: `${BACKUP_DIR}/${stale}`, ...data }).catch(() => undefined);
-    }
+    await prune('journal-', KEEP_BACKUPS);
     return true;
   } catch {
     // a failed backup must never block a save
     return false;
+  }
+}
+
+/** oldest first, so only the newest `keep` backups starting with `prefix` stay */
+async function prune(prefix: string, keep: number) {
+  const { files } = await Filesystem.readdir({ path: BACKUP_DIR, ...data });
+  const names = files
+    .map((f) => f.name)
+    .filter((n) => n.startsWith(prefix) && n.endsWith('.json'))
+    .sort();
+  for (const stale of names.slice(0, Math.max(0, names.length - keep))) {
+    await Filesystem.deleteFile({ path: `${BACKUP_DIR}/${stale}`, ...data }).catch(() => undefined);
   }
 }
 
@@ -148,6 +153,18 @@ export const capacitorStorage: JournalStorage = {
   writeJournal(journal: JournalData): Promise<string | null> {
     // saves share one temp file, so they must never overlap
     const run = writes.then(() => writeNow(journal));
+    writes = run.catch(() => undefined);
+    return run;
+  },
+
+  keepCopy(journal: JournalData, reason: CopyReason): Promise<string | null> {
+    // in the same queue as saves, so the copy is of a settled journal
+    const run = writes.then(async () => {
+      const path = `${BACKUP_DIR}/${reason}-${copyStamp()}.json`;
+      await Filesystem.writeFile({ path, data: JSON.stringify(journal), encoding: Encoding.UTF8, recursive: true, ...data });
+      await prune(`${reason}-`, KEEP_COPIES).catch(() => undefined);
+      return decodeURIComponent(`${baseUri}/${path}`.replace(/^file:\/\//, ''));
+    });
     writes = run.catch(() => undefined);
     return run;
   },

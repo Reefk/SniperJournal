@@ -46,12 +46,21 @@ Then open <http://localhost:3000>. Changes appear as soon as you save.
 `npm run dev` is for editing. `npm run build` followed by `npm start` is the
 faster version you use day to day — that is what `start.bat` runs.
 
-Two more commands worth knowing:
+More commands worth knowing:
 
 ```
 npm run typecheck   # catches mistakes before you see them in the browser
 npm run build       # fails loudly if anything is broken
+npm test            # the calculation, CSV, storage and API tests (a few seconds)
+npm run coverage    # the same, with a coverage report
+npm run e2e         # after npm run build: the whole app in a headless Edge/Chrome,
+                    # with made-up trades in a throwaway folder
+npm run bench       # timings for 100 to 50,000 trades
 ```
+
+The tests are in `tests/` and only ever use made-up trades. They never open
+`data/` or anything else of yours. `docs/QUALITY_AUDIT.md` explains what they
+cover and what they don't.
 
 ## Where everything lives
 

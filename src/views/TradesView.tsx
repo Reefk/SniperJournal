@@ -125,6 +125,18 @@ export function TradesView() {
     });
   }, [accountTrades, filters, setupNames]);
 
+  // A bulk action must only ever touch trades you can see. When the search,
+  // a filter or the account changes, the selection keeps only the trades
+  // still shown (on any page); before this, "Delete 3 trades" could delete
+  // three that had been filtered out of view, even in another account.
+  useEffect(() => {
+    const shown = new Set(filtered.map((t) => t.id));
+    setSelected((s) => {
+      const kept = [...s].filter((id) => shown.has(id));
+      return kept.length === s.size ? s : new Set(kept);
+    });
+  }, [filtered]);
+
   const sorted = useMemo(() => {
     const dir = sort.dir === 'asc' ? 1 : -1;
     const value = (t: Trade): number | string => {

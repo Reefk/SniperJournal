@@ -1,5 +1,5 @@
 import type { JournalData } from '@/lib/types';
-import type { JournalStorage } from './types';
+import type { CopyReason, JournalStorage } from './types';
 
 /**
  * The desktop implementation: talks to the Next.js API routes, which write
@@ -28,6 +28,17 @@ export const webStorage: JournalStorage = {
     });
     const json = await res.json();
     if (!json?.ok) throw new Error(json?.error ?? 'Could not save the journal.');
+    return (json.path as string) ?? null;
+  },
+
+  async keepCopy(data: JournalData, reason: CopyReason): Promise<string | null> {
+    const res = await fetch(`/api/journal?copy=${reason}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    const json = await res.json();
+    if (!json?.ok) throw new Error(json?.error ?? 'Could not keep a copy of the journal.');
     return (json.path as string) ?? null;
   },
 

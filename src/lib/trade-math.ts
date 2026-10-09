@@ -5,18 +5,26 @@ export function isClosed(t: Trade): boolean {
   return t.manualPnl != null || (t.exitPrice != null && Number.isFinite(t.exitPrice));
 }
 
+/**
+ * Money arithmetic in binary floating point leaves dust: (1.2 - 1.1) * 10 is
+ * 0.9999999999999987, so a trade whose fee equals its profit would net
+ * -0.0000000000000013 and count as a loss. Rounding to 1e-8 removes the dust
+ * while staying far below a cent.
+ */
+const settle = (v: number) => Math.round(v * 1e8) / 1e8;
+
 /** P&L before fees */
 export function grossPnl(t: Trade): number {
   if (t.manualPnl != null) return t.manualPnl;
   if (t.exitPrice == null) return 0;
   const direction = t.side === 'LONG' ? 1 : -1;
-  return (t.exitPrice - t.entryPrice) * t.quantity * (t.multiplier || 1) * direction;
+  return settle((t.exitPrice - t.entryPrice) * t.quantity * (t.multiplier || 1) * direction);
 }
 
 /** P&L after fees and commissions — the number that matters */
 export function netPnl(t: Trade): number {
   if (!isClosed(t)) return 0;
-  return grossPnl(t) - (t.fees || 0);
+  return settle(grossPnl(t) - (t.fees || 0));
 }
 
 /** Money at risk from entry to stop. Null when no stop was recorded. */

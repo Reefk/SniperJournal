@@ -23,7 +23,8 @@ import { useUI } from '@/store/UIProvider';
 import { computeStats, sniperScore, sqnLabel } from '@/lib/stats';
 import { RANGE_OPTIONS, splitByRange, type RangeKey } from '@/lib/ranges';
 import { formatDate, formatDuration, formatMoney, formatPct, formatRatio } from '@/lib/format';
-import { isClosed, netPnl, tradeTimestamp } from '@/lib/trade-math';
+import { isClosed, tradeTimestamp } from '@/lib/trade-math';
+import { openingBalance } from '@/store/selectors';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { MetricCard, MetricCell, MetricStrip, toneFor } from '@/components/ui/MetricCard';
@@ -47,11 +48,8 @@ export function DashboardView() {
 
   const { inRange, before } = useMemo(() => splitByRange(accountTrades, range), [accountTrades, range]);
   // the curve starts from whatever the balance already was when the range began
-  const openingBalance = useMemo(
-    () => startingBalance + before.reduce((a, t) => a + netPnl(t), 0),
-    [startingBalance, before],
-  );
-  const stats = useMemo(() => computeStats(inRange, openingBalance), [inRange, openingBalance]);
+  const opening = useMemo(() => openingBalance(startingBalance, before), [startingBalance, before]);
+  const stats = useMemo(() => computeStats(inRange, opening), [inRange, opening]);
   const score = useMemo(() => sniperScore(inRange, stats), [inRange, stats]);
   const recent = useMemo(
     () => [...accountTrades].sort((a, b) => tradeTimestamp(b).localeCompare(tradeTimestamp(a))).slice(0, 5),
@@ -91,7 +89,7 @@ export function DashboardView() {
   const pf = stats.profitFactor;
   const pfRing = pf == null ? 0 : Number.isFinite(pf) ? Math.min(pf / 4, 1) : 1;
   const rrRing = stats.payoff == null ? 0 : Math.min(Number.isFinite(stats.payoff) ? stats.payoff / 3 : 1, 1);
-  const equityNow = openingBalance + stats.net;
+  const equityNow = opening + stats.net;
 
   return (
     <>
@@ -227,13 +225,13 @@ export function DashboardView() {
             <MetricCell
               label="Best day"
               value={stats.bestDay ? formatMoney(stats.bestDay.net, currency, { sign: true, compact: true }) : '—'}
-              tone="profit"
+              tone={toneFor(stats.bestDay?.net ?? 0)}
               sub={stats.bestDay ? formatDate(stats.bestDay.day) : undefined}
             />
             <MetricCell
               label="Worst day"
               value={stats.worstDay ? formatMoney(stats.worstDay.net, currency, { sign: true, compact: true }) : '—'}
-              tone="loss"
+              tone={toneFor(stats.worstDay?.net ?? 0)}
               sub={stats.worstDay ? formatDate(stats.worstDay.day) : undefined}
             />
             <MetricCell
@@ -265,7 +263,7 @@ export function DashboardView() {
                 </div>
               }
             >
-              <EquityCurveChart points={stats.equity} currency={currency} startingBalance={openingBalance} />
+              <EquityCurveChart points={stats.equity} currency={currency} startingBalance={opening} />
             </ChartContainer>
 
             <ChartContainer

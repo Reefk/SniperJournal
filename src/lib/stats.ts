@@ -1,6 +1,6 @@
 import type { Trade } from './types';
 import { mean } from './utils';
-import { grossPnl, holdMinutes, netPnl, rMultiple, sortChronological, statTrades, tradeDay } from './trade-math';
+import { grossPnl, holdMinutes, isClosed, netPnl, rMultiple, sortChronological, statTrades, tradeDay } from './trade-math';
 
 export interface DayAgg {
   day: string;
@@ -118,7 +118,8 @@ const EMPTY_STATS = (startingBalance: number): Stats => ({
  */
 export function computeStats(allTrades: Trade[], startingBalance = 0): Stats {
   const closed = sortChronological(statTrades(allTrades));
-  const open = allTrades.filter((t) => !t.excluded).length - closed.length;
+  // positions still open; a closed trade that is merely incomplete is not one
+  const open = allTrades.filter((t) => !t.excluded && !isClosed(t)).length;
   if (closed.length === 0) return { ...EMPTY_STATS(startingBalance), open: Math.max(0, open) };
 
   const pnls = closed.map(netPnl);
@@ -169,11 +170,13 @@ export function computeStats(allTrades: Trade[], startingBalance = 0): Stats {
   const rs = closed.map(rMultiple).filter((r): r is number => r != null);
   const avgR = rs.length ? mean(rs) : null;
 
-  // SQN prefers R units; falls back to money when no stops were logged
+  // SQN prefers R units; falls back to money when no stops were logged.
+  // Van Tharp: mean / sample standard deviation * sqrt(n), where n is the
+  // number of values the mean and deviation came from.
   const basis = rs.length >= Math.max(5, closed.length * 0.5) ? rs : pnls;
   const basisMean = mean(basis);
-  const sd = Math.sqrt(mean(basis.map((v) => (v - basisMean) ** 2)));
-  const sqn = sd > 0 && closed.length > 1 ? (basisMean / sd) * Math.sqrt(closed.length) : null;
+  const sd = basis.length > 1 ? Math.sqrt(basis.reduce((a, v) => a + (v - basisMean) ** 2, 0) / (basis.length - 1)) : 0;
+  const sqn = sd > 0 ? (basisMean / sd) * Math.sqrt(basis.length) : null;
 
   const days = aggregateDays(allTrades);
   const sortedDays = [...days].sort((a, b) => a.net - b.net);

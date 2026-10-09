@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -30,6 +30,20 @@ export function Modal({
   phone?: 'sheet' | 'full';
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+
+  // Keyboard and screen-reader users land inside the dialog when it opens
+  // (unless a field in it already took focus), and go back to where they were
+  // when it closes.
+  useEffect(() => {
+    if (!open) return;
+    const before = document.activeElement as HTMLElement | null;
+    const dialog = ref.current;
+    if (dialog && !dialog.contains(document.activeElement)) dialog.focus({ preventScroll: true });
+    return () => {
+      if (before && document.contains(before)) before.focus({ preventScroll: true });
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -50,9 +64,11 @@ export function Modal({
       data-modal-root
       role="dialog"
       aria-modal="true"
+      aria-labelledby={title ? titleId : undefined}
+      tabIndex={-1}
       className={cn(
         // phone: the panel scrolls inside itself, so its header and footer stay put
-        'fixed inset-0 z-50 flex justify-center bg-black/60 backdrop-blur-[2px]',
+        'fixed inset-0 z-50 flex justify-center bg-black/60 outline-none backdrop-blur-[2px]',
         phone === 'full' ? 'items-stretch' : 'items-end pt-safe',
         'md:items-start md:overflow-y-auto md:p-6 md:pt-[6vh]',
       )}
@@ -73,7 +89,9 @@ export function Modal({
         {title && (
           <div className="flex shrink-0 items-start justify-between gap-4 border-b border-line px-5 py-4">
             <div className="min-w-0">
-              <h2 className="text-[15px] font-semibold text-fg">{title}</h2>
+              <h2 id={titleId} className="text-[15px] font-semibold text-fg">
+                {title}
+              </h2>
               {description && <p className="mt-0.5 text-sm text-muted">{description}</p>}
             </div>
             <button

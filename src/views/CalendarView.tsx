@@ -9,6 +9,7 @@ import { aggregateDays, computeStats } from '@/lib/stats';
 import { formatDate, formatMoney, formatMonthKey, formatPct, MONTHS_SHORT, WEEKDAYS } from '@/lib/format';
 import { isClosed, netPnl, tradeDay } from '@/lib/trade-math';
 import { cn, dateKey, pad2 } from '@/lib/utils';
+import { realised } from '@/store/selectors';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { MetricCard, toneFor } from '@/components/ui/MetricCard';
@@ -246,8 +247,9 @@ export function CalendarView() {
         title={selectedDay ? formatDate(selectedDay) : ''}
         description={
           selectedDay
-            ? `${selectedTrades.length} ${selectedTrades.length === 1 ? 'trade' : 'trades'} · net ${formatMoney(
-                selectedTrades.reduce((a, t) => a + netPnl(t), 0),
+            ? // the same trades the day cell counted, so the two totals agree
+              `${selectedTrades.length} ${selectedTrades.length === 1 ? 'trade' : 'trades'} · net ${formatMoney(
+                realised(selectedTrades),
                 currency,
                 { sign: true },
               )}`

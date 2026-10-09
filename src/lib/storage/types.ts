@@ -36,6 +36,15 @@ export interface JournalStorage {
    */
   writeJournal(data: JournalData): Promise<string | null>;
 
+  /**
+   * Keep a separate, dated copy of the journal before something replaces it
+   * wholesale: a restore, or erasing everything. The daily backup only holds
+   * the start of the day, so without this the day's work up to that moment
+   * could not be got back. Returns where the copy went, and throws when it
+   * could not be made, so the caller can refuse to go ahead.
+   */
+  keepCopy(data: JournalData, reason: CopyReason): Promise<string | null>;
+
   /** Save a chart image and return the name to store on the trade. */
   saveImage(blob: Blob, extension: string): Promise<string>;
 
@@ -53,6 +62,18 @@ export interface JournalStorage {
    * opens the share sheet instead.
    */
   exportFile(filename: string, content: string, mimeType: string): Promise<void>;
+}
+
+/** why a copy was kept; also the start of its file name */
+export type CopyReason = 'before-restore' | 'before-erase';
+export const COPY_REASONS: readonly CopyReason[] = ['before-restore', 'before-erase'];
+
+/** how many copies of each kind are kept; the daily backups have their own limit */
+export const KEEP_COPIES = 10;
+
+/** 2026-10-09T12:34:56.789Z -> 20261009-123456, for a copy's file name */
+export function copyStamp(now = new Date()): string {
+  return now.toISOString().replace(/[-:]/g, '').replace('T', '-').slice(0, 15);
 }
 
 /** Thrown when storage is unavailable, so callers can say something useful. */

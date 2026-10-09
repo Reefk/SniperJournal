@@ -38,15 +38,46 @@ export const clamp = (v: number, min: number, max: number) => Math.min(max, Math
 export const round2 = (v: number) => Math.round(v * 100) / 100;
 export const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
 
+/**
+ * A number typed or exported in either convention: 1,234.50 and 1.234,50 are
+ * both 1234.5. A separator only counts as a thousands separator when it forms
+ * proper groups of three, so "4,25" is four and a quarter, never 425, and
+ * "1,08640" is a forex price, not 108640. "1,500" stays fifteen hundred.
+ * Anything that is not clearly one number gives null.
+ */
+export function parseDecimal(raw: string): number | null {
+  let s = raw.trim().replace(/[\s_  ']/g, '');
+  if (!s) return null;
+  let sign = '';
+  if (/^[+-]/.test(s)) {
+    sign = s[0] === '-' ? '-' : '';
+    s = s.slice(1);
+  }
+  const lastComma = s.lastIndexOf(',');
+  const lastDot = s.lastIndexOf('.');
+  if (lastComma !== -1 && lastDot !== -1) {
+    // both present: whichever comes last is the decimal point, and the other
+    // must be grouping the whole part in threes
+    const point = Math.max(lastComma, lastDot);
+    const thousands = point === lastComma ? '.' : ',';
+    const whole = s.slice(0, point);
+    if (!new RegExp(`^\\d{1,3}(\\${thousands}\\d{3})*$`).test(whole)) return null;
+    s = `${whole.split(thousands).join('')}.${s.slice(point + 1)}`;
+  } else if (lastComma !== -1) {
+    s = /^\d{1,3}(,\d{3})+$/.test(s) ? s.replace(/,/g, '') : s.split(',').length === 2 ? s.replace(',', '.') : '';
+  } else if (lastDot !== -1 && s.indexOf('.') !== lastDot) {
+    // several dots can only be thousands separators: 1.234.567
+    s = /^\d{1,3}(\.\d{3})+$/.test(s) ? s.replace(/\./g, '') : '';
+  }
+  if (!/^(\d+\.?\d*|\.\d+)(e[+-]?\d+)?$/i.test(s)) return null;
+  const n = Number(sign + s);
+  return Number.isFinite(n) ? n : null;
+}
+
 export function toNumberOrNull(value: string | number | null | undefined): number | null {
   if (typeof value === 'number') return Number.isFinite(value) ? value : null;
   if (value == null) return null;
-  const cleaned = String(value)
-    .trim()
-    .replace(/[\s,_]/g, '');
-  if (!cleaned) return null;
-  const n = Number(cleaned);
-  return Number.isFinite(n) ? n : null;
+  return parseDecimal(String(value));
 }
 
 export function downloadFile(filename: string, content: string, mime = 'application/json') {

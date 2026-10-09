@@ -4,12 +4,13 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { SystemBars, SystemBarsStyle } from '@capacitor/core';
 import type { Account, JournalData, Resource, Setup, Trade, TradeInput, Settings, Profile } from '@/lib/types';
 import { generateSampleData } from '@/lib/sample';
-import { isIncomplete, netPnl } from '@/lib/trade-math';
+import { isIncomplete } from '@/lib/trade-math';
 import { mergeIssue, mergeTrades as combineTrades } from '@/lib/merge';
 import { deleteScreenshot } from '@/lib/screenshots';
 import { storage } from '@/lib/storage';
 import { uid } from '@/lib/utils';
 import { cleanAccounts, cleanResources, cleanSettings, cleanSetups, cleanTrades } from './sanitize';
+import { accountBalances } from './selectors';
 
 const LOCAL_KEY = 'sniper-journal:v1';
 
@@ -53,7 +54,7 @@ export function createDefaultData(): JournalData {
  * value of the wrong type (see store/sanitize.ts) so that a damaged journal or
  * backup cannot crash the app every time it opens.
  */
-function normalize(raw: unknown): JournalData {
+export function normalize(raw: unknown): JournalData {
   const base = createDefaultData();
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return base;
   const input = raw as Partial<Record<keyof JournalData, unknown>>;
@@ -402,11 +403,8 @@ export function JournalProvider({ children }: { children: ReactNode }) {
     const accountTrades = isAll ? data.trades : data.trades.filter((t) => t.accountId === data.activeAccountId);
     const activeAccount = data.accounts.find((a) => a.id === data.activeAccountId) ?? null;
 
-    const balances: Record<string, number> = {};
-    for (const account of data.accounts) {
-      const net = data.trades.filter((t) => t.accountId === account.id).reduce((a, t) => a + netPnl(t), 0);
-      balances[account.id] = account.startingBalance + net;
-    }
+    // counted like every statistic, so it matches the end of the equity curve
+    const balances = accountBalances(data);
 
     return {
       data,

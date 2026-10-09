@@ -58,6 +58,29 @@ function validZone(zone: string): boolean {
   }
 }
 
+/**
+ * Ids must be unique: an edit or delete finds its record by id, so two trades
+ * sharing one would be edited and deleted together. A repeated id is either
+ * given a fresh one, keeping the record, or (for accounts, which trades point
+ * at) the repeat is dropped and its trades stay with the first.
+ */
+function uniqueIds<T extends { id: string }>(items: T[], repeats: 'rename' | 'drop'): T[] {
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const item of items) {
+    if (!seen.has(item.id)) {
+      seen.add(item.id);
+      out.push(item);
+    } else if (repeats === 'rename') {
+      let id = `${item.id}-${Math.random().toString(36).slice(2, 8)}`;
+      while (seen.has(id)) id = `${item.id}-${Math.random().toString(36).slice(2, 8)}`;
+      seen.add(id);
+      out.push({ ...item, id });
+    }
+  }
+  return out;
+}
+
 export function cleanSettings(v: unknown, base: Settings): Settings {
   const s = isRecord(v) ? v : {};
   const merged = { ...base, ...s } as Settings & Loose;
@@ -72,7 +95,7 @@ export function cleanSettings(v: unknown, base: Settings): Settings {
 }
 
 export function cleanAccounts(v: unknown): Account[] {
-  return records(v)
+  const accounts = records(v)
     .filter((a) => typeof a.id === 'string')
     .map((a) => ({
       ...a,
@@ -81,10 +104,11 @@ export function cleanAccounts(v: unknown): Account[] {
       startingBalance: num(a.startingBalance),
       createdAt: text(a.createdAt),
     }));
+  return uniqueIds(accounts, 'drop');
 }
 
 export function cleanTrades(v: unknown): Trade[] {
-  return records(v)
+  const trades: Trade[] = records(v)
     .filter((t) => typeof t.id === 'string')
     .map((t) => ({
       ...(t as unknown as Trade),
@@ -99,7 +123,8 @@ export function cleanTrades(v: unknown): Trade[] {
       stopLoss: nullableNum(t.stopLoss),
       takeProfit: nullableNum(t.takeProfit),
       fees: num(t.fees),
-      multiplier: optNum(t.multiplier),
+      // zero or less is refused by the trade form; a negative one flips every result
+      multiplier: isNum(t.multiplier) && t.multiplier > 0 ? t.multiplier : undefined,
       manualPnl: nullableNum(t.manualPnl),
       leverage: nullableNum(t.leverage),
       session: optText(t.session),
@@ -119,10 +144,11 @@ export function cleanTrades(v: unknown): Trade[] {
       createdAt: text(t.createdAt),
       updatedAt: text(t.updatedAt),
     }));
+  return uniqueIds(trades, 'rename');
 }
 
 export function cleanSetups(v: unknown): Setup[] {
-  return records(v)
+  const setups = records(v)
     .filter((s) => typeof s.id === 'string')
     .map((s) => ({
       ...s,
@@ -133,10 +159,11 @@ export function cleanSetups(v: unknown): Setup[] {
       color: typeof s.color === 'string' && COLOR.test(s.color) ? s.color : undefined,
       isSample: optBool(s.isSample),
     }));
+  return uniqueIds(setups, 'rename');
 }
 
 export function cleanResources(v: unknown): Resource[] {
-  return records(v)
+  const resources = records(v)
     .filter((r) => typeof r.id === 'string')
     .map((r) => ({
       ...r,
@@ -147,4 +174,5 @@ export function cleanResources(v: unknown): Resource[] {
       notes: optText(r.notes),
       createdAt: text(r.createdAt),
     }));
+  return uniqueIds(resources, 'rename');
 }

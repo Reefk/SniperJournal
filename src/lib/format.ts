@@ -108,9 +108,11 @@ export function formatTime(value: string): string {
 export function formatDuration(minutes: number | null | undefined): string {
   if (minutes == null || !Number.isFinite(minutes) || minutes < 0) return '—';
   if (minutes < 1) return 'under a minute';
-  if (minutes < 60) return `${Math.round(minutes)}m`;
-  const h = Math.floor(minutes / 60);
-  const m = Math.round(minutes % 60);
+  // round once, up front, so 119.6 minutes is "2h" and never "1h 60m"
+  const total = Math.round(minutes);
+  if (total < 60) return `${total}m`;
+  const h = Math.floor(total / 60);
+  const m = total % 60;
   if (h < 24) return m ? `${h}h ${m}m` : `${h}h`;
   const d = Math.floor(h / 24);
   return `${d}d ${h % 24}h`;

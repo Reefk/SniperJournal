@@ -148,8 +148,9 @@ Anything else that differs between PC and phone reads `storage.kind`.
 
 ## Ground rules
 
-1. Don't change the calculations in `src/lib/` (stats, insights, CSV, trade
-   maths). They are tested, and every number in the app rests on them.
+1. Change the calculations in `src/lib/` (stats, insights, CSV, trade maths)
+   only with a test in `tests/` that shows the new behaviour, and run
+   `npm test`. Every number in the app rests on them.
 2. The desktop app must keep working after every change. Run `npm run build`
    and open it on the PC before calling something done.
 3. Run `npm run typecheck` before finishing anything.

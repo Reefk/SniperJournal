@@ -7,7 +7,7 @@ import { useUI } from '@/store/UIProvider';
 import { exportBackup, parseBackup } from '@/lib/backup';
 import { CURRENCIES, formatMoney } from '@/lib/format';
 import { toNumberOrNull } from '@/lib/utils';
-import { storage } from '@/lib/storage';
+import { storage, type CopyReason } from '@/lib/storage';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Field, Input, Select } from '@/components/ui/Field';
@@ -47,8 +47,21 @@ export function SettingsView() {
       tone: 'danger',
     });
     if (ok) {
+      // the journal being replaced must stay recoverable, so no copy, no restore
+      if (!(await keepCurrent('before-restore'))) return;
       actions.replaceAll(parsed);
-      toast('Journal restored');
+      toast('Journal restored. The one it replaced was kept in your backups.');
+    }
+  };
+
+  /** a dated copy of the journal as it is now; false (and a message) when that fails */
+  const keepCurrent = async (reason: CopyReason): Promise<boolean> => {
+    try {
+      await storage.keepCopy(data, reason);
+      return true;
+    } catch {
+      toast('Could not keep a copy of your current journal first, so nothing was changed.', 'error');
+      return false;
     }
   };
 
@@ -288,9 +301,9 @@ export function SettingsView() {
                 confirmLabel: 'Erase my journal',
                 tone: 'danger',
               });
-              if (ok) {
+              if (ok && (await keepCurrent('before-erase'))) {
                 actions.resetAll();
-                toast('Journal erased');
+                toast('Journal erased. A copy of it was kept in your backups.');
               }
             }}
           >

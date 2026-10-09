@@ -3,7 +3,7 @@ import type { JournalStorage } from './types';
 import { capacitorStorage } from './capacitor';
 import { webStorage } from './web';
 
-export type { JournalStorage } from './types';
+export type { CopyReason, JournalStorage } from './types';
 export { StorageUnavailable } from './types';
 
 /**
