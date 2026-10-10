@@ -164,13 +164,45 @@ entries are never touched.
 Trades → **Import CSV**. You get a preview of exactly what was understood before
 anything is added, and nothing is imported until you confirm.
 
-**Only a `symbol` column is required.** Everything else is optional. Rows that
-are missing a date, a quantity or an entry price still import; they are marked
-**needs details**, kept out of every statistic, and listed at the top of the
-Trades page so you can fill the gaps by hand.
+**Only a `symbol` column is required.** Everything else is optional. A file
+without one, such as TradingView's list of trades, asks you to type the symbol
+for every row. Rows that are missing a date, a quantity or an entry price still
+import; they are marked **needs details**, kept out of every statistic, and
+listed at the top of the Trades page so you can fill the gaps by hand.
 
-Column names are matched loosely, so common broker headings such as `qty`,
-`ticker`, `commission` and `realized pnl` work without editing the file.
+**Most broker and platform exports work as they are.** The importer finds the
+table even when the file opens with a title or account details, skips total
+lines, and recognises the many ways brokers name their columns (`Qty`,
+`Filled`, `Market pos.`, `Comm/Fee`, `Net P&L (USD)`, `Date/Time`, separate
+date and time columns, several fee columns that add up). It reads files that
+list:
+
+- **whole trades**, with the entry and exit on one row (NinjaTrader, MetaTrader
+  positions, cTrader, TopstepX and most journals);
+- **individual fills**, one buy or sell per row (Interactive Brokers,
+  Thinkorswim, Webull, Robinhood, Binance, MetaTrader deals, Tradovate orders).
+  These are put back together by following your position in each symbol:
+  scaling in and out stays one trade at the average price, a fill that takes
+  you from long to short closes one trade and opens the next, cancelled orders
+  are left out, and a position still open at the end of the file is imported
+  as open;
+- **entry and exit rows paired by a trade number** (TradingView's strategy
+  tester).
+
+The preview says how it read the file. If something is wrong, change it there:
+whether **each row is** a whole trade or one fill, which way round **dates like
+03/04/2026** go, and, under **Columns**, what each column is. Your choices are
+remembered on this device for the next file with the same columns.
+
+**What one point is worth** comes from a multiplier column if there is one,
+otherwise from the amount against the price, or from the P&L the file reports.
+Failing all of those, futures are recognised from a full contract code such as
+`ESH6` or `MNQ 03-26` (never from a bare `ES`, which is also a stock) and options
+count as 100 shares. The preview tells you whenever it worked one out, so you
+can check it.
+
+Times that carry a time zone (`Z`, `+02:00`, or a column marked `UTC`) are
+converted to this device's local time; times without one are kept as written.
 
 **Paired buy/sell exports** — the format Tradovate and similar futures platforms
 produce, with `buyPrice`, `sellPrice`, `boughtTimestamp` and `soldTimestamp` and
@@ -275,7 +307,14 @@ _needs details_, and that you have not excluded it with the eye icon.
 
 **An imported trade shows the wrong direction.** In paired buy/sell exports the
 direction comes from which fill happened first. If your file has both fills at
-the same minute, open the trade and set the side yourself.
+the same minute, open the trade and set the side yourself. In a file of single
+fills, a sell with nothing open reads as a short; if it actually closed a
+position from an earlier export, import the exports together, or fix the trade
+by hand.
+
+**The importer did not understand my broker's file.** Open **Columns** in the
+preview and say what each column is; the file is read again as you choose, and
+the choice is remembered for the next export like it.
 
 ---
 

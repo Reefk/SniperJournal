@@ -94,7 +94,9 @@ data/               your journal and its backups, created at runtime
 | Win rate, profit factor, expectancy, SQN, drawdown | `src/lib/stats.ts`                                                                  |
 | The Sniper Score axes and how they are scored      | `sniperScore()` in `src/lib/stats.ts`                                               |
 | The wording and rules of the insights              | `src/lib/insights.ts`                                                               |
-| Which CSV column names are recognised              | `ALIASES` in `src/lib/csv.ts`                                                       |
+| Which CSV column names are recognised              | the `alias(...)` lists in `src/lib/import/columns.ts`                               |
+| How a file of single fills becomes trades          | `src/lib/import/fills.ts`                                                          |
+| Futures point values the importer knows            | `POINT_VALUES` in `src/lib/import/instruments.ts`                                  |
 | How partial fills are combined into one trade      | `src/lib/merge.ts`                                                                  |
 | Chart image upload, scaling and storage            | `src/lib/screenshots.ts`, `src/app/api/screenshot/`                                 |
 | The app icon                                       | `assets/icon.svg`, then rebuild `sniper-journal.ico` and `src/app/icon.png` from it |
@@ -127,8 +129,9 @@ need real colour values rather than variables, so they are mirrored once in
 1. Add it to the `Trade` interface in `src/lib/types.ts`.
 2. Add an input for it in `TradeFormModal.tsx` — the form state, the validator
    and the JSX all sit in that one file.
-3. If it should survive a CSV round trip, add it to `CSV_COLUMNS` and `ALIASES`
-   in `src/lib/csv.ts`.
+3. If it should survive a CSV round trip, add it to `CSV_COLUMNS` in
+   `src/lib/csv.ts`, give it a role and its column names in
+   `src/lib/import/columns.ts`, and read it in `importTradesFromCsv`.
 
 Old journals keep working: `normalize()` in `JournalProvider.tsx` fills in
 anything an existing `journal.json` does not have yet.

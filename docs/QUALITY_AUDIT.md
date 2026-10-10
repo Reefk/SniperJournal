@@ -172,10 +172,10 @@ No Critical findings were made.
 | SJ-25 | Low | Security | Desktop pages could be framed by any site (clickjacking) | Fixed and Verified |
 | SJ-26 | Info | Docs | README said the calculations were tested; no tests existed | Fixed and Verified |
 | SJ-27 | Medium | CSV | Re-importing a file without trade IDs duplicates every trade | Confirmed |
-| SJ-28 | Medium | CSV | Separate Date and Time columns: the time is dropped (00:00) | Confirmed |
+| SJ-28 | Medium | CSV | Separate Date and Time columns: the time is dropped (00:00) | Fixed and Verified (2026-10-09) |
 | SJ-29 | Medium | Accessibility | Several text colours below WCAG AA contrast | Confirmed |
 | SJ-30 | Medium | Process | No CI, no lint; tests run only when someone remembers | Confirmed |
-| SJ-31 | Low | CSV | Time-zone suffixes (`Z`, `+02:00`) ignored without a warning | Confirmed |
+| SJ-31 | Low | CSV | Time-zone suffixes (`Z`, `+02:00`) ignored without a warning | Fixed and Verified (2026-10-09) |
 | SJ-32 | Low | Persistence | A newer-version journal on disk is silently downgraded on load | Confirmed |
 | SJ-33 | Low | Accessibility | Dialogs do not trap Tab focus | Confirmed (code) |
 | SJ-34 | Low | Accessibility | Charts have no text alternative | Confirmed (code) |
@@ -553,7 +553,7 @@ No Critical findings were made.
 - **Actual (observed):** `2026-03-02T00:00`.
 - **Impact:** Session, hold time and time-of-day insights are wrong for brokers that split date and time.
 - **Recommended fix:** When a date-only column and a time-only column map to the same field, join them. Only do this when the first value has no time and the second has no date, so files that work today don't change.
-- **Status:** Confirmed.
+- **Status:** Fixed and Verified on 2026-10-09. A time-of-day column is now joined with its date column (Date + Time, Entry Date + Entry Time, Exit Date + Exit Time). Tests: `tests/import-formats.test.ts` ("separate date and time columns are joined", and the fills file with Date and Time columns).
 
 ### SJ-29: Text contrast below WCAG AA
 
@@ -588,7 +588,7 @@ No Critical findings were made.
 - **Actual (observed):** Stored as 14:35 and 15:00 with no warning. The real close (13:00 UTC) was before the open.
 - **Note:** By design the journal stores wall-clock times without a zone, so this is a documentation and warning gap, not a calculation bug.
 - **Recommended fix:** When values carry a zone, warn in the preview, or convert them to the user's chosen time zone.
-- **Status:** Confirmed.
+- **Status:** Fixed and Verified on 2026-10-09. A time with a zone (`Z`, `+02:00`, `GMT`), or in a column whose header declares one ("Date(UTC)", "Opening Time (UTC+2)"), is converted to the device's local time, and the preview says so. Times without a zone are kept as written. Tests: `tests/import-formats.test.ts` (cTrader, TopstepX, Binance, and "a zone is converted to local time").
 
 ### SJ-32: A newer-version journal on disk is silently downgraded
 
@@ -1002,7 +1002,7 @@ A build that compiles is not evidence of readiness. These items are.
 | Item | Finding | Effort |
 |---|---|---|
 | Warn about possible duplicate trades on import (fingerprint), skipped by default | SJ-27 | M |
-| Join separate Date and Time columns | SJ-28 | S |
+| ~~Join separate Date and Time columns~~ Done 2026-10-09 | SJ-28 | S |
 | Adopt AA-compliant colour tokens | SJ-29 | S |
 | ~~Owner confirms "excluded trades don't count toward balance"~~ Done 2026-10-09: a Settings option, off by default | SJ-16 | XS |
 | ESLint with `eslint-config-next` (hook rules) | SJ-30 | S |
@@ -1014,7 +1014,7 @@ A build that compiles is not evidence of readiness. These items are.
 | Refuse or read-only a newer-version journal on load | SJ-32 | S |
 | Focus trap in `Modal` (or native `<dialog>`) | SJ-33 | S |
 | Text alternatives for charts | SJ-34 | S |
-| Warn about or convert time-zone suffixes | SJ-31 | S |
+| ~~Warn about or convert time-zone suffixes~~ Done 2026-10-09: converted | SJ-31 | S |
 | Component tests for TradeForm, ImportTradesModal and Settings | §12 | M |
 | Tests for each insights rule | §12 | M |
 | Distinct names for the two search inputs | SJ-40 | XS |

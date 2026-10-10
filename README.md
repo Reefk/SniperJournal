@@ -35,9 +35,12 @@ you have an edge.
 - **Trades.** Search and filter by pair, session, leverage, setup, date,
   direction and result. Edit trades in bulk, merge partial fills back into one
   position, or keep a trade but leave it out of the statistics.
-- **Broker import.** CSV import with a preview before anything is added,
-  including paired buy/sell exports such as Tradovate's, whose fill IDs are
-  remembered so re-importing never adds a fill twice. CSV export too.
+- **Broker import.** CSV import from most brokers and platforms, with a preview
+  before anything is added. Files of whole trades and files of single fills
+  both work: fills are put back together by following the position. Columns
+  are recognised by the many names brokers use, and anything misread can be
+  corrected in the preview. Fill and trade IDs are remembered, so re-importing
+  never adds a trade twice. CSV export too.
 - **Playbook.** The setups you allow yourself to trade, their rules, and how
   each one actually performs.
 - **Insights & signals.** Patterns found in your own trades, such as your best
