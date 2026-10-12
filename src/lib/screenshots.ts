@@ -1,4 +1,5 @@
 import { storage } from './storage';
+import type { Trade } from './types';
 
 /** Where the app serves a saved chart image from */
 export function screenshotSrc(name: string): string {
@@ -63,6 +64,16 @@ export async function uploadScreenshot(file: File): Promise<UploadResult> {
     if (err instanceof Error && err.name === 'Error' && err.message) return { error: err.message };
     return { error: 'Images can only be saved while the app can reach its data folder.' };
   }
+}
+
+/**
+ * The chart images that only the trades being removed use, and so can go with
+ * them. An image another remaining trade still shows is kept.
+ */
+export function imagesOnlyIn(removed: readonly Trade[], remaining: readonly Trade[]): string[] {
+  const stillShown = new Set(remaining.map((t) => t.screenshotFile));
+  const names = removed.map((t) => t.screenshotFile).filter((n): n is string => Boolean(n) && !stillShown.has(n));
+  return [...new Set(names)];
 }
 
 export async function deleteScreenshot(name: string): Promise<void> {

@@ -6,7 +6,7 @@ import type { Account, JournalData, Resource, Setup, Trade, TradeInput, Settings
 import { generateSampleData } from '@/lib/sample';
 import { isIncomplete } from '@/lib/trade-math';
 import { mergeIssue, mergeTrades as combineTrades } from '@/lib/merge';
-import { deleteScreenshot } from '@/lib/screenshots';
+import { deleteScreenshot, imagesOnlyIn } from '@/lib/screenshots';
 import { storage } from '@/lib/storage';
 import { uid } from '@/lib/utils';
 import { cleanAccounts, cleanResources, cleanSettings, cleanSetups, cleanTrades } from './sanitize';
@@ -286,9 +286,9 @@ export function JournalProvider({ children }: { children: ReactNode }) {
       deleteTrades: (ids) => {
         const set = new Set(ids);
         // a deleted trade should not leave its chart behind in the data folder
-        for (const t of dataRef.current.trades) {
-          if (set.has(t.id) && t.screenshotFile) void deleteScreenshot(t.screenshotFile);
-        }
+        const trades = dataRef.current.trades;
+        const removed = trades.filter((t) => set.has(t.id));
+        for (const name of imagesOnlyIn(removed, trades.filter((t) => !set.has(t.id)))) void deleteScreenshot(name);
         mutate((d) => ({ ...d, trades: d.trades.filter((t) => !set.has(t.id)) }));
       },
       setExcluded: (ids, excluded) => {
@@ -318,6 +318,13 @@ export function JournalProvider({ children }: { children: ReactNode }) {
         mutate((d) => ({ ...d, accounts: d.accounts.map((a) => (a.id === id ? { ...a, ...patch } : a)) }));
       },
       deleteAccount: (id) => {
+        // its trades go for good, and their charts with them (the last account stays)
+        const current = dataRef.current;
+        if (current.accounts.some((a) => a.id !== id)) {
+          const removed = current.trades.filter((t) => t.accountId === id);
+          const remaining = current.trades.filter((t) => t.accountId !== id);
+          for (const name of imagesOnlyIn(removed, remaining)) void deleteScreenshot(name);
+        }
         mutate((d) => {
           const accounts = d.accounts.filter((a) => a.id !== id);
           if (!accounts.length) return d;
@@ -393,8 +400,19 @@ export function JournalProvider({ children }: { children: ReactNode }) {
           setups: d.setups.filter((s) => !s.isSample),
         }));
       },
-      replaceAll: (next) => setData({ ...normalize(next), updatedAt: new Date().toISOString() }),
-      resetAll: () => setData({ ...createDefaultData(), onboarded: true }),
+      // The chart images of the journal being replaced go with it, apart from
+      // those the incoming journal still uses. The copy Settings keeps first
+      // (before-restore, before-erase) is the journal only, so restored later,
+      // its trades come back without those charts. Settings says so.
+      replaceAll: (next) => {
+        const incoming = normalize(next);
+        for (const name of imagesOnlyIn(dataRef.current.trades, incoming.trades)) void deleteScreenshot(name);
+        setData({ ...incoming, updatedAt: new Date().toISOString() });
+      },
+      resetAll: () => {
+        for (const name of imagesOnlyIn(dataRef.current.trades, [])) void deleteScreenshot(name);
+        setData({ ...createDefaultData(), onboarded: true });
+      },
     }),
     [mutate],
   );

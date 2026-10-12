@@ -42,7 +42,7 @@ export function SettingsView() {
     }
     const ok = await confirm({
       title: 'Restore this backup?',
-      message: `The backup holds ${parsed.trades.length} trades. Restoring replaces everything currently in your journal.`,
+      message: `The backup holds ${parsed.trades.length} trades. Restoring replaces everything currently in your journal, and deletes the chart images that the backup's trades don't use.`,
       confirmLabel: 'Replace my journal',
       tone: 'danger',
     });
@@ -50,7 +50,7 @@ export function SettingsView() {
       // the journal being replaced must stay recoverable, so no copy, no restore
       if (!(await keepCurrent('before-restore'))) return;
       actions.replaceAll(parsed);
-      toast('Journal restored. The one it replaced was kept in your backups.');
+      toast('Journal restored. The one it replaced was kept in your backups, without its chart images.');
     }
   };
 
@@ -313,13 +313,13 @@ export function SettingsView() {
             onClick={async () => {
               const ok = await confirm({
                 title: 'Erase everything?',
-                message: `This permanently deletes all ${data.trades.length} trades, your setups, resources and accounts. Download a backup first if you are not certain.`,
+                message: `This permanently deletes all ${data.trades.length} trades and their chart images, your setups, resources and accounts. Download a backup first if you are not certain; backups don't include chart images.`,
                 confirmLabel: 'Erase my journal',
                 tone: 'danger',
               });
               if (ok && (await keepCurrent('before-erase'))) {
                 actions.resetAll();
-                toast('Journal erased. A copy of it was kept in your backups.');
+                toast('Journal erased. A copy of it, without chart images, was kept in your backups.');
               }
             }}
           >

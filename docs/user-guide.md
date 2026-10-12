@@ -257,7 +257,11 @@ few hundred charts stay in the tens of megabytes rather than gigabytes.
 
 Two things worth knowing: the JSON backup contains your trades but not the
 images, so copy `data/screenshots/` as well when moving to another computer, and
-deleting a trade deletes its image with it.
+deleting a trade, or an account with its trades, deletes their images with them.
+So does **Erase all data**, and restoring a backup deletes the images that the
+backup's trades don't use. The copy of the old journal that both keep in your
+backups is the journal only: restored later, its trades come back without those
+charts.
 
 If you would rather link to a chart you host elsewhere, such as a TradingView
 snapshot, there is still a **Chart link** field under _Futures, forex and manual
