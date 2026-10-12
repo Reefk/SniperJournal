@@ -4,7 +4,8 @@ import { useJournal } from '@/store/JournalProvider';
 
 /**
  * Recharts needs concrete colors rather than CSS variables for SVG fills,
- * so the palette is mirrored here per theme.
+ * so the palette is mirrored here per theme. Keep it in step with the
+ * tokens in globals.css: axis is --faint, the rest share their names.
  */
 export interface ChartTheme {
   grid: string;
@@ -19,9 +20,9 @@ export interface ChartTheme {
 
 const DARK: ChartTheme = {
   grid: '#222c42',
-  axis: '#5c6882',
+  axis: '#7e8ba6',
   profit: '#34d399',
-  loss: '#f43f5e',
+  loss: '#ff6879',
   accent: '#818cf8',
   surface: '#131a2a',
   text: '#e6eaf2',
@@ -30,13 +31,13 @@ const DARK: ChartTheme = {
 
 const LIGHT: ChartTheme = {
   grid: '#e2e8f0',
-  axis: '#94a3b8',
-  profit: '#059669',
-  loss: '#e11d48',
+  axis: '#616f83',
+  profit: '#056e4c',
+  loss: '#ba0236',
   accent: '#4f46e5',
   surface: '#ffffff',
   text: '#0f172a',
-  muted: '#64748b',
+  muted: '#5f6f86',
 };
 
 export function useChartTheme(): ChartTheme {

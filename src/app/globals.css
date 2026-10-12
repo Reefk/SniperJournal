@@ -2,6 +2,10 @@
 
 /* ---------------------------------------------------------------
    Design tokens. Dark is the default; .light on <html> overrides.
+   Every text colour (fg, muted, faint, accent, profit, loss, warn)
+   keeps at least 4.5:1 contrast (WCAG AA) on app, surface and raised,
+   and profit, loss and warn also on their own 10-15% tinted fills,
+   the badges and toggles that put them behind their own text.
    --------------------------------------------------------------- */
 :root {
   --app: #0b1120;
@@ -11,11 +15,11 @@
   --line-strong: #34405b;
   --fg: #e6eaf2;
   --muted: #8b97ad;
-  --faint: #5c6882;
+  --faint: #7e8ba6;
   --accent: #818cf8;
   --accent-strong: #6366f1;
   --profit: #34d399;
-  --loss: #f43f5e;
+  --loss: #ff6879;
   --warn: #f59e0b;
 }
 
@@ -26,13 +30,13 @@
   --line: #e2e8f0;
   --line-strong: #cbd5e1;
   --fg: #0f172a;
-  --muted: #64748b;
-  --faint: #94a3b8;
+  --muted: #5f6f86;
+  --faint: #616f83;
   --accent: #4f46e5;
   --accent-strong: #4f46e5;
-  --profit: #059669;
-  --loss: #e11d48;
-  --warn: #d97706;
+  --profit: #056e4c;
+  --loss: #ba0236;
+  --warn: #9a5304;
 }
 
 @theme inline {
