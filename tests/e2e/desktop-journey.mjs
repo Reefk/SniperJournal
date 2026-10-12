@@ -88,39 +88,15 @@ async function openBrowser() {
     } catch {}
   }
   await new Promise((r) => ws.addEventListener('open', r, { once: true }));
-  let id = 0;
-  const pending = new Map();
-  ws.addEventListener('message', (e) => {
-    const m = JSON.parse(e.data);
-    if (pending.has(m.id)) {
-      pending.get(m.id)(m);
-      pending.delete(m.id);
-    }
-  });
-  const send = (method, params = {}) =>
-    new Promise((r) => {
-      const n = ++id;
-      pending.set(n, r);
-      ws.send(JSON.stringify({ id: n, method, params }));
-    });
+  const page = drive(ws);
+  const { send } = page;
   await send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: downloads, eventsEnabled: true });
-  const run = async (expression) => {
-    const res = await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true });
-    if (res.result?.exceptionDetails) throw new Error(`${expression.slice(0, 80)}: ${res.result.exceptionDetails.exception?.description}`);
-    return res.result?.result?.value;
-  };
-  const until = async (expression, label, timeout = 8000) => {
-    const end = Date.now() + timeout;
-    while (Date.now() < end) {
-      if (await run(expression)) return true;
-      await sleep(100);
-    }
-    throw new Error(`timed out waiting for: ${label}`);
-  };
-  const setFile = async (selector, path) => {
-    const { result } = await send('DOM.getDocument', { depth: -1 });
-    const { result: q } = await send('DOM.querySelector', { nodeId: result.root.nodeId, selector });
-    await send('DOM.setFileInputFiles', { nodeId: q.nodeId, files: [path] });
+  // a second tab in the same browser: same profile, so the same browser copy of the journal
+  const newTab = async () => {
+    const target = await (await fetch(`http://127.0.0.1:${debugPort}/json/new?about:blank`, { method: 'PUT' })).json();
+    const tabWs = new WebSocket(target.webSocketDebuggerUrl);
+    await new Promise((r) => tabWs.addEventListener('open', r, { once: true }));
+    return { ...drive(tabWs), close: async () => { tabWs.close(); await fetch(`http://127.0.0.1:${debugPort}/json/close/${target.id}`); } };
   };
   // Edge hands off to another process at launch, so killing the one started
   // here leaves the real browser running: ask the browser itself to quit,
@@ -140,7 +116,45 @@ async function openBrowser() {
     proc.kill();
   };
   browsers.add(close);
-  return { send, run, until, setFile, close };
+  return { ...page, newTab, close };
+}
+
+/** send / run / until / setFile for one page, over its DevTools WebSocket */
+function drive(ws) {
+  let id = 0;
+  const pending = new Map();
+  ws.addEventListener('message', (e) => {
+    const m = JSON.parse(e.data);
+    if (pending.has(m.id)) {
+      pending.get(m.id)(m);
+      pending.delete(m.id);
+    }
+  });
+  const send = (method, params = {}) =>
+    new Promise((r) => {
+      const n = ++id;
+      pending.set(n, r);
+      ws.send(JSON.stringify({ id: n, method, params }));
+    });
+  const run = async (expression) => {
+    const res = await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true });
+    if (res.result?.exceptionDetails) throw new Error(`${expression.slice(0, 80)}: ${res.result.exceptionDetails.exception?.description}`);
+    return res.result?.result?.value;
+  };
+  const until = async (expression, label, timeout = 8000) => {
+    const end = Date.now() + timeout;
+    while (Date.now() < end) {
+      if (await run(expression)) return true;
+      await sleep(100);
+    }
+    throw new Error(`timed out waiting for: ${label}`);
+  };
+  const setFile = async (selector, path) => {
+    const { result } = await send('DOM.getDocument', { depth: -1 });
+    const { result: q } = await send('DOM.querySelector', { nodeId: result.root.nodeId, selector });
+    await send('DOM.setFileInputFiles', { nodeId: q.nodeId, files: [path] });
+  };
+  return { send, run, until, setFile };
 }
 
 // helpers that run inside the page
@@ -531,6 +545,88 @@ async function journey() {
   await b.run(`$t('Erase my journal', $modal()).click(); true`);
   await b.until(`$text().includes('Journal erased')`, 'erased');
   check('Erase all data deletes every chart image', beforeErase.length === 1 && (await imagesSoon(0)).length === 0, JSON.stringify({ beforeErase, after: images() }));
+
+  // ---- 13. two tabs on the same journal: neither writes over the other -------
+  const logTrade = async (tab, symbol) => {
+    await tab.run(`$tStarts('Log trade').click(); true`);
+    await tab.until(`!!$modal() && !!$field('Symbol', $modal())`, 'trade form');
+    await tab.run(`$type($field('Symbol', $modal()), '${symbol}'); $type($field('Quantity', $modal()), '1'); $type($field('Entry price', $modal()), '10'); $t('Save trade', $modal()).click(); true`);
+    await tab.until(`!$modal()`, 'trade saved');
+  };
+  const symbolsOnDisk = () => journalOnDisk().trades.map((t) => t.symbol);
+  const second = await b.newTab();
+  await second.send('Page.navigate', { url: base });
+  await second.until(`document.readyState === 'complete' && !!document.querySelector('aside')`, 'second tab');
+  await second.run(PAGE);
+  // the first tab saves after the second one opened the journal
+  await logTrade(b, 'TABA');
+  check('the first tab saves as usual', await savedSoon((j) => j.trades.some((t) => t.symbol === 'TABA')));
+  // the second tab's save is now based on an older file
+  await logTrade(second, 'TABB');
+  const refused = await second
+    .until(`/changed in another window/.test($modal()?.innerText ?? '') && /conflict-/.test($modal().innerText)`, 'conflict dialog', 10000)
+    .then(() => true, () => false);
+  check("the second tab's save is refused, and it says so", refused);
+  check('the first tab\'s trade is still in the file, the second\'s is not', symbolsOnDisk().includes('TABA') && !symbolsOnDisk().includes('TABB'), JSON.stringify(symbolsOnDisk()));
+  const conflictCopies = readdirSync(join(work, 'data', 'backups')).filter((f) => f.startsWith('conflict-'));
+  const keptB = conflictCopies.length === 1 && JSON.parse(readFileSync(join(work, 'data', 'backups', conflictCopies[0]), 'utf8'));
+  check("the second tab's version is kept as a conflict copy, with its trade", Boolean(keptB) && keptB.trades.some((t) => t.symbol === 'TABB'), conflictCopies.join(','));
+  check('the sidebar of the second tab says it is not saving', await second.run(`document.querySelector('aside').innerText.includes('Changed elsewhere')`));
+  // reload the second tab: it opens what the first saved, not its own copy from the browser
+  await second.run(`[...document.querySelectorAll('[data-modal-root] button')].find((x) => x.textContent.includes('Reload')).click(); true`);
+  await sleep(500);
+  await second.until(`document.readyState === 'complete' && !!document.querySelector('aside') && !document.querySelector('[data-modal-root]')`, 'second tab reloaded', 10000);
+  await second.run(PAGE);
+  await second.run(`$nav('/trades'); true`);
+  await second.until(`[...document.querySelectorAll('tbody tr')].some((r) => r.innerText.includes('TABA'))`, 'trades after reload');
+  check('after Reload the second tab shows what the first saved, and not its own refused trade', await second.run(`![...document.querySelectorAll('tbody tr')].some((r) => r.innerText.includes('TABB'))`));
+  // both carry on, one after the other, with nothing refused
+  await logTrade(second, 'TABC');
+  check('the reloaded second tab saves again', await savedSoon((j) => j.trades.some((t) => t.symbol === 'TABC')));
+  await b.run(`location.reload(); true`);
+  await sleep(500);
+  await b.until(`document.readyState === 'complete' && !!document.querySelector('aside')`, 'first tab reloaded', 10000);
+  await b.run(PAGE);
+  await logTrade(b, 'TABD');
+  check('and so does the first, after a reload', await savedSoon((j) => ['TABA', 'TABC', 'TABD'].every((s) => j.trades.some((t) => t.symbol === s))), JSON.stringify(symbolsOnDisk()));
+  await second.close();
+
+  // ---- 14. the trade form deletes a chart only once the trade is saved -------
+  await logWithChart('CHART');
+  const chartOf = () => journalOnDisk().trades.find((t) => t.symbol === 'CHART')?.screenshotFile;
+  await savedSoon((j) => j.trades.some((t) => t.symbol === 'CHART' && t.screenshotFile));
+  const original = chartOf();
+  const openChart = async () => {
+    await b.run(`$nav('/trades'); true`);
+    await b.until(`[...document.querySelectorAll('tbody tr')].some((r) => r.innerText.includes('CHART'))`, 'trades table');
+    await b.run(`[...document.querySelectorAll('tbody tr')].find((r) => r.innerText.includes('CHART')).click(); true`);
+    await b.until(`!!$modal()?.querySelector('img')`, 'trade form with its chart');
+  };
+  const replaceChart = async () => {
+    await b.setFile('[data-modal-root] input[type=file]', png);
+    await b.until(`!$modal().querySelector('img').getAttribute('src').includes('${original}')`, 'replacement uploaded');
+  };
+  const closeWith = async (label) => {
+    await b.run(`$t('${label}', $modal()).click(); true`);
+    await b.until(`!$modal()`, 'form closed');
+    await sleep(500);
+  };
+  await openChart();
+  await b.run(`$modal().querySelector('button[aria-label="Remove chart"]').click(); true`);
+  await b.until(`!$modal().querySelector('img')`, 'chart removed in the form');
+  await closeWith('Cancel');
+  check('Remove chart, then Cancel: the image file is still there, and the trade still shows it', images().includes(original) && chartOf() === original, JSON.stringify({ original, files: images(), now: chartOf() }));
+  await openChart();
+  await replaceChart();
+  await closeWith('Cancel');
+  check('Replace, then Cancel: the original stays, and the unsaved upload is deleted', JSON.stringify(await imagesSoon(1)) === JSON.stringify([original]) && chartOf() === original, JSON.stringify({ original, files: images() }));
+  await openChart();
+  await replaceChart();
+  await closeWith('Save changes');
+  await savedSoon((j) => j.trades.some((t) => t.symbol === 'CHART' && t.screenshotFile !== original));
+  const replaced = chartOf();
+  check('Replace, then Save: the trade shows the new image, and the old file is deleted', Boolean(replaced) && replaced !== original && JSON.stringify(await imagesSoon(1)) === JSON.stringify([replaced]), JSON.stringify({ original, replaced, files: images() }));
+
   await b.close();
   await stopServer();
 }
