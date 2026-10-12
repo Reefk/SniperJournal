@@ -198,6 +198,14 @@ which tab wrote it and which file version it was made on top of
 newer *and* based on the file as it is now; a newer copy made on top of an
 older file is kept as a conflict copy instead of being opened.
 
+**When something crashes.** A page that throws while drawing is replaced by
+`src/app/error.tsx`, inside the app: the sidebar, the journal and saving
+carry on. A crash in the app around the pages (the journal's state, the
+sidebar, the header) shows `src/app/global-error.tsx` instead, which has none
+of the app's providers, so it reads the journal straight from storage
+(`src/store/rescue.ts`). Both offer a backup download and say where the
+journal file is (`storage.location()`, known from the first read).
+
 The Android app doesn't need any of this: it runs one WebView (`singleTask`),
 its saves are already queued one at a time, and nothing else writes its
 folder. Its storage keeps no versions (`version` is left out), so it behaves

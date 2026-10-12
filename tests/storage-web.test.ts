@@ -111,6 +111,12 @@ describe('saving from two windows', () => {
     expect(webStorage.version?.()).toBe('v1');
   });
 
+  it('knows where the journal is kept from the first read, before any save', async () => {
+    scripted([{ status: 200, body: { ok: true, data: null, version: 'none', path: 'C:\journal\data\journal.json' } }]);
+    await webStorage.readJournal();
+    expect(webStorage.location()).toBe('C:\journal\data\journal.json');
+  });
+
   it('on a first run the window is based on "no file yet"', async () => {
     const requests = scripted([
       { status: 200, body: { ok: true, data: null, version: 'none' } },

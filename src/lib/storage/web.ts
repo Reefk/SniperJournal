@@ -14,6 +14,9 @@ let writes: Promise<unknown> = Promise.resolve();
  */
 let base: string | null = null;
 
+/** where the server keeps the journal file, as it last said */
+let where: string | null = null;
+
 async function put(data: JournalData): Promise<string | null> {
   const res = await fetch('/api/journal', {
     method: 'PUT',
@@ -24,6 +27,7 @@ async function put(data: JournalData): Promise<string | null> {
   if (res.status === 412 || json?.conflict) throw new JournalConflict(json?.error ?? 'The journal was changed elsewhere.');
   if (!json?.ok) throw new Error(json?.error ?? 'Could not save the journal.');
   if (typeof json.version === 'string') base = json.version;
+  if (typeof json.path === 'string') where = json.path;
   return (json.path as string) ?? null;
 }
 
@@ -44,7 +48,12 @@ export const webStorage: JournalStorage = {
     const json = await res.json();
     if (!json?.ok) throw new Error(json?.error ?? 'Could not read the journal.');
     base = typeof json.version === 'string' ? json.version : null;
+    if (typeof json.path === 'string') where = json.path;
     return (json.data as JournalData | null) ?? null;
+  },
+
+  location() {
+    return where;
   },
 
   version() {

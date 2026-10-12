@@ -166,10 +166,10 @@ export async function GET(request: Request) {
   if (refused) return refused;
   try {
     const text = await fs.readFile(FILE, 'utf8');
-    return NextResponse.json({ ok: true, data: JSON.parse(text), version: versionOf(text) });
+    return NextResponse.json({ ok: true, data: JSON.parse(text), version: versionOf(text), path: FILE });
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
-      return NextResponse.json({ ok: true, data: null, version: NO_FILE });
+      return NextResponse.json({ ok: true, data: null, version: NO_FILE, path: FILE });
     }
     return NextResponse.json({ ok: false, error: 'Could not read the journal file.' }, { status: 500 });
   }

@@ -33,6 +33,12 @@ export interface JournalStorage {
   version?(): string | null;
 
   /**
+   * Where the journal is kept (a file path on a PC, the app's folder on a
+   * phone), known once it has been read; null before that.
+   */
+  location(): string | null;
+
+  /**
    * Persist the journal, and say where it ended up — a file path on a PC, the
    * app's own folder on a phone. The Support page shows this so you always
    * know where your trades actually live. Return null when there is nothing

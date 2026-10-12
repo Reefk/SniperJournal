@@ -12,9 +12,7 @@ import { JournalConflict, storage } from '@/lib/storage';
 import { uid } from '@/lib/utils';
 import { accountBalances } from './selectors';
 import { createAutosave, readPatiently } from './autosave';
-import { decodeMirror, encodeMirror, pickJournal, rebaseMirror } from './mirror';
-
-const LOCAL_KEY = 'sniper-journal:v1';
+import { decodeMirror, encodeMirror, MIRROR_KEY as LOCAL_KEY, pickJournal, rebaseMirror } from './mirror';
 
 /**
  * On a PC the journal is mirrored into the browser on every change, in case
@@ -221,6 +219,8 @@ export function JournalProvider({ children }: { children: ReactNode }) {
       }
 
       if (!cancelled) {
+        // where the journal lives is known from the read, before any save
+        setFilePath(storage.location());
         setData(normalize(winner));
         setSaveStatus(diskReadable.current ? 'saved' : 'error');
         setReady(true);

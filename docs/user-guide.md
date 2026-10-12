@@ -307,6 +307,12 @@ edit the `dev` and `start` lines in `package.json` to use a different port.
 program is using port 3000, that program was left running, and it is the one to
 close (or a copy of the app in a different folder).
 
+**"This page couldn't be shown" or "Sniper Journal ran into a problem".**
+Something in the app went wrong while drawing the screen. Your journal is saved
+on its own and the screen doesn't change it. Use **Download a backup** there to
+be safe, then **Try again** or reload. If it keeps happening, **Details for a
+bug report** at the bottom says what went wrong.
+
 **"This journal was changed in another window".** You had the app open in two
 tabs or windows (or two copies of it on one journal), and the other one saved
 after this one opened. Rather than write over that work, this window stopped

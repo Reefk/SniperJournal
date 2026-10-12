@@ -43,7 +43,8 @@ const file = () => JSON.parse(readFileSync(join(root, 'data', 'journal.json'), '
 describe('/api/journal', () => {
   it('reports no journal on a first run', async () => {
     const res = await routes.journal.GET(req('/api/journal'));
-    expect(await res.json()).toEqual({ ok: true, data: null, version: 'none' });
+    // where it will be kept is known before the first save
+    expect(await res.json()).toEqual({ ok: true, data: null, version: 'none', path: join(root, 'data', 'journal.json') });
   });
 
   it('saves a journal atomically and reads it back', async () => {

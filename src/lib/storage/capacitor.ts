@@ -107,6 +107,11 @@ async function writeNow(journal: JournalData): Promise<string> {
   }
   journalExists = true;
 
+  return journalPath();
+}
+
+/** the journal file as a path, once init() has resolved the app's folder */
+function journalPath(): string {
   return decodeURIComponent(`${baseUri}/${FILE}`.replace(/^file:\/\//, ''));
 }
 
@@ -148,6 +153,10 @@ export const capacitorStorage: JournalStorage = {
       }
     }
     return null;
+  },
+
+  location() {
+    return baseUri ? journalPath() : null;
   },
 
   writeJournal(journal: JournalData): Promise<string | null> {

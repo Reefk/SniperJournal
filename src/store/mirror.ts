@@ -13,6 +13,9 @@ import type { JournalData } from '@/lib/types';
  *
  * No React here, so it can be tested on its own (tests/mirror.test.ts).
  */
+/** where the browser keeps it (localStorage) */
+export const MIRROR_KEY = 'sniper-journal:v1';
+
 export interface Mirror {
   journal: JournalData;
   /** the file version this journal was made on top of; null where versions aren't kept (a phone) */
