@@ -50,6 +50,7 @@ More commands worth knowing:
 
 ```
 npm run typecheck   # catches mistakes before you see them in the browser
+npm run lint        # React, hooks, accessibility and TypeScript rules (ESLint)
 npm run build       # fails loudly if anything is broken
 npm test            # the calculation, CSV, storage and API tests (a few seconds)
 npm run coverage    # the same, with a coverage report
@@ -61,6 +62,12 @@ npm run bench       # timings for 100 to 50,000 trades
 The tests are in `tests/` and only ever use made-up trades. They never open
 `data/` or anything else of yours. `docs/QUALITY_AUDIT.md` explains what they
 cover and what they don't.
+
+GitHub runs typecheck, lint, the tests and both builds (desktop and the
+Android export) on Windows and Linux for every push to `main` and every pull
+request: `.github/workflows/ci.yml`. It only reads the code; nothing is signed
+or published. Lint warnings don't fail it, errors do. The warnings left today
+are known (see the comment in `eslint.config.mjs`); don't add new ones.
 
 ## Where everything lives
 
@@ -110,13 +117,18 @@ Every colour in the app is a CSS variable defined twice in `globals.css`, once
 for dark and once for light:
 
 ```css
-:root       { --profit: #34d399; --loss: #f43f5e; --accent: #818cf8; … }
-:root.light { --profit: #059669; --loss: #e11d48; --accent: #4f46e5; … }
+:root       { --profit: #34d399; --loss: #ff6879; --accent: #818cf8; … }
+:root.light { --profit: #056e4c; --loss: #ba0236; --accent: #4f46e5; … }
 ```
 
 Change those two blocks and the whole app follows, charts included. The charts
 need real colour values rather than variables, so they are mirrored once in
 `src/hooks/useChartTheme.ts` — change them in both places.
+
+Text colours must stay readable: at least 4.5:1 contrast (WCAG AA) on the
+`app`, `surface` and `raised` backgrounds, and for `profit`, `loss` and `warn`
+also on the 10–15% tinted fills of the badges that put them behind their own
+text. Check a new shade with any WCAG contrast checker before using it.
 
 ### Adding a page
 

@@ -88,6 +88,8 @@ emulator, see [Building the Android app](#building-the-android-app) below.
 npm install          # once
 npm run dev          # http://localhost:3000, with live reload
 npm run typecheck    # the project is strict TypeScript
+npm run lint         # ESLint with Next's React, hooks and accessibility rules
+npm test             # the calculation, CSV, storage and API tests
 npm run build        # the desktop app
 ```
 
@@ -156,7 +158,8 @@ Anything else that differs between PC and phone reads `storage.kind`.
    `npm test`. Every number in the app rests on them.
 2. The desktop app must keep working after every change. Run `npm run build`
    and open it on the PC before calling something done.
-3. Run `npm run typecheck` before finishing anything.
+3. Run `npm run typecheck` and `npm run lint` before finishing anything. GitHub
+   runs both, with the tests and builds, on every push to `main`.
 4. If you change the shape of the journal, update `normalize()` in
    `src/store/JournalProvider.tsx` so existing journals still load.
 5. Keep it offline. The app makes no network requests and keeps no telemetry.
