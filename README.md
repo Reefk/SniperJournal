@@ -90,7 +90,9 @@ npm run dev          # http://localhost:3000, with live reload
 npm run typecheck    # the project is strict TypeScript
 npm run lint         # ESLint with Next's React, hooks and accessibility rules
 npm test             # the calculation, CSV, storage and API tests
+npm run check        # all three of the above, before calling anything done
 npm run build        # the desktop app
+npm run clean        # delete build leftovers (keeps the desktop build and data/)
 ```
 
 Stop the background copy (`stop.bat`) before running a dev server, or the two

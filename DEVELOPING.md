@@ -53,10 +53,15 @@ npm run typecheck   # catches mistakes before you see them in the browser
 npm run lint        # React, hooks, accessibility and TypeScript rules (ESLint)
 npm run build       # fails loudly if anything is broken
 npm test            # the calculation, CSV, storage and API tests (a few seconds)
-npm run coverage    # the same, with a coverage report
+npm run test:watch  # the same, again on every save
+npm run check       # typecheck, lint and tests in one go
+npm run coverage    # the tests, with a coverage report
 npm run e2e         # after npm run build: the whole app in a headless Edge/Chrome,
                     # with made-up trades in a throwaway folder
+npm run e2e:android # the Android app on a running emulator (tests/android/)
 npm run bench       # timings for 100 to 50,000 trades
+npm run format -- <files>   # Prettier on the files you name (VS Code does it on save)
+npm run clean       # delete build leftovers: .next/dev and cache, out/, Android build
 ```
 
 The tests are in `tests/` and only ever use made-up trades. They never open

@@ -904,7 +904,7 @@ No optimisation was made for speed alone, because nothing measured justifies one
 
 - **No component tests** (React Testing Library). UI behaviour is covered only by the one E2E journey.
 - **Insights rules are partly covered:** 60% of branches. Each rule's thresholds deserve a test.
-- **The E2E journey runs on the desktop only.** The Android flow was checked with the scripts described in [section 9](#9-persistence-backup-restore-and-migrations), which are not in the repository. They depend on adb and a running emulator.
+- **The E2E journey runs on the desktop only.** The Android flow is checked by `tests/android/emulator-journey.mjs` (`npm run e2e:android`, in the repository since 2026-10-12: restore, erase, persistence, a corrupted journal, a refused save, the back button and the share sheet). It needs adb and a running emulator, so CI does not run it.
 - **The screenshot (image) flow in E2E** covers uploading and deleting with an account, a restore and an erase, not pasting or replacing an image in the trade form.
 - **No visual regression tests.**
 - **No accessibility scanner** (for example axe) was run. The checks were targeted DOM assertions.
@@ -979,7 +979,7 @@ Run on the machine above, from a clean `npm ci` in a copy of the working tree. T
 - **Security:** This was code review plus targeted requests, not a penetration test. No external scanners were used, by instruction.
 - **Coverage:** It covers logic, storage and API code. React components are covered only by the E2E journey.
 - **Performance:** Measured on a fast desktop CPU; see SJ-42.
-- **Android test scripts:** The emulator scripts are not committed to the repository. They need a local adb setup.
+- **Android test scripts:** Committed on 2026-10-12 as `tests/android/emulator-journey.mjs`. They need a local adb setup and an emulator, so they are run by hand, not in CI.
 - **Code-inspection findings:** SJ-05, SJ-06, SJ-16 to SJ-18 and SJ-20 to SJ-22 were confirmed by reading the code rather than by a test failing against the old code. The fixes for SJ-05, SJ-06 and SJ-16 to SJ-18 are verified by tests or E2E checks; SJ-20 to SJ-22 only by code review and typecheck.
 
 ---
