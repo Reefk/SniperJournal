@@ -42,24 +42,26 @@ review and typecheck only. The serious ones were in three places:
    - SQN used the population standard deviation and the wrong N (overstated by 12% to 41% in the test fixtures).
    - A trade that nets exactly $0 was classed as a loss because of floating-point noise.
 
-**How it was verified.** Tests were built from nothing and run on the final code:
+**How it was verified.** Tests were built from nothing and run on the final code. The figures below were refreshed on 2026-10-12 (commit `964df19` plus the uncommitted changes of that day). At the end of the audit itself they were 212 tests, 79.3% of statements, 73.8% of branches, 37 E2E checks and 16 Android checks.
 
 | Check | Result |
 |---|---|
-| Unit and integration tests (`npm test`) | 212 / 212 pass |
-| Coverage of logic, storage and API code | 79.3% statements, 73.8% branches |
-| E2E journey on the production desktop build, headless Edge | 37 / 37 checks pass |
-| Android flow on the emulator | 16 / 16 checks pass |
-| Back-button sequence on Android | Correct at all 5 steps |
-| Typecheck, desktop build, mobile build, production `npm audit` | All clean |
+| Unit and integration tests (`npm test`) | 279 / 279 pass, 14 files |
+| Coverage of logic, storage and API code | 85.9% statements, 79.4% branches |
+| E2E journey on the production desktop build, headless Edge | 65 / 65 checks pass |
+| Android flow on the emulator (minified release build) | 20 / 20 checks pass, plus back button, share sheet and a clean log |
+| Back-button sequence on Android | Correct at all 5 steps (audit run) |
+| Typecheck, lint, desktop build, mobile build, production `npm audit` | All clean (lint: 0 errors, 27 known warnings) |
+| CI on GitHub (Windows and Linux) | Green on every push to `main` since 2026-10-12 |
 
 **What remains open.** The most important items:
 
 - Re-importing a CSV that has no trade IDs duplicates every trade.
-- Files with separate Date and Time columns lose the time.
-- Several text colours fail WCAG AA contrast.
+- ~~Files with separate Date and Time columns lose the time.~~ Fixed 2026-10-09 (SJ-28).
+- ~~Several text colours fail WCAG AA contrast.~~ Fixed 2026-10-12 (SJ-29).
 - ~~The app is labelled "AI Insights" although the analysis is rule-based.~~ Renamed to "Insights & Signals" on 2026-10-09; store screenshot `05-insights.png` still shows the old name.
-- Nothing runs the tests automatically yet: there is no CI or lint.
+- ~~Nothing runs the tests automatically yet: there is no CI or lint.~~ Fixed 2026-10-12 (SJ-30).
+- Nothing has run on a physical phone yet (SJ-41).
 
 **Release.** The evidence supports releasing to a Play closed/internal test
 track now. It does not yet support calling the app production-ready; see
@@ -177,12 +179,12 @@ No Critical findings were made.
 | SJ-30 | Medium | Process | No CI, no lint; tests run only when someone remembers | Fixed and Verified (2026-10-12) |
 | SJ-31 | Low | CSV | Time-zone suffixes (`Z`, `+02:00`) ignored without a warning | Fixed and Verified (2026-10-09) |
 | SJ-32 | Low | Persistence | A newer-version journal on disk is silently downgraded on load | Confirmed |
-| SJ-33 | Low | Accessibility | Dialogs do not trap Tab focus | Confirmed (code) |
+| SJ-33 | Low | Accessibility | Dialogs do not trap Tab focus | Fixed and Verified (2026-10-12) |
 | SJ-34 | Low | Accessibility | Charts have no text alternative | Confirmed (code) |
 | SJ-35 | Low | Product / Store | UI says "AI Insights"; the analysis is rule-based and the store listing avoids "AI" | Fixed (2026-10-09; store screenshot 05 still to retake) |
-| SJ-36 | Low | Persistence | Screenshots: orphaned on account delete/reset; not in backups | Accepted Risk |
+| SJ-36 | Low | Persistence | Screenshots: orphaned on account delete/reset; not in backups | Orphans fixed (2026-10-12); backups still exclude images (documented) |
 | SJ-37 | Info | Persistence | Desktop `localStorage` mirror fails silently past about 5 MB | Accepted Risk |
-| SJ-38 | Info | Dependencies | 3 moderate advisories, dev-only (`@capacitor/cli`) | Accepted Risk |
+| SJ-38 | Info | Dependencies | Dev-only advisories: `@capacitor/cli` (3 moderate) and, since 2026-10-12, `eslint-config-next` (5 high, `braces`) | Accepted Risk |
 | SJ-39 | Info | Persistence | A cleaned-up journal is only written back on the next change | Accepted Risk |
 | SJ-40 | Info | Accessibility | Two different inputs are both named "Search trades" | Confirmed |
 | SJ-41 | Info | Android | Real devices and WebView ≥ 140 (edge-to-edge) not tested | Unverified |
@@ -450,7 +452,7 @@ No Critical findings were made.
   - The dialog takes focus when it opens, unless a field inside already did.
   - Focus returns to the opener on close.
 - **Evidence:** E2E checks that the dialog's name is "Import trades from CSV", that focus is inside it after opening, and that focus is back on the Import CSV button after Escape.
-- **Status:** Fixed and Verified. Tab focus trapping is still open (SJ-33).
+- **Status:** Fixed and Verified. Tab focus trapping followed on 2026-10-12 (SJ-33).
 
 ### SJ-19: "Open" count included incomplete closed trades
 
@@ -579,7 +581,7 @@ No Critical findings were made.
 
 - **Severity / category:** Medium, Process
 - **Evidence:** No `.github/`, no ESLint config, and Prettier configured but not installed.
-- **Impact:** The 212 tests and the E2E journey protect nothing unless someone runs them. React hook dependency mistakes (`react-hooks/exhaustive-deps`) are not caught. None were found by reading, but this was not checked by a tool.
+- **Impact:** The tests (212 at the time) and the E2E journey protect nothing unless someone runs them. React hook dependency mistakes (`react-hooks/exhaustive-deps`) are not caught. None were found by reading, but this was not checked by a tool.
 - **Recommended fix:** A GitHub Actions workflow on Windows or Linux running `npm ci`, typecheck, test, build and `build:mobile`. Add `eslint` with `eslint-config-next` (hooks rules).
 - **Fix (2026-10-12):** `npm run lint` (ESLint 9 with `eslint-config-next`, core web vitals and TypeScript rules, and `eslint-config-prettier`) and `.github/workflows/ci.yml`, which runs `npm ci`, typecheck, lint, test, build and `build:mobile` on Windows and Linux for every push to `main` and every pull request, with read-only permissions. `noUnusedLocals`, `noUnusedParameters` and `noFallthroughCasesInSwitch` are on. The hooks rules flag 26 places in existing components: 22 helper components declared inside `ReportsView` and `TradesView`, and 4 `setState` calls made directly from an effect. They are warnings for now, not errors.
 - **Status:** Fixed and Verified. The first run on GitHub (commit `2e90acf`) passed every step on Windows (2 min 20 s) and Linux (1 min 10 s), the first time the tests ran on Linux.
@@ -596,7 +598,7 @@ No Critical findings were made.
 ### SJ-32: A newer-version journal on disk is silently downgraded
 
 - **Severity / category:** Low, Persistence
-- **Location:** `normalize()` in `src/store/JournalProvider.tsx`
+- **Location:** `normalize()`, in `src/lib/journal.ts` since 2026-10-12 (was in `src/store/JournalProvider.tsx`)
 - **Reproduction:** `normalize({ version: 2, futureField: 1, … })`
 - **Actual (observed):** `version: 1`, and `futureField` is gone. The next save writes that to disk.
 - **Impact:** Only if someone runs an older build against a newer journal, for example by rolling back the desktop folder or sideloading an older APK. Play does not allow downgrades.
@@ -609,6 +611,9 @@ No Critical findings were made.
 - **Location:** `src/components/ui/Modal.tsx`. There is no Tab handling. `aria-modal="true"` keeps screen readers inside, but keyboard Tab can move to the page behind.
 - **Recommended fix:** A small focus trap that cycles Tab and Shift+Tab within the dialog, or the native `<dialog>` element with `showModal()`.
 - **Status:** Confirmed by code inspection. Keyboard behaviour was not exercised at runtime.
+- **Reproduced (2026-10-12):** in a headless browser, Tab left the trade form in 23 of 70 presses and Shift+Tab in 22 of 70. Once focus was on the page behind, PageDown and End scrolled that page under the open dialog (scrollTop 600 to 2581). Also found: when a confirmation closed, focus went to the page instead of back to the button that opened it, because the confirmation's own button takes focus (`autoFocus`) before `Modal` notes where focus was.
+- **Fix (2026-10-12):** `Modal` keeps Tab and Shift+Tab going round the dialog on top and brings back focus that gets out another way; focus returns to where it was before the dialog, autofocus or not; and the page behind (`<main data-page-scroll>`) is locked while any dialog is open, with the scrollbar's width kept as padding so nothing shifts. A mouse wheel or a swipe over a dialog never scrolled the page in Chromium (the dialogs are `position: fixed`), so the lock is a second line behind the focus trap.
+- **Status:** Fixed and Verified. 19 checks in a headless browser at desktop and phone width; three of them are now in `npm run e2e` (section 11).
 
 ### SJ-34: Charts have no text alternative
 
@@ -643,6 +648,10 @@ No Critical findings were made.
   - Orphaned files take up space.
   - A restored backup cannot bring back the chart of a trade that was deleted after the backup was made.
 - **Status:** Accepted Risk. Leaving files in place is the recoverable choice. Document it in the user guide.
+- **Update (2026-10-12):** every way trades go away now takes their chart images with it, through the same path as deleting a trade (`imagesOnlyIn` and `deleteScreenshot`, `src/lib/screenshots.ts`): deleting trades, deleting an account, restoring a backup (the images the restored journal doesn't use) and Erase all data. An image another remaining trade still uses is kept. Tested by unit tests and by `npm run e2e` section 12.
+- **Trade-off, chosen by the owner:** the copy Settings keeps before a restore or an erase (`before-restore`, `before-erase`) holds the journal only, so if it is restored later its trades come back without those charts. The restore and erase confirmations and their messages now say so.
+- **Also found:** in the trade form, removing or replacing a chart deletes the old file at once, before the trade is saved, so Cancel leaves the trade pointing at a deleted image; and merging trades keeps one leg's chart and leaves the other legs' images behind.
+- **Still open:** backups contain no images (documented in the user guide).
 
 ### SJ-37: Desktop `localStorage` mirror
 
@@ -690,7 +699,7 @@ No Critical findings were made.
 
 - **Severity / category:** Informational, Performance
 - **What was measured:** Only desktop timings ([section 11](#11-performance)).
-- **Not measured:** A mid-range phone is typically several times slower than the i7 used here, but that was not measured. At 10,000 trades the dashboard computes `computeStats` plus `sniperScore` (about 100 to 125 ms on this PC) whenever its inputs change.
+- **Not measured:** A mid-range phone is typically several times slower than the i7 used here, but that was not measured. At 10,000 trades the dashboard computes `computeStats` and then `sniperScore` from it, about 35 ms on this PC (34 ms + 1.3 ms, 2026-10-12), whenever its inputs change. (An earlier estimate of 100 to 125 ms counted `computeStats` twice: the benchmark's `sniperScore` column used to include a `computeStats` call.)
 - **Status:** Unverified.
 
 ### SJ-43: Journal API has no request-size limit
@@ -824,27 +833,26 @@ Also covered:
 **Method:**
 
 - Each workload is warmed up, then run repeatedly for about 0.5 s, and the median is taken.
-- The table shows the range over 3 runs on the same machine. The first run was on a quiet machine; the later two ran while the Android emulator was running, which explains most of the spread.
-- Times are in milliseconds.
+- One run on 2026-10-12 (Node 24.21, the same i7 machine), with the Android emulator running in the background. The audit's own three runs gave the same picture.
+- Times are in milliseconds. `sniperScore` is timed on its own, given the stats; until 2026-10-12 the benchmark timed it together with a `computeStats` call.
 
-| Trades | Journal JSON | computeStats | sniperScore | buildInsights | CSV import | CSV export | Save (stringify) | Launch (parse + normalize) |
-|---|---|---|---|---|---|---|---|---|
-| 100 | 0.05 MB | 0.33 to 0.56 | 0.35 to 0.58 | 0.59 to 0.95 | 0.69 to 1.23 | 0.20 to 0.32 | 0.09 to 0.13 | 0.14 to 0.21 |
-| 1,000 | 0.54 MB | 3.5 to 5.4 | 3.8 to 5.2 | 5.2 to 8.0 | 7.4 to 12.5 | 2.1 to 3.6 | 1.1 to 1.9 | 1.5 to 2.3 |
-| 10,000 | 5.36 MB | 37 to 59 | 39 to 65 | 54 to 82 | 96 to 169 | 25 to 40 | 12 to 20 | 15 to 23 |
-| 50,000 | 26.83 MB | 196 to 423 | 210 to 561 | 362 to 531 | 640 to 819 | 156 to 272 | 70 to 104 | 116 to 142 |
+| Trades | Journal JSON | computeStats | sniperScore | buildInsights | CSV import | CSV import, one row per fill | CSV export | Save (stringify) | Launch (parse + normalize) |
+|---|---|---|---|---|---|---|---|---|---|
+| 100 | 0.05 MB | 0.32 | 0.02 | 0.55 | 1.60 | 1.93 | 0.20 | 0.09 | 0.14 |
+| 1,000 | 0.54 MB | 3.37 | 0.12 | 5.01 | 12.2 | 18.3 | 2.11 | 1.08 | 1.35 |
+| 10,000 | 5.36 MB | 34.1 | 1.25 | 51.8 | 129 | 183 | 24.0 | 11.4 | 15.2 |
+| 50,000 | 26.83 MB | 193 | 8.87 | 280 | 732 | 1,147 | 155 | 76.6 | 117 |
 
-**Assessment.** Everything scales roughly linearly. Up to about 10,000 trades every operation stays under about 170 ms on this PC, which is comfortable for a personal journal. At 50,000 trades:
+**Assessment.** Everything scales roughly linearly. Up to about 10,000 trades every operation stays under about 185 ms on this PC, which is comfortable for a personal journal. At 50,000 trades:
 
-- The dashboard's recalculation is roughly 0.4 to 1 s per change.
-- An import of 50,000 rows takes under a second.
+- The dashboard's recalculation (`computeStats` and `sniperScore`) is about 0.2 s per change.
+- An import of 50,000 whole-trade rows takes under a second; 50,000 fills about 1.1 s.
 
-Possible optimisations if very large journals ever matter:
+`sniperScore` takes the stats it is given and does not work them out again. `buildInsights` can now be handed them too; the Insights page does, so the stats are worked out once there.
 
-- `sniperScore` calls `computeStats` again internally; reusing the existing result would halve the dashboard cost.
-- Each save rewrites the whole JSON file. That costs about 100 ms at 27 MB.
+Possible optimisation if very large journals ever matter: each save rewrites the whole JSON file, which costs about 80 ms at 27 MB.
 
-No optimisation was made, because nothing measured justifies one yet. Phone timings: SJ-42.
+No optimisation was made for speed alone, because nothing measured justifies one yet. Phone timings: SJ-42.
 
 ---
 
@@ -854,42 +862,50 @@ No optimisation was made, because nothing measured justifies one yet. Phone timi
 
 | Suite | Tests | Scope |
 |---|---|---|
-| `tests/trade-math.test.ts` | 27 | P&L, fees, R, outcome, hold time across DST and midnight, completeness |
+| `tests/trade-math.test.ts` | 29 | P&L, fees, R, outcome, hold time across DST and midnight, completeness, chronological order |
 | `tests/stats.test.ts` | 27 | hand-calculated record, boundaries, open count, SQN, 400 property runs vs a reference, days and groups, Sniper Score |
 | `tests/merge.test.ts` | 16 | scale-in and scale-out merging, P&L preserved, refusal reasons |
 | `tests/csv.test.ts` | 52 | parser, structure, numbers, dates, direction, P&L/fees, multiplier, duplicates/paired fills, export round trip, formula injection |
-| `tests/journal-data.test.ts` | 19 | normalize, sanitize rules, multiplier, backup parsing incl. newer versions and 20,000 trades |
+| `tests/import-formats.test.ts` | 33 | broker layouts (whole trades, fills, TradingView pairs), column mapping, time zones, multipliers |
+| `tests/journal-data.test.ts` | 20 | normalize, sanitize rules, multiplier, backup parsing incl. newer versions and 20,000 trades |
 | `tests/storage-native.test.ts` | 15 | Capacitor storage on a mock filesystem: atomic save, rolling backups, safety copies, corrupt files, screenshots |
-| `tests/api-desktop.test.ts` | 19 | desktop API routes in a temp folder: guard, save, backups, safety copy, screenshots |
-| `tests/helpers-format.test.ts` | 32 | number parsing, dates, ranges, sessions, formatting, insights and signals |
-| `tests/selectors.test.ts` | 5 | balances and equity-curve consistency |
-| **Total** | **212** | |
-| `tests/e2e/desktop-journey.mjs` | 37 checks | production desktop build in headless Edge/Chrome over the DevTools protocol, temp data folder, no extra packages |
+| `tests/storage-web.test.ts` | 2 | desktop saves sent one at a time |
+| `tests/api-desktop.test.ts` | 27 | desktop API routes in a temp folder: guard, save, overlapping saves, locked files, backups, safety copy, screenshots |
+| `tests/autosave.test.ts` | 10 | save retries and the startup read retry |
+| `tests/helpers-format.test.ts` | 34 | number parsing, dates, ranges, sessions, formatting, insights and signals |
+| `tests/selectors.test.ts` | 7 | balances and equity-curve consistency |
+| `tests/confirm.test.ts` | 3 | a confirmation replaced by a newer one is answered "no" |
+| `tests/screenshots.test.ts` | 4 | which chart images go with removed trades |
+| **Total** | **279** | |
+| `tests/e2e/desktop-journey.mjs` | 65 checks | production desktop build in headless Edge/Chrome over the DevTools protocol, temp data folder, no extra packages |
 | `tests/bench/workloads.bench.ts` | n/a | timings (`npm run bench`) |
 
-**Coverage** (`npm run coverage`). This covers `src/lib`, `src/store/sanitize.ts` and `src/app/api` only; components and views are not instrumented.
+**Coverage** (`npm run coverage`, 2026-10-12). This covers `src/lib`, the plain modules of `src/store` (`src/store/**/*.ts`: autosave, confirm, sanitize, selectors) and `src/app/api`. Components, views and the `.tsx` providers (`JournalProvider.tsx`, `UIProvider.tsx`) are not instrumented; they need React render tests first.
 
 | | Statements | Branches | Functions | Lines |
 |---|---|---|---|---|
-| All covered files | **79.34%** (1060/1336) | **73.78%** (864/1171) | 79.53% (237/298) | 80.66% (872/1081) |
-| `stats.ts` | 97.53 | 87.2 | 100 | 100 |
-| `sanitize.ts` | 98.5 | 97.01 | 100 | 100 |
-| `csv.ts` | 92.98 | 91.66 | 93.93 | 93.95 |
-| `trade-math.ts` | 91.22 | 81.69 | 94.44 | 92.5 |
+| All covered files | **85.89%** (1912/2226) | **79.35%** (1491/1879) | 86.45% (415/480) | 87.71% (1578/1799) |
+| `stats.ts` | 97.53 | 86.99 | 100 | 100 |
+| `store/` (autosave, confirm, sanitize, selectors) | 98.54 | 96.8 | 100 | 100 |
+| `journal.ts` (normalize) | 100 | 100 | 100 | 100 |
+| `import/` (columns, fills, table, values) | 95.1 | 86.25 | 97.47 | 97.63 |
+| `csv.ts` | 92.27 | 86.74 | 94.54 | 94.33 |
+| `trade-math.ts` | 91.52 | 82.66 | 94.44 | 93.02 |
 | `merge.ts` | 94.18 | 83.95 | 95.12 | 94.82 |
 | `storage/capacitor.ts` | 89.36 | 78.78 | 78.57 | 97.46 |
-| `api/journal/route.desktop.ts` | 90.14 | 87.5 | 90 | 92.18 |
-| `insights.ts` | 66.66 | 47.82 | 58.06 | 68.85 |
+| `api/journal/route.desktop.ts` | 87.25 | 84.37 | 83.33 | 89.88 |
+| `insights.ts` | 72.54 | 60.24 | 61.29 | 74.59 |
 | `format.ts` | 64.7 | 67.1 | 46.66 | 64.15 |
-| `storage/web.ts` | 2.94 | 0 | 0 | 3.44 (exercised by the E2E journey, which coverage does not measure) |
-| `sample.ts`, `screenshots.ts` | ~0 to 4 | | | |
+| `storage/web.ts` | 30 | 16.66 | 33.33 | 27.27 (the rest is exercised by the E2E journey, which coverage does not measure) |
+| `screenshots.ts` | 11.53 | 5.12 | 36.36 | 7.31 |
+| `sample.ts` | 0 | 0 | 0 | 0 |
 
 **Gaps:**
 
 - **No component tests** (React Testing Library). UI behaviour is covered only by the one E2E journey.
-- **Insights rules are partly covered:** 48% of branches. Each rule's thresholds deserve a test.
+- **Insights rules are partly covered:** 60% of branches. Each rule's thresholds deserve a test.
 - **The E2E journey runs on the desktop only.** The Android flow was checked with the scripts described in [section 9](#9-persistence-backup-restore-and-migrations), which are not in the repository. They depend on adb and a running emulator.
-- **No screenshot (image) flow in E2E.**
+- **The screenshot (image) flow in E2E** covers uploading and deleting with an account, a restore and an erase, not pasting or replacing an image in the trade form.
 - **No visual regression tests.**
 - **No accessibility scanner** (for example axe) was run. The checks were targeted DOM assertions.
 
@@ -929,27 +945,28 @@ No optimisation was made, because nothing measured justifies one yet. Phone timi
 
 ---
 
-## 14. Commands and results (final run, after all changes)
+## 14. Commands and results (refreshed 2026-10-12)
 
-Run from a clean `npm ci`, in this order, on the machine above. The same sequence also passed once before the last two fixes (SJ-13, SJ-25).
+Run on the machine above, from a clean `npm ci` in a copy of the working tree. The audit's own final run (commit `509f512`) had 212 tests, 79.34% of statements, 37 E2E checks and 16 Android checks, with no linter.
 
 | Command | Result | Details |
 |---|---|---|
-| `npm ci` | **PASS** | 227 packages, 33 s; deprecation warning for `uuid@7` (dev chain) |
-| `npm run typecheck` | **PASS** | `tsc --noEmit`, no errors |
-| `npm test` | **PASS** | 9 files, 212 / 212 tests |
-| `npm run coverage` | **PASS** | 212 / 212; statements 79.34%, branches 73.78% |
+| `npm ci` | **PASS** | 540 packages, 16 s |
+| `npm run typecheck` | **PASS** | `tsc --noEmit`, no errors (with `noUnusedLocals`, `noUnusedParameters`, `noFallthroughCasesInSwitch`) |
+| `npm run lint` | **PASS** | 0 errors, 27 known warnings (React hooks rules, see SJ-30) |
+| `npm test` | **PASS** | 14 files, 279 / 279 tests |
+| `npm run coverage` | **PASS** | 279 / 279; statements 85.89%, branches 79.35% |
 | `npm run build:mobile` | **PASS** | static export to `out/`, no API routes |
 | `npm run build` | **PASS** | desktop server build incl. `/api/journal`, `/api/screenshot` |
-| `npm run e2e` | **PASS** | 37 / 37 checks |
+| `npm run e2e` | **PASS** | 65 / 65 checks |
 | `npm run bench` | **PASS** | timings in [section 11](#11-performance) |
-| `npm audit` | **FAIL** (exit 1) | 3 moderate, dev-only (SJ-38) |
+| `npm audit` | **FAIL** (exit 1) | 8 dev-only: 3 moderate (`@capacitor/cli`), 5 high (`braces` via `eslint-config-next`) (SJ-38) |
 | `npm audit --omit=dev` | **PASS** | 0 vulnerabilities |
-| lint | **NOT RUN** | no linter configured (SJ-30) |
-| Android: `npx cap sync android` + `gradlew assembleDebug` | **PASS** | |
-| Android: install over the existing app + restore/erase/persistence/corruption script | **PASS** | 16 / 16 checks, 0 crashes |
-| Android: back-button sequence (`adb input keyevent BACK`) | **PASS** | 5 / 5 steps as expected |
-| Android: release build / Play bundle | **NOT RUN** in this audit | needs the upload key (`npm run bundle`) |
+| CI on GitHub | **PASS** | the same steps (without E2E and bench) on Windows and Linux |
+| Android: release bundle with R8 (`minifyEnabled true`) | **PASS**, unsigned | `gradlew bundleRelease`: 2.9 MB `.aab`; `npm run bundle` itself needs the upload key, which does not exist yet |
+| Android: that bundle as a universal APK (bundletool, debug key) on the emulator: restore/erase/persistence/corruption/save-failure script | **PASS** | 20 / 20 checks |
+| Android: same build, back button, share sheet, log | **PASS** | 3 / 3; no crash or missing-class error |
+| Android: back-button sequence (`adb input keyevent BACK`) | **PASS** (audit run) | 5 / 5 steps as expected |
 | Physical device | **BLOCKED** | none available |
 
 ---
@@ -980,11 +997,11 @@ Run from a clean `npm ci`, in this order, on the machine above. The same sequenc
 
 **Against:**
 
-- SJ-27 (double import) and SJ-28 (lost times) can still corrupt statistics for ordinary users.
-- SJ-35 ("AI" wording) is a store-review risk.
-- SJ-29 (contrast) affects readability.
+- SJ-27 (double import) can still corrupt statistics for ordinary users. (SJ-28, lost times, was fixed on 2026-10-09.)
+- ~~SJ-35 ("AI" wording) is a store-review risk.~~ Renamed 2026-10-09; the store screenshot still needs retaking.
+- ~~SJ-29 (contrast) affects readability.~~ Fixed 2026-10-12.
 - Nothing has run on a physical phone (SJ-41).
-- Nothing enforces the tests (SJ-30).
+- ~~Nothing enforces the tests (SJ-30).~~ CI and lint since 2026-10-12.
 
 A build that compiles is not evidence of readiness. These items are.
 
@@ -1015,7 +1032,7 @@ A build that compiles is not evidence of readiness. These items are.
 | Item | Finding | Effort |
 |---|---|---|
 | Refuse or read-only a newer-version journal on load | SJ-32 | S |
-| Focus trap in `Modal` (or native `<dialog>`) | SJ-33 | S |
+| ~~Focus trap in `Modal` (or native `<dialog>`)~~ Done 2026-10-12 | SJ-33 | S |
 | Text alternatives for charts | SJ-34 | S |
 | ~~Warn about or convert time-zone suffixes~~ Done 2026-10-09: converted | SJ-31 | S |
 | Component tests for TradeForm, ImportTradesModal and Settings | §12 | M |
@@ -1026,7 +1043,7 @@ A build that compiles is not evidence of readiness. These items are.
 
 | Item | Finding | Effort |
 |---|---|---|
-| Reuse `computeStats` inside `sniperScore`; measure on a phone | SJ-42 | S |
-| Include screenshots in backups, or document that they are excluded; clean up orphaned images | SJ-36 | M |
+| Measure on a phone (`sniperScore` already reuses the stats it is given) | SJ-42 | S |
+| Include screenshots in backups (they are documented as excluded; orphans cleaned up since 2026-10-12) | SJ-36 | M |
 | Body-size limit on the journal API | SJ-43 | XS |
 | Re-check the `@capacitor/cli` advisory when Capacitor updates | SJ-38 | XS |
