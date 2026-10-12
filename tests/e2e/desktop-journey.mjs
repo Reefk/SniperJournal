@@ -1,8 +1,9 @@
 // End-to-end journey through the real desktop build, in a headless browser:
 // first run, CSV import, metrics, edit, delete, CSV export, backup, restore
 // (with its safety copy), a save while another program holds the journal
-// file (Windows), and a server restart. Synthetic data only, in a throwaway
-// folder; your own data/ folder is never touched.
+// file (Windows), a server restart, the keyboard inside dialogs, and chart
+// images going with a deleted account, a restore and an erase. Synthetic data
+// only, in a throwaway folder; your own data/ folder is never touched.
 //
 //   npm run build && npm run e2e
 //
@@ -415,7 +416,10 @@ async function journey() {
   b = await openBrowser(); // a brand new profile: no browser copy to fall back on
   // on Windows the file is also busy for a moment just as the app opens: the
   // app waits for it rather than starting empty
-  const busy = windows ? await holdJournal(2000, 'None') : null;
+  // (1.5s: the first read lands inside it, and the app's last retry, about 2s
+  // after its first read, lands after it. Holding it for the full 2s made the
+  // check a race.)
+  const busy = windows ? await holdJournal(1500, 'None') : null;
   await b.send('Page.navigate', { url: base });
   await b.until(`document.readyState === 'complete' && !!document.querySelector('aside')`, 'app after restart');
   await b.run(PAGE);
@@ -442,6 +446,91 @@ async function journey() {
     await seen(`/1\\s*ready to import/.test($modal().innerText) && $modal().innerText.includes('as you set them for this layout last time')`, 'remembered layout', 5000),
   );
   await b.run(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); true`);
+  await b.until(`!$modal()`, 'import dialog closed');
+
+  // ---- 11. the keyboard stays in the dialog on top --------------------------
+  const press = async (key, shift = false) => {
+    const code = { Tab: 9, Escape: 27, Enter: 13 }[key];
+    const event = { key, code: key, windowsVirtualKeyCode: code, nativeVirtualKeyCode: code, modifiers: shift ? 8 : 0 };
+    await b.send('Input.dispatchKeyEvent', { ...event, ...(key === 'Enter' ? { type: 'keyDown', text: '\r' } : { type: 'rawKeyDown' }) });
+    await b.send('Input.dispatchKeyEvent', { ...event, type: 'keyUp' });
+  };
+  // how many of `times` presses of Tab left the dialog on top
+  const tabsOutside = async (times, shift = false) => {
+    let out = 0;
+    for (let i = 0; i < times; i++) {
+      await press('Tab', shift);
+      if (!(await b.run(`$modal()?.contains(document.activeElement) === true`))) out++;
+    }
+    return out;
+  };
+  await b.run(`document.querySelector('tbody tr').click(); true`);
+  await b.until(`!!$modal() && !!$t('Delete', $modal())`, 'trade form');
+  check('Tab and Shift+Tab go round the trade form, never to the page behind', (await tabsOutside(40)) + (await tabsOutside(40, true)) === 0);
+  await b.run(`$t('Delete', $modal()).focus(); true`);
+  await press('Enter');
+  await b.until(`document.querySelectorAll('[data-modal-root]').length === 2`, 'confirmation over the form');
+  check('in a confirmation over the form, Tab stays in the confirmation', (await tabsOutside(10)) === 0);
+  await press('Escape');
+  await b.until(`document.querySelectorAll('[data-modal-root]').length === 1`, 'confirmation closed');
+  check('Escape closes only the confirmation, and focus goes back to Delete', await b.run(`document.activeElement === $t('Delete', $modal())`));
+  await press('Escape');
+  await b.until(`!$modal()`, 'trade form closed');
+
+  // ---- 12. deleting an account deletes its charts, and only its charts --------
+  const png = join(work, 'chart.png');
+  writeFileSync(png, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64'));
+  const images = () => (existsSync(join(work, 'data', 'screenshots')) ? readdirSync(join(work, 'data', 'screenshots')) : []);
+  const logWithChart = async (symbol) => {
+    await b.run(`$tStarts('Log trade').click(); true`);
+    await b.until(`!!$modal() && !!$field('Symbol', $modal())`, 'trade form');
+    await b.run(`$type($field('Symbol', $modal()), '${symbol}'); $type($field('Quantity', $modal()), '1'); $type($field('Entry price', $modal()), '10'); true`);
+    await b.setFile('[data-modal-root] input[type=file]', png);
+    await b.until(`!!$modal().querySelector('img')`, 'chart saved');
+    await b.run(`$t('Save trade', $modal()).click(); true`);
+    await b.until(`!$modal()`, 'trade saved');
+  };
+  await logWithChart('KEEP');
+  const kept = images();
+  await b.run(`$nav('/settings'); true`);
+  await b.until(`!!$field('Add an account')`, 'settings');
+  await b.run(`$type($field('Add an account'), 'Second'); $tStarts('Add', $field('Add an account').closest('form')).click(); true`);
+  await b.until(`!!document.querySelector('button[aria-label="Delete Second"]')`, 'second account');
+  await logWithChart('GONE');
+  const both = images();
+  await b.run(`document.querySelector('button[aria-label="Delete Second"]').click(); true`);
+  await b.until(`!!$modal() && !!$t('Delete account', $modal())`, 'delete account confirmation');
+  await b.run(`$t('Delete account', $modal()).click(); true`);
+  await b.until(`!document.querySelector('button[aria-label="Delete Second"]')`, 'account deleted');
+  let left = images();
+  for (let i = 0; i < 30 && left.length !== 1; i++) {
+    await sleep(100);
+    left = images();
+  }
+  check(
+    "deleting an account deletes its trades' chart images, and only those",
+    kept.length === 1 && both.length === 2 && left.length === 1 && left[0] === kept[0],
+    JSON.stringify({ kept, both, left }),
+  );
+  const imagesSoon = async (count) => {
+    for (let i = 0; i < 30 && images().length !== count; i++) await sleep(100);
+    return images();
+  };
+  // the backup from step 6 has no charts, so restoring it takes KEEP's chart away
+  await b.setFile('input[type=file][accept*=json]', join(downloads, backup));
+  await b.until(`!!$modal() && !!$t('Replace my journal', $modal())`, 'restore confirmation');
+  await b.run(`$t('Replace my journal', $modal()).click(); true`);
+  await b.until(`$text().includes('Journal restored')`, 'restored');
+  check('restoring a backup deletes the chart images its trades don\'t use', (await imagesSoon(0)).length === 0, JSON.stringify(images()));
+  await logWithChart('ERASEME');
+  const beforeErase = images();
+  await b.run(`$nav('/settings'); true`);
+  await b.until(`!!$tStarts('Erase all data')`, 'settings');
+  await b.run(`$tStarts('Erase all data').click(); true`);
+  await b.until(`!!$modal() && !!$t('Erase my journal', $modal())`, 'erase confirmation');
+  await b.run(`$t('Erase my journal', $modal()).click(); true`);
+  await b.until(`$text().includes('Journal erased')`, 'erased');
+  check('Erase all data deletes every chart image', beforeErase.length === 1 && (await imagesSoon(0)).length === 0, JSON.stringify({ beforeErase, after: images() }));
   await b.close();
   await stopServer();
 }

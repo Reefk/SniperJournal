@@ -89,10 +89,14 @@ it('workload timings', { timeout: 600_000 }, () => {
     };
     const json = JSON.stringify(journal);
     const ms = (fn: () => void) => `${median(fn).toFixed(2)} ms`;
+    // the dashboard works the stats out once and hands them to sniperScore, so
+    // sniperScore is timed on its own (until 2026-10-12 this column included a
+    // computeStats call)
+    const stats = computeStats(trades);
     rows[`${size} trades`] = {
       'journal JSON': `${(json.length / 1024 / 1024).toFixed(2)} MB`,
       computeStats: ms(() => computeStats(trades, 25000)),
-      sniperScore: ms(() => sniperScore(trades, computeStats(trades))),
+      sniperScore: ms(() => sniperScore(trades, stats)),
       buildInsights: ms(() => buildInsights(trades, [], settings)),
       'CSV import': ms(() => importTradesFromCsv(csv, { accountId: 'acc1', accounts, setups: [] })),
       'CSV import, one row per fill': ms(() => importTradesFromCsv(fills, { accountId: 'acc1', accounts, setups: [] })),

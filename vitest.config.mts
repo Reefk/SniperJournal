@@ -23,7 +23,10 @@ export default defineConfig({
     env: { TZ: 'UTC' },
     coverage: {
       provider: 'v8',
-      include: ['src/lib/**/*.ts', 'src/store/sanitize.ts', 'src/app/api/**/*.ts'],
+      // src/store/**/*.ts: the store's plain modules (autosave, confirm, sanitize,
+      // selectors). The .tsx providers need React render tests before they can
+      // be measured meaningfully.
+      include: ['src/lib/**/*.ts', 'src/store/**/*.ts', 'src/app/api/**/*.ts'],
       reporter: ['text-summary', 'text'],
     },
   },
