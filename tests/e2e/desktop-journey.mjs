@@ -11,7 +11,7 @@
 // No extra packages: it speaks the DevTools protocol over Node's WebSocket.
 
 import { spawn } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -266,10 +266,15 @@ async function journey() {
   const dashboard = async (expectNet, expectWinRate, label) => {
     await b.run(`$nav('/'); true`);
     await b.until(`!!$t('All')`, 'dashboard');
-    await b.run(`$t('All').click(); true`);
-    await b.until(`$text().includes('Net profit')`, 'metrics');
+    // "All" is in the page before React has hooked it up (right after a
+    // restart, say), so a click can be lost: click until the figures change
+    const net = `${expectNet >= 0 ? '+' : '-'}${money(expectNet)}`;
+    for (let i = 0; i < 10; i++) {
+      await b.run(`$t('All').click(); true`);
+      if (await seen(`$text().includes(${JSON.stringify(net)})`, 'net profit', 800)) break;
+    }
     const text = await b.run(`$text()`);
-    check(`${label}: net profit ${money(expectNet)}`, text.includes(`${expectNet >= 0 ? '+' : '-'}${money(expectNet)}`), text.match(/Net profit[^\n]*\n[^\n]+/)?.[0]);
+    check(`${label}: net profit ${money(expectNet)}`, text.includes(net), text.match(/Net profit[^\n]*\n[^\n]+/)?.[0]);
     check(`${label}: win rate ${expectWinRate.toFixed(1)}%`, text.includes(`${expectWinRate.toFixed(1)}%`));
     const sidebar = await b.run(`document.querySelector('aside').innerText`);
     check(`${label}: sidebar balance equals the equity curve's current balance`, sidebar.includes(money(10000 + expectNet)) && text.includes(money(10000 + expectNet)));
@@ -422,6 +427,12 @@ async function journey() {
   await b.until(`[...document.querySelectorAll('tbody tr')].some((r) => r.innerText.includes('AAPL'))`, 'trades table');
   await b.run(eye('AAPL', 'Excluded'));
   await dashboard(143, 100, 'AAPL included again');
+  // section 9 opens a fresh browser with no copy of its own, so the last
+  // changes must be in the file before this one closes (saves wait 350ms)
+  check(
+    'the last changes are in the file before the browser closes',
+    await savedSoon((j) => j.settings.countExcludedInBalance !== true && j.trades.some((t) => t.symbol === 'AAPL' && !t.excluded)),
+  );
   await b.close();
 
   // ---- 9. restart: the journal comes back from disk, not from the browser ---
@@ -431,8 +442,7 @@ async function journey() {
   // on Windows the file is also busy for a moment just as the app opens: the
   // app waits for it rather than starting empty
   // (1.5s: the first read lands inside it, and the app's last retry, about 2s
-  // after its first read, lands after it. Holding it for the full 2s made the
-  // check a race.)
+  // after its first read, lands after it.)
   const busy = windows ? await holdJournal(1500, 'None') : null;
   await b.send('Page.navigate', { url: base });
   await b.until(`document.readyState === 'complete' && !!document.querySelector('aside')`, 'app after restart');
@@ -572,21 +582,24 @@ async function journey() {
   const keptB = conflictCopies.length === 1 && JSON.parse(readFileSync(join(work, 'data', 'backups', conflictCopies[0]), 'utf8'));
   check("the second tab's version is kept as a conflict copy, with its trade", Boolean(keptB) && keptB.trades.some((t) => t.symbol === 'TABB'), conflictCopies.join(','));
   check('the sidebar of the second tab says it is not saving', await second.run(`document.querySelector('aside').innerText.includes('Changed elsewhere')`));
+  // the old page looks ready until the reload has actually begun, so it is
+  // marked first, and only a page without the mark counts as reloaded
+  const reloaded = async (tab, how, label) => {
+    await tab.run(`window.__beforeReload = true; true`);
+    await tab.run(how);
+    await tab.until(`!window.__beforeReload && document.readyState === 'complete' && !!document.querySelector('aside')`, label, 15000);
+    await tab.run(PAGE);
+  };
   // reload the second tab: it opens what the first saved, not its own copy from the browser
-  await second.run(`[...document.querySelectorAll('[data-modal-root] button')].find((x) => x.textContent.includes('Reload')).click(); true`);
-  await sleep(500);
-  await second.until(`document.readyState === 'complete' && !!document.querySelector('aside') && !document.querySelector('[data-modal-root]')`, 'second tab reloaded', 10000);
-  await second.run(PAGE);
+  await reloaded(second, `[...document.querySelectorAll('[data-modal-root] button')].find((x) => x.textContent.includes('Reload')).click(); true`, 'second tab reloaded');
+  check('after Reload the conflict dialog is gone', await second.run(`!document.querySelector('[data-modal-root]')`));
   await second.run(`$nav('/trades'); true`);
   await second.until(`[...document.querySelectorAll('tbody tr')].some((r) => r.innerText.includes('TABA'))`, 'trades after reload');
   check('after Reload the second tab shows what the first saved, and not its own refused trade', await second.run(`![...document.querySelectorAll('tbody tr')].some((r) => r.innerText.includes('TABB'))`));
   // both carry on, one after the other, with nothing refused
   await logTrade(second, 'TABC');
   check('the reloaded second tab saves again', await savedSoon((j) => j.trades.some((t) => t.symbol === 'TABC')));
-  await b.run(`location.reload(); true`);
-  await sleep(500);
-  await b.until(`document.readyState === 'complete' && !!document.querySelector('aside')`, 'first tab reloaded', 10000);
-  await b.run(PAGE);
+  await reloaded(b, `location.reload(); true`, 'first tab reloaded');
   await logTrade(b, 'TABD');
   check('and so does the first, after a reload', await savedSoon((j) => ['TABA', 'TABC', 'TABD'].every((s) => j.trades.some((t) => t.symbol === s))), JSON.stringify(symbolsOnDisk()));
   await second.close();
@@ -626,6 +639,83 @@ async function journey() {
   await savedSoon((j) => j.trades.some((t) => t.symbol === 'CHART' && t.screenshotFile !== original));
   const replaced = chartOf();
   check('Replace, then Save: the trade shows the new image, and the old file is deleted', Boolean(replaced) && replaced !== original && JSON.stringify(await imagesSoon(1)) === JSON.stringify([replaced]), JSON.stringify({ original, replaced, files: images() }));
+
+  // ---- 15. a crash shows a calm screen that still hands over the journal ------
+  // Nothing in the app can crash on purpose, so the test makes money formatting
+  // throw for one amount, named in the address (?sj-crash=), before the app loads.
+  const logClosed = async (symbol, exit) => {
+    await b.run(`$tStarts('Log trade').click(); true`);
+    await b.until(`!!$modal() && !!$field('Symbol', $modal())`, 'trade form');
+    await b.run(`$type($field('Symbol', $modal()), '${symbol}'); $type($field('Quantity', $modal()), '1'); $type($field('Entry price', $modal()), '100'); $type($field('Exit price', $modal()), '${exit}'); $t('Save trade', $modal()).click(); true`);
+    await b.until(`!$modal()`, 'trade saved');
+  };
+  await logClosed('BOOM', '4342.42'); // its P&L is 4,242.42
+  await logClosed('EXTRA', '200'); // with it, the balance is 4,342.42
+  await savedSoon((j) => ['BOOM', 'EXTRA'].every((s) => j.trades.some((t) => t.symbol === s)));
+  await b.send('Page.enable'); // without it the script below only applies from the second page load
+  const { result: crashScript } = await b.send('Page.addScriptToEvaluateOnNewDocument', {
+    source: `(() => {
+      const target = Number(new URLSearchParams(location.search).get('sj-crash'));
+      if (!target) return;
+      const Real = Intl.NumberFormat;
+      function Crashing(...args) {
+        const nf = new Real(...args);
+        const format = nf.format.bind(nf);
+        return new Proxy(nf, {
+          get(t, p) {
+            if (p === 'format') return (v) => { if (Math.abs(Math.abs(Number(v)) - target) < 0.005) throw new Error('test crash at ' + target); return format(v); };
+            const x = Reflect.get(t, p);
+            return typeof x === 'function' ? x.bind(t) : x;
+          },
+        });
+      }
+      Crashing.prototype = Real.prototype;
+      Crashing.supportedLocalesOf = Real.supportedLocalesOf;
+      Intl.NumberFormat = Crashing;
+    })();`,
+  });
+  // a backup downloaded today has the same name as the one from step 6, and
+  // the browser writes over it, so a new download is told by its time
+  const newDownload = async (since) => {
+    for (let i = 0; i < 50; i++) {
+      const fresh = (existsSync(downloads) ? readdirSync(downloads) : []).filter(
+        (f) => f.endsWith('.json') && statSync(join(downloads, f)).mtimeMs >= since,
+      );
+      if (fresh.length) {
+        try {
+          return JSON.parse(readFileSync(join(downloads, fresh[0]), 'utf8'));
+        } catch {
+          /* still being written */
+        }
+      }
+      await sleep(200);
+    }
+    return null;
+  };
+  // a page that crashes: the page is replaced, the app around it carries on
+  await b.send('Page.navigate', { url: `${base}/trades?sj-crash=4242.42` });
+  const pageError = await seen(`document.body.innerText.includes("This page couldn't be shown")`, 'page error screen', 10000);
+  await b.run(PAGE);
+  check('a page that crashes shows a calm error screen, inside the app', pageError && (await b.run(`!!document.querySelector('aside')`)));
+  check('it says where the journal is kept', await b.run(`document.querySelector('main').innerText.includes('journal.json')`));
+  let since = Date.now() - 1000;
+  await b.run(`$tStarts('Download a backup', document.querySelector('main')).click(); true`);
+  const fromPage = await newDownload(since);
+  check('its "Download a backup" hands over the whole journal', Boolean(fromPage?.trades?.some((t) => t.symbol === 'BOOM')));
+  await b.run(`$nav('/settings'); true`);
+  check('the rest of the app still works (Settings opens from the sidebar)', await seen(`!!$tStarts('Erase all data')`, 'settings', 8000));
+  // the app itself crashing (the sidebar shows the balance): the whole page is replaced
+  await b.send('Page.navigate', { url: `${base}/?sj-crash=4342.42` });
+  const appError = await seen(`document.body.innerText.includes('Sniper Journal ran into a problem')`, 'global error screen', 10000);
+  check('a crash in the app itself shows its own calm screen', appError && (await b.run(`!document.querySelector('aside')`)));
+  check('it still finds the journal on its own, and says where it is', await seen(`/The backup holds \\d+ trades/.test(document.body.innerText) && document.body.innerText.includes('journal.json')`, 'rescued journal', 8000));
+  since = Date.now() - 1000;
+  await b.run(`[...document.querySelectorAll('button')].find((x) => x.textContent.trim() === 'Download a backup').click(); true`);
+  const fromApp = await newDownload(since);
+  check('its "Download a backup" hands over the whole journal too', Boolean(fromApp?.trades?.some((t) => t.symbol === 'BOOM')));
+  await b.send('Page.removeScriptToEvaluateOnNewDocument', { identifier: crashScript.identifier });
+  await b.send('Page.navigate', { url: base });
+  check('opened normally again, the app is back', await seen(`!!document.querySelector('aside') && !document.body.innerText.includes('ran into a problem')`, 'app back', 10000));
 
   await b.close();
   await stopServer();
