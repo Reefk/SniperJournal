@@ -145,7 +145,7 @@ text. Check a new shade with any WCAG contrast checker before using it.
    `src/lib/csv.ts`, give it a role and its column names in
    `src/lib/import/columns.ts`, and read it in `importTradesFromCsv`.
 
-Old journals keep working: `normalize()` in `JournalProvider.tsx` fills in
+Old journals keep working: `normalize()` in `src/lib/journal.ts` fills in
 anything an existing `journal.json` does not have yet.
 
 ## How the data flows

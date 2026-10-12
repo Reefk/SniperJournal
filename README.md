@@ -161,7 +161,7 @@ Anything else that differs between PC and phone reads `storage.kind`.
 3. Run `npm run typecheck` and `npm run lint` before finishing anything. GitHub
    runs both, with the tests and builds, on every push to `main`.
 4. If you change the shape of the journal, update `normalize()` in
-   `src/store/JournalProvider.tsx` so existing journals still load.
+   `src/lib/journal.ts` so existing journals still load.
 5. Keep it offline. The app makes no network requests and keeps no telemetry.
 
 ## Built with

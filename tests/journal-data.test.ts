@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseBackup } from '@/lib/backup';
 import { netPnl } from '@/lib/trade-math';
-import { normalize } from '@/store/JournalProvider';
+import { normalize } from '@/lib/journal';
 import { cleanResources, cleanSettings, cleanSetups, cleanTrades, safeLink } from '@/store/sanitize';
 import type { JournalData } from '@/lib/types';
 import { trade } from './helpers';

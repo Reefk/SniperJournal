@@ -7,7 +7,7 @@ import { importTradesFromCsv, tradesToCsv } from '@/lib/csv';
 import { buildInsights } from '@/lib/insights';
 import { computeStats, sniperScore } from '@/lib/stats';
 import type { JournalData, Trade } from '@/lib/types';
-import { normalize } from '@/store/JournalProvider';
+import { normalize } from '@/lib/journal';
 import { seeded, trade } from '../helpers';
 
 /**
