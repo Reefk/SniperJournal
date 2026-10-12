@@ -6,6 +6,77 @@ import { cn } from '@/lib/utils';
 
 const SIZES = { sm: 'max-w-md', md: 'max-w-xl', lg: 'max-w-3xl', xl: 'max-w-5xl' };
 
+// Dialogs are not portalled, so the one on top is simply the last in the page
+// (the trade form and the confirmation are rendered after the page content).
+const isTopmost = (dialog: HTMLElement) => {
+  const all = document.querySelectorAll('[data-modal-root]');
+  return all[all.length - 1] === dialog;
+};
+
+/** what Tab can reach inside a dialog, in page order */
+function tabbable(dialog: HTMLElement): HTMLElement[] {
+  const candidates = dialog.querySelectorAll<HTMLElement>(
+    'a[href], button, input, select, textarea, summary, [tabindex], [contenteditable="true"]',
+  );
+  return [...candidates].filter(
+    (el) =>
+      el !== dialog &&
+      el.tabIndex >= 0 &&
+      !(el as HTMLButtonElement).disabled &&
+      !(el instanceof HTMLInputElement && el.type === 'hidden') &&
+      el.getClientRects().length > 0 && // not display:none, nor inside a closed <details>
+      getComputedStyle(el).visibility !== 'hidden',
+  );
+}
+
+/**
+ * The page scrolls inside <main data-page-scroll>, not the window, so that is
+ * what has to stay still behind an open dialog. Counted, so a dialog opened
+ * over another doesn't unlock the page when it closes. The scrollbar's width
+ * is given back as padding, so nothing behind the backdrop shifts sideways.
+ */
+let scrollLocks = 0;
+let unlockPage: (() => void) | null = null;
+function lockPageScroll(): () => void {
+  if (scrollLocks++ === 0) {
+    const pages = [...document.querySelectorAll<HTMLElement>('[data-page-scroll]')];
+    const before = pages.map((el) => ({ overflow: el.style.overflow, paddingRight: el.style.paddingRight }));
+    for (const el of pages) {
+      const scrollbar = el.offsetWidth - el.clientWidth;
+      el.style.overflow = 'hidden';
+      if (scrollbar > 0) el.style.paddingRight = `${scrollbar}px`;
+    }
+    unlockPage = () => pages.forEach((el, i) => Object.assign(el.style, before[i]));
+  }
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    if (--scrollLocks === 0) {
+      unlockPage?.();
+      unlockPage = null;
+    }
+  };
+}
+
+/**
+ * Where focus was before its latest move. A dialog whose content takes focus
+ * as it opens (autoFocus, like the confirm button) has already moved it by the
+ * time the dialog's effect runs, so this is where focus has to go back to.
+ */
+let lastFocus: Element | null = null;
+let focusBefore: Element | null = null;
+if (typeof document !== 'undefined') {
+  document.addEventListener(
+    'focusin',
+    (e) => {
+      focusBefore = lastFocus;
+      lastFocus = e.target as Element;
+    },
+    true,
+  );
+}
+
 export function Modal({
   open,
   onClose,
@@ -37,9 +108,10 @@ export function Modal({
   // when it closes.
   useEffect(() => {
     if (!open) return;
-    const before = document.activeElement as HTMLElement | null;
     const dialog = ref.current;
-    if (dialog && !dialog.contains(document.activeElement)) dialog.focus({ preventScroll: true });
+    const active = document.activeElement;
+    const before = (dialog?.contains(active) ? focusBefore : active) as HTMLElement | null;
+    if (dialog && !dialog.contains(active)) dialog.focus({ preventScroll: true });
     return () => {
       if (before && document.contains(before)) before.focus({ preventScroll: true });
     };
@@ -47,13 +119,46 @@ export function Modal({
 
   useEffect(() => {
     if (!open) return;
+    return lockPageScroll();
+  }, [open]);
+
+  // Escape closes the dialog on top. Tab and Shift+Tab go round the dialog on
+  // top and never reach the page behind it, and focus that gets out some other
+  // way is brought back in.
+  useEffect(() => {
+    if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
-      const all = document.querySelectorAll('[data-modal-root]');
-      if (all[all.length - 1] === ref.current) onClose();
+      const dialog = ref.current;
+      if (!dialog || !isTopmost(dialog)) return;
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+      const items = tabbable(dialog);
+      const active = document.activeElement;
+      if (!items.length) {
+        e.preventDefault();
+        dialog.focus({ preventScroll: true });
+      } else if (e.shiftKey && (active === items[0] || active === dialog || !dialog.contains(active))) {
+        e.preventDefault();
+        items[items.length - 1].focus();
+      } else if (!e.shiftKey && (active === items[items.length - 1] || !dialog.contains(active))) {
+        e.preventDefault();
+        items[0].focus();
+      }
+    };
+    const onFocusIn = (e: FocusEvent) => {
+      const dialog = ref.current;
+      if (!dialog || !isTopmost(dialog) || dialog.contains(e.target as Node)) return;
+      (tabbable(dialog)[0] ?? dialog).focus({ preventScroll: true });
     };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    document.addEventListener('focusin', onFocusIn);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.removeEventListener('focusin', onFocusIn);
+    };
   }, [open, onClose]);
 
   if (!open) return null;
@@ -68,7 +173,7 @@ export function Modal({
       tabIndex={-1}
       className={cn(
         // phone: the panel scrolls inside itself, so its header and footer stay put
-        'fixed inset-0 z-50 flex justify-center bg-black/60 outline-none backdrop-blur-[2px]',
+        'fixed inset-0 z-50 flex justify-center overscroll-contain bg-black/60 outline-none backdrop-blur-[2px]',
         phone === 'full' ? 'items-stretch' : 'items-end pt-safe',
         'md:items-start md:overflow-y-auto md:p-6 md:pt-[6vh]',
       )}
@@ -104,7 +209,7 @@ export function Modal({
             </button>
           </div>
         )}
-        <div className={cn('min-h-0 flex-1 overflow-y-auto px-5 py-4 md:overflow-visible', !footer && 'max-md:pb-safe-4')}>
+        <div className={cn('min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 md:overflow-visible', !footer && 'max-md:pb-safe-4')}>
           {children}
         </div>
         {footer && (
