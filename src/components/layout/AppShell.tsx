@@ -67,7 +67,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
         <Header />
-        <main data-page-scroll className="min-h-0 flex-1 overflow-y-auto max-md:overflow-x-hidden">
+        {/* relative: hidden inputs and other absolutely placed bits then scroll
+            with the page inside main, instead of stretching the whole window */}
+        <main data-page-scroll className="relative min-h-0 flex-1 overflow-y-auto max-md:overflow-x-hidden">
           {sampleCount > 0 && (
             <div className="flex items-center gap-3 border-b border-warn/25 bg-warn/10 px-4 py-2 text-sm md:px-6">
               <FlaskConical className="size-4 shrink-0 text-warn" />

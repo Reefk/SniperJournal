@@ -130,6 +130,16 @@ Text colours must stay readable: at least 4.5:1 contrast (WCAG AA) on the
 also on the 10–15% tinted fills of the badges that put them behind their own
 text. Check a new shade with any WCAG contrast checker before using it.
 
+Keep every colour token a plain hex value. Tailwind writes tints like
+`bg-profit/15` with `color-mix()`, which Android WebViews older than
+Chrome 111 don't know; there Tailwind's fallback is the solid colour, and the
+text on it disappears. `scripts/postcss-old-webview.mjs` (run after Tailwind,
+see `postcss.config.mjs`) turns each of those fallbacks into the same tint in
+the old syntax, `rgb(var(--profit-rgb) / 15%)`, and adds the `--profit-rgb`
+channels next to every hex token. It can only do that for hex. It also gives
+`100dvh` a `100vh` fallback (Chrome 108). Phones on an older WebView were
+the first place both showed up.
+
 ### Adding a page
 
 1. Create `src/views/MyThingView.tsx`.

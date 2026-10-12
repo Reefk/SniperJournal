@@ -283,6 +283,11 @@ journal useful. Two ways to add it:
 
 ## Troubleshooting
 
+**On Android, colours or the layout look wrong.** The app draws its screens
+with your phone's "Android System WebView". If that hasn't been updated for a
+long time, some screens can look off. Open the Play Store, search for
+**Android System WebView**, and update it (and Chrome).
+
 **The window closes immediately.** Node.js is probably not installed. Install it
 from <https://nodejs.org> and run `INSTALLER.bat` again.
 
