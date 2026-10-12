@@ -2,10 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { formatDuration, formatMoney, formatPct, formatPrice, formatRatio } from '@/lib/format';
 import { buildInsights, buildSignals } from '@/lib/insights';
 import { rangeStart, splitByRange } from '@/lib/ranges';
+import { computeStats } from '@/lib/stats';
 import { detectSession } from '@/lib/sessions';
 import { dateKey, parseDateKey, parseLocal, toNumberOrNull } from '@/lib/utils';
 import type { Settings } from '@/lib/types';
-import { pnl, trade } from './helpers';
+import { pnl, seeded, trade } from './helpers';
 
 describe('toNumberOrNull: what the trade form accepts', () => {
   it.each([
@@ -127,5 +128,28 @@ describe('insights and signals', () => {
       trade({ entryPrice: 100, exitPrice: 100 + g, fees: 6, closedAt: `2026-03-0${i + 2}T11:00` }),
     );
     expect(buildInsights(trades, [], settings).map((x) => x.id)).toContain('fees');
+  });
+
+  it('gives the same insights when handed the stats the page already has', () => {
+    const rand = seeded(11);
+    const trades = Array.from({ length: 60 }, (_, i) =>
+      pnl(Math.round((rand() - 0.4) * 400), {
+        openedAt: `2026-03-${String((i % 27) + 1).padStart(2, '0')}T${String(9 + (i % 6)).padStart(2, '0')}:00`,
+        closedAt: `2026-03-${String((i % 27) + 1).padStart(2, '0')}T${String(10 + (i % 6)).padStart(2, '0')}:30`,
+        fees: 2,
+        tags: i % 4 === 0 ? ['fomo'] : [],
+      }),
+    );
+    const own = buildInsights(trades, [], settings);
+    expect(own.length).toBeGreaterThan(2);
+    expect(buildInsights(trades, [], settings, computeStats(trades))).toEqual(own);
+  });
+
+  it('uses the stats it is handed rather than working them out again', () => {
+    const trades = [10, -4, 12, -6, 9].map((v) => pnl(v));
+    const stats = computeStats(trades);
+    const handed = buildInsights(trades, [], settings, { ...stats, expectancy: -1 });
+    expect(handed.find((x) => x.id === 'expectancy')?.tone).toBe('bad');
+    expect(buildInsights(trades, [], settings).find((x) => x.id === 'expectancy')?.tone).toBe('good');
   });
 });

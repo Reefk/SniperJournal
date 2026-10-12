@@ -28,11 +28,11 @@ export function InsightsView() {
 
   const closedCount = statTrades(accountTrades).length;
   const signals = useMemo(() => buildSignals(accountTrades, data.settings), [accountTrades, data.settings]);
-  const insights = useMemo(
-    () => buildInsights(accountTrades, data.setups, data.settings),
-    [accountTrades, data.setups, data.settings],
-  );
   const stats = useMemo(() => computeStats(accountTrades), [accountTrades]);
+  const insights = useMemo(
+    () => buildInsights(accountTrades, data.setups, data.settings, stats),
+    [accountTrades, data.setups, data.settings, stats],
+  );
   const score = useMemo(() => sniperScore(accountTrades, stats), [accountTrades, stats]);
 
   const breakdowns = useMemo(() => {

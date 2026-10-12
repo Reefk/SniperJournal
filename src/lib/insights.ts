@@ -133,12 +133,15 @@ export function buildSignals(trades: Trade[], settings: Settings, now = new Date
 /**
  * Patterns found in the trades you logged. Nothing here is invented:
  * every line points at a count you can go and check in the table.
+ *
+ * `stats` must be `computeStats(trades)`; pass it when you already have it
+ * (the Insights page does), so it isn't worked out twice.
  */
-export function buildInsights(trades: Trade[], setups: Setup[], settings: Settings): Insight[] {
+export function buildInsights(trades: Trade[], setups: Setup[], settings: Settings, stats?: Stats): Insight[] {
   const closed = statTrades(trades);
   if (closed.length < MIN_TRADES_FOR_INSIGHTS) return [];
 
-  const stats: Stats = computeStats(trades);
+  stats ??= computeStats(trades);
   const money = settings.currency;
   const out: Insight[] = [];
   const setupNames = new Map(setups.map((s) => [s.id, s.name]));
