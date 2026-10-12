@@ -287,12 +287,16 @@ is not running — usually because something stopped it, or autostart is off. Op
 the app from the desktop icon, which starts it again, and refresh.
 
 **A security warning keeps coming back.** Run `INSTALLER.bat` once more — it
-clears the download mark from every file in the folder. If it still appears,
-right-click the file, choose Properties, and tick Unblock.
+clears the download mark from the app's launchers and scripts (`.bat`, `.cmd`,
+`.vbs`, `.ps1` and shortcuts). If it still appears, right-click the file, choose
+Properties, and tick Unblock.
 
 **"Port 3000 is already in use".** Another program is using that port, or a
 previous copy of the app is still running. Close the other console window, or
 edit the `dev` and `start` lines in `package.json` to use a different port.
+`stop.bat` only stops the Sniper Journal in its own folder: if it says another
+program is using port 3000, that program was left running, and it is the one to
+close (or a copy of the app in a different folder).
 
 **The sidebar says "Saved in browser".** The app could not reach its own data
 folder, so it is holding your changes in the browser instead. Restart it with

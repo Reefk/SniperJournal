@@ -174,7 +174,7 @@ No Critical findings were made.
 | SJ-27 | Medium | CSV | Re-importing a file without trade IDs duplicates every trade | Confirmed |
 | SJ-28 | Medium | CSV | Separate Date and Time columns: the time is dropped (00:00) | Fixed and Verified (2026-10-09) |
 | SJ-29 | Medium | Accessibility | Several text colours below WCAG AA contrast | Fixed and Verified (2026-10-12) |
-| SJ-30 | Medium | Process | No CI, no lint; tests run only when someone remembers | Fixed (2026-10-12; first GitHub run pending) |
+| SJ-30 | Medium | Process | No CI, no lint; tests run only when someone remembers | Fixed and Verified (2026-10-12) |
 | SJ-31 | Low | CSV | Time-zone suffixes (`Z`, `+02:00`) ignored without a warning | Fixed and Verified (2026-10-09) |
 | SJ-32 | Low | Persistence | A newer-version journal on disk is silently downgraded on load | Confirmed |
 | SJ-33 | Low | Accessibility | Dialogs do not trap Tab focus | Confirmed (code) |
@@ -582,7 +582,7 @@ No Critical findings were made.
 - **Impact:** The 212 tests and the E2E journey protect nothing unless someone runs them. React hook dependency mistakes (`react-hooks/exhaustive-deps`) are not caught. None were found by reading, but this was not checked by a tool.
 - **Recommended fix:** A GitHub Actions workflow on Windows or Linux running `npm ci`, typecheck, test, build and `build:mobile`. Add `eslint` with `eslint-config-next` (hooks rules).
 - **Fix (2026-10-12):** `npm run lint` (ESLint 9 with `eslint-config-next`, core web vitals and TypeScript rules, and `eslint-config-prettier`) and `.github/workflows/ci.yml`, which runs `npm ci`, typecheck, lint, test, build and `build:mobile` on Windows and Linux for every push to `main` and every pull request, with read-only permissions. `noUnusedLocals`, `noUnusedParameters` and `noFallthroughCasesInSwitch` are on. The hooks rules flag 26 places in existing components: 22 helper components declared inside `ReportsView` and `TradesView`, and 4 `setState` calls made directly from an effect. They are warnings for now, not errors.
-- **Status:** Fixed. The same steps pass in a clean copy on Windows; the first run on GitHub is still to come.
+- **Status:** Fixed and Verified. The first run on GitHub (commit `2e90acf`) passed every step on Windows (2 min 20 s) and Linux (1 min 10 s), the first time the tests ran on Linux.
 
 ### SJ-31: Time-zone suffixes ignored
 
