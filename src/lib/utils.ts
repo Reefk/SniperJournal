@@ -35,7 +35,6 @@ export function parseLocal(value: string): Date {
 }
 
 export const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
-export const round2 = (v: number) => Math.round(v * 100) / 100;
 export const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
 
 /**

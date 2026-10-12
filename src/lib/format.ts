@@ -1,5 +1,3 @@
-import { pad2, parseLocal } from './utils';
-
 export const CURRENCIES = ['USD', 'EUR', 'GBP', 'ILS', 'JPY', 'CAD', 'AUD', 'CHF', 'INR', 'USDT'];
 
 const SYMBOL_FOR: Record<string, string> = { USDT: 'USD' };
@@ -116,12 +114,4 @@ export function formatDuration(minutes: number | null | undefined): string {
   if (h < 24) return m ? `${h}h ${m}m` : `${h}h`;
   const d = Math.floor(h / 24);
   return `${d}d ${h % 24}h`;
-}
-
-export function formatClock(date: Date): string {
-  return `${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
-}
-
-export function weekdayOf(value: string): number {
-  return parseLocal(value).getDay();
 }

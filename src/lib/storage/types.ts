@@ -84,9 +84,6 @@ export function copyStamp(now = new Date()): string {
   return now.toISOString().replace(/[-:]/g, '').replace('T', '-').slice(0, 15);
 }
 
-/** Thrown when storage is unavailable, so callers can say something useful. */
-export class StorageUnavailable extends Error {}
-
 /**
  * Thrown when a save is refused because the journal file changed since this
  * window last read or wrote it: another tab, window or copy of the app saved

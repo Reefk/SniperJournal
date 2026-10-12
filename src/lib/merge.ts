@@ -1,5 +1,5 @@
 import type { Trade } from './types';
-import { grossPnl, isClosed, netPnl } from './trade-math';
+import { grossPnl, isClosed } from './trade-math';
 
 /**
  * Scaling out of a position leaves one entry matched against several exits,
@@ -125,11 +125,4 @@ export function mergeTrades(trades: Trade[]): Trade {
     needsReview: undefined,
     updatedAt: new Date().toISOString(),
   };
-}
-
-/** A one-line summary of what a merge would produce, for the confirmation */
-export function describeMerge(trades: Trade[], currency: string, format: (v: number, c: string) => string): string {
-  const merged = mergeTrades(trades);
-  const pnl = isClosed(merged) ? format(netPnl(merged), currency) : 'still open';
-  return `${trades.length} parts become one ${merged.symbol} ${merged.side.toLowerCase()} of ${merged.quantity}, worth ${pnl}.`;
 }
