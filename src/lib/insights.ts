@@ -1,7 +1,7 @@
 import type { Settings, Setup, Trade } from './types';
 import { formatMoney, WEEKDAYS } from './format';
 import { aggregateDays, computeStats, groupTrades, type GroupStat, type Stats } from './stats';
-import { holdMinutes, netPnl, sortChronological, statTrades, tradeDay } from './trade-math';
+import { netPnl, sortChronological, statTrades, tradeDay } from './trade-math';
 import { dateKey, mean, parseLocal } from './utils';
 
 export type Tone = 'good' | 'bad' | 'warn' | 'info';
