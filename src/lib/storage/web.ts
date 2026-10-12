@@ -1,5 +1,5 @@
 import type { JournalData } from '@/lib/types';
-import type { CopyReason, JournalStorage } from './types';
+import { JournalConflict, type CopyReason, type JournalStorage } from './types';
 
 /**
  * Saves are sent one at a time, in order. Two in flight at once could finish
@@ -7,14 +7,23 @@ import type { CopyReason, JournalStorage } from './types';
  */
 let writes: Promise<unknown> = Promise.resolve();
 
+/**
+ * The version of the journal file this window last read or wrote. Each save
+ * sends it, and the server refuses the save if the file has changed since
+ * (another tab, window or copy of the app saved first).
+ */
+let base: string | null = null;
+
 async function put(data: JournalData): Promise<string | null> {
   const res = await fetch('/api/journal', {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...(base ? { 'If-Match': base } : {}) },
     body: JSON.stringify(data),
   });
   const json = await res.json();
+  if (res.status === 412 || json?.conflict) throw new JournalConflict(json?.error ?? 'The journal was changed elsewhere.');
   if (!json?.ok) throw new Error(json?.error ?? 'Could not save the journal.');
+  if (typeof json.version === 'string') base = json.version;
   return (json.path as string) ?? null;
 }
 
@@ -34,7 +43,12 @@ export const webStorage: JournalStorage = {
     const res = await fetch('/api/journal', { cache: 'no-store' });
     const json = await res.json();
     if (!json?.ok) throw new Error(json?.error ?? 'Could not read the journal.');
+    base = typeof json.version === 'string' ? json.version : null;
     return (json.data as JournalData | null) ?? null;
+  },
+
+  version() {
+    return base;
   },
 
   writeJournal(data: JournalData): Promise<string | null> {

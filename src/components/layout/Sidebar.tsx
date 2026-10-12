@@ -41,8 +41,11 @@ const NAV = [
 
 const SAVE_LABEL: Record<SaveStatus, string> =
   storage.kind === 'native'
-    ? { saved: 'Saved on this device', saving: 'Saving…', browser: 'Saved temporarily', error: 'Journal file unreadable' }
-    : { saved: 'Saved to disk', saving: 'Saving…', browser: 'Saved in browser', error: 'Journal file unreadable' };
+    ? { saved: 'Saved on this device', saving: 'Saving…', browser: 'Saved temporarily', error: 'Journal file unreadable', conflict: 'Changed elsewhere' }
+    : { saved: 'Saved to disk', saving: 'Saving…', browser: 'Saved in browser', error: 'Journal file unreadable', conflict: 'Changed elsewhere' };
+
+/** the states where changes are not reaching the file */
+const ALARM: SaveStatus[] = ['error', 'conflict'];
 
 /** "online" means nothing to an app that never uses the network on a phone */
 const SHOW_ONLINE = storage.kind === 'web';
@@ -137,7 +140,7 @@ export function Sidebar() {
             </span>
           )}
           <span
-            className={cn(saveStatus === 'error' ? 'text-loss' : 'text-faint')}
+            className={cn(ALARM.includes(saveStatus) ? 'text-loss' : 'text-faint')}
             title="Where your journal is stored"
           >
             {SAVE_LABEL[saveStatus]}
@@ -269,7 +272,7 @@ export function MobileNav() {
               );
             })}
           </div>
-          <span className={cn('text-xs', saveStatus === 'error' ? 'text-loss' : 'text-faint')}>
+          <span className={cn('text-xs', ALARM.includes(saveStatus) ? 'text-loss' : 'text-faint')}>
             {SAVE_LABEL[saveStatus]}
           </span>
         </div>

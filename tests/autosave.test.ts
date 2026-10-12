@@ -161,6 +161,69 @@ describe('when a save fails', () => {
   });
 });
 
+describe('when a save is refused for good (the file changed in another window)', () => {
+  /** like harness(), but a write answered 'refused' fails with a reason that stops saving */
+  function stopping() {
+    const writes: { snapshot: string; answer: (how: 'ok' | 'failed' | 'refused') => Promise<void> }[] = [];
+    const events: string[] = [];
+    const save = createAutosave<string>(
+      (snapshot) =>
+        new Promise<void>((resolve, reject) => {
+          writes.push({
+            snapshot,
+            answer: async (how) => {
+              if (how === 'ok') resolve();
+              else reject(how === 'refused' ? 'conflict' : new Error('Could not write the journal file.'));
+              await vi.advanceTimersByTimeAsync(0);
+            },
+          });
+        }),
+      {
+        saved: () => events.push('saved'),
+        saving: () => events.push('saving'),
+        failed: (newest) => events.push(`failed:${newest}`),
+        stopped: (newest, reason) => events.push(`stopped:${newest}:${String(reason)}`),
+      },
+      (reason) => reason === 'conflict',
+    );
+    return { save, writes, events, sent: () => writes.map((w) => w.snapshot) };
+  }
+
+  it('it is never tried again, and says so once, with the newest journal', async () => {
+    const h = stopping();
+    h.save.change('a');
+    await vi.advanceTimersByTimeAsync(350);
+    h.save.change('b'); // made while the refused save is on its way
+    await h.writes[0].answer('refused');
+    expect(h.events.filter((e) => e.startsWith('stopped'))).toEqual(['stopped:b:conflict']);
+    expect(h.events.some((e) => e.startsWith('failed'))).toBe(false);
+    expect(h.save.stopped).toBe(true);
+    await vi.advanceTimersByTimeAsync(120_000);
+    expect(h.sent()).toEqual(['a']);
+  });
+
+  it('changes after that are not written, not even when the app is hidden', async () => {
+    const h = stopping();
+    h.save.change('a');
+    await vi.advanceTimersByTimeAsync(350);
+    await h.writes[0].answer('refused');
+    h.save.change('b');
+    h.save.flush();
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(h.sent()).toEqual(['a']);
+  });
+
+  it('an ordinary failure still retries as before', async () => {
+    const h = stopping();
+    h.save.change('a');
+    await vi.advanceTimersByTimeAsync(350);
+    await h.writes[0].answer('failed');
+    expect(h.save.stopped).toBe(false);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(h.sent()).toEqual(['a', 'a']);
+  });
+});
+
 describe('reading at startup', () => {
   it('a read that fails is tried again after 0.5s and 1.5s', async () => {
     let calls = 0;

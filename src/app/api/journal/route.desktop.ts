@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { refuseForeign } from '../local-only';
@@ -62,10 +62,10 @@ async function writeDurably(file: string, text: string) {
 const HELD = new Set(['EPERM', 'EBUSY', 'EACCES']);
 const RENAME_RETRIES_MS = [50, 100, 200, 400, 800];
 
-async function renamePatiently(from: string, to: string) {
+async function patiently<T>(task: () => Promise<T>): Promise<T> {
   for (let attempt = 0; ; attempt++) {
     try {
-      return await fs.rename(from, to);
+      return await task();
     } catch (err) {
       const code = (err as NodeJS.ErrnoException).code ?? '';
       if (!HELD.has(code) || attempt >= RENAME_RETRIES_MS.length) throw err;
@@ -73,6 +73,25 @@ async function renamePatiently(from: string, to: string) {
     }
   }
 }
+
+const renamePatiently = (from: string, to: string) => patiently(() => fs.rename(from, to));
+
+/** the journal as it is on disk now, or null when there is none yet */
+const readExisting = () =>
+  patiently(() => fs.readFile(FILE, 'utf8')).catch((err: NodeJS.ErrnoException) => {
+    if (err.code === 'ENOENT') return null;
+    throw err;
+  });
+
+/**
+ * Which version of the file a window's journal is based on: a hash of the
+ * file's exact contents, so the file format itself doesn't change. A window
+ * gets it when it reads the journal and after each save, and sends it back
+ * with the next save (If-Match). NO_FILE stands for "there was no file yet".
+ */
+const NO_FILE = 'none';
+const versionOf = (text: string | null) =>
+  text == null ? NO_FILE : createHash('sha256').update(text, 'utf8').digest('hex').slice(0, 32);
 
 /**
  * On Linux and macOS a rename is only on the disk once its folder is.
@@ -147,10 +166,10 @@ export async function GET(request: Request) {
   if (refused) return refused;
   try {
     const text = await fs.readFile(FILE, 'utf8');
-    return NextResponse.json({ ok: true, data: JSON.parse(text) });
+    return NextResponse.json({ ok: true, data: JSON.parse(text), version: versionOf(text) });
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
-      return NextResponse.json({ ok: true, data: null });
+      return NextResponse.json({ ok: true, data: null, version: NO_FILE });
     }
     return NextResponse.json({ ok: false, error: 'Could not read the journal file.' }, { status: 500 });
   }
@@ -171,21 +190,37 @@ export async function PUT(request: Request) {
     return NextResponse.json({ ok: false, error: 'That is not a valid journal payload.' }, { status: 400 });
   }
 
+  // the version the saving window's journal is based on; a save without one
+  // (an older page still open) is written as before
+  const basedOn = request.headers.get('if-match')?.replace(/^W\//, '').replace(/"/g, '').trim() || null;
+
   return oneAtATime(async () => {
     // a temp file of its own, so not even a second server on another port
     // can write into it
     const tmp = `${FILE}.${randomUUID()}.tmp`;
     try {
       await ensureDir(DATA_DIR);
-      const existing = await fs.readFile(FILE, 'utf8').catch(() => null);
+      const existing = await readExisting();
+
+      // checked inside the same queue as the write, so nothing can slip in
+      // between: another tab, window or copy of the app saved since this
+      // window read the file, so writing would throw that work away
+      if (basedOn && basedOn !== versionOf(existing)) {
+        return NextResponse.json(
+          { ok: false, conflict: true, error: 'The journal was changed in another window since this one opened it.' },
+          { status: 412 },
+        );
+      }
+
       if (existing) await rollBackup(existing);
 
       // write to a temp file first so a crash mid-write cannot corrupt the journal
-      await writeDurably(tmp, JSON.stringify(data, null, 2));
+      const text = JSON.stringify(data, null, 2);
+      await writeDurably(tmp, text);
       await renamePatiently(tmp, FILE);
       await syncFolder(DATA_DIR);
 
-      return NextResponse.json({ ok: true, path: FILE });
+      return NextResponse.json({ ok: true, path: FILE, version: versionOf(text) });
     } catch {
       await fs.unlink(tmp).catch(() => undefined);
       return NextResponse.json({ ok: false, error: 'Could not write the journal file.' }, { status: 500 });

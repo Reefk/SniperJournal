@@ -307,6 +307,14 @@ edit the `dev` and `start` lines in `package.json` to use a different port.
 program is using port 3000, that program was left running, and it is the one to
 close (or a copy of the app in a different folder).
 
+**"This journal was changed in another window".** You had the app open in two
+tabs or windows (or two copies of it on one journal), and the other one saved
+after this one opened. Rather than write over that work, this window stopped
+saving and kept its own version in `data/backups/` as `conflict-<date>.json`.
+Press **Reload** to carry on with the journal as it is saved. If the window's
+own version was the one you wanted, restore that file from **Settings →
+Restore from a backup**.
+
 **The sidebar says "Saved in browser".** The app could not reach its own data
 folder, so it is holding your changes in the browser instead. Restart it with
 `start.bat`; your work is written to disk as soon as it can be.

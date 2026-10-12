@@ -177,6 +177,27 @@ A journal file that cannot be read when the app starts is tried twice more
 (after 0.5s and 1.5s). If it still cannot be read, it is never written over
 for the rest of that session, and the sidebar says "Journal file unreadable".
 
+**Two tabs, windows or servers on the same journal.** Every read of the journal
+comes with a version: a hash of the file's exact contents, so the file format
+doesn't change. Each save sends back the version it was made on top of
+(`If-Match`), and the server checks it, in the same queue as the write,
+before writing. A save made on top of an older version is refused (412), the
+file is left alone, and `src/store/autosave.ts` stops: a refused save is never
+tried again. That window keeps its own version as
+`data/backups/conflict-<time>.json` and shows a dialog with **Reload** (the
+journal as it is saved now) and **Download this window's version**.
+
+All tabs share one copy of the journal in the browser, so that copy records
+which tab wrote it and which file version it was made on top of
+(`src/store/mirror.ts`). At startup it only wins over the file while it is
+newer *and* based on the file as it is now; a newer copy made on top of an
+older file is kept as a conflict copy instead of being opened.
+
+The Android app doesn't need any of this: it runs one WebView (`singleTask`),
+its saves are already queued one at a time, and nothing else writes its
+folder. Its storage keeps no versions (`version` is left out), so it behaves
+exactly as before.
+
 Every read and write — the journal, chart images, exported files — goes through
 the one interface in `src/lib/storage/types.ts`. Nothing else in the app touches
 the filesystem or the network. Supporting a new platform means writing one file

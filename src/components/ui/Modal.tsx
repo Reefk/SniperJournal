@@ -86,6 +86,7 @@ export function Modal({
   footer,
   size = 'md',
   closeOnBackdrop = true,
+  closable = true,
   phone = 'sheet',
 }: {
   open: boolean;
@@ -97,6 +98,8 @@ export function Modal({
   size?: keyof typeof SIZES;
   /** false for forms, so a stray click never throws away typing */
   closeOnBackdrop?: boolean;
+  /** false for a dialog that must be answered with one of its own buttons: no close button */
+  closable?: boolean;
   /** below the md breakpoint: a sheet rising from the bottom, or the whole screen */
   phone?: 'sheet' | 'full';
 }) {
@@ -199,14 +202,16 @@ export function Modal({
               </h2>
               {description && <p className="mt-0.5 text-sm text-muted">{description}</p>}
             </div>
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Close"
-              className="-m-2 rounded-md p-3 text-muted transition hover:bg-raised hover:text-fg md:m-0 md:p-1"
-            >
-              <X className="size-4" />
-            </button>
+            {closable && (
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Close"
+                className="-m-2 rounded-md p-3 text-muted transition hover:bg-raised hover:text-fg md:m-0 md:p-1"
+              >
+                <X className="size-4" />
+              </button>
+            )}
           </div>
         )}
         <div className={cn('min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 md:overflow-visible', !footer && 'max-md:pb-safe-4')}>

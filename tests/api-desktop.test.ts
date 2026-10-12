@@ -43,7 +43,7 @@ const file = () => JSON.parse(readFileSync(join(root, 'data', 'journal.json'), '
 describe('/api/journal', () => {
   it('reports no journal on a first run', async () => {
     const res = await routes.journal.GET(req('/api/journal'));
-    expect(await res.json()).toEqual({ ok: true, data: null });
+    expect(await res.json()).toEqual({ ok: true, data: null, version: 'none' });
   });
 
   it('saves a journal atomically and reads it back', async () => {
@@ -196,6 +196,63 @@ describe('/api/journal', () => {
     expect((await routes.journal.GET(req('/api/journal', { headers }))).status).toBe(403);
     expect((await put(valid(9), headers)).status).toBe(403);
     expect(existsSync(join(root, 'data', 'journal.json'))).toBe(false);
+  });
+
+  describe('two windows saving the same journal', () => {
+    const get = async () => (await routes.journal.GET(req('/api/journal'))).json();
+    const putOn = async (body: unknown, version: string) => {
+      const res = await put(body, { 'if-match': version });
+      return { status: res.status, json: await res.json() };
+    };
+
+    it('each read and save says which version of the file it saw or wrote', async () => {
+      const first = await putOn(valid(1), 'none');
+      expect(first.status).toBe(200);
+      expect(first.json.version).toMatch(/^[0-9a-f]{32}$/);
+      expect((await get()).version).toBe(first.json.version);
+      const second = await putOn(valid(2), first.json.version);
+      expect(second.status).toBe(200);
+      expect(second.json.version).not.toBe(first.json.version);
+      expect((await get()).version).toBe(second.json.version);
+    });
+
+    it('a save made on top of an older version is refused, and the file is left alone', async () => {
+      const v1 = (await putOn(valid(1), 'none')).json.version;
+      expect((await putOn(valid(2), v1)).status).toBe(200); // the other window saved first
+      const late = await putOn(valid(3), v1);
+      expect(late.status).toBe(412);
+      expect(late.json).toMatchObject({ ok: false, conflict: true });
+      expect(file()).toEqual(valid(2));
+    });
+
+    it('a window that saw no file yet cannot write over one that has appeared since', async () => {
+      expect((await putOn(valid(1), 'none')).status).toBe(200);
+      expect((await putOn(valid(2), 'none')).status).toBe(412);
+      expect(file()).toEqual(valid(1));
+    });
+
+    it('of two saves made on top of the same version at the same moment, exactly one is written', async () => {
+      const v1 = (await putOn(valid(1), 'none')).json.version;
+      const [a, b] = await Promise.all([putOn(valid(2), v1), putOn(valid(3), v1)]);
+      expect([a.status, b.status].sort()).toEqual([200, 412]);
+      expect(file()).toEqual(a.status === 200 ? valid(2) : valid(3));
+    });
+
+    it('a save that names no version (a page from before versions) is still written', async () => {
+      await putOn(valid(1), 'none');
+      expect((await put(valid(2))).status).toBe(200);
+      expect(file()).toEqual(valid(2));
+    });
+
+    it('keeps the version of a refused window as a conflict copy when asked', async () => {
+      const res = await routes.journal.POST(
+        req('/api/journal?copy=conflict', { method: 'POST', body: JSON.stringify(valid(5)), headers: { 'content-type': 'application/json' } }),
+      );
+      expect(res.status).toBe(200);
+      const copies = readdirSync(join(root, 'data', 'backups')).filter((f) => f.startsWith('conflict-'));
+      expect(copies).toHaveLength(1);
+      expect(JSON.parse(readFileSync(join(root, 'data', 'backups', copies[0]), 'utf8'))).toEqual(valid(5));
+    });
   });
 
   it('accepts the app itself under its other loopback names', async () => {

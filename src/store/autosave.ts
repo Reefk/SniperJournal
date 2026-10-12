@@ -8,6 +8,10 @@
  * Changes made in the meantime go with that next try, and the first save
  * that succeeds puts everything back to normal.
  *
+ * A save can also be refused for good (`stopsOn`): the file changed in
+ * another window, so writing again would only be refused again, or worse.
+ * Then nothing more is written, and `stopped` says so once.
+ *
  * No React here, so it can be tested on its own (tests/autosave.test.ts).
  */
 export const SAVE_PAUSE_MS = 350;
@@ -22,24 +26,33 @@ export interface AutosaveEvents<T> {
   saving: () => void;
   /** a save failed; `newest` will be tried again */
   failed: (newest: T) => void;
+  /** a save was refused for good (see `stopsOn`); nothing more is written */
+  stopped?: (newest: T, reason: unknown) => void;
 }
 
 export interface Autosave<T> {
   /** a save has failed and none has succeeded since */
   readonly failing: boolean;
+  /** a save was refused for good; nothing more will be written */
+  readonly stopped: boolean;
   change: (snapshot: T) => void;
   /** write a change that is waiting out its pause right now (the app is being hidden) */
   flush: () => void;
   dispose: () => void;
 }
 
-export function createAutosave<T>(write: (snapshot: T) => Promise<unknown>, on: AutosaveEvents<T>): Autosave<T> {
+export function createAutosave<T>(
+  write: (snapshot: T) => Promise<unknown>,
+  on: AutosaveEvents<T>,
+  stopsOn: (reason: unknown) => boolean = () => false,
+): Autosave<T> {
   let newest: T | undefined;
   /** `newest` is not known to be in the file yet */
   let unsaved = false;
   /** the last snapshot handed to `write` */
   let sent: T | undefined;
   let failures = 0;
+  let stopped = false;
   let timer: ReturnType<typeof setTimeout> | null = null;
 
   const cancel = () => {
@@ -53,11 +66,12 @@ export function createAutosave<T>(write: (snapshot: T) => Promise<unknown>, on: 
 
   function attempt() {
     cancel();
-    if (!unsaved) return;
+    if (!unsaved || stopped) return;
     const snapshot = newest as T;
     sent = snapshot;
     write(snapshot).then(
       () => {
+        if (stopped) return;
         failures = 0;
         if (snapshot === newest) {
           unsaved = false;
@@ -68,7 +82,14 @@ export function createAutosave<T>(write: (snapshot: T) => Promise<unknown>, on: 
           after(SAVE_PAUSE_MS);
         }
       },
-      () => {
+      (reason) => {
+        if (stopped) return;
+        if (stopsOn(reason)) {
+          stopped = true;
+          cancel();
+          on.stopped?.(newest as T, reason);
+          return;
+        }
         failures += 1;
         on.failed(newest as T);
         // a newer save already on its way decides what happens next
@@ -81,9 +102,13 @@ export function createAutosave<T>(write: (snapshot: T) => Promise<unknown>, on: 
     get failing() {
       return failures > 0;
     },
+    get stopped() {
+      return stopped;
+    },
     change(snapshot) {
       newest = snapshot;
       unsaved = true;
+      if (stopped) return;
       if (failures > 0) {
         // still failing: the try already planned takes this change along
         on.failed(snapshot);

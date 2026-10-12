@@ -26,13 +26,21 @@ export interface JournalStorage {
   readJournal(): Promise<JournalData | null>;
 
   /**
+   * Which version of the journal file this window last read or wrote, so the
+   * browser's copy can tell whether it was made on top of the file as it is
+   * now. Left out where only one window can ever write the file (a phone).
+   */
+  version?(): string | null;
+
+  /**
    * Persist the journal, and say where it ended up — a file path on a PC, the
    * app's own folder on a phone. The Support page shows this so you always
    * know where your trades actually live. Return null when there is nothing
    * meaningful to show.
    *
    * Must be atomic enough that a crash mid-write cannot leave a half-written
-   * file behind.
+   * file behind. Throws JournalConflict, and writes nothing, when the file
+   * changed since this window last read or wrote it.
    */
   writeJournal(data: JournalData): Promise<string | null>;
 
@@ -65,8 +73,8 @@ export interface JournalStorage {
 }
 
 /** why a copy was kept; also the start of its file name */
-export type CopyReason = 'before-restore' | 'before-erase';
-export const COPY_REASONS: readonly CopyReason[] = ['before-restore', 'before-erase'];
+export type CopyReason = 'before-restore' | 'before-erase' | 'conflict';
+export const COPY_REASONS: readonly CopyReason[] = ['before-restore', 'before-erase', 'conflict'];
 
 /** how many copies of each kind are kept; the daily backups have their own limit */
 export const KEEP_COPIES = 10;
@@ -78,3 +86,11 @@ export function copyStamp(now = new Date()): string {
 
 /** Thrown when storage is unavailable, so callers can say something useful. */
 export class StorageUnavailable extends Error {}
+
+/**
+ * Thrown when a save is refused because the journal file changed since this
+ * window last read or wrote it: another tab, window or copy of the app saved
+ * in between. Writing anyway would throw that work away, and trying again
+ * would only be refused again.
+ */
+export class JournalConflict extends Error {}

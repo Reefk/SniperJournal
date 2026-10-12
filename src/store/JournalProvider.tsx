@@ -8,10 +8,11 @@ import { generateSampleData } from '@/lib/sample';
 import { isIncomplete } from '@/lib/trade-math';
 import { mergeIssue, mergeTrades as combineTrades } from '@/lib/merge';
 import { deleteScreenshot, imagesOnlyIn } from '@/lib/screenshots';
-import { storage } from '@/lib/storage';
+import { JournalConflict, storage } from '@/lib/storage';
 import { uid } from '@/lib/utils';
 import { accountBalances } from './selectors';
 import { createAutosave, readPatiently } from './autosave';
+import { decodeMirror, encodeMirror, pickJournal, rebaseMirror } from './mirror';
 
 const LOCAL_KEY = 'sniper-journal:v1';
 
@@ -23,12 +24,28 @@ const LOCAL_KEY = 'sniper-journal:v1';
  */
 const MIRROR_ALWAYS = storage.kind === 'web';
 
-function writeMirror(data: JournalData) {
+/** this page load: every tab shares one mirror, and has to know its own (see mirror.ts) */
+const TAB = uid();
+const fileVersion = () => storage.version?.() ?? null;
+
+function readMirror(): string | null {
   try {
-    localStorage.setItem(LOCAL_KEY, JSON.stringify(data));
+    return localStorage.getItem(LOCAL_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function writeMirrorRaw(raw: string) {
+  try {
+    localStorage.setItem(LOCAL_KEY, raw);
   } catch {
     /* quota */
   }
+}
+
+function writeMirror(data: JournalData) {
+  writeMirrorRaw(encodeMirror(data, fileVersion(), TAB));
 }
 
 function removeMirror() {
@@ -40,14 +57,27 @@ function removeMirror() {
 }
 
 /**
- * saved:   the newest change is in the journal file
- * saving:  a change is about to be written
- * browser: a save failed; changes are kept in the browser (or, on a phone,
- *          temporarily) and the file is tried again until it works
- * error:   the file could not be read at startup, so it is never written
- *          over this session; changes are kept in the browser instead
+ * saved:    the newest change is in the journal file
+ * saving:   a change is about to be written
+ * browser:  a save failed; changes are kept in the browser (or, on a phone,
+ *           temporarily) and the file is tried again until it works
+ * error:    the file could not be read at startup, so it is never written
+ *           over this session; changes are kept in the browser instead
+ * conflict: another tab, window or copy of the app saved the journal after
+ *           this window opened it, so this window stopped saving (see
+ *           `conflict` in the context)
  */
-export type SaveStatus = 'saved' | 'saving' | 'browser' | 'error';
+export type SaveStatus = 'saved' | 'saving' | 'browser' | 'error' | 'conflict';
+
+/**
+ * This window's journal, refused because the file changed elsewhere. `copy`
+ * is where it was kept: undefined while that is still being written, null if
+ * it could not be.
+ */
+export interface Conflict {
+  journal: JournalData;
+  copy: string | null | undefined;
+}
 
 interface Actions {
   addTrade: (input: TradeInput) => void;
@@ -81,6 +111,14 @@ interface JournalContextValue {
   ready: boolean;
   saveStatus: SaveStatus;
   filePath: string | null;
+  /** set once this window stopped saving because the file changed elsewhere */
+  conflict: Conflict | null;
+  /**
+   * Where unsaved changes from another window were kept, when they turned up
+   * in the browser at startup but were made on top of an older file.
+   */
+  recovered: string | null;
+  dismissRecovered: () => void;
   actions: Actions;
   accountTrades: Trade[];
   activeAccount: Account | null;
@@ -97,28 +135,56 @@ export function JournalProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
   const [filePath, setFilePath] = useState<string | null>(null);
+  const [conflict, setConflict] = useState<Conflict | null>(null);
+  const [recovered, setRecovered] = useState<string | null>(null);
   const diskReadable = useRef(true);
   const firstLoad = useRef(true);
   const dataRef = useRef<JournalData>(createDefaultData());
 
-  // when changes reach the file, and trying again after a failed save
+  // when changes reach the file, trying again after a failed save, and
+  // stopping for good when the file was changed in another window
   const [autosave] = useState(() =>
-    createAutosave<JournalData>(async (snapshot) => setFilePath(await storage.writeJournal(snapshot)), {
-      saved: () => {
-        setSaveStatus('saved');
-        // the folder has it now; a leftover fallback copy would only go stale
-        if (!MIRROR_ALWAYS) removeMirror();
+    createAutosave<JournalData>(
+      async (snapshot) => {
+        const from = fileVersion();
+        setFilePath(await storage.writeJournal(snapshot));
+        // this tab's copy in the browser now sits on top of the file it just wrote
+        if (MIRROR_ALWAYS) {
+          const rebased = rebaseMirror(readMirror(), TAB, from, fileVersion());
+          if (rebased) writeMirrorRaw(rebased);
+        }
       },
-      saving: () => setSaveStatus('saving'),
-      failed: (newest) => {
-        setSaveStatus('browser');
-        if (!MIRROR_ALWAYS) writeMirror(newest);
+      {
+        saved: () => {
+          setSaveStatus('saved');
+          // the folder has it now; a leftover fallback copy would only go stale
+          if (!MIRROR_ALWAYS) removeMirror();
+        },
+        saving: () => setSaveStatus('saving'),
+        failed: (newest) => {
+          setSaveStatus('browser');
+          if (!MIRROR_ALWAYS) writeMirror(newest);
+        },
+        stopped: (newest) => {
+          setSaveStatus('conflict');
+          setConflict({ journal: newest, copy: undefined });
+          storage.keepCopy(newest, 'conflict').then(
+            (copy) => {
+              setConflict({ journal: newest, copy });
+              // kept safely, so this tab's copy in the browser must not come
+              // back over the other window's work on a reload
+              if (decodeMirror(readMirror())?.tab === TAB) removeMirror();
+            },
+            () => setConflict({ journal: newest, copy: null }),
+          );
+        },
       },
-    }),
+      (reason) => reason instanceof JournalConflict,
+    ),
   );
   useEffect(() => () => autosave.dispose(), [autosave]);
 
-  // ---- load: prefer whichever copy is newer, disk or this browser ----
+  // ---- load: the file, unless the browser holds newer changes made on top of it ----
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -134,20 +200,25 @@ export function JournalProvider({ children }: { children: ReactNode }) {
         diskReadable.current = false;
       }
 
-      let fromBrowser: JournalData | null = null;
-      try {
-        const raw = localStorage.getItem(LOCAL_KEY);
-        if (raw) fromBrowser = JSON.parse(raw);
-      } catch {
-        /* ignore an unreadable mirror */
-      }
+      const { journal: winner, stale } = pickJournal(
+        fromDisk,
+        diskReadable.current ? fileVersion() : null,
+        decodeMirror(readMirror()),
+      );
 
-      const winner =
-        fromDisk && fromBrowser
-          ? (fromBrowser.updatedAt ?? '') > (fromDisk.updatedAt ?? '')
-            ? fromBrowser
-            : fromDisk
-          : (fromDisk ?? fromBrowser);
+      // changes from a window that lost to another window's save, closed
+      // before they could be kept: kept as a copy now, not opened over the
+      // newer journal. If that fails they stay in the browser only until
+      // this window's next change, which is the most that can be done here.
+      if (stale) {
+        try {
+          const copy = await storage.keepCopy(stale, 'conflict');
+          removeMirror();
+          if (!cancelled) setRecovered(copy ?? 'your backups');
+        } catch {
+          /* nowhere else to put them */
+        }
+      }
 
       if (!cancelled) {
         setData(normalize(winner));
@@ -168,9 +239,13 @@ export function JournalProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    // a window that stopped saving leaves the shared browser copy to the others
+    if (autosave.stopped) return;
     if (MIRROR_ALWAYS || !diskReadable.current) writeMirror(data);
     if (diskReadable.current) autosave.change(data);
   }, [data, ready, autosave]);
+
+  const dismissRecovered = useCallback(() => setRecovered(null), []);
 
   // a phone can suspend the app the moment it leaves the screen, so a save
   // still waiting out its 350ms is written straight away instead
@@ -384,6 +459,9 @@ export function JournalProvider({ children }: { children: ReactNode }) {
       ready,
       saveStatus,
       filePath,
+      conflict,
+      recovered,
+      dismissRecovered,
       actions,
       accountTrades,
       activeAccount,
@@ -394,7 +472,7 @@ export function JournalProvider({ children }: { children: ReactNode }) {
       balances,
       sampleCount: data.trades.filter((t) => t.isSample).length,
     };
-  }, [data, ready, saveStatus, filePath, actions]);
+  }, [data, ready, saveStatus, filePath, conflict, recovered, dismissRecovered, actions]);
 
   return <JournalContext.Provider value={value}>{children}</JournalContext.Provider>;
 }

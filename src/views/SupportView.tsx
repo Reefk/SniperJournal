@@ -93,6 +93,8 @@ export function SupportView() {
           <p className="mt-1.5 text-sm leading-relaxed text-muted">
             {saveStatus === 'error'
               ? `The journal file could not be read when the app started, so it is being left exactly as it is rather than saved over. Your changes are kept ${native ? 'temporarily' : 'in this browser'} for now. Close and reopen the app to try again. If this keeps happening, restore your latest backup in Settings.`
+              : saveStatus === 'conflict'
+              ? 'Another tab, window or copy of the app saved the journal after this window opened it, so this window stopped saving rather than write over that work. Its own version was kept as a copy in your backups. Reload to carry on.'
               : saveStatus === 'browser'
               ? native
                 ? 'The app cannot write its file right now, so changes are being kept temporarily. They will be written as soon as it can.'

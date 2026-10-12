@@ -10,6 +10,7 @@ import { TradeFormModal } from '@/components/trades/TradeFormModal';
 import { useAndroidBack } from '@/hooks/useAndroidBack';
 import { MobileNav, Sidebar } from './Sidebar';
 import { Header } from './Header';
+import { RecoveredNotice, SaveConflictDialog } from './SaveConflict';
 import { WelcomeModal } from './WelcomeModal';
 
 function isTypingTarget(target: EventTarget | null): boolean {
@@ -70,6 +71,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         {/* relative: hidden inputs and other absolutely placed bits then scroll
             with the page inside main, instead of stretching the whole window */}
         <main data-page-scroll className="relative min-h-0 flex-1 overflow-y-auto max-md:overflow-x-hidden">
+          <RecoveredNotice />
           {sampleCount > 0 && (
             <div className="flex items-center gap-3 border-b border-warn/25 bg-warn/10 px-4 py-2 text-sm md:px-6">
               <FlaskConical className="size-4 shrink-0 text-warn" />
@@ -90,6 +92,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </div>
       <TradeFormModal />
       <WelcomeModal />
+      <SaveConflictDialog />
     </div>
   );
 }

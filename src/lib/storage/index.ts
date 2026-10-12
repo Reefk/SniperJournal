@@ -4,7 +4,7 @@ import { capacitorStorage } from './capacitor';
 import { webStorage } from './web';
 
 export type { CopyReason, JournalStorage } from './types';
-export { StorageUnavailable } from './types';
+export { JournalConflict, StorageUnavailable } from './types';
 
 /**
  * Picks the implementation for whatever the app is running on: the Android
