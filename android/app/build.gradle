@@ -51,7 +51,9 @@ android {
             if (signingConfigs.findByName('release') != null) {
                 signingConfig signingConfigs.release
             }
-            minifyEnabled false
+            // R8 shrinks and obfuscates the Java/Kotlin side; Capacitor ships the
+            // keep rules its plugins need (they are called by reflection)
+            minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
