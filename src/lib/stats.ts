@@ -52,7 +52,6 @@ export interface Stats {
   avgLoss: number;
   payoff: number | null;
   expectancy: number;
-  expectancyR: number | null;
   avgR: number | null;
   sqn: number | null;
   maxWinStreak: number;
@@ -91,7 +90,6 @@ const EMPTY_STATS = (startingBalance: number): Stats => ({
   avgLoss: 0,
   payoff: null,
   expectancy: 0,
-  expectancyR: null,
   avgR: null,
   sqn: null,
   maxWinStreak: 0,
@@ -209,7 +207,6 @@ export function computeStats(allTrades: Trade[], startingBalance = 0): Stats {
     avgLoss,
     payoff: avgLoss > 0 ? avgWin / avgLoss : avgWin > 0 ? Infinity : null,
     expectancy: net / closed.length,
-    expectancyR: rs.length ? mean(rs) : null,
     avgR,
     sqn,
     maxWinStreak,
@@ -260,6 +257,27 @@ const clamp100 = (v: number) => Math.max(0, Math.min(100, v));
 /**
  * The radar on the dashboard. Axes you haven't supplied data for are
  * reported as unrated rather than silently scored zero.
+ *
+ * Where the weights come from: they are this app's own calibration, not a
+ * published standard. Each axis is a straight line from a result the app
+ * treats as poor (0) to one it treats as excellent (100), clamped to 0–100:
+ *
+ *   Win rate       winRate × 1.4         0% → 0, 50% → 70, about 71% or more → 100
+ *   Profit factor  pf / 3 × 100          break-even (1.0) → 33, 3.0 or more → 100;
+ *                                        no losing trade at all → 100
+ *   Risk:reward    (avgR + 0.5) × 50     −0.5R → 0, 0R → 25, +1.5R or more → 100
+ *   Consistency    green-day share × 60  every day green → 60 of the 100
+ *                  + steadiness × 0.4    steadiness = |mean day| ÷ its standard
+ *                                        deviation × 60, so a ratio of about
+ *                                        1.67 or more → 100 (40 of the 100);
+ *                                        identical days → 60 (24 of the 100)
+ *   Discipline,    average rating ÷ 5    1 of 5 → 20, 5 of 5 → 100
+ *   execution,     × 100
+ *   patience
+ *
+ * The overall score is the plain average of the rated axes. Steadiness uses
+ * the size of the average day, not its sign, so steadily losing days earn it
+ * too; only the green-day share tells winning from losing there.
  */
 export function sniperScore(trades: Trade[], stats: Stats): SniperScore {
   const closed = statTrades(trades);

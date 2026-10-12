@@ -200,6 +200,8 @@ describe('computeStats: R multiples and SQN basis', () => {
     const m = rs.reduce((a, b) => a + b, 0) / rs.length;
     const sd = Math.sqrt(rs.reduce((a, r) => a + (r - m) ** 2, 0) / (rs.length - 1));
     expect(s.avgR).toBeCloseTo(m, 10);
+    // the expectancy in R is this same average; it is not reported twice
+    expect(s).not.toHaveProperty('expectancyR');
     expect(s.sqn).toBeCloseTo((m / sd) * Math.sqrt(rs.length), 10);
   });
 });
