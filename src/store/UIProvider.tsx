@@ -1,11 +1,12 @@
 'use client';
 
-import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 import { CircleAlert, CircleCheck, Info } from 'lucide-react';
 import type { Trade } from '@/lib/types';
 import { cn, uid } from '@/lib/utils';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
+import { createConfirmGate } from './confirm';
 
 interface ConfirmOptions {
   title: string;
@@ -46,7 +47,7 @@ export function UIProvider({ children }: { children: ReactNode }) {
   const [confirmState, setConfirmState] = useState<(ConfirmOptions & { id: string }) | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [globalSearch, setGlobalSearch] = useState('');
-  const resolver = useRef<((v: boolean) => void) | null>(null);
+  const [confirmGate] = useState(createConfirmGate);
 
   const openTradeForm = useCallback((opts?: { trade?: Trade; defaults?: Partial<Trade> }) => {
     setTradeForm((s) => ({ open: true, nonce: s.nonce + 1, trade: opts?.trade, defaults: opts?.defaults }));
@@ -54,18 +55,22 @@ export function UIProvider({ children }: { children: ReactNode }) {
 
   const closeTradeForm = useCallback(() => setTradeForm((s) => ({ ...s, open: false })), []);
 
-  const confirm = useCallback((options: ConfirmOptions) => {
-    setConfirmState({ ...options, id: uid() });
-    return new Promise<boolean>((resolve) => {
-      resolver.current = resolve;
-    });
-  }, []);
+  // a second question asked while one is open replaces it; the first is answered "no"
+  const confirm = useCallback(
+    (options: ConfirmOptions) => {
+      setConfirmState({ ...options, id: uid() });
+      return confirmGate.ask();
+    },
+    [confirmGate],
+  );
 
-  const settle = useCallback((result: boolean) => {
-    resolver.current?.(result);
-    resolver.current = null;
-    setConfirmState(null);
-  }, []);
+  const settle = useCallback(
+    (result: boolean) => {
+      confirmGate.answer(result);
+      setConfirmState(null);
+    },
+    [confirmGate],
+  );
 
   const toast = useCallback((message: string, kind: ToastKind = 'success') => {
     const id = uid();
