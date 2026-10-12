@@ -12,10 +12,15 @@
     "start": "next start -H 127.0.0.1 -p 3000",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
+    "format": "prettier --write",
     "test": "vitest run",
+    "test:watch": "vitest",
     "coverage": "vitest run --coverage",
     "bench": "vitest run",
-    "e2e": "node tests/e2e/desktop-journey.mjs"
+    "e2e": "node tests/e2e/desktop-journey.mjs",
+    "e2e:android": "node tests/android/emulator-journey.mjs",
+    "check": "npm run typecheck && npm run lint && npm test",
+    "clean": "node scripts/clean.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.2",
@@ -41,6 +46,9 @@
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.3.8",
     "eslint-config-prettier": "^10.1.8",
+    "postcss": "^8.5.29",
+    "prettier": "^3.9.10",
+    "sharp": "^0.35.5",
     "tailwindcss": "^4.3.3",
     "typescript": "^5.9.3",
     "vitest": "^5.0.3"
