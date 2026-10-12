@@ -89,8 +89,17 @@ export function outcome(t: Trade): Outcome {
   return p > 0 ? 'WIN' : p < 0 ? 'LOSS' : 'BE';
 }
 
+/**
+ * Oldest first. The timestamps are ISO-style local times, which sort correctly
+ * as plain strings; a plain comparison also skips Intl's collation, which is
+ * slow on large journals.
+ */
 export function sortChronological(trades: Trade[]): Trade[] {
-  return [...trades].sort((a, b) => tradeTimestamp(a).localeCompare(tradeTimestamp(b)));
+  return [...trades].sort((a, b) => {
+    const x = tradeTimestamp(a);
+    const y = tradeTimestamp(b);
+    return x < y ? -1 : x > y ? 1 : 0;
+  });
 }
 
 /** closed, complete and not excluded — the set every statistic is built from */

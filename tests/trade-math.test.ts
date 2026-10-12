@@ -10,10 +10,11 @@ import {
   plannedRR,
   riskAmount,
   rMultiple,
+  sortChronological,
   statTrades,
   tradeDay,
 } from '@/lib/trade-math';
-import { trade } from './helpers';
+import { seeded, shuffle, trade } from './helpers';
 
 describe('grossPnl and netPnl', () => {
   it.each([
@@ -150,5 +151,35 @@ describe('completeness and the set statistics are built from', () => {
     const excluded = trade({ excluded: true });
     const incomplete = trade({ entryPrice: 0 });
     expect(statTrades([counted, open, excluded, incomplete])).toEqual([counted]);
+  });
+});
+
+describe('sortChronological', () => {
+  // the journal stores local wall-clock times: YYYY-MM-DDTHH:mm, sometimes :ss
+  const stamp = (rand: () => number) => {
+    const two = (n: number) => String(n).padStart(2, '0');
+    const base = `20${two(24 + Math.floor(rand() * 4))}-${two(1 + Math.floor(rand() * 12))}-${two(1 + Math.floor(rand() * 28))}T${two(Math.floor(rand() * 24))}:${two(Math.floor(rand() * 60))}`;
+    return rand() < 0.3 ? `${base}:${two(Math.floor(rand() * 60))}` : base;
+  };
+
+  it('puts trades in the order of their close (or open, while open), exactly as localeCompare did', () => {
+    const rand = seeded(7);
+    const trades = Array.from({ length: 2000 }, (_, i) => {
+      const t = stamp(rand);
+      return rand() < 0.2 ? trade({ id: `o${i}`, openedAt: t, closedAt: undefined }) : trade({ id: `c${i}`, closedAt: t });
+    });
+    const when = (t: (typeof trades)[number]) => t.closedAt || t.openedAt;
+    const before = [...trades].sort((a, b) => when(a).localeCompare(when(b)));
+    expect(sortChronological(trades).map((t) => t.id)).toEqual(before.map((t) => t.id));
+  });
+
+  it('keeps trades with the same time in the order they came in, and leaves the input alone', () => {
+    const same = ['a', 'b', 'c'].map((id) => trade({ id, closedAt: '2026-03-02T10:00' }));
+    const input = shuffle([...same, trade({ id: 'early', closedAt: '2026-03-02T09:59' })], seeded(3));
+    const copy = [...input];
+    const sorted = sortChronological(input);
+    expect(sorted[0].id).toBe('early');
+    expect(sorted.slice(1).map((t) => t.id)).toEqual(input.filter((t) => t.id !== 'early').map((t) => t.id));
+    expect(input).toEqual(copy);
   });
 });
