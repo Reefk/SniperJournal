@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowDownRight, ArrowUpRight, ChevronDown, Trash2, TriangleAlert } from 'lucide-react';
 import type { Side, Trade, TradeInput } from '@/lib/types';
 import { useJournal } from '@/store/JournalProvider';
@@ -10,6 +10,7 @@ import { formatDuration, formatMoney, formatRatio } from '@/lib/format';
 import { grossPnl, holdMinutes, isClosed, netPnl, plannedRR, riskAmount, rMultiple } from '@/lib/trade-math';
 import { cn, toLocalInput, toNumberOrNull } from '@/lib/utils';
 import { storage } from '@/lib/storage';
+import { chartsToDiscard, deleteScreenshot } from '@/lib/screenshots';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Field, Input, Select, Textarea } from '@/components/ui/Field';
@@ -190,6 +191,26 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
   const fallbackAccount = data.activeAccountId === 'all' ? data.accounts[0].id : data.activeAccountId;
   const [form, setForm] = useState<FormState>(() => initialState(fallbackAccount, trade, defaults));
   const [errors, setErrors] = useState<Errors>({});
+  // chart images added while the form is open. None is deleted until the
+  // form closes: saving keeps the one shown, Cancel the one the trade had.
+  const uploaded = useRef(new Set<string>());
+  const usedElsewhere = (name: string) => data.trades.some((t) => t.id !== trade?.id && t.screenshotFile === name);
+  const discardCharts = (kept: string | undefined) => {
+    for (const name of chartsToDiscard(uploaded.current, trade?.screenshotFile, kept, usedElsewhere)) {
+      void deleteScreenshot(name);
+    }
+    uploaded.current.clear();
+  };
+  // closed without saving (Cancel, Escape, the close button): only what was
+  // uploaded since it opened goes; the trade keeps its chart
+  useEffect(() => {
+    const added = uploaded.current;
+    const original = trade?.screenshotFile;
+    return () => {
+      for (const name of chartsToDiscard(added, original, original, () => true)) void deleteScreenshot(name);
+    };
+  }, [trade]);
+
   const [showAdvanced, setShowAdvanced] = useState(() =>
     Boolean(trade && (trade.manualPnl != null || (trade.multiplier && trade.multiplier !== 1) || trade.screenshotUrl)),
   );
@@ -232,6 +253,7 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
       setErrors(result.errors);
       return;
     }
+    discardCharts(result.input.screenshotFile);
     if (trade) {
       actions.updateTrade(trade.id, result.input);
       toast(`${result.input.symbol} trade updated`);
@@ -587,7 +609,10 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
 
           <ChartImage
             file={form.screenshotFile}
-            onChange={(name) => set('screenshotFile', name)}
+            onChange={(name) => {
+              if (name) uploaded.current.add(name);
+              set('screenshotFile', name);
+            }}
             onError={(message) => toast(message, 'error')}
           />
 

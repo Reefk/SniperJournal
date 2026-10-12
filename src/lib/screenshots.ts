@@ -76,6 +76,27 @@ export function imagesOnlyIn(removed: readonly Trade[], remaining: readonly Trad
   return [...new Set(names)];
 }
 
+/**
+ * Which chart images to delete when the trade form closes. Nothing is deleted
+ * while it is open, so Cancel always puts the trade back as it was.
+ *
+ * `uploaded` are the images added while the form was open, `original` the
+ * trade's chart when the form opened, and `kept` the chart the trade has
+ * now: the one saved, or after Cancel the original again. An image is
+ * deleted when the trade no longer shows it, unless another trade does.
+ */
+export function chartsToDiscard(
+  uploaded: Iterable<string>,
+  original: string | undefined,
+  kept: string | undefined,
+  usedElsewhere: (name: string) => boolean,
+): string[] {
+  const out = new Set<string>();
+  for (const name of uploaded) if (name !== kept) out.add(name);
+  if (original && original !== kept && !usedElsewhere(original)) out.add(original);
+  return [...out];
+}
+
 export async function deleteScreenshot(name: string): Promise<void> {
   try {
     await storage.deleteImage(name);

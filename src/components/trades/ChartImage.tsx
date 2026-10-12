@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { ExternalLink, ImagePlus, LoaderCircle, Maximize2, Trash2 } from 'lucide-react';
-import { deleteScreenshot, imageFromTransfer, screenshotSrc, uploadScreenshot } from '@/lib/screenshots';
+import { imageFromTransfer, screenshotSrc, uploadScreenshot } from '@/lib/screenshots';
 import { cn } from '@/lib/utils';
 import { storage } from '@/lib/storage';
 import { Modal } from '@/components/ui/Modal';
@@ -12,6 +12,10 @@ import { Button } from '@/components/ui/Button';
  * Add the chart you were looking at. Click, drag an image in, or just paste
  * with Ctrl+V while the trade form is open — screenshotting a chart and
  * pasting it is the fastest way to do this.
+ *
+ * Replacing or removing a chart deletes no file here: the form decides once
+ * it closes (chartsToDiscard), so Cancel always leaves the trade's chart
+ * where it was.
  */
 export function ChartImage({
   file,
@@ -30,7 +34,6 @@ export function ChartImage({
   const accept = async (picked: File | null | undefined) => {
     if (!picked) return;
     setBusy(true);
-    const previous = file;
     const { name, error } = await uploadScreenshot(picked);
     setBusy(false);
     if (error || !name) {
@@ -38,7 +41,6 @@ export function ChartImage({
       return;
     }
     onChange(name);
-    if (previous) void deleteScreenshot(previous);
   };
 
   // paste a screenshot straight into the open form
@@ -53,10 +55,7 @@ export function ChartImage({
     return () => document.removeEventListener('paste', onPaste);
   });
 
-  const remove = () => {
-    if (file) void deleteScreenshot(file);
-    onChange(undefined);
-  };
+  const remove = () => onChange(undefined);
 
   return (
     <div className="rounded-lg border border-line p-4">
