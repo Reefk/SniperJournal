@@ -336,6 +336,19 @@ Restore from a backup**.
 folder, so it is holding your changes in the browser instead. Restart it with
 `start.bat`; your work is written to disk as soon as it can be.
 
+**"This browser won't keep a spare copy of your journal".** Every change is
+also copied into the browser, in case the app is closed before its save is
+done. A journal over about 7,500 trades is too big for that copy, and a browser
+whose storage is full or turned off refuses it. Nothing else changes: the
+journal file is saved after every change as before. The message is shown once
+each time you open the app; **Support** says the same under "Your journal file".
+
+**The sidebar says "Not saved".** The app can't reach its data folder *and* the
+browser can't keep a copy, so your latest changes are only on the screen. Keep
+the app open: they are written to disk as soon as the folder can be reached
+(restart it with `start.bat` if that doesn't happen). To be safe, use
+**Download a backup** in the message at the top of the page.
+
 **The launcher says it has not been set up.** You opened `start.bat` before
 `INSTALLER.bat`. Run the installer first.
 

@@ -183,7 +183,7 @@ No Critical findings were made.
 | SJ-34 | Low | Accessibility | Charts have no text alternative | Confirmed (code) |
 | SJ-35 | Low | Product / Store | UI says "AI Insights"; the analysis is rule-based and the store listing avoids "AI" | Fixed (2026-10-09; store screenshot 05 still to retake) |
 | SJ-36 | Low | Persistence | Screenshots: orphaned on account delete/reset; not in backups | Orphans fixed (2026-10-12; merges, and Settings → Reclaim unused chart images, 2026-10-13); backups still exclude images (documented) |
-| SJ-37 | Info | Persistence | Desktop `localStorage` mirror fails silently past about 5 MB | Accepted Risk |
+| SJ-37 | Info | Persistence | Desktop `localStorage` mirror fails silently past about 5 MB | Fixed and Verified (2026-10-13) |
 | SJ-38 | Info | Dependencies | Dev-only advisories: `@capacitor/cli` (3 moderate) and, since 2026-10-12, `eslint-config-next` (5 high, `braces`) | Accepted Risk |
 | SJ-39 | Info | Persistence | A cleaned-up journal is only written back on the next change | Accepted Risk |
 | SJ-40 | Info | Accessibility | Two different inputs are both named "Search trades" | Confirmed |
@@ -664,7 +664,9 @@ No Critical findings were made.
 - **Location:** `src/store/JournalProvider.tsx:20-30,147-160`
 - **Behaviour:** On desktop the journal is also mirrored to `localStorage`, and on load the newer of disk and mirror (by `updatedAt`) wins. Above roughly 5 MB (about 10,000 trades; the 10k benchmark journal is 5.36 MB), the browser rejects the mirror write. The error is swallowed by design.
 - **Impact:** None while the disk save works. Only if the server cannot write to `data/` *and* the journal is past the limit is the latest change kept nowhere. The status pill does show "browser" in that state.
-- **Status:** Accepted Risk.
+- **Status:** Fixed and Verified (2026-10-13).
+- **Fix:** a copy over `MIRROR_LIMIT` (4,000,000 characters, about 7,500 trades) is not tried, and one the browser refuses is caught (`storeMirror`, `src/store/mirror.ts`). Either way the context's `copyMiss` says why. While the file saves as usual, a calm notice says so once a session. If the file can't be written either, the status is the new `unsaved` ("Not saved", red) instead of "Saved in browser", and the notice comes back offering a backup download. Support explains each case.
+- **Verified:** `tests/mirror.test.ts` (fits, over the limit and not tried, full, storage blocked). `npm run e2e` section 16 fills the browser's real storage to the last character, then: the calm notice, the change still on disk, "Saved to disk", the old copy untouched, not said again once dismissed; with the journal file held open, "Not saved" and the notice with a backup download, both gone once the save lands; with room again, the copy is kept.
 
 ### SJ-38: npm audit (dev-only)
 
@@ -764,7 +766,7 @@ Also covered:
 
 ## 9. Persistence, backup, restore and migrations
 
-**Fixed:** SJ-05, SJ-11, SJ-12. **Open:** SJ-32, SJ-36, SJ-37, SJ-39.
+**Fixed:** SJ-05, SJ-11, SJ-12, SJ-37. **Open:** SJ-32, SJ-36, SJ-39.
 
 **Verified behaviour.**
 

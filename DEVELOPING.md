@@ -168,7 +168,7 @@ anything an existing `journal.json` does not have yet.
 ```
 you type in the form
   → JournalProvider updates its state
-  → the whole journal is written to localStorage immediately
+  → the whole journal is written to localStorage immediately (src/store/mirror.ts)
   → 350ms later it goes to storage.writeJournal()   (src/store/autosave.ts)
   → on a PC that is a PUT to /api/journal, which writes data/journal.json:
     one save at a time, to a temp file flushed to the disk, then renamed
@@ -197,6 +197,19 @@ which tab wrote it and which file version it was made on top of
 (`src/store/mirror.ts`). At startup it only wins over the file while it is
 newer *and* based on the file as it is now; a newer copy made on top of an
 older file is kept as a conflict copy instead of being opened.
+
+**When the browser can't keep its copy.** A copy over `MIRROR_LIMIT` (4
+million characters, about 7,500 trades; browsers allow about 5 million per
+site) isn't tried, and one the browser refuses (full, or storage turned off)
+is caught. Either way the previous copy is left as it was (it is older than
+the file, so the file still opens) and `copyMiss` in the journal context says
+why. While the file is saved as usual that only loses the spare, and a notice
+says so calmly, once a session (`CopyNotice` in
+`src/components/layout/SaveConflict.tsx`). If the file can't be written
+either, the status is `unsaved` rather than `browser`: the sidebar says "Not
+saved" and the notice comes back, offering a backup download. On a phone, which
+only keeps a copy while its folder can't be written, only the second can
+happen.
 
 **When something crashes.** A page that throws while drawing is replaced by
 `src/app/error.tsx`, inside the app: the sidebar, the journal and saving
