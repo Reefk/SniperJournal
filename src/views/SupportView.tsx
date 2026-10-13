@@ -1,7 +1,9 @@
 'use client';
 
 import { FolderOpen, HardDrive, Keyboard, LifeBuoy, ShieldCheck, Upload } from 'lucide-react';
-import { useJournal } from '@/store/JournalProvider';
+import { useJournal, type SaveStatus } from '@/store/JournalProvider';
+import type { CopyMiss } from '@/store/mirror';
+import { WHY_NO_COPY } from '@/components/layout/SaveConflict';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { storage } from '@/lib/storage';
 import { cn } from '@/lib/utils';
@@ -16,7 +18,7 @@ const SHORTCUTS = [
 const FAQ: Array<{ q: string; a: string }> = [
   {
     q: 'Where exactly is my data kept?',
-    a: 'In a plain JSON file at data/journal.json inside the Sniper Journal folder on this PC. Nothing is uploaded anywhere, and the app works with your internet disconnected. A copy is also mirrored into this browser so your work survives if the app is closed mid-edit.',
+    a: 'In a plain JSON file at data/journal.json inside the Sniper Journal folder on this PC. Nothing is uploaded anywhere, and the app works with your internet disconnected. A copy is also mirrored into this browser so your work survives if the app is closed mid-edit, as long as the journal fits in the browser (up to about 7,500 trades).',
   },
   {
     q: 'What happens if I break something?',
@@ -79,8 +81,33 @@ const QUESTIONS = native
     })
   : FAQ;
 
+/** what happened to the latest changes, in words */
+function fileStatus(status: SaveStatus, copyMiss: CopyMiss | null): string {
+  const why = copyMiss ? WHY_NO_COPY[copyMiss] : '';
+  switch (status) {
+    case 'error':
+      return copyMiss
+        ? `The journal file could not be read when the app started, so it is being left exactly as it is rather than saved over. ${native ? 'The app' : 'This browser'} can't keep your changes either (${why}), so changes made now are not saved anywhere. Download a backup before you close the app, then close and reopen it to try again.`
+        : `The journal file could not be read when the app started, so it is being left exactly as it is rather than saved over. Your changes are kept ${native ? 'temporarily' : 'in this browser'} for now. Close and reopen the app to try again. If this keeps happening, restore your latest backup in Settings.`;
+    case 'conflict':
+      return 'Another tab, window or copy of the app saved the journal after this window opened it, so this window stopped saving rather than write over that work. Its own version was kept as a copy in your backups. Reload to carry on.';
+    case 'browser':
+      return native
+        ? 'The app cannot write its file right now, so changes are being kept temporarily. They will be written as soon as it can.'
+        : 'The app cannot reach its file right now, so changes are being kept in this browser only. They will be written to disk as soon as it is reachable again.';
+    case 'unsaved':
+      return native
+        ? `The app cannot write its file right now and can't keep a temporary copy either (${why}), so your latest changes are not saved anywhere yet. Keep the app open: they will be written as soon as it can. To be safe, save a backup.`
+        : `The app cannot reach its file right now and this browser can't keep a copy either (${why}), so your latest changes are not saved anywhere yet. Keep the app open: they will be written to disk as soon as the file is reachable again. To be safe, download a backup.`;
+    default:
+      return copyMiss && !native
+        ? `Saved automatically a moment after every change. The spare copy in this browser is off: ${why}.`
+        : 'Saved automatically a moment after every change.';
+  }
+}
+
 export function SupportView() {
-  const { filePath, saveStatus } = useJournal();
+  const { filePath, saveStatus, copyMiss } = useJournal();
 
   return (
     <>
@@ -91,15 +118,7 @@ export function SupportView() {
           <HardDrive className="size-5 text-accent" />
           <h2 className="mt-3 text-sm font-semibold text-fg">Your journal file</h2>
           <p className="mt-1.5 text-sm leading-relaxed text-muted">
-            {saveStatus === 'error'
-              ? `The journal file could not be read when the app started, so it is being left exactly as it is rather than saved over. Your changes are kept ${native ? 'temporarily' : 'in this browser'} for now. Close and reopen the app to try again. If this keeps happening, restore your latest backup in Settings.`
-              : saveStatus === 'conflict'
-              ? 'Another tab, window or copy of the app saved the journal after this window opened it, so this window stopped saving rather than write over that work. Its own version was kept as a copy in your backups. Reload to carry on.'
-              : saveStatus === 'browser'
-              ? native
-                ? 'The app cannot write its file right now, so changes are being kept temporarily. They will be written as soon as it can.'
-                : 'The app cannot reach its file right now, so changes are being kept in this browser only. They will be written to disk as soon as it is reachable again.'
-              : 'Saved automatically a moment after every change.'}
+            {fileStatus(saveStatus, copyMiss)}
           </p>
           {filePath && (
             <p className="num mt-3 break-all rounded-md border border-line bg-app px-3 py-2 text-xs text-muted">

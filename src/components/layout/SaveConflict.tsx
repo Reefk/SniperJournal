@@ -1,8 +1,12 @@
 'use client';
 
-import { Download, Info, RotateCw } from 'lucide-react';
+import { useState } from 'react';
+import { CircleAlert, Download, Info, RotateCw } from 'lucide-react';
 import { useJournal } from '@/store/JournalProvider';
+import type { CopyMiss } from '@/store/mirror';
 import { exportBackup } from '@/lib/backup';
+import { storage } from '@/lib/storage';
+import { cn } from '@/lib/utils';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 
@@ -59,6 +63,70 @@ export function SaveConflictDialog() {
         <p>Reload to carry on with the journal as it is saved now.</p>
       </div>
     </Modal>
+  );
+}
+
+/** why the browser isn't keeping its copy of the journal, in words */
+export const WHY_NO_COPY: Record<CopyMiss, string> = {
+  'too-big': 'the journal is too large for it',
+  refused: 'its storage is full or turned off',
+};
+
+const native = storage.kind === 'native';
+
+/**
+ * Said once a session when the browser can't keep its copy of the journal.
+ * Calmly while the file is saved as usual: on a PC the copy is only a spare,
+ * for a window closed before its last save. Once more, and not calmly, if
+ * changes then aren't saved anywhere; dismissing that one covers both. A
+ * phone keeps a copy only while its folder can't be written, so it only ever
+ * gets the second.
+ */
+export function CopyNotice() {
+  const { copyMiss, saveStatus, data } = useJournal();
+  const [seen, setSeen] = useState<Array<'off' | 'lost'>>([]);
+  if (!copyMiss || saveStatus === 'conflict') return null;
+  const lost = saveStatus === 'unsaved' || saveStatus === 'error';
+  if (seen.includes(lost ? 'lost' : 'off') || (native && !lost)) return null;
+  const why = WHY_NO_COPY[copyMiss];
+
+  return (
+    <div
+      role="status"
+      className={cn(
+        'flex flex-wrap items-start gap-3 border-b px-4 py-2 text-sm md:px-6',
+        lost ? 'border-loss/25 bg-loss/10' : 'border-accent/25 bg-accent/10',
+      )}
+    >
+      {lost ? (
+        <CircleAlert className="mt-0.5 size-4 shrink-0 text-loss" />
+      ) : (
+        <Info className="mt-0.5 size-4 shrink-0 text-accent" />
+      )}
+      <span className="min-w-0 flex-1 text-fg">
+        {!lost
+          ? copyMiss === 'too-big'
+            ? 'Your journal is now too large for this browser to keep its spare copy. Nothing else changes: it is still saved to the journal file a moment after every change.'
+            : `This browser won't keep a spare copy of your journal (${why}). Nothing else changes: it is still saved to the journal file a moment after every change.`
+          : saveStatus === 'error'
+            ? `The journal file couldn't be read when the app started, and ${native ? 'the app' : 'this browser'} can't keep your changes either (${why}), so changes made now aren't saved anywhere. Download a backup before you close the app.`
+            : `Your latest changes aren't saved anywhere yet: ${native ? "the app can't write its file right now and can't keep a temporary copy" : "the journal file can't be reached and this browser can't keep a copy"} (${why}). They are written as soon as the file can be. To be safe, download a backup before you close the app.`}
+      </span>
+      <span className="ml-auto flex gap-2">
+        {lost && (
+          <Button size="sm" variant="secondary" onClick={() => exportBackup(data)}>
+            <Download className="size-4" /> Download a backup
+          </Button>
+        )}
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() => setSeen((list) => [...list, 'off', ...(lost ? (['lost'] as const) : [])])}
+        >
+          OK
+        </Button>
+      </span>
+    </div>
   );
 }
 

@@ -30,6 +30,31 @@ export function encodeMirror(journal: JournalData, base: string | null, tab: str
   return JSON.stringify({ tab, base, journal });
 }
 
+/**
+ * The largest copy that is tried. A browser keeps about 5 million characters
+ * per site, shared with everything else the app stores there; a journal
+ * larger than this (about 7,500 trades) would be refused anyway, after costing
+ * time on every change.
+ */
+export const MIRROR_LIMIT = 4_000_000;
+
+/** why the copy isn't in the browser: too big to try, or the browser said no (full, or storage turned off) */
+export type CopyMiss = 'too-big' | 'refused';
+
+/**
+ * Puts the copy in the browser. Null when it is there; otherwise why not, and
+ * whatever copy was there before is left as it was.
+ */
+export function storeMirror(raw: string, store: () => Pick<Storage, 'setItem'> = () => localStorage): CopyMiss | null {
+  if (raw.length > MIRROR_LIMIT) return 'too-big';
+  try {
+    store().setItem(MIRROR_KEY, raw);
+    return null;
+  } catch {
+    return 'refused';
+  }
+}
+
 /** what the browser holds; a copy from before versions were recorded counts as `legacy` */
 export function decodeMirror(raw: string | null): Mirror | null {
   if (!raw) return null;

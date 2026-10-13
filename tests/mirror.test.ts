@@ -1,6 +1,14 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { JournalData } from '@/lib/types';
-import { decodeMirror, encodeMirror, pickJournal, rebaseMirror } from '@/store/mirror';
+import {
+  decodeMirror,
+  encodeMirror,
+  MIRROR_KEY,
+  MIRROR_LIMIT,
+  pickJournal,
+  rebaseMirror,
+  storeMirror,
+} from '@/store/mirror';
 
 const journal = (updatedAt: string, note = updatedAt) =>
   ({ version: 1, updatedAt, trades: [{ id: note }], accounts: [] }) as unknown as JournalData;
@@ -21,6 +29,34 @@ describe('the browser copy of the journal', () => {
     expect(decodeMirror('not json')).toBeNull();
     expect(decodeMirror('7')).toBeNull();
     expect(decodeMirror(JSON.stringify({ journal: null, base: 'v1' }))).toBeNull();
+  });
+});
+
+describe('putting the copy in the browser', () => {
+  it('stores a copy that fits, under the one key every tab shares', () => {
+    const setItem = vi.fn();
+    expect(storeMirror('x'.repeat(MIRROR_LIMIT), () => ({ setItem }))).toBeNull();
+    expect(setItem).toHaveBeenCalledWith(MIRROR_KEY, 'x'.repeat(MIRROR_LIMIT));
+  });
+
+  it('does not even try a copy over the limit, and says it is too big', () => {
+    const setItem = vi.fn();
+    expect(storeMirror('x'.repeat(MIRROR_LIMIT + 1), () => ({ setItem }))).toBe('too-big');
+    expect(setItem).not.toHaveBeenCalled();
+  });
+
+  it('says the browser refused it when its storage is full', () => {
+    const full = () => {
+      throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
+    };
+    expect(storeMirror('{}', () => ({ setItem: full }))).toBe('refused');
+  });
+
+  it('says the same when the browser has storage turned off altogether', () => {
+    const blocked = () => {
+      throw new DOMException('Access is denied for this document.', 'SecurityError');
+    };
+    expect(storeMirror('{}', blocked)).toBe('refused');
   });
 });
 

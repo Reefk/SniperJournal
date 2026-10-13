@@ -41,11 +41,11 @@ const NAV = [
 
 const SAVE_LABEL: Record<SaveStatus, string> =
   storage.kind === 'native'
-    ? { saved: 'Saved on this device', saving: 'Saving…', browser: 'Saved temporarily', error: 'Journal file unreadable', conflict: 'Changed elsewhere' }
-    : { saved: 'Saved to disk', saving: 'Saving…', browser: 'Saved in browser', error: 'Journal file unreadable', conflict: 'Changed elsewhere' };
+    ? { saved: 'Saved on this device', saving: 'Saving…', browser: 'Saved temporarily', unsaved: 'Not saved', error: 'Journal file unreadable', conflict: 'Changed elsewhere' }
+    : { saved: 'Saved to disk', saving: 'Saving…', browser: 'Saved in browser', unsaved: 'Not saved', error: 'Journal file unreadable', conflict: 'Changed elsewhere' };
 
 /** the states where changes are not reaching the file */
-const ALARM: SaveStatus[] = ['error', 'conflict'];
+const ALARM: SaveStatus[] = ['unsaved', 'error', 'conflict'];
 
 /** "online" means nothing to an app that never uses the network on a phone */
 const SHOW_ONLINE = storage.kind === 'web';
