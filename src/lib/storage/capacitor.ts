@@ -3,7 +3,7 @@ import { Directory, Encoding, Filesystem } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import type { JournalData } from '@/lib/types';
 import { KEEP_COPIES, copyStamp, type CopyReason, type JournalStorage } from './types';
-import { findUnused, removeUnused, type SweepFiles, type UnusedImage } from './sweep';
+import { IMAGE_NAME, findUnused, removeUnused, type SweepFiles, type UnusedImage } from './sweep';
 
 /**
  * The phone implementation: the journal and its chart images live in the
@@ -127,7 +127,22 @@ function toBase64(blob: Blob): Promise<string> {
 
 /** only ever touch a plain generated filename, never a path */
 function safeName(raw: string): string | null {
-  return /^[a-z0-9]{6,40}\.(png|jpe?g|webp|gif)$/i.test(raw) ? raw : null;
+  return IMAGE_NAME.test(raw) ? raw : null;
+}
+
+/**
+ * Every kept copy of the journal in backups/. A folder that is not there yet
+ * is made (empty), so that a listing that still fails is an error, never "no
+ * backups": `exists()` cannot tell a missing folder from one it failed to check.
+ */
+async function keptCopies(): Promise<string[]> {
+  await Filesystem.mkdir({ path: BACKUP_DIR, recursive: true, ...data }).catch(() => undefined);
+  const { files } = await Filesystem.readdir({ path: BACKUP_DIR, ...data });
+  return files
+    .map((f) => f.name)
+    .filter((n) => n.endsWith('.json'))
+    .sort()
+    .map((n) => `${BACKUP_DIR}/${n}`);
 }
 
 const sweepFiles: SweepFiles = {
@@ -139,13 +154,17 @@ const sweepFiles: SweepFiles = {
       .map((f) => ({ name: f.name, modified: f.mtime, bytes: f.size }));
   },
   async journals() {
-    if (!(await exists(BACKUP_DIR))) return [FILE];
-    // a backups folder that is there but cannot be listed stops the search
-    const { files } = await Filesystem.readdir({ path: BACKUP_DIR, ...data });
-    const copies = files.map((f) => f.name).filter((n) => n.endsWith('.json')).sort();
-    return [FILE, ...copies.map((n) => `${BACKUP_DIR}/${n}`)];
+    return [FILE, ...(await keptCopies())];
   },
-  read: readText,
+  async read(path) {
+    try {
+      return await readText(path);
+    } catch (err) {
+      // a copy pruned by a save since it was listed is gone from a fresh listing too
+      if (path !== FILE && !(await keptCopies()).includes(path)) return null;
+      throw err;
+    }
+  },
   remove: async (name) => {
     await Filesystem.deleteFile({ path: `${SHOTS_DIR}/${name}`, ...data });
   },
@@ -230,8 +249,8 @@ export const capacitorStorage: JournalStorage = {
     return findUnused(sweepFiles, inUse);
   },
 
-  removeUnusedImages(inUse: string[]): Promise<UnusedImage[]> {
-    return removeUnused(sweepFiles, inUse);
+  removeUnusedImages(inUse: string[], approved: string[]): Promise<UnusedImage[]> {
+    return removeUnused(sweepFiles, inUse, approved);
   },
 
   async exportFile(filename: string, content: string) {

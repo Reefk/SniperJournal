@@ -33,14 +33,14 @@ async function put(data: JournalData): Promise<string | null> {
 }
 
 /** the server holds the journal file and its backups, so it decides which images are unused */
-async function unusedImages(inUse: string[], remove: boolean): Promise<UnusedImage[]> {
+async function unusedImages(body: { inUse: string[]; remove?: string[] }): Promise<UnusedImage[]> {
   const res = await fetch('/api/screenshot?unused', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ inUse, remove }),
+    body: JSON.stringify(body),
   });
   const json = await res.json();
-  if (!json?.ok) throw new Error(json?.error ?? 'Could not tell which chart images are still used.');
+  if (!json?.ok) throw new Error(json?.error ?? 'Could not tell which chart images are still used, so none was deleted.');
   return json.images as UnusedImage[];
 }
 
@@ -108,11 +108,11 @@ export const webStorage: JournalStorage = {
   },
 
   findUnusedImages(inUse: string[]): Promise<UnusedImage[]> {
-    return unusedImages(inUse, false);
+    return unusedImages({ inUse });
   },
 
-  removeUnusedImages(inUse: string[]): Promise<UnusedImage[]> {
-    return unusedImages(inUse, true);
+  removeUnusedImages(inUse: string[], approved: string[]): Promise<UnusedImage[]> {
+    return unusedImages({ inUse, remove: approved });
   },
 
   async exportFile(filename: string, content: string, mimeType: string) {

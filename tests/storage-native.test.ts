@@ -9,7 +9,17 @@ const fs = vi.hoisted(() => {
   const files = new Map<string, string>();
   /** last modified, where a test sets it; anything else is from 1970 */
   const mtimes = new Map<string, number>();
-  const failures = { renameOverExisting: false, writeFile: false, slowWrites: 0 };
+  const failures = {
+    renameOverExisting: false,
+    writeFile: false,
+    slowWrites: 0,
+    /** a path whose stat fails for some other reason than "not found" */
+    statFails: '',
+    /** a folder whose listing fails */
+    readdirFails: '',
+    /** a file deleted just as it is read, the way a save prunes an old backup */
+    vanishOnRead: '',
+  };
   const key = (dir: string | undefined, path: string) => `${dir ?? 'DATA'}:${path}`;
   const notFound = (path: string) => Object.assign(new Error(`'${path}' does not exist`), { code: 'OS-PLUG-FILE-0008' });
   return { files, mtimes, failures, key, notFound };
@@ -23,12 +33,17 @@ vi.mock('@capacitor/filesystem', () => ({
       return { uri: `file:///data/user/0/com.sniperjournal.app/files${path ? `/${path}` : ''}` };
     },
     async stat({ path, directory }: { path: string; directory?: string }) {
+      if (fs.failures.statFails === path) throw new Error('Input/output error');
       const k = fs.key(directory, path);
       // a folder is there while anything is in it
       if (!fs.files.has(k) && ![...fs.files.keys()].some((f) => f.startsWith(`${k}/`))) throw fs.notFound(path);
       return { size: fs.files.get(fs.key(directory, path))?.length ?? 0 };
     },
     async readFile({ path, directory }: { path: string; directory?: string }) {
+      if (fs.failures.vanishOnRead === path) {
+        fs.files.delete(fs.key(directory, path));
+        throw fs.notFound(path);
+      }
       const v = fs.files.get(fs.key(directory, path));
       if (v == null) throw fs.notFound(path);
       return { data: v };
@@ -58,6 +73,7 @@ vi.mock('@capacitor/filesystem', () => ({
       return { uri: to };
     },
     async readdir({ path, directory }: { path: string; directory?: string }) {
+      if (fs.failures.readdirFails === path) throw new Error('Input/output error');
       const prefix = fs.key(directory, `${path}/`);
       return {
         files: [...fs.files.keys()]
@@ -99,7 +115,14 @@ async function freshStorage() {
 beforeEach(() => {
   fs.files.clear();
   fs.mtimes.clear();
-  Object.assign(fs.failures, { renameOverExisting: false, writeFile: false, slowWrites: 0 });
+  Object.assign(fs.failures, {
+    renameOverExisting: false,
+    writeFile: false,
+    slowWrites: 0,
+    statFails: '',
+    readdirFails: '',
+    vanishOnRead: '',
+  });
   share.calls.length = 0;
   share.cancel = false;
   vi.useRealTimers();
@@ -252,17 +275,51 @@ describe('chart images and exports', () => {
       fs.files.set('DATA:backups/conflict-20261012-101500.json', mentioning('other001.webp'));
       expect(await s.findUnusedImages(['shown001.png'])).toEqual([{ name: 'orphan01.jpg', bytes: 1 }]);
       expect(left()).toContain('orphan01.jpg');
-      expect(await s.removeUnusedImages(['shown001.png'])).toEqual([{ name: 'orphan01.jpg', bytes: 1 }]);
+      expect(await s.removeUnusedImages(['shown001.png'], ['orphan01.jpg'])).toEqual([{ name: 'orphan01.jpg', bytes: 1 }]);
       expect(left()).toEqual(['fresh001.png', 'notes.txt', 'other001.webp', 'saved001.png', 'shown001.png']);
     });
 
     it('with no journal file, or no screenshots folder, it deletes nothing', async () => {
       const s = await freshStorage();
-      expect(await s.removeUnusedImages([])).toEqual([]);
+      expect(await s.removeUnusedImages([], ['orphan01.png'])).toEqual([]);
       shot('orphan01.png');
-      await expect(s.findUnusedImages([])).rejects.toThrow();
-      await expect(s.removeUnusedImages([])).rejects.toThrow();
+      await expect(s.findUnusedImages([])).rejects.toThrow('Your journal file could not be read');
+      await expect(s.removeUnusedImages([], ['orphan01.png'])).rejects.toThrow();
       expect(left()).toEqual(['orphan01.png']);
+    });
+
+    it('a backups folder that could not be checked is still searched, never taken for "no backups"', async () => {
+      const s = await freshStorage();
+      shot('other001.webp');
+      shot('orphan01.png');
+      fs.files.set('DATA:journal.json', mentioning());
+      fs.files.set('DATA:backups/conflict-20261012-101500.json', mentioning('other001.webp'));
+      fs.failures.statFails = 'backups';
+      expect(await s.findUnusedImages([])).toEqual([{ name: 'orphan01.png', bytes: 1 }]);
+    });
+
+    it('a backups folder that cannot be listed stops the search', async () => {
+      const s = await freshStorage();
+      shot('orphan01.png');
+      fs.files.set('DATA:journal.json', mentioning());
+      fs.files.set('DATA:backups/journal-2026-10-01.json', mentioning());
+      fs.failures.readdirFails = 'backups';
+      await expect(s.removeUnusedImages([], ['orphan01.png'])).rejects.toThrow('The backups folder could not be read');
+      expect(left()).toEqual(['orphan01.png']);
+    });
+
+    it('a backup pruned between listing and reading is skipped; a damaged one stops the search', async () => {
+      const s = await freshStorage();
+      shot('daily001.png');
+      shot('orphan01.png');
+      fs.files.set('DATA:journal.json', mentioning());
+      fs.files.set('DATA:backups/journal-2026-09-01.json', mentioning());
+      fs.files.set('DATA:backups/journal-2026-10-01.json', mentioning('daily001.png'));
+      fs.failures.vanishOnRead = 'backups/journal-2026-09-01.json';
+      expect(await s.findUnusedImages([])).toEqual([{ name: 'orphan01.png', bytes: 1 }]);
+      fs.failures.vanishOnRead = '';
+      fs.files.set('DATA:backups/journal-2026-10-01.json', mentioning('daily001.png').slice(0, 20));
+      await expect(s.findUnusedImages([])).rejects.toThrow('The backup journal-2026-10-01.json is damaged');
     });
   });
 

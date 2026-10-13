@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { refuseForeign } from '../local-only';
-import { findUnused, removeUnused, type StoredImage, type SweepFiles } from '@/lib/storage/sweep';
+import { IMAGE_NAME, SweepError, findUnused, removeUnused, type StoredImage, type SweepFiles } from '@/lib/storage/sweep';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -31,7 +31,7 @@ const MAX_BYTES = 8 * 1024 * 1024;
 /** only ever touch a plain generated filename, never a path from the client */
 function safeName(raw: string | null): string | null {
   if (!raw) return null;
-  return /^[a-z0-9]{6,40}\.(png|jpe?g|webp|gif)$/i.test(raw) ? raw : null;
+  return IMAGE_NAME.test(raw) ? raw : null;
 }
 
 export async function GET(request: Request) {
@@ -81,33 +81,48 @@ const sweepFiles: SweepFiles = {
     const copies = (await entries(BACKUP_DIR)).filter((f) => f.endsWith('.json')).sort();
     return [JOURNAL, ...copies.map((f) => path.join(BACKUP_DIR, f))];
   },
-  read: (file) => fs.readFile(file, 'utf8'),
+  async read(file) {
+    try {
+      return await fs.readFile(file, 'utf8');
+    } catch (err) {
+      // a copy pruned by a save since it was listed protects nothing any more
+      if (file !== JOURNAL && (err as NodeJS.ErrnoException).code === 'ENOENT') return null;
+      throw err;
+    }
+  },
   remove: (name) => fs.unlink(path.join(DIR, name)),
 };
+
+const names = (value: unknown): value is string[] => Array.isArray(value) && value.every((n) => typeof n === 'string');
 
 /**
  * POST /api/screenshot?unused, sent { inUse: [names] }: the images nothing
  * uses any more, with their sizes (see lib/storage/sweep.ts). Sent
- * { inUse, remove: true } it deletes them, and answers with those that went.
+ * { inUse, remove: [names] } it deletes those of them still unused, and
+ * answers with those that went.
  */
 async function unused(request: Request) {
-  let inUse: unknown;
-  let remove = false;
+  let body: { inUse?: unknown; remove?: unknown } | null;
   try {
-    const body = (await request.json()) as { inUse?: unknown; remove?: unknown } | null;
-    inUse = body?.inUse;
-    remove = body?.remove === true;
+    body = await request.json();
   } catch {
     return NextResponse.json({ ok: false, error: 'Malformed request body.' }, { status: 400 });
   }
-  if (!Array.isArray(inUse) || inUse.some((n) => typeof n !== 'string')) {
+  const inUse = body?.inUse;
+  const remove = body?.remove;
+  if (!names(inUse)) {
     return NextResponse.json({ ok: false, error: 'Say which images are in use.' }, { status: 400 });
   }
+  if (remove !== undefined && !names(remove)) {
+    return NextResponse.json({ ok: false, error: 'Say which images to delete.' }, { status: 400 });
+  }
   try {
-    const images = await (remove ? removeUnused : findUnused)(sweepFiles, inUse);
+    const images = remove ? await removeUnused(sweepFiles, inUse, remove) : await findUnused(sweepFiles, inUse);
     return NextResponse.json({ ok: true, images });
-  } catch {
-    return NextResponse.json({ ok: false, error: 'Could not tell which chart images are still used.' }, { status: 500 });
+  } catch (err) {
+    const error =
+      err instanceof SweepError ? err.message : 'Could not tell which chart images are still used, so none was deleted.';
+    return NextResponse.json({ ok: false, error }, { status: 500 });
   }
 }
 

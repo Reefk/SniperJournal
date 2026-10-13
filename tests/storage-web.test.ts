@@ -139,15 +139,17 @@ describe('reclaiming the chart images', () => {
       }),
     );
     expect(await webStorage.findUnusedImages(['shown001.png'])).toEqual([{ name: 'orphan01.png', bytes: 70 }]);
-    expect(await webStorage.removeUnusedImages(['shown001.png'])).toEqual([{ name: 'orphan01.png', bytes: 70 }]);
+    expect(await webStorage.removeUnusedImages(['shown001.png'], ['orphan01.png'])).toEqual([{ name: 'orphan01.png', bytes: 70 }]);
     expect(sent).toEqual([
-      { url: '/api/screenshot?unused', method: 'POST', body: { inUse: ['shown001.png'], remove: false } },
-      { url: '/api/screenshot?unused', method: 'POST', body: { inUse: ['shown001.png'], remove: true } },
+      { url: '/api/screenshot?unused', method: 'POST', body: { inUse: ['shown001.png'] } },
+      // only the images the person was shown
+      { url: '/api/screenshot?unused', method: 'POST', body: { inUse: ['shown001.png'], remove: ['orphan01.png'] } },
     ]);
   });
 
-  it('an answer the server could not give is an error', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ ok: false, error: 'Could not tell which chart images are still used.' }), { status: 500 })));
-    await expect(webStorage.findUnusedImages([])).rejects.toThrow('still used');
+  it("an answer the server could not give is an error carrying the server's reason", async () => {
+    const reason = 'Your journal file is damaged (it is not a complete journal), so no chart image was deleted.';
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ ok: false, error: reason }), { status: 500 })));
+    await expect(webStorage.findUnusedImages([])).rejects.toThrow(reason);
   });
 });

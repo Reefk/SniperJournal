@@ -3,15 +3,15 @@ import { chartsOnlyInSample, chartsToDiscard, findUnusedCharts, imagesOnlyIn, re
 import { mergeTrades } from '@/lib/merge';
 import { trade } from './helpers';
 
-const asked = vi.hoisted(() => [] as Array<[string, string[]]>);
+const asked = vi.hoisted(() => [] as Array<[string, string[], string[]?]>);
 vi.mock('@/lib/storage', () => ({
   storage: {
     async findUnusedImages(inUse: string[]) {
       asked.push(['find', inUse]);
       return [{ name: 'orphan01.png', bytes: 70 }];
     },
-    async removeUnusedImages(inUse: string[]) {
-      asked.push(['remove', inUse]);
+    async removeUnusedImages(inUse: string[], approved: string[]) {
+      asked.push(['remove', inUse, approved]);
       return [{ name: 'orphan01.png', bytes: 70 }];
     },
   },
@@ -106,13 +106,13 @@ describe('reclaiming the chart images nothing uses', () => {
     asked.length = 0;
   });
 
-  it('names the images the open journal shows, once each, both to find them and to delete them', async () => {
+  it('names the images the open journal shows, once each, and deletes only the ones agreed to', async () => {
     const trades = [trade({ screenshotFile: 'aaa111.png' }), trade(), trade({ screenshotFile: 'aaa111.png' })];
     expect(await findUnusedCharts(trades)).toEqual([{ name: 'orphan01.png', bytes: 70 }]);
-    expect(await removeUnusedCharts(trades)).toEqual([{ name: 'orphan01.png', bytes: 70 }]);
+    expect(await removeUnusedCharts(trades, ['orphan01.png'])).toEqual([{ name: 'orphan01.png', bytes: 70 }]);
     expect(asked).toEqual([
       ['find', ['aaa111.png']],
-      ['remove', ['aaa111.png']],
+      ['remove', ['aaa111.png'], ['orphan01.png']],
     ]);
   });
 });

@@ -75,12 +75,16 @@ export interface JournalStorage {
    * The chart images nothing uses any more, with their sizes. `inUse` are the
    * images the journal open in this window shows; those the saved journal or
    * its kept copies mention, and the last day's, are in use too (sweep.ts).
-   * Throws when any of them cannot be read.
+   * Throws, with a message worded for the person, when the journal or a copy
+   * cannot be read or is not a whole journal.
    */
   findUnusedImages(inUse: string[]): Promise<UnusedImage[]>;
 
-  /** Delete them, and say which went. Throws, having deleted nothing, as above. */
-  removeUnusedImages(inUse: string[]): Promise<UnusedImage[]>;
+  /**
+   * Delete those of `approved`, the images the person was shown, that are
+   * still unused, and say which went. Throws, having deleted nothing, as above.
+   */
+  removeUnusedImages(inUse: string[], approved: string[]): Promise<UnusedImage[]>;
 
   /**
    * Hand the user a file: a CSV export, a JSON backup, the import template.

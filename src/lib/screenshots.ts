@@ -126,15 +126,19 @@ function shownBy(trades: readonly Trade[]): string[] {
  * The chart images nothing uses any more, with their sizes: no trade in
  * `trades` (the journal open here), the saved journal or any copy in backups
  * mentions them, and none was added in the last day. See lib/storage/sweep.ts.
- * Throws when the journal or a copy cannot be read.
+ * Throws, with a message worded for the person, when the journal or a copy
+ * cannot be read or is not a whole journal.
  */
 export function findUnusedCharts(trades: readonly Trade[]): Promise<UnusedImage[]> {
   return storage.findUnusedImages(shownBy(trades));
 }
 
-/** Deletes them, looked for afresh, and says which went. */
-export function removeUnusedCharts(trades: readonly Trade[]): Promise<UnusedImage[]> {
-  return storage.removeUnusedImages(shownBy(trades));
+/**
+ * Deletes those of `approved` (the images the person was shown) that are
+ * still unused, looked for afresh, and says which went.
+ */
+export function removeUnusedCharts(trades: readonly Trade[], approved: readonly string[]): Promise<UnusedImage[]> {
+  return storage.removeUnusedImages(shownBy(trades), [...approved]);
 }
 
 /** Pulls the first image out of a paste or a drop */

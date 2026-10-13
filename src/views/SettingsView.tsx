@@ -83,14 +83,26 @@ export function SettingsView() {
         tone: 'danger',
       });
       if (!ok) return;
-      const removed = await removeUnusedCharts(data.trades);
+      // only what was shown and agreed to, even if more became unused meanwhile
+      const removed = await removeUnusedCharts(
+        data.trades,
+        unused.map((i) => i.name),
+      );
       toast(
         removed.length
           ? `${formatBytes(removed.reduce((a, i) => a + i.bytes, 0))} freed: ${removed.length} unused chart ${removed.length === 1 ? 'image' : 'images'} deleted.`
           : 'Nothing was deleted: the images are in use again, or could not be removed.',
       );
-    } catch {
-      toast('Could not read your journal and its backups, so no chart image was deleted.', 'error');
+    } catch (err) {
+      // a plain Error carries the storage's own explanation (a damaged journal,
+      // a backup it could not read); anything else (a failed fetch, an
+      // unreadable reply) means the data folder was out of reach
+      toast(
+        err instanceof Error && err.name === 'Error' && err.message
+          ? err.message
+          : 'The app could not reach its data folder, so no chart image was deleted.',
+        'error',
+      );
     } finally {
       setReclaiming(false);
     }

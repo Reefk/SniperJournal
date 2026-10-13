@@ -331,33 +331,79 @@ describe('/api/screenshot', () => {
       ]);
       expect(left()).toEqual(everything); // finding deletes nothing
 
-      expect(await named(await unused({ inUse: ['shown001.png'], remove: true }))).toEqual([
+      expect(await named(await unused({ inUse: ['shown001.png'], remove: ['orphan01.jpg', 'orphan002.png'] }))).toEqual([
         { name: 'orphan002.png', bytes: 13 },
         { name: 'orphan01.jpg', bytes: 12 },
       ]);
       expect(left()).toEqual(['daily001.png', 'desktop.ini', 'fresh001.png', 'other001.webp', 'saved001.png', 'shown001.png']);
     });
 
-    it('with no journal file, or a copy it cannot read, it answers with an error and deletes nothing', async () => {
+    it('deletes only the images it was told to, of those still unused', async () => {
+      for (const name of ['orphan01.png', 'orphan02.png', 'shown001.png']) shot(name);
+      writeFileSync(join(root, 'data', 'journal.json'), mentioning());
+      expect(await named(await unused({ inUse: ['shown001.png'], remove: ['orphan01.png', 'shown001.png'] }))).toEqual([
+        { name: 'orphan01.png', bytes: 12 },
+      ]);
+      // shown001 came back into use after it was agreed to; orphan02 never was
+      expect(left()).toEqual(['orphan02.png', 'shown001.png']);
+    });
+
+    it('with no journal, a damaged journal or a copy it cannot read, it says why and deletes nothing', async () => {
       shot('orphan01.png');
-      expect((await unused({ inUse: [], remove: true })).status).toBe(500);
+      const error = async (res: Response) => [res.status, (await res.json()).error];
+      expect(await error(await unused({ inUse: [], remove: ['orphan01.png'] }))).toEqual([
+        500,
+        'Your journal file could not be read, so no chart image was deleted.',
+      ]);
+      writeFileSync(join(root, 'data', 'journal.json'), mentioning('orphan01.png').slice(0, 12)); // cut short
+      expect(await error(await unused({ inUse: [] }))).toEqual([
+        500,
+        'Your journal file is damaged (it is not a complete journal), so no chart image was deleted.',
+      ]);
       writeFileSync(join(root, 'data', 'journal.json'), mentioning());
       mkdirSync(join(backups, 'conflict-unreadable.json'), { recursive: true }); // a folder: reading it fails
-      expect((await unused({ inUse: [] })).status).toBe(500);
-      expect((await unused({ inUse: [], remove: true })).status).toBe(500);
+      expect(await error(await unused({ inUse: [], remove: ['orphan01.png'] }))).toEqual([
+        500,
+        'The backup conflict-unreadable.json could not be read, so no chart image was deleted.',
+      ]);
       expect(left()).toEqual(['orphan01.png']);
+    });
+
+    it('a backup pruned by a save while it searches is skipped; the journal itself is not', async () => {
+      for (const name of ['orphan01.png', 'daily001.png']) shot(name);
+      writeFileSync(join(root, 'data', 'journal.json'), mentioning());
+      mkdirSync(backups, { recursive: true });
+      writeFileSync(join(backups, 'journal-2026-09-01.json'), mentioning());
+      writeFileSync(join(backups, 'journal-2026-10-01.json'), mentioning('daily001.png'));
+      const readFile = fsp.readFile;
+      const pruned = (end: string) =>
+        vi.spyOn(fsp, 'readFile').mockImplementation(async (...args: Parameters<typeof fsp.readFile>) => {
+          if (String(args[0]).endsWith(end)) throw Object.assign(new Error('ENOENT: no such file'), { code: 'ENOENT' });
+          return readFile(...args);
+        });
+      try {
+        pruned('journal-2026-09-01.json');
+        expect(await named(await unused({ inUse: [] }))).toEqual([{ name: 'orphan01.png', bytes: 12 }]);
+        vi.restoreAllMocks();
+        pruned('journal.json');
+        expect((await unused({ inUse: [] })).status).toBe(500);
+      } finally {
+        vi.restoreAllMocks();
+      }
     });
 
     it('with no screenshots folder there is nothing to find', async () => {
       expect(await (await unused({ inUse: [] })).json()).toEqual({ ok: true, images: [] });
     });
 
-    it('refuses a request that does not say which images are in use, or comes from another site', async () => {
+    it('refuses a request that does not say which images are in use or which to delete, or comes from another site', async () => {
       shot('orphan01.png');
       writeFileSync(join(root, 'data', 'journal.json'), mentioning());
-      expect((await unused({ remove: true })).status).toBe(400);
-      expect((await unused({ inUse: [1], remove: true })).status).toBe(400);
-      expect((await unused({ inUse: [], remove: true }, { origin: 'https://evil.example' })).status).toBe(403);
+      expect((await unused({ remove: ['orphan01.png'] })).status).toBe(400);
+      expect((await unused({ inUse: [1], remove: ['orphan01.png'] })).status).toBe(400);
+      // "delete whatever is unused", as a page from before this change asked
+      expect((await unused({ inUse: [], remove: true })).status).toBe(400);
+      expect((await unused({ inUse: [], remove: ['orphan01.png'] }, { origin: 'https://evil.example' })).status).toBe(403);
       expect(left()).toEqual(['orphan01.png']);
     });
   });
