@@ -271,8 +271,10 @@ was never saved because the app was closed. **Settings → Chart images → Recl
 unused chart images** finds them and tells you how many there are and how much
 space they take before deleting anything. An image is kept while your journal or
 any of the copies in `data/backups/` uses it, and for a day after it was added,
-in case a trade form open in another window is about to save it. Files you put in
-the folder yourself, under names the app did not give them, are never touched.
+in case a trade form open in another window is about to save it. If your journal
+or one of the backups can't be read, or is damaged, nothing is deleted and the
+message says which file. Files you put in the folder yourself, under names the
+app did not give them, are never touched.
 
 If you would rather link to a chart you host elsewhere, such as a TradingView
 snapshot, there is still a **Chart link** field under _Futures, forex and manual
