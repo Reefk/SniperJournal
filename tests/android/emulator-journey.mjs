@@ -162,9 +162,21 @@ function pushFile(local, path) {
 }
 // Settings can delete the chart images no journal or backup mentions. While
 // the emulator's own journal is swapped out, a copy of it waits among the
-// backups, so no chart it shows can go. Removed at the end.
+// backups, with the names of every image already on the emulator, so the
+// test's reclaim takes only what it planted itself. Removed at the end.
 const KEPT_COPY = 'files/backups/sj-e2e-kept.json';
-if (hadJournal) pushFile(keptJournal, KEPT_COPY);
+let imagesBefore = [];
+try {
+  imagesBefore = inApp('ls', 'files/screenshots').split(/\s+/).filter(Boolean);
+} catch {
+  // no screenshots folder yet
+}
+// whole JSON whatever the emulator's journal holds: a damaged copy stops the reclaim
+writeFileSync(
+  join(work, 'kept-copy.json'),
+  JSON.stringify({ journal: hadJournal ? readFileSync(keptJournal, 'utf8') : null, images: imagesBefore }),
+);
+pushFile(join(work, 'kept-copy.json'), KEPT_COPY);
 const SWEEP_COPY = 'files/backups/conflict-20260101-000000.json';
 const PLANTED = ['droidused1.png', 'droidcopy1.png', 'droidorph1.png', 'droidnew01.png'];
 
