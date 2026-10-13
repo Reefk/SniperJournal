@@ -109,8 +109,8 @@ you are mid-edit.
 
 Click **Load test data** on the dashboard or in Settings. It generates about
 80 realistic trades, marked as test data, and a yellow banner appears with a
-one-click **Remove test data** button that deletes only those trades. Your own
-entries are never touched.
+one-click **Remove test data** button that deletes only those trades, along with
+any chart image you attached to one of them. Your own entries are never touched.
 
 ---
 
@@ -236,7 +236,10 @@ If your broker gives each piece its own entry id, or you want to combine trades
 the importer could not see belong together, tick the rows in the Trades table
 and choose **Merge into one**. You get a summary of the resulting trade before
 anything changes. Merging cannot be undone, but re-importing the original CSV
-brings the separate parts back.
+brings the separate parts back. A trade has one chart, so the merged trade keeps
+the earliest part's, and the other parts' chart images are deleted. It also has
+one chart link: the earliest part's stays the link, and the other parts' links
+are added to its notes, so none is lost. The summary says what happens to each.
 
 Trades can only be merged when they share a symbol, a direction and an account,
 and are either all closed or all open — otherwise the result would quietly lose
@@ -262,6 +265,14 @@ So does **Erase all data**, and restoring a backup deletes the images that the
 backup's trades don't use. The copy of the old journal that both keep in your
 backups is the journal only: restored later, its trades come back without those
 charts.
+
+Images can still be left behind, for example one pasted into a trade form that
+was never saved because the app was closed. **Settings → Chart images → Reclaim
+unused chart images** finds them and tells you how many there are and how much
+space they take before deleting anything. An image is kept while your journal or
+any of the copies in `data/backups/` uses it, and for a day after it was added,
+in case a trade form open in another window is about to save it. Files you put in
+the folder yourself, under names the app did not give them, are never touched.
 
 If you would rather link to a chart you host elsewhere, such as a TradingView
 snapshot, there is still a **Chart link** field under _Futures, forex and manual

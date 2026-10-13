@@ -182,7 +182,7 @@ No Critical findings were made.
 | SJ-33 | Low | Accessibility | Dialogs do not trap Tab focus | Fixed and Verified (2026-10-12) |
 | SJ-34 | Low | Accessibility | Charts have no text alternative | Confirmed (code) |
 | SJ-35 | Low | Product / Store | UI says "AI Insights"; the analysis is rule-based and the store listing avoids "AI" | Fixed (2026-10-09; store screenshot 05 still to retake) |
-| SJ-36 | Low | Persistence | Screenshots: orphaned on account delete/reset; not in backups | Orphans fixed (2026-10-12); backups still exclude images (documented) |
+| SJ-36 | Low | Persistence | Screenshots: orphaned on account delete/reset; not in backups | Orphans fixed (2026-10-12; merges, and Settings → Reclaim unused chart images, 2026-10-13); backups still exclude images (documented) |
 | SJ-37 | Info | Persistence | Desktop `localStorage` mirror fails silently past about 5 MB | Accepted Risk |
 | SJ-38 | Info | Dependencies | Dev-only advisories: `@capacitor/cli` (3 moderate) and, since 2026-10-12, `eslint-config-next` (5 high, `braces`) | Accepted Risk |
 | SJ-39 | Info | Persistence | A cleaned-up journal is only written back on the next change | Accepted Risk |
@@ -651,6 +651,11 @@ No Critical findings were made.
 - **Update (2026-10-12):** every way trades go away now takes their chart images with it, through the same path as deleting a trade (`imagesOnlyIn` and `deleteScreenshot`, `src/lib/screenshots.ts`): deleting trades, deleting an account, restoring a backup (the images the restored journal doesn't use) and Erase all data. An image another remaining trade still uses is kept. Tested by unit tests and by `npm run e2e` section 12.
 - **Trade-off, chosen by the owner:** the copy Settings keeps before a restore or an erase (`before-restore`, `before-erase`) holds the journal only, so if it is restored later its trades come back without those charts. The restore and erase confirmations and their messages now say so.
 - **Also found:** in the trade form, removing or replacing a chart deletes the old file at once, before the trade is saved, so Cancel leaves the trade pointing at a deleted image; and merging trades keeps one leg's chart and leaves the other legs' images behind.
+- **Update (2026-10-13):**
+  - Merging trades deletes the charts of the parts the merged trade no longer shows (it keeps the earliest part's that has one), unless another trade shows them. Chart *links* (`screenshotUrl`) were dropped the same way, silently; now the earliest stays the link and the others are added to the notes (`linksMovedToNotes`, `src/lib/merge.ts`). The merge confirmation says what happens to both.
+  - Remove test data, and Regenerate test data (which replaces it), also delete a chart image attached by hand to a test trade, unless one of your own trades shows it (`chartsOnlyInSample`). The Remove test data confirmations (Settings and the banner) say so; Regenerate asks nothing, as before, since the trades the chart belonged to are replaced either way.
+  - Images left behind anyway (by older versions, by a trade form closed by shutting the app, by a delete that failed) can be deleted from **Settings → Chart images → Reclaim unused chart images**. It first says how many there are and the space they take, and asks; afterwards it reports the space freed. An image counts as unused only when no trade in the open journal, the saved journal or any copy in `backups/` mentions its name, and it was added more than a day ago, since a trade form in another window may hold a newer one. If the journal or any copy cannot be read, nothing is deleted. A file whose name the app did not generate is never touched.
+  - `src/lib/storage/sweep.ts`, shared by `POST /api/screenshot?unused` on a PC and `capacitorStorage` on a phone (`findUnusedImages`, `removeUnusedImages`). Tested by `tests/sweep.test.ts`, the API and storage tests, `npm run e2e` section 14b and `npm run e2e:android`.
 - **Still open:** backups contain no images (documented in the user guide).
 
 ### SJ-37: Desktop `localStorage` mirror
@@ -1044,6 +1049,6 @@ A build that compiles is not evidence of readiness. These items are.
 | Item | Finding | Effort |
 |---|---|---|
 | Measure on a phone (`sniperScore` already reuses the stats it is given) | SJ-42 | S |
-| Include screenshots in backups (they are documented as excluded; orphans cleaned up since 2026-10-12) | SJ-36 | M |
+| Include screenshots in backups (they are documented as excluded; orphans cleaned up since 2026-10-12, and reclaimable from Settings since 2026-10-13) | SJ-36 | M |
 | Body-size limit on the journal API | SJ-43 | XS |
 | Re-check the `@capacitor/cli` advisory when Capacitor updates | SJ-38 | XS |
