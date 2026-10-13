@@ -849,6 +849,48 @@ async function journey() {
   await b.send('Page.navigate', { url: base });
   check('opened normally again, the app is back', await seen(`!!document.querySelector('aside') && !document.body.innerText.includes('ran into a problem')`, 'app back', 10000));
 
+  // ---- 16. a browser too full for its copy of the journal says so -----------
+  // The browser's storage is filled for real, to the last character, so the
+  // copy can't grow; every new trade then makes it bigger than there is room.
+  await b.run(PAGE);
+  const sidebar = `document.querySelector('aside').innerText`;
+  const notice = `(document.querySelector('main [role=status]')?.innerText ?? '')`;
+  const inCopy = (symbol) => b.run(`(localStorage.getItem('sniper-journal:v1') ?? '').includes('"symbol":"${symbol}"')`);
+  const filler = await b.run(`(() => {
+    let lo = 0, hi = 12e6;
+    while (lo < hi) {
+      const mid = Math.ceil((lo + hi) / 2);
+      try { localStorage.setItem('sj-filler', 'x'.repeat(mid)); lo = mid; } catch { hi = mid - 1; }
+    }
+    localStorage.setItem('sj-filler', 'x'.repeat(lo));
+    return lo;
+  })()`);
+  check('the browser storage is full (test setup)', filler > 1e6, String(filler));
+  await logClosed('FULL1', '110');
+  check('a copy the browser refuses brings a calm notice', await seen(`${notice}.includes("won't keep a spare copy")`, 'copy notice', 8000), await b.run(notice));
+  check('it offers no backup download while the file is saved as usual', !(await b.run(`${notice}.includes('Download a backup')`)));
+  check('the change is in the file all the same', await savedSoon((j) => j.trades.some((t) => t.symbol === 'FULL1')));
+  check('and the sidebar says "Saved to disk", as it is', await seen(`${sidebar}.includes('Saved to disk')`, 'saved', 8000));
+  check('the browser copy is the one from before, untouched', !(await inCopy('FULL1')) && Boolean(await b.run(`localStorage.getItem('sniper-journal:v1')`)));
+  await b.run(`$t('OK', document.querySelector('main [role=status]')).click(); true`);
+  await logClosed('FULL2', '120');
+  await savedSoon((j) => j.trades.some((t) => t.symbol === 'FULL2'));
+  await sleep(500);
+  check('once dismissed, it is not said again for the next change', (await b.run(notice)) === '');
+  if (windows) {
+    const { released } = await holdJournal(6000, 'Read');
+    await logClosed('FULL3', '130');
+    check('when the file cannot be written either, the sidebar says "Not saved"', await seen(`${sidebar}.includes('Not saved')`, 'not saved', 10000), await b.run(sidebar));
+    check('and the notice comes back, this time offering a backup', await seen(`${notice}.includes("aren't saved anywhere") && ${notice}.includes('Download a backup')`, 'lost notice', 5000), await b.run(notice));
+    check('meanwhile the file on disk is left as it was', !journalOnDisk().trades.some((t) => t.symbol === 'FULL3'));
+    await released;
+    check('once the file is free the change is saved, and the sidebar says so', await seen(`${sidebar}.includes('Saved to disk')`, 'saved again', 20000));
+    check('the warning goes once the change is in the file', (await b.run(notice)) === '' && journalOnDisk().trades.some((t) => t.symbol === 'FULL3'));
+  }
+  await b.run(`localStorage.removeItem('sj-filler'); true`);
+  await logClosed('FULL4', '140');
+  check('with room again, the browser keeps its copy', await seen(`(localStorage.getItem('sniper-journal:v1') ?? '').includes('"symbol":"FULL4"')`, 'copy kept', 5000));
+
   await b.close();
   await stopServer();
 }
