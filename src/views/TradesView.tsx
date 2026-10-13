@@ -39,7 +39,8 @@ import { Input, Select, inputClass } from '@/components/ui/Field';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { PnlValue, SideBadge, StatusBadge } from '@/components/ui/StatusBadge';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { mergeIssue, mergeTrades as previewMerge } from '@/lib/merge';
+import { linksMovedToNotes, mergeIssue, mergeTrades as previewMerge } from '@/lib/merge';
+import { imagesOnlyIn } from '@/lib/screenshots';
 import { ImportTradesModal } from '@/components/trades/ImportTradesModal';
 import { BulkDetailsModal } from '@/components/trades/BulkDetailsModal';
 
@@ -175,6 +176,9 @@ export function TradesView() {
     }
 
     const preview = previewMerge(legs);
+    // the same images the merge itself deletes
+    const droppedCharts = imagesOnlyIn(legs, [...data.trades.filter((t) => !selected.has(t.id)), preview]).length;
+    const movedLinks = linksMovedToNotes(legs).length;
     const ok = await confirm({
       title: `Merge ${legs.length} parts into one trade?`,
       message: (
@@ -193,6 +197,25 @@ export function TradesView() {
           )}
           , worth <strong className="text-fg">{formatMoney(netPnl(preview), currency, { sign: true })}</strong> — the
           same as the parts added together.
+          {(droppedCharts > 0 || movedLinks > 0) && (
+            <>
+              <br />
+              <br />
+              {droppedCharts > 0 && (
+                <>
+                  The merged trade keeps the chart of the earliest part that has one;{' '}
+                  {droppedCharts === 1 ? 'the other chart image is' : `the other ${droppedCharts} chart images are`}{' '}
+                  deleted.{' '}
+                </>
+              )}
+              {movedLinks > 0 && (
+                <>
+                  It keeps the chart link of the earliest part that has one, and{' '}
+                  {movedLinks === 1 ? 'the other link is' : `the other ${movedLinks} links are`} added to its notes.
+                </>
+              )}
+            </>
+          )}
           <br />
           <br />
           <span className="text-faint">

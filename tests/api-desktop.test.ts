@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync, mkdirSync, existsSync, promises as fsp } from 'node:fs';
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync, mkdirSync, existsSync, utimesSync, promises as fsp } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -294,6 +294,72 @@ describe('/api/screenshot', () => {
       expect((await routes.shot.DELETE(req(`/api/screenshot?name=${name}`, { method: 'DELETE' }))).status).toBe(400);
     }
     expect(readFileSync(join(root, 'data', 'journal.json'), 'utf8')).toBe('keep');
+  });
+
+  describe('reclaiming the images nothing uses', () => {
+    const shots = join(root, 'data', 'screenshots');
+    const backups = join(root, 'data', 'backups');
+    const month = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const shot = (name: string, modified = month) => {
+      mkdirSync(shots, { recursive: true });
+      writeFileSync(join(shots, name), name); // as many bytes as letters in its name
+      utimesSync(join(shots, name), modified, modified);
+    };
+    const mentioning = (...names: string[]) => JSON.stringify({ trades: names.map((n) => ({ screenshotFile: n })) });
+    const unused = (body: unknown, headers: Record<string, string> = {}) =>
+      routes.shot.POST(
+        req('/api/screenshot?unused', { method: 'POST', body: JSON.stringify(body), headers: { 'content-type': 'application/json', ...headers } }),
+      );
+    const left = () => readdirSync(shots).sort();
+    const named = async (res: Response) => ((await res.json()).images as { name: string; bytes: number }[]).sort((a, b) => a.name.localeCompare(b.name));
+
+    it('finds, with their sizes, the images neither the open journal, the saved one, a kept copy nor the last day uses', async () => {
+      for (const name of ['shown001.png', 'saved001.png', 'daily001.png', 'other001.webp', 'orphan01.jpg', 'orphan002.png']) shot(name);
+      shot('fresh001.png', new Date(Date.now() - 23 * 60 * 60 * 1000));
+      shot('desktop.ini'); // not a name the app gives, so never touched
+      writeFileSync(join(root, 'data', 'journal.json'), mentioning('saved001.png'));
+      mkdirSync(backups, { recursive: true });
+      writeFileSync(join(backups, 'journal-2026-10-01.json'), mentioning('daily001.png'));
+      writeFileSync(join(backups, 'conflict-20261012-101500.json'), mentioning('other001.webp'));
+      const everything = left();
+
+      const found = await unused({ inUse: ['shown001.png'] });
+      expect(found.status).toBe(200);
+      expect(await named(found)).toEqual([
+        { name: 'orphan002.png', bytes: 13 },
+        { name: 'orphan01.jpg', bytes: 12 },
+      ]);
+      expect(left()).toEqual(everything); // finding deletes nothing
+
+      expect(await named(await unused({ inUse: ['shown001.png'], remove: true }))).toEqual([
+        { name: 'orphan002.png', bytes: 13 },
+        { name: 'orphan01.jpg', bytes: 12 },
+      ]);
+      expect(left()).toEqual(['daily001.png', 'desktop.ini', 'fresh001.png', 'other001.webp', 'saved001.png', 'shown001.png']);
+    });
+
+    it('with no journal file, or a copy it cannot read, it answers with an error and deletes nothing', async () => {
+      shot('orphan01.png');
+      expect((await unused({ inUse: [], remove: true })).status).toBe(500);
+      writeFileSync(join(root, 'data', 'journal.json'), mentioning());
+      mkdirSync(join(backups, 'conflict-unreadable.json'), { recursive: true }); // a folder: reading it fails
+      expect((await unused({ inUse: [] })).status).toBe(500);
+      expect((await unused({ inUse: [], remove: true })).status).toBe(500);
+      expect(left()).toEqual(['orphan01.png']);
+    });
+
+    it('with no screenshots folder there is nothing to find', async () => {
+      expect(await (await unused({ inUse: [] })).json()).toEqual({ ok: true, images: [] });
+    });
+
+    it('refuses a request that does not say which images are in use, or comes from another site', async () => {
+      shot('orphan01.png');
+      writeFileSync(join(root, 'data', 'journal.json'), mentioning());
+      expect((await unused({ remove: true })).status).toBe(400);
+      expect((await unused({ inUse: [1], remove: true })).status).toBe(400);
+      expect((await unused({ inUse: [], remove: true }, { origin: 'https://evil.example' })).status).toBe(403);
+      expect(left()).toEqual(['orphan01.png']);
+    });
   });
 
   it('a cross-site upload is refused before anything is written', async () => {

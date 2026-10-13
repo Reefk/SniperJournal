@@ -7,10 +7,12 @@ import type { JournalData } from '@/lib/types';
  */
 const fs = vi.hoisted(() => {
   const files = new Map<string, string>();
+  /** last modified, where a test sets it; anything else is from 1970 */
+  const mtimes = new Map<string, number>();
   const failures = { renameOverExisting: false, writeFile: false, slowWrites: 0 };
   const key = (dir: string | undefined, path: string) => `${dir ?? 'DATA'}:${path}`;
   const notFound = (path: string) => Object.assign(new Error(`'${path}' does not exist`), { code: 'OS-PLUG-FILE-0008' });
-  return { files, failures, key, notFound };
+  return { files, mtimes, failures, key, notFound };
 });
 
 vi.mock('@capacitor/filesystem', () => ({
@@ -21,7 +23,9 @@ vi.mock('@capacitor/filesystem', () => ({
       return { uri: `file:///data/user/0/com.sniperjournal.app/files${path ? `/${path}` : ''}` };
     },
     async stat({ path, directory }: { path: string; directory?: string }) {
-      if (!fs.files.has(fs.key(directory, path))) throw fs.notFound(path);
+      const k = fs.key(directory, path);
+      // a folder is there while anything is in it
+      if (!fs.files.has(k) && ![...fs.files.keys()].some((f) => f.startsWith(`${k}/`))) throw fs.notFound(path);
       return { size: fs.files.get(fs.key(directory, path))?.length ?? 0 };
     },
     async readFile({ path, directory }: { path: string; directory?: string }) {
@@ -58,7 +62,13 @@ vi.mock('@capacitor/filesystem', () => ({
       return {
         files: [...fs.files.keys()]
           .filter((k) => k.startsWith(prefix))
-          .map((k) => ({ name: k.slice(prefix.length), type: 'file', size: 0, mtime: 0, uri: k })),
+          .map((k) => ({
+            name: k.slice(prefix.length),
+            type: 'file',
+            size: fs.files.get(k)?.length ?? 0,
+            mtime: fs.mtimes.get(k) ?? 0,
+            uri: k,
+          })),
       };
     },
   },
@@ -88,6 +98,7 @@ async function freshStorage() {
 
 beforeEach(() => {
   fs.files.clear();
+  fs.mtimes.clear();
   Object.assign(fs.failures, { renameOverExisting: false, writeFile: false, slowWrites: 0 });
   share.calls.length = 0;
   share.cancel = false;
@@ -221,6 +232,38 @@ describe('chart images and exports', () => {
     expect(s.imageSrc('../journal.json')).toBe('');
     await s.deleteImage('../journal.json');
     expect(fs.files.get('DATA:journal.json')).toBe('keep me');
+  });
+
+  describe('reclaiming the images nothing uses', () => {
+    const DAY = 24 * 60 * 60 * 1000;
+    const shot = (name: string, age = 30 * 24 * 60 * 60 * 1000) => {
+      fs.files.set(`DATA:screenshots/${name}`, 'x');
+      fs.mtimes.set(`DATA:screenshots/${name}`, Date.now() - age);
+    };
+    const mentioning = (...names: string[]) => JSON.stringify({ trades: names.map((n) => ({ screenshotFile: n })) });
+    const left = () => [...fs.files.keys()].filter((k) => k.startsWith('DATA:screenshots/')).map((k) => k.slice(17)).sort();
+
+    it('finds, then deletes, only what neither the open journal, the saved one, a kept copy nor the last day uses', async () => {
+      const s = await freshStorage();
+      for (const name of ['shown001.png', 'saved001.png', 'other001.webp', 'orphan01.jpg']) shot(name);
+      shot('fresh001.png', DAY - 60_000);
+      fs.files.set('DATA:screenshots/notes.txt', 'not a name the app gives, so never touched');
+      fs.files.set('DATA:journal.json', mentioning('saved001.png'));
+      fs.files.set('DATA:backups/conflict-20261012-101500.json', mentioning('other001.webp'));
+      expect(await s.findUnusedImages(['shown001.png'])).toEqual([{ name: 'orphan01.jpg', bytes: 1 }]);
+      expect(left()).toContain('orphan01.jpg');
+      expect(await s.removeUnusedImages(['shown001.png'])).toEqual([{ name: 'orphan01.jpg', bytes: 1 }]);
+      expect(left()).toEqual(['fresh001.png', 'notes.txt', 'other001.webp', 'saved001.png', 'shown001.png']);
+    });
+
+    it('with no journal file, or no screenshots folder, it deletes nothing', async () => {
+      const s = await freshStorage();
+      expect(await s.removeUnusedImages([])).toEqual([]);
+      shot('orphan01.png');
+      await expect(s.findUnusedImages([])).rejects.toThrow();
+      await expect(s.removeUnusedImages([])).rejects.toThrow();
+      expect(left()).toEqual(['orphan01.png']);
+    });
   });
 
   it('exports through the share sheet from the cache, with a safe file name; cancelling is not an error', async () => {

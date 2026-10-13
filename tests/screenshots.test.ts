@@ -1,6 +1,21 @@
-import { describe, expect, it } from 'vitest';
-import { chartsToDiscard, imagesOnlyIn } from '@/lib/screenshots';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { chartsOnlyInSample, chartsToDiscard, findUnusedCharts, imagesOnlyIn, removeUnusedCharts } from '@/lib/screenshots';
+import { mergeTrades } from '@/lib/merge';
 import { trade } from './helpers';
+
+const asked = vi.hoisted(() => [] as Array<[string, string[]]>);
+vi.mock('@/lib/storage', () => ({
+  storage: {
+    async findUnusedImages(inUse: string[]) {
+      asked.push(['find', inUse]);
+      return [{ name: 'orphan01.png', bytes: 70 }];
+    },
+    async removeUnusedImages(inUse: string[]) {
+      asked.push(['remove', inUse]);
+      return [{ name: 'orphan01.png', bytes: 70 }];
+    },
+  },
+}));
 
 describe('which chart images go with removed trades', () => {
   it('lists the images of the removed trades', () => {
@@ -54,5 +69,50 @@ describe('which chart images go when the trade form closes', () => {
   it('a new trade: Save keeps its chart, Cancel drops the upload', () => {
     expect(chartsToDiscard(['new001.webp'], undefined, 'new001.webp', nobodyElse)).toEqual([]);
     expect(chartsToDiscard(['new001.webp'], undefined, undefined, nobodyElse)).toEqual(['new001.webp']);
+  });
+});
+
+describe('removing the test data', () => {
+  it('takes the charts attached to test trades, but not one a trade of your own also shows', () => {
+    const trades = [
+      trade({ isSample: true, screenshotFile: 'sample01.png' }),
+      trade({ isSample: true }),
+      trade({ isSample: true, screenshotFile: 'shared01.png' }),
+      trade({ screenshotFile: 'shared01.png' }),
+      trade({ screenshotFile: 'mine0001.png' }),
+    ];
+    expect(chartsOnlyInSample(trades)).toEqual(['sample01.png']);
+    expect(chartsOnlyInSample([trade({ screenshotFile: 'mine0001.png' })])).toEqual([]);
+  });
+});
+
+describe('merging trades', () => {
+  it("the merged trade keeps the earliest chart; the other parts' charts go, unless another trade shows them", () => {
+    const legs = [
+      trade({ symbol: 'ES', openedAt: '2026-03-02T10:05', screenshotFile: 'later001.png' }),
+      trade({ symbol: 'ES', openedAt: '2026-03-02T10:00' }),
+      trade({ symbol: 'ES', openedAt: '2026-03-02T10:01', screenshotFile: 'first001.png' }),
+      trade({ symbol: 'ES', openedAt: '2026-03-02T10:10', screenshotFile: 'shared01.png' }),
+    ];
+    const merged = mergeTrades(legs);
+    expect(merged.screenshotFile).toBe('first001.png');
+    const elsewhere = trade({ screenshotFile: 'shared01.png' });
+    expect(imagesOnlyIn(legs, [elsewhere, merged])).toEqual(['later001.png']);
+  });
+});
+
+describe('reclaiming the chart images nothing uses', () => {
+  beforeEach(() => {
+    asked.length = 0;
+  });
+
+  it('names the images the open journal shows, once each, both to find them and to delete them', async () => {
+    const trades = [trade({ screenshotFile: 'aaa111.png' }), trade(), trade({ screenshotFile: 'aaa111.png' })];
+    expect(await findUnusedCharts(trades)).toEqual([{ name: 'orphan01.png', bytes: 70 }]);
+    expect(await removeUnusedCharts(trades)).toEqual([{ name: 'orphan01.png', bytes: 70 }]);
+    expect(asked).toEqual([
+      ['find', ['aaa111.png']],
+      ['remove', ['aaa111.png']],
+    ]);
   });
 });

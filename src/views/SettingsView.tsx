@@ -1,11 +1,12 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { Download, FlaskConical, Plus, RotateCcw, Trash2, Upload, Wallet } from 'lucide-react';
+import { Download, FlaskConical, ImageMinus, Plus, RotateCcw, Trash2, Upload, Wallet } from 'lucide-react';
 import { useJournal } from '@/store/JournalProvider';
 import { useUI } from '@/store/UIProvider';
 import { exportBackup, parseBackup } from '@/lib/backup';
-import { CURRENCIES, formatMoney } from '@/lib/format';
+import { CURRENCIES, formatBytes, formatMoney } from '@/lib/format';
+import { findUnusedCharts, removeUnusedCharts } from '@/lib/screenshots';
 import { toNumberOrNull } from '@/lib/utils';
 import { storage, type CopyReason } from '@/lib/storage';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -31,6 +32,7 @@ export function SettingsView() {
   const { confirm, toast } = useUI();
   const fileInput = useRef<HTMLInputElement>(null);
   const [newAccount, setNewAccount] = useState('');
+  const [reclaiming, setReclaiming] = useState(false);
   const currency = data.settings.currency;
 
   const restore = async (file: File | undefined) => {
@@ -62,6 +64,35 @@ export function SettingsView() {
     } catch {
       toast('Could not keep a copy of your current journal first, so nothing was changed.', 'error');
       return false;
+    }
+  };
+
+  const reclaimCharts = async () => {
+    setReclaiming(true);
+    try {
+      const unused = await findUnusedCharts(data.trades);
+      if (!unused.length) {
+        toast('Every chart image is still in use. There is nothing to reclaim.');
+        return;
+      }
+      const one = unused.length === 1;
+      const ok = await confirm({
+        title: `Delete ${unused.length} unused chart ${one ? 'image' : 'images'}?`,
+        message: `No trade in your journal and no copy in your backups uses ${one ? 'it' : 'them'}. Deleting ${one ? 'it' : 'them'} frees ${formatBytes(unused.reduce((a, i) => a + i.bytes, 0))}.`,
+        confirmLabel: one ? 'Delete it' : 'Delete them',
+        tone: 'danger',
+      });
+      if (!ok) return;
+      const removed = await removeUnusedCharts(data.trades);
+      toast(
+        removed.length
+          ? `${formatBytes(removed.reduce((a, i) => a + i.bytes, 0))} freed: ${removed.length} unused chart ${removed.length === 1 ? 'image' : 'images'} deleted.`
+          : 'Nothing was deleted: the images are in use again, or could not be removed.',
+      );
+    } catch {
+      toast('Could not read your journal and its backups, so no chart image was deleted.', 'error');
+    } finally {
+      setReclaiming(false);
     }
   };
 
@@ -273,6 +304,20 @@ export function SettingsView() {
         </Section>
 
         <Section
+          title="Chart images"
+          description="Images no trade uses any more, such as one pasted into a trade form that was never saved."
+        >
+          <Button disabled={reclaiming} onClick={() => void reclaimCharts()}>
+            <ImageMinus className="size-4" /> Reclaim unused chart images
+          </Button>
+          <p className="mt-3 text-xs leading-relaxed text-faint">
+            You see how many there are, and how much space they take, before anything is deleted. An image is kept while
+            your journal or any copy in your backups still uses it, and for a day after it was added, in case a trade
+            form open in another window is about to save it.
+          </p>
+        </Section>
+
+        <Section
           title="Test data"
           description="Generated trades for trying the app out. They are flagged separately and never mix into your own records."
         >
@@ -291,7 +336,7 @@ export function SettingsView() {
               onClick={async () => {
                 const ok = await confirm({
                   title: 'Remove test data?',
-                  message: `This deletes the ${sampleCount} generated trades and the test setups. Your own trades are untouched.`,
+                  message: `This deletes the ${sampleCount} generated trades, any chart images you attached to them, and the test setups. Your own trades are untouched.`,
                   confirmLabel: 'Remove test data',
                   tone: 'danger',
                 });

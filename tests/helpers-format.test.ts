@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatDuration, formatMoney, formatPct, formatPrice, formatRatio } from '@/lib/format';
+import { formatBytes, formatDuration, formatMoney, formatPct, formatPrice, formatRatio } from '@/lib/format';
 import { buildInsights, buildSignals } from '@/lib/insights';
 import { rangeStart, splitByRange } from '@/lib/ranges';
 import { computeStats } from '@/lib/stats';
@@ -99,6 +99,23 @@ describe('formatting', () => {
     [-1, '—'],
   ])('durations: %s minutes -> %s', (minutes, expected) => {
     expect(formatDuration(minutes)).toBe(expected);
+  });
+
+  it.each([
+    [0, '0 bytes'],
+    [1, '1 byte'],
+    [70, '70 bytes'],
+    [1023, '1023 bytes'],
+    [1024, '1 KB'],
+    [524_288, '512 KB'],
+    [1024 ** 2 - 1, '1.0 MB'],
+    [1024 ** 3 - 1, '1.00 GB'],
+    [1024 ** 2, '1.0 MB'],
+    [3.4 * 1024 ** 2, '3.4 MB'],
+    [1.25 * 1024 ** 3, '1.25 GB'],
+    [Number.NaN, '—'],
+  ])('a size of %s bytes reads %s', (bytes, expected) => {
+    expect(formatBytes(bytes)).toBe(expected);
   });
 });
 

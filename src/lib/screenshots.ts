@@ -1,4 +1,5 @@
 import { storage } from './storage';
+import type { UnusedImage } from './storage/sweep';
 import type { Trade } from './types';
 
 /** Where the app serves a saved chart image from */
@@ -77,6 +78,17 @@ export function imagesOnlyIn(removed: readonly Trade[], remaining: readonly Trad
 }
 
 /**
+ * The chart images that only the generated test trades use, attached by hand
+ * to one of them, so they go when the test data does.
+ */
+export function chartsOnlyInSample(trades: readonly Trade[]): string[] {
+  return imagesOnlyIn(
+    trades.filter((t) => t.isSample),
+    trades.filter((t) => !t.isSample),
+  );
+}
+
+/**
  * Which chart images to delete when the trade form closes. Nothing is deleted
  * while it is open, so Cancel always puts the trade back as it was.
  *
@@ -101,8 +113,28 @@ export async function deleteScreenshot(name: string): Promise<void> {
   try {
     await storage.deleteImage(name);
   } catch {
-    // an orphaned file is harmless
+    // an orphaned file is harmless; Settings can reclaim it later
   }
+}
+
+/** the chart images some trades show, each once */
+function shownBy(trades: readonly Trade[]): string[] {
+  return [...new Set(trades.map((t) => t.screenshotFile).filter((n): n is string => Boolean(n)))];
+}
+
+/**
+ * The chart images nothing uses any more, with their sizes: no trade in
+ * `trades` (the journal open here), the saved journal or any copy in backups
+ * mentions them, and none was added in the last day. See lib/storage/sweep.ts.
+ * Throws when the journal or a copy cannot be read.
+ */
+export function findUnusedCharts(trades: readonly Trade[]): Promise<UnusedImage[]> {
+  return storage.findUnusedImages(shownBy(trades));
+}
+
+/** Deletes them, looked for afresh, and says which went. */
+export function removeUnusedCharts(trades: readonly Trade[]): Promise<UnusedImage[]> {
+  return storage.removeUnusedImages(shownBy(trades));
 }
 
 /** Pulls the first image out of a paste or a drop */

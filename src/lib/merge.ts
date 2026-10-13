@@ -36,6 +36,21 @@ function weightedAverage(parts: Array<{ price: number; quantity: number }>, deci
   return Number(raw.toFixed(decimals));
 }
 
+/** earliest entry first: the order a merge reads its parts in */
+const byOpening = (trades: Trade[]) => [...trades].sort((a, b) => (a.openedAt || '').localeCompare(b.openedAt || ''));
+
+/** the parts' chart links, in that order, each once */
+const chartLinks = (legs: Trade[]) =>
+  [...new Set(legs.map((t) => t.screenshotUrl?.trim()).filter((u): u is string => Boolean(u)))];
+
+/**
+ * The chart links a merge moves into the notes. A trade has one chart link, so
+ * the earliest part's stays a link, and the other parts' are kept as text.
+ */
+export function linksMovedToNotes(trades: Trade[]): string[] {
+  return chartLinks(byOpening(trades)).slice(1);
+}
+
 /**
  * Combines several partial fills into one trade. The quantities add up, the
  * prices become size-weighted averages, and the P&L stays exactly the sum of
@@ -43,7 +58,7 @@ function weightedAverage(parts: Array<{ price: number; quantity: number }>, deci
  * verbatim instead.
  */
 export function mergeTrades(trades: Trade[]): Trade {
-  const legs = [...trades].sort((a, b) => (a.openedAt || '').localeCompare(b.openedAt || ''));
+  const legs = byOpening(trades);
   const first = legs[0];
   const quantity = legs.reduce((a, t) => a + t.quantity, 0);
   const allClosed = legs.every(isClosed);
@@ -91,7 +106,11 @@ export function mergeTrades(trades: Trade[]): Trade {
     : undefined;
 
   const withReview = legs.find((t) => t.review && Object.values(t.review).some((v) => v != null));
-  const notes = [...new Set(legs.map((t) => t.notes?.trim()).filter(Boolean))].join(' / ');
+  const [screenshotUrl, ...otherLinks] = chartLinks(legs);
+  const notes = [
+    ...new Set(legs.map((t) => t.notes?.trim()).filter(Boolean)),
+    ...(otherLinks.length ? [`Chart links of the merged parts: ${otherLinks.join(' ')}`] : []),
+  ].join(' / ');
   const externalIds = legs.flatMap((t) => (t.externalId ? t.externalId.split('|') : []));
 
   return {
@@ -116,7 +135,7 @@ export function mergeTrades(trades: Trade[]): Trade {
     tags: [...new Set(legs.flatMap((t) => t.tags))],
     notes: notes || undefined,
     review: withReview?.review,
-    screenshotUrl: legs.find((t) => t.screenshotUrl)?.screenshotUrl,
+    screenshotUrl,
     screenshotFile: legs.find((t) => t.screenshotFile)?.screenshotFile,
     excluded: legs.every((t) => t.excluded) ? true : false,
     isSample: legs.every((t) => t.isSample) ? true : undefined,

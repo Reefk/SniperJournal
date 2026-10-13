@@ -115,3 +115,16 @@ export function formatDuration(minutes: number | null | undefined): string {
   const d = Math.floor(h / 24);
   return `${d}d ${h % 24}h`;
 }
+
+/** a file size the way a person reads it: 70 bytes, 512 KB, 3.4 MB, 1.25 GB */
+export function formatBytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes < 0) return '—';
+  const n = Math.round(bytes);
+  if (n < 1024) return `${n} ${n === 1 ? 'byte' : 'bytes'}`;
+  // each unit gives way to the next once it would read 1024 ("1.0 MB", never "1024 KB")
+  const kb = Math.round(n / 1024);
+  if (kb < 1024) return `${kb} KB`;
+  const mb = (n / 1024 ** 2).toFixed(1);
+  if (Number(mb) < 1024) return `${mb} MB`;
+  return `${(n / 1024 ** 3).toFixed(2)} GB`;
+}

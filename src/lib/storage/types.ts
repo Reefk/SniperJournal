@@ -1,4 +1,5 @@
 import type { JournalData } from '@/lib/types';
+import type { UnusedImage } from './sweep';
 
 /**
  * Everything the app needs from the device it is running on.
@@ -69,6 +70,17 @@ export interface JournalStorage {
   imageSrc(name: string): string;
 
   deleteImage(name: string): Promise<void>;
+
+  /**
+   * The chart images nothing uses any more, with their sizes. `inUse` are the
+   * images the journal open in this window shows; those the saved journal or
+   * its kept copies mention, and the last day's, are in use too (sweep.ts).
+   * Throws when any of them cannot be read.
+   */
+  findUnusedImages(inUse: string[]): Promise<UnusedImage[]>;
+
+  /** Delete them, and say which went. Throws, having deleted nothing, as above. */
+  removeUnusedImages(inUse: string[]): Promise<UnusedImage[]>;
 
   /**
    * Hand the user a file: a CSV export, a JSON backup, the import template.

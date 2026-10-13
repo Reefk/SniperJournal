@@ -127,3 +127,27 @@ describe('saving from two windows', () => {
     expect(requests[1].ifMatch).toBe('none');
   });
 });
+
+describe('reclaiming the chart images', () => {
+  it('asks the server, which holds the journal and its backups, naming the images this window shows', async () => {
+    const sent: { url: string; method?: string; body: unknown }[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init?: RequestInit) => {
+        sent.push({ url, method: init?.method, body: JSON.parse(String(init?.body)) });
+        return new Response(JSON.stringify({ ok: true, images: [{ name: 'orphan01.png', bytes: 70 }] }));
+      }),
+    );
+    expect(await webStorage.findUnusedImages(['shown001.png'])).toEqual([{ name: 'orphan01.png', bytes: 70 }]);
+    expect(await webStorage.removeUnusedImages(['shown001.png'])).toEqual([{ name: 'orphan01.png', bytes: 70 }]);
+    expect(sent).toEqual([
+      { url: '/api/screenshot?unused', method: 'POST', body: { inUse: ['shown001.png'], remove: false } },
+      { url: '/api/screenshot?unused', method: 'POST', body: { inUse: ['shown001.png'], remove: true } },
+    ]);
+  });
+
+  it('an answer the server could not give is an error', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ ok: false, error: 'Could not tell which chart images are still used.' }), { status: 500 })));
+    await expect(webStorage.findUnusedImages([])).rejects.toThrow('still used');
+  });
+});

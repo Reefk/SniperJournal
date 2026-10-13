@@ -3,6 +3,7 @@ import { Directory, Encoding, Filesystem } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import type { JournalData } from '@/lib/types';
 import { KEEP_COPIES, copyStamp, type CopyReason, type JournalStorage } from './types';
+import { findUnused, removeUnused, type SweepFiles, type UnusedImage } from './sweep';
 
 /**
  * The phone implementation: the journal and its chart images live in the
@@ -129,6 +130,27 @@ function safeName(raw: string): string | null {
   return /^[a-z0-9]{6,40}\.(png|jpe?g|webp|gif)$/i.test(raw) ? raw : null;
 }
 
+const sweepFiles: SweepFiles = {
+  async images() {
+    // a folder that cannot be listed has nothing in it that can be deleted
+    const { files } = await Filesystem.readdir({ path: SHOTS_DIR, ...data }).catch(() => ({ files: [] }));
+    return files
+      .filter((f) => f.type === 'file' && safeName(f.name))
+      .map((f) => ({ name: f.name, modified: f.mtime, bytes: f.size }));
+  },
+  async journals() {
+    if (!(await exists(BACKUP_DIR))) return [FILE];
+    // a backups folder that is there but cannot be listed stops the search
+    const { files } = await Filesystem.readdir({ path: BACKUP_DIR, ...data });
+    const copies = files.map((f) => f.name).filter((n) => n.endsWith('.json')).sort();
+    return [FILE, ...copies.map((n) => `${BACKUP_DIR}/${n}`)];
+  },
+  read: readText,
+  remove: async (name) => {
+    await Filesystem.deleteFile({ path: `${SHOTS_DIR}/${name}`, ...data });
+  },
+};
+
 export const capacitorStorage: JournalStorage = {
   kind: 'native',
 
@@ -202,6 +224,14 @@ export const capacitorStorage: JournalStorage = {
   async deleteImage(name: string) {
     if (!safeName(name)) return;
     await Filesystem.deleteFile({ path: `${SHOTS_DIR}/${name}`, ...data }).catch(() => undefined);
+  },
+
+  findUnusedImages(inUse: string[]): Promise<UnusedImage[]> {
+    return findUnused(sweepFiles, inUse);
+  },
+
+  removeUnusedImages(inUse: string[]): Promise<UnusedImage[]> {
+    return removeUnused(sweepFiles, inUse);
   },
 
   async exportFile(filename: string, content: string) {

@@ -52,7 +52,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const removeSample = async () => {
     const ok = await confirm({
       title: 'Remove test data?',
-      message: `This deletes the ${sampleCount} generated test trades and the test playbook setups. Trades you entered yourself are kept.`,
+      message: `This deletes the ${sampleCount} generated test trades, any chart images you attached to them, and the test playbook setups. Trades you entered yourself are kept.`,
       confirmLabel: 'Remove test data',
       tone: 'danger',
     });

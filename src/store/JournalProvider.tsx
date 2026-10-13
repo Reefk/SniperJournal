@@ -7,7 +7,7 @@ import { createDefaultData, normalize } from '@/lib/journal';
 import { generateSampleData } from '@/lib/sample';
 import { isIncomplete } from '@/lib/trade-math';
 import { mergeIssue, mergeTrades as combineTrades } from '@/lib/merge';
-import { deleteScreenshot, imagesOnlyIn } from '@/lib/screenshots';
+import { chartsOnlyInSample, deleteScreenshot, imagesOnlyIn } from '@/lib/screenshots';
 import { JournalConflict, storage } from '@/lib/storage';
 import { uid } from '@/lib/utils';
 import { accountBalances } from './selectors';
@@ -329,6 +329,9 @@ export function JournalProvider({ children }: { children: ReactNode }) {
         const issue = mergeIssue(legs);
         if (issue) return issue;
         const merged = combineTrades(legs);
+        // the merged trade shows one chart; the other parts' charts go with them
+        const others = dataRef.current.trades.filter((t) => !set.has(t.id));
+        for (const name of imagesOnlyIn(legs, [...others, merged])) void deleteScreenshot(name);
         mutate((d) => ({
           ...d,
           trades: [...d.trades.filter((t) => !set.has(t.id)), merged],
@@ -401,6 +404,8 @@ export function JournalProvider({ children }: { children: ReactNode }) {
         }));
       },
       loadSampleData: () => {
+        // the old test trades make way for new ones, and their charts go with them
+        for (const name of chartsOnlyInSample(dataRef.current.trades)) void deleteScreenshot(name);
         mutate((d) => {
           const accountId = d.activeAccountId === 'all' ? d.accounts[0].id : d.activeAccountId;
           const { trades, setups } = generateSampleData(accountId);
@@ -422,6 +427,7 @@ export function JournalProvider({ children }: { children: ReactNode }) {
         });
       },
       clearSampleData: () => {
+        for (const name of chartsOnlyInSample(dataRef.current.trades)) void deleteScreenshot(name);
         mutate((d) => ({
           ...d,
           trades: d.trades.filter((t) => !t.isSample),

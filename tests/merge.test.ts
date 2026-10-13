@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mergeIssue, mergeTrades } from '@/lib/merge';
+import { linksMovedToNotes, mergeIssue, mergeTrades } from '@/lib/merge';
 import { computeStats } from '@/lib/stats';
 import { grossPnl, isClosed, netPnl } from '@/lib/trade-math';
 import { trade } from './helpers';
@@ -93,6 +93,29 @@ describe('merging partial fills back into one position', () => {
     expect(merged.notes).toBe('first / second');
     expect(merged.externalId).toBe('f1:s1|f1:s2');
     expect(merged.stopLoss).toBe(95);
+  });
+
+  it("no chart link is lost: the earliest part's stays the link, the others go into the notes", () => {
+    const legs = [
+      trade({ openedAt: '2026-03-02T09:45', screenshotUrl: 'https://charts.example/b', notes: 'added' }),
+      trade({ openedAt: '2026-03-02T09:30', notes: 'entry' }),
+      trade({ openedAt: '2026-03-02T09:40', screenshotUrl: ' https://charts.example/a ' }),
+      trade({ openedAt: '2026-03-02T09:50', screenshotUrl: 'https://charts.example/c' }),
+    ];
+    const merged = mergeTrades(legs);
+    expect(merged.screenshotUrl).toBe('https://charts.example/a');
+    expect(merged.notes).toBe('entry / added / Chart links of the merged parts: https://charts.example/b https://charts.example/c');
+    expect(linksMovedToNotes(legs)).toEqual(['https://charts.example/b', 'https://charts.example/c']);
+  });
+
+  it('one link, or the same link on every part, stays a link and adds nothing to the notes', () => {
+    const one = mergeTrades([trade({ screenshotUrl: 'https://charts.example/a' }), trade({ notes: 'n' })]);
+    expect(one.screenshotUrl).toBe('https://charts.example/a');
+    expect(one.notes).toBe('n');
+    const same = [trade({ screenshotUrl: 'https://charts.example/a' }), trade({ screenshotUrl: 'https://charts.example/a' })];
+    expect(mergeTrades(same).notes).toBeUndefined();
+    expect(linksMovedToNotes(same)).toEqual([]);
+    expect(mergeTrades([trade(), trade()]).screenshotUrl).toBeUndefined();
   });
 });
 
