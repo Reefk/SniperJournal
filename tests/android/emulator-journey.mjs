@@ -1,6 +1,7 @@
 // The Android app on an emulator: restore and erase with their safety copies,
 // the journal surviving a force-stop, a corrupted journal, a save the phone
-// refuses, the back button and the share sheet. Works on a debug build and,
+// refuses, reclaiming chart images nothing uses, the back button and the
+// share sheet. Works on a debug build and,
 // on an emulator image that allows `adb root`, on a release build too.
 //
 //   npm run build:mobile && npx cap sync android, build and install the app,
@@ -152,6 +153,21 @@ try {
 const copiesBefore = new Set(backups());
 const original = JSON.parse(readFileSync(sample, 'utf8'));
 
+/** a file from this PC into the app's folder, owned by the app */
+function pushFile(local, path) {
+  adb('push', local, '/data/local/tmp/sj-file');
+  inApp('cp', '/data/local/tmp/sj-file', path);
+  handBack(path);
+  adb('shell', 'rm', '/data/local/tmp/sj-file');
+}
+// Settings can delete the chart images no journal or backup mentions. While
+// the emulator's own journal is swapped out, a copy of it waits among the
+// backups, so no chart it shows can go. Removed at the end.
+const KEPT_COPY = 'files/backups/sj-e2e-kept.json';
+if (hadJournal) pushFile(keptJournal, KEPT_COPY);
+const SWEEP_COPY = 'files/backups/conflict-20260101-000000.json';
+const PLANTED = ['droidused1.png', 'droidcopy1.png', 'droidorph1.png', 'droidnew01.png'];
+
 try {
   await pushJournal(sample);
   await launch();
@@ -285,6 +301,47 @@ try {
     fileJson('files/journal.json').settings.currency === 'EUR',
   );
 
+  // ---- Settings reclaims the chart images nothing uses ----------------------------
+  // planted a month old: one the journal shows, one only a kept copy mentions,
+  // one nothing uses; and one nothing uses that was just added
+  const withChart = structuredClone(original);
+  withChart.trades[0].screenshotFile = 'droidused1.png';
+  writeFileSync(join(work, 'with-chart.json'), JSON.stringify(withChart));
+  await pushJournal(join(work, 'with-chart.json'));
+  writeFileSync(join(work, 'copy.json'), JSON.stringify({ version: 1, trades: [{ id: 'c', screenshotFile: 'droidcopy1.png' }], accounts: [] }));
+  pushFile(join(work, 'copy.json'), SWEEP_COPY);
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
+  writeFileSync(join(work, 'chart.png'), png);
+  inApp('mkdir', '-p', 'files/screenshots');
+  for (const name of PLANTED) {
+    pushFile(join(work, 'chart.png'), `files/screenshots/${name}`);
+    if (name !== 'droidnew01.png') inApp('touch', '-t', '202601010000', `files/screenshots/${name}`);
+  }
+  const shots = () => inApp('ls', 'files/screenshots').split(/\s+/).filter((f) => PLANTED.includes(f)).sort();
+  await launch();
+  await ev(goSettings);
+  await until(`[...document.querySelectorAll('button')].some((b) => b.textContent.includes('Reclaim unused chart images'))`, 'reclaim button');
+  await ev(clickText('Reclaim unused chart images'));
+  await until(`[...document.querySelectorAll('[data-modal-root] button')].some((b) => b.textContent.trim() === 'Delete it')`, 'reclaim confirmation');
+  const asking = await ev(`document.querySelector('[data-modal-root]').innerText`);
+  check(
+    'Reclaim unused chart images says how many there are and the space they take',
+    asking.includes('Delete 1 unused chart image?') && asking.includes(`frees ${png.length} bytes`) && shots().length === PLANTED.length,
+    asking,
+  );
+  await ev(clickText('Delete it'));
+  let left = shots();
+  for (let i = 0; i < 40 && left.includes('droidorph1.png'); i++) {
+    await sleep(250);
+    left = shots();
+  }
+  check(
+    'confirmed, it deletes the image nothing uses; ones in use, in a kept copy, or new stay',
+    JSON.stringify(left) === JSON.stringify(['droidcopy1.png', 'droidnew01.png', 'droidused1.png']),
+    JSON.stringify(left),
+  );
+  check('and says how much space it freed', await seen(`document.body.innerText.includes('${png.length} bytes freed: 1 unused chart image deleted')`, 'freed toast', 5000));
+
   // ---- the App and Share plugins ------------------------------------------------
   adb('logcat', '-c');
   await launch();
@@ -328,6 +385,9 @@ try {
   await pushJournal(hadJournal ? keptJournal : sample).catch(() => undefined);
   for (const f of backups())
     if (!copiesBefore.has(f) && /^before-(restore|erase)-/.test(f)) inApp('rm', `files/backups/${f}`);
+  try {
+    inApp('rm', '-f', KEPT_COPY, SWEEP_COPY, ...PLANTED.map((n) => `files/screenshots/${n}`));
+  } catch {}
   adb('shell', 'am', 'force-stop', PKG);
   if (rooted) adb('unroot');
   rmSync(work, { recursive: true, force: true });

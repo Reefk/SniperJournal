@@ -2,7 +2,8 @@
 // first run, CSV import, metrics, edit, delete, CSV export, backup, restore
 // (with its safety copy), a save while another program holds the journal
 // file (Windows), a server restart, the keyboard inside dialogs, and chart
-// images going with a deleted account, a restore and an erase. Synthetic data
+// images going with a deleted account, a restore, an erase and a merge, and
+// reclaimed in Settings once nothing uses them. Synthetic data
 // only, in a throwaway folder; your own data/ folder is never touched.
 //
 //   npm run build && npm run e2e
@@ -11,7 +12,7 @@
 // No extra packages: it speaks the DevTools protocol over Node's WebSocket.
 
 import { spawn } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -639,6 +640,137 @@ async function journey() {
   await savedSoon((j) => j.trades.some((t) => t.symbol === 'CHART' && t.screenshotFile !== original));
   const replaced = chartOf();
   check('Replace, then Save: the trade shows the new image, and the old file is deleted', Boolean(replaced) && replaced !== original && JSON.stringify(await imagesSoon(1)) === JSON.stringify([replaced]), JSON.stringify({ original, replaced, files: images() }));
+
+  // ---- 14b. merging keeps one chart; Settings reclaims images nothing uses ----
+  // a part with a chart image and a chart link; returns the image's file name
+  const logMergeLeg = async (link) => {
+    const before = images();
+    await b.run(`$tStarts('Log trade').click(); true`);
+    await b.until(`!!$modal() && !!$field('Symbol', $modal())`, 'trade form');
+    await b.run(`$type($field('Symbol', $modal()), 'MERGE'); $type($field('Quantity', $modal()), '1'); $type($field('Entry price', $modal()), '10'); [...$modal().querySelectorAll('button[aria-expanded]')].find((x) => x.textContent.includes('Futures, forex')).click(); true`);
+    await b.until(`!!$field('Chart link', $modal())`, 'chart link field');
+    await b.run(`$type($field('Chart link', $modal()), '${link}'); true`);
+    await b.setFile('[data-modal-root] input[type=file]', png);
+    await b.until(`!!$modal().querySelector('img')`, 'chart saved');
+    await b.run(`$t('Save trade', $modal()).click(); true`);
+    await b.until(`!$modal()`, 'trade saved');
+    return images().find((f) => !before.includes(f));
+  };
+  await b.run(`$nav('/trades'); true`);
+  await b.until(`!!$tStarts('Log trade')`, 'trades page');
+  const firstLeg = await logMergeLeg('https://charts.example/first');
+  const secondLeg = await logMergeLeg('https://charts.example/second');
+  const tickMerge = `[...document.querySelectorAll('input[aria-label="Select MERGE trade"]')].find((c) => c.offsetParent !== null && !c.checked).click(); true`;
+  await b.run(tickMerge);
+  await b.until(`${selectedCount} === 1`, '1 selected');
+  await b.run(tickMerge);
+  await b.until(`${selectedCount} === 2`, '2 selected');
+  await b.run(`$tStarts('Merge into one').click(); true`);
+  await b.until(`!!$modal() && !!$t('Merge into one trade', $modal())`, 'merge confirmation');
+  check(
+    "the merge confirmation says the other part's chart image is deleted and its chart link goes into the notes",
+    await b.run(`$modal().innerText.includes('the other chart image is deleted') && $modal().innerText.includes('the other link is added to its notes')`),
+    await b.run(`$modal().innerText`),
+  );
+  await b.run(`$t('Merge into one trade', $modal()).click(); true`);
+  await b.until(`!$modal()`, 'merged');
+  const mergedOnDisk = await savedSoon((j) => j.trades.filter((t) => t.symbol === 'MERGE').length === 1);
+  const mergedTrade = journalOnDisk().trades.find((t) => t.symbol === 'MERGE');
+  const mergedChart = mergedTrade?.screenshotFile;
+  check(
+    "merging keeps the first part's chart and deletes the other part's image",
+    Boolean(firstLeg && secondLeg) && mergedOnDisk && mergedChart === firstLeg && JSON.stringify((await imagesSoon(2)).sort()) === JSON.stringify([firstLeg, replaced].sort()),
+    JSON.stringify({ firstLeg, secondLeg, mergedChart, files: images() }),
+  );
+  check(
+    "it keeps the first part's chart link, and the other part's link is in its notes",
+    mergedTrade?.screenshotUrl === 'https://charts.example/first' && (mergedTrade?.notes ?? '').includes('https://charts.example/second'),
+    JSON.stringify({ link: mergedTrade?.screenshotUrl, notes: mergedTrade?.notes }),
+  );
+
+  // left behind by older versions, a form never closed, or a failed delete
+  const shots = join(work, 'data', 'screenshots');
+  const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const plant = (name, modified = monthAgo) => {
+    writeFileSync(join(shots, name), readFileSync(png));
+    utimesSync(join(shots, name), modified, modified);
+  };
+  plant('orphan0001.png'); // nothing uses it
+  plant('orphan0002.png'); // nothing uses it either
+  plant('copykeep01.png'); // only a kept copy mentions it
+  plant('fresh00001.png', new Date()); // nothing uses it, but it was just added
+  writeFileSync(join(work, 'data', 'backups', 'conflict-20260101-000000.json'), JSON.stringify({ version: 1, trades: [{ id: 'x', screenshotFile: 'copykeep01.png' }], accounts: [] }));
+  for (const name of [replaced, firstLeg]) utimesSync(join(shots, name), monthAgo, monthAgo); // in use, and old
+  const planted = images();
+  const reclaim = async () => {
+    await b.run(`$nav('/settings'); true`);
+    await b.until(`!!$t('Reclaim unused chart images')`, 'settings');
+    await b.run(`$t('Reclaim unused chart images').click(); true`);
+  };
+  await reclaim();
+  await b.until(`!!$modal() && !!$t('Delete them', $modal())`, 'reclaim confirmation');
+  const asking = await b.run(`$modal().innerText`);
+  check(
+    'Reclaim unused chart images says how many there are and the space they take before deleting anything',
+    /Delete 2 unused chart images\?/.test(asking) && asking.includes(`frees ${2 * statSync(png).size} bytes`) && images().length === planted.length,
+    asking,
+  );
+  await b.run(`$t('Cancel', $modal()).click(); true`);
+  await b.until(`!$modal()`, 'reclaim cancelled');
+  check('Cancel deletes nothing', JSON.stringify(images()) === JSON.stringify(planted));
+  await reclaim();
+  await b.until(`!!$modal() && !!$t('Delete them', $modal())`, 'reclaim confirmation');
+  await b.run(`$t('Delete them', $modal()).click(); true`);
+  const freed = await seen(`$text().includes('${2 * statSync(png).size} bytes freed: 2 unused chart images deleted')`, 'reclaimed', 10000);
+  check(
+    'confirmed, it deletes the images nothing uses and reports the space freed; ones in use, in a kept copy, or new stay',
+    freed && JSON.stringify(images().sort()) === JSON.stringify(['copykeep01.png', 'fresh00001.png', firstLeg, replaced].sort()),
+    JSON.stringify(images()),
+  );
+  await reclaim();
+  check('asked again, it says there is nothing left to reclaim', await seen(`$text().includes('There is nothing to reclaim')`, 'nothing to reclaim', 10000) && !(await b.run(`!!$modal()`)));
+
+  // removing the test data takes a chart attached to a test trade with it
+  const balanceBefore = journalOnDisk().accounts[0].startingBalance;
+  await b.run(`$tStarts('Load test data').click(); true`);
+  await savedSoon((j) => j.trades.some((t) => t.isSample));
+  const onDisk = journalOnDisk();
+  const mine = new Set(onDisk.trades.filter((t) => !t.isSample).map((t) => t.symbol));
+  const sampleSymbol = onDisk.trades.find((t) => t.isSample && !mine.has(t.symbol))?.symbol;
+  const search = `document.querySelector('main input[aria-label="Search trades"]')`;
+  const sampleRow = `[...document.querySelectorAll('tbody tr')].find((r) => r.innerText.includes(${JSON.stringify(sampleSymbol)}))`;
+  await b.run(`$nav('/trades'); true`);
+  await b.until(`!!${search}`, 'trades page');
+  await b.run(`$type(${search}, ${JSON.stringify(sampleSymbol)}); true`);
+  await b.until(`!!${sampleRow}`, 'a test trade');
+  await b.run(`${sampleRow}.click(); true`);
+  await b.until(`!!$modal()?.querySelector('input[type=file]')`, 'test trade form');
+  const beforeSample = images();
+  await b.setFile('[data-modal-root] input[type=file]', png);
+  await b.until(`!!$modal().querySelector('img')`, 'chart on a test trade');
+  await b.run(`$t('Save changes', $modal()).click(); true`);
+  await b.until(`!$modal()`, 'test trade saved');
+  const sampleChart = images().find((f) => !beforeSample.includes(f));
+  await savedSoon((j) => j.trades.some((t) => t.isSample && t.screenshotFile === sampleChart));
+  await b.run(`$type(${search}, ''); $nav('/settings'); true`);
+  await b.until(`!!$tStarts('Remove test data', document.querySelector('main'))`, 'settings');
+  await b.run(`$tStarts('Remove test data', document.querySelector('main')).click(); true`);
+  await b.until(`!!$modal() && !!$t('Remove test data', $modal())`, 'remove test data confirmation');
+  const removing = await b.run(`$modal().innerText`);
+  await b.run(`$t('Remove test data', $modal()).click(); true`);
+  let afterSample = images();
+  for (let i = 0; i < 30 && afterSample.includes(sampleChart); i++) {
+    await sleep(100);
+    afterSample = images();
+  }
+  check(
+    'Remove test data says it takes their charts, and deletes the chart attached to a test trade (and only that)',
+    Boolean(sampleChart) && removing.includes('any chart images you attached to them') && JSON.stringify(afterSample) === JSON.stringify(beforeSample),
+    JSON.stringify({ sampleSymbol, sampleChart, removing, afterSample }),
+  );
+  // loading test data gave the account a starting balance; section 15 needs the old one
+  await b.run(`$type(document.querySelector('input[aria-label="Starting balance"]'), '${balanceBefore}'); true`);
+  await savedSoon((j) => j.accounts[0].startingBalance === balanceBefore && !j.trades.some((t) => t.isSample));
 
   // ---- 15. a crash shows a calm screen that still hands over the journal ------
   // Nothing in the app can crash on purpose, so the test makes money formatting
