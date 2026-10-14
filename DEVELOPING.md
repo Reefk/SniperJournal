@@ -68,6 +68,12 @@ The tests are in `tests/` and only ever use made-up trades. They never open
 `data/` or anything else of yours. `docs/QUALITY_AUDIT.md` explains what they
 cover and what they don't.
 
+A test named **current behaviour, under review** pins down something known to
+be wrong or still undecided, with a comment above it saying what is planned.
+It is there so the behaviour can't change by accident in the meantime; the
+change that settles it updates that test on purpose. `grep -rn "under review"
+tests/` lists them.
+
 GitHub runs typecheck, lint, the tests and both builds (desktop and the
 Android export) on Windows and Linux for every push to `main` and every pull
 request: `.github/workflows/ci.yml`. It only reads the code; nothing is signed

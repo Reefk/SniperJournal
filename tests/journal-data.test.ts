@@ -133,6 +133,15 @@ describe('sanitize: individual rules', () => {
     expect(t.manualPnl).toBeNull();
   });
 
+  // Under review: the trade form only takes ratings of 1–5 and a quantity
+  // above 0, but a hand-edited journal or backup can hold any number. Planned:
+  // clamp ratings to 1–5, and refuse or clamp a negative quantity.
+  it('current behaviour, under review: review ratings outside 1–5 and a negative quantity are kept as they are', () => {
+    const [t] = cleanTrades([trade({ quantity: -3, review: { discipline: 9, execution: 0, patience: -2 } })]);
+    expect(t.quantity).toBe(-3);
+    expect(t.review).toEqual({ discipline: 9, execution: 0, patience: -2 });
+  });
+
   it('a multiplier of zero or less is dropped, so a winner can never show as a loss', () => {
     const [neg, zero, ok] = cleanTrades([
       trade({ id: 'n', entryPrice: 100, exitPrice: 110, multiplier: -2 }),

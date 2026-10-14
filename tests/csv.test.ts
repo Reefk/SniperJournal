@@ -252,6 +252,18 @@ describe('import: duplicates and partial fills', () => {
     expect(r.trades).toHaveLength(2);
   });
 
+  // Under review (SJ-27): with no ids, nothing tells a trade already imported
+  // from a new one. Planned: warn about likely duplicates (same account,
+  // symbol, side, entry time and quantity) without blocking them.
+  it('current behaviour, under review: a file without trade ids imported again adds every trade again, without a word', () => {
+    const csv = 'symbol,side,opened_at,qty,entry,exit\nAAPL,long,2026-03-02 10:00,1,100,101\nMSFT,short,2026-03-02 11:00,2,50,49';
+    const first = importTradesFromCsv(csv, ctx());
+    const again = importTradesFromCsv(csv, ctx({ existing: first.trades }));
+    expect(again.trades).toHaveLength(2);
+    expect(again.duplicates).toBe(0);
+    expect([...again.errors, ...again.notices]).toEqual([]);
+  });
+
   it('a repeated id inside one file is imported once', () => {
     const r = importTradesFromCsv('symbol,id\nAAPL,7\nAAPL,7', ctx());
     expect(r.trades).toHaveLength(1);

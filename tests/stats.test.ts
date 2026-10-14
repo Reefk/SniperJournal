@@ -182,7 +182,29 @@ describe('computeStats: which trades count', () => {
 });
 
 describe('computeStats: R multiples and SQN basis', () => {
-  it('SQN uses R when most trades have a stop, scaled by the number of R values', () => {
+  /** closed trades with a stop 10 below a 100 entry, one a day, each making these R */
+  const withStop = (rs: number[]) =>
+    rs.map((r, i) =>
+      trade({
+        entryPrice: 100,
+        stopLoss: 90,
+        exitPrice: 100 + r * 10,
+        quantity: 1,
+        openedAt: `2026-03-${String(2 + i).padStart(2, '0')}T10:00`,
+        closedAt: `2026-03-${String(2 + i).padStart(2, '0')}T11:00`,
+      }),
+    );
+  const sqnOf = (values: number[]) => {
+    const m = values.reduce((a, b) => a + b, 0) / values.length;
+    const sd = Math.sqrt(values.reduce((a, v) => a + (v - m) ** 2, 0) / (values.length - 1));
+    return (m / sd) * Math.sqrt(values.length);
+  };
+
+  // Under review: SQN is worked out in R while at least half the trades have
+  // a stop, and in money below that, so one more trade without a stop can move
+  // it a long way. Planned: one basis, or say which one is in use. This test
+  // and the next change then.
+  it('current behaviour, under review: SQN uses R when most trades have a stop, scaled by the number of R values', () => {
     // 6 trades with a stop (R = 2, -1, 1, -1, 2, 0.5) and 4 without
     const withStops = [2, -1, 1, -1, 2, 0.5].map((r, i) =>
       trade({
@@ -203,6 +225,18 @@ describe('computeStats: R multiples and SQN basis', () => {
     // the expectancy in R is this same average; it is not reported twice
     expect(s).not.toHaveProperty('expectancyR');
     expect(s.sqn).toBeCloseTo((m / sd) * Math.sqrt(rs.length), 10);
+  });
+
+  it('current behaviour, under review: one more trade without a stop flips SQN from R to money', () => {
+    const rs = [2, -1, 1, -1, 2, 0.5];
+    const noStop = [30, -10, 5, 20, 15, -5];
+    // 6 of 12 trades have a stop: R
+    expect(computeStats([...withStop(rs), ...series(noStop)]).sqn).toBeCloseTo(sqnOf(rs), 10);
+    // 6 of 13: every trade's P&L in money, the stopped ones' included
+    const money = [...rs.map((r) => r * 10), ...noStop, 10];
+    expect(computeStats([...withStop(rs), ...series([...noStop, 10])]).sqn).toBeCloseTo(sqnOf(money), 10);
+    // 1.05 ("Below average") becomes 2.08 ("Good")
+    expect(sqnOf(rs)).not.toBeCloseTo(sqnOf(money), 1);
   });
 });
 
@@ -306,6 +340,32 @@ describe('sniperScore', () => {
     expect(axis('Patience')?.score).toBe(100);
     const rated = score.axes.filter((a) => a.rated);
     expect(score.overall).toBe(Math.round(rated.reduce((a, b) => a + b.score, 0) / rated.length));
+  });
+
+  // Under review: a self-rating axis counts once 3 trades are rated, but with
+  // 1 or 2 it already has a score. The dashboard's radar chart plots it while
+  // the same screen lists the axis as not yet rated. Planned: no score while
+  // unrated.
+  it('current behaviour, under review: a self-rating axis with fewer than 3 ratings is unrated, yet has a score', () => {
+    const trades = series([10, -5, 10, 10, -5], (i) => (i < 2 ? { review: { discipline: 4 } } : {}));
+    const score = sniperScore(trades, computeStats(trades));
+    expect(score.axes.find((a) => a.axis === 'Discipline')).toMatchObject({ rated: false, score: 80 });
+    expect(score.unrated).toContain('Discipline');
+  });
+
+  // Under review: steadiness uses the size of the average day, whatever its
+  // sign, so days that lose about the same every time earn it as fully as days
+  // that win it; only the share of green days tells them apart. Planned:
+  // steadiness only for steady gains.
+  it('current behaviour, under review: steadily losing days earn the same steadiness as steadily winning ones', () => {
+    const consistency = (nets: number[]) => {
+      const trades = series(nets);
+      return sniperScore(trades, computeStats(trades)).axes.find((a) => a.axis === 'Consistency')?.score;
+    };
+    // no green day, yet the full 40 for steadiness
+    expect(consistency([-10, -12, -10, -12, -10])).toBe(40);
+    // every day green: 60 for that, and the same 40
+    expect(consistency([10, 12, 10, 12, 10])).toBe(100);
   });
 
   it('labels SQN bands', () => {
