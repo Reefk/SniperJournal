@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { JournalData } from '@/lib/types';
+import { UNSUPPORTED_IMAGE } from '@/lib/storage/image-types';
 
 /**
  * The phone's storage, against an in-memory stand-in for Capacitor's
@@ -239,14 +240,26 @@ describe('chart images and exports', () => {
 
   it('saves an image under a generated name and serves it through Capacitor', async () => {
     const s = await freshStorage();
-    const name = await s.saveImage(new Blob([new Uint8Array([1, 2, 3])], { type: 'image/png' }), 'png');
+    const name = await s.saveImage(new Blob([new Uint8Array([1, 2, 3])], { type: 'image/png' }));
     expect(name).toMatch(/^[a-z0-9]{6,40}\.png$/);
     expect(fs.files.get(`DATA:screenshots/${name}`)).toBe('AQID');
     expect(s.imageSrc(name)).toBe(`https://localhost/_capacitor_file_/data/user/0/com.sniperjournal.app/files/screenshots/${name}`);
   });
 
   it('refuses file types it does not serve', async () => {
-    await expect((await freshStorage()).saveImage(new Blob(['x']), 'svg')).rejects.toThrow(/PNG, JPEG, WebP and GIF/);
+    await expect((await freshStorage()).saveImage(new Blob(['<svg/>'], { type: 'image/svg+xml' }))).rejects.toThrow(
+      /PNG, JPEG, WebP and GIF/,
+    );
+  });
+
+  it("goes by the image's own type: an AVIF, BMP or HEIC is refused, in the desktop's words, and nothing is written", async () => {
+    const s = await freshStorage();
+    for (const type of ['image/avif', 'image/bmp', 'image/heic']) {
+      await expect(s.saveImage(new Blob([new Uint8Array([1, 2, 3])], { type }))).rejects.toThrow(UNSUPPORTED_IMAGE);
+    }
+    expect([...fs.files.keys()].filter((k) => k.includes('screenshots/'))).toEqual([]);
+    // a JPEG is saved as .jpg, as on the desktop
+    expect(await s.saveImage(new Blob([new Uint8Array([1])], { type: 'image/jpeg' }))).toMatch(/^[a-z0-9]{6,40}\.jpg$/);
   });
 
   it('never turns a stored name into a path outside the screenshots folder', async () => {

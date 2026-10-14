@@ -4,6 +4,7 @@ import { Share } from '@capacitor/share';
 import type { JournalData } from '@/lib/types';
 import { KEEP_COPIES, copyStamp, type CopyReason, type JournalStorage } from './types';
 import { IMAGE_NAME, findUnused, removeUnused, type SweepFiles, type UnusedImage } from './sweep';
+import { UNSUPPORTED_IMAGE, imageExtension } from './image-types';
 
 /**
  * The phone implementation: the journal and its chart images live in the
@@ -24,14 +25,6 @@ const TMP = 'journal.tmp';
 const BACKUP_DIR = 'backups';
 const SHOTS_DIR = 'screenshots';
 const KEEP_BACKUPS = 30;
-
-const TYPES: Record<string, string> = {
-  png: 'image/png',
-  jpg: 'image/jpeg',
-  jpeg: 'image/jpeg',
-  webp: 'image/webp',
-  gif: 'image/gif',
-};
 
 /** file:// URI of Directory.Data, resolved once in init() */
 let baseUri = '';
@@ -219,9 +212,9 @@ export const capacitorStorage: JournalStorage = {
     return run;
   },
 
-  async saveImage(blob: Blob, extension: string): Promise<string> {
-    const ext = extension.toLowerCase();
-    if (!TYPES[ext]) throw new Error('Only PNG, JPEG, WebP and GIF images can be saved.');
+  async saveImage(blob: Blob): Promise<string> {
+    const ext = imageExtension(blob.type);
+    if (!ext) throw new Error(UNSUPPORTED_IMAGE);
     const name = `${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36).slice(-4)}.${ext}`;
     await Filesystem.writeFile({
       path: `${SHOTS_DIR}/${name}`,

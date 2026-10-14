@@ -60,8 +60,12 @@ export interface JournalStorage {
    */
   keepCopy(data: JournalData, reason: CopyReason): Promise<string | null>;
 
-  /** Save a chart image and return the name to store on the trade. */
-  saveImage(blob: Blob, extension: string): Promise<string>;
+  /**
+   * Save a chart image and return the name to store on the trade. Its
+   * extension comes from the blob's own type; throws UNSUPPORTED_IMAGE
+   * (image-types.ts) for a type that cannot be saved.
+   */
+  saveImage(blob: Blob): Promise<string>;
 
   /**
    * A URL the webview can put in an <img src>. Synchronous on purpose: it is

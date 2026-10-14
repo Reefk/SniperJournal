@@ -1,11 +1,26 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { chartsOnlyInSample, chartsToDiscard, findUnusedCharts, imagesOnlyIn, removeUnusedCharts } from '@/lib/screenshots';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  chartsOnlyInSample,
+  chartsToDiscard,
+  findUnusedCharts,
+  imagesOnlyIn,
+  removeUnusedCharts,
+  uploadScreenshot,
+} from '@/lib/screenshots';
+import { UNSUPPORTED_IMAGE } from '@/lib/storage/image-types';
 import { mergeTrades } from '@/lib/merge';
 import { trade } from './helpers';
 
 const asked = vi.hoisted(() => [] as Array<[string, string[], string[]?]>);
+/** the types of the images handed to the storage, and what it throws instead */
+const saved = vi.hoisted(() => ({ types: [] as string[], fail: null as Error | null }));
 vi.mock('@/lib/storage', () => ({
   storage: {
+    async saveImage(blob: Blob) {
+      if (saved.fail) throw saved.fail;
+      saved.types.push(blob.type);
+      return 'saved001.png';
+    },
     async findUnusedImages(inUse: string[]) {
       asked.push(['find', inUse]);
       return [{ name: 'orphan01.png', bytes: 70 }];
@@ -114,5 +129,81 @@ describe('reclaiming the chart images nothing uses', () => {
       ['find', ['aaa111.png']],
       ['remove', ['aaa111.png'], ['orphan01.png']],
     ]);
+  });
+});
+
+describe('saving a chart image', () => {
+  const image = (type: string, bytes = 1000) => new File([new Uint8Array(bytes)], 'chart', { type });
+
+  /** what the browser can draw: a bitmap this size, or nothing (a HEIC, say) */
+  function browserDraws(size: { width: number; height: number } | null) {
+    vi.stubGlobal(
+      'createImageBitmap',
+      vi.fn(async () => {
+        if (!size) throw new DOMException('The source image could not be decoded.', 'InvalidStateError');
+        return { ...size, close() {} };
+      }),
+    );
+    // the canvas writes whatever type it is asked for, smaller than any image here
+    const canvas = {
+      width: 0,
+      height: 0,
+      getContext: () => ({ drawImage() {} }),
+      toBlob: (done: (b: Blob) => void, type: string) => done(new Blob([new Uint8Array(4)], { type })),
+    };
+    vi.stubGlobal('document', { createElement: () => canvas });
+  }
+
+  beforeEach(() => {
+    saved.types.length = 0;
+    saved.fail = null;
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('saves a small PNG, JPEG, WebP or GIF as it is', async () => {
+    browserDraws({ width: 800, height: 600 });
+    for (const type of ['image/png', 'image/jpeg', 'image/webp', 'image/gif']) {
+      expect(await uploadScreenshot(image(type))).toEqual({ name: 'saved001.png' });
+    }
+    expect(saved.types).toEqual(['image/png', 'image/jpeg', 'image/webp', 'image/gif']);
+  });
+
+  it('refuses a small AVIF or BMP, which would be kept as it came, instead of saving it as a .jpg', async () => {
+    browserDraws({ width: 800, height: 600 });
+    for (const type of ['image/avif', 'image/bmp']) {
+      expect(await uploadScreenshot(image(type))).toEqual({ error: UNSUPPORTED_IMAGE });
+    }
+    expect(saved.types).toEqual([]);
+  });
+
+  it('refuses an image the browser cannot draw (a HEIC), which is left as it came', async () => {
+    browserDraws(null);
+    expect(await uploadScreenshot(image('image/heic'))).toEqual({ error: UNSUPPORTED_IMAGE });
+    expect(saved.types).toEqual([]);
+  });
+
+  it('an AVIF big enough to be redrawn is saved as the WebP it becomes, as before', async () => {
+    browserDraws({ width: 3600, height: 2000 });
+    expect(await uploadScreenshot(image('image/avif'))).toEqual({ name: 'saved001.png' });
+    expect(saved.types).toEqual(['image/webp']);
+  });
+
+  it('a file that is not an image is refused before anything is drawn or saved', async () => {
+    browserDraws({ width: 800, height: 600 });
+    expect(await uploadScreenshot(image('text/plain'))).toEqual({ error: 'That file is not an image.' });
+    expect(createImageBitmap).not.toHaveBeenCalled();
+    expect(saved.types).toEqual([]);
+  });
+
+  it("passes on the storage's own reason, and says the data folder was out of reach for anything else", async () => {
+    browserDraws({ width: 800, height: 600 });
+    saved.fail = new Error('That image is larger than 8MB.');
+    expect(await uploadScreenshot(image('image/png'))).toEqual({ error: 'That image is larger than 8MB.' });
+    saved.fail = new TypeError('Failed to fetch');
+    expect(await uploadScreenshot(image('image/png'))).toEqual({
+      error: 'Images can only be saved while the app can reach its data folder.',
+    });
   });
 });

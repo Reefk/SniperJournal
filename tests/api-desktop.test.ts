@@ -3,6 +3,7 @@ import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync, mkdirSyn
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { UNSUPPORTED_IMAGE } from '@/lib/storage/image-types';
 
 /**
  * The desktop server's API routes, run against a throwaway folder: the
@@ -284,6 +285,22 @@ describe('/api/screenshot', () => {
   it('refuses types it will not serve, and anything over 8MB', async () => {
     expect((await upload(new Blob(['<svg/>'], { type: 'image/svg+xml' }), 'x.svg')).status).toBe(400);
     expect((await upload(new Blob([new Uint8Array(8 * 1024 * 1024 + 1)], { type: 'image/png' }))).status).toBe(400);
+  });
+
+  it("goes by the image's own type: an AVIF, BMP or HEIC is refused, in the phone's words, whatever it is called", async () => {
+    for (const type of ['image/avif', 'image/bmp', 'image/heic']) {
+      const res = await upload(new Blob([new Uint8Array([1, 2, 3])], { type }), 'chart.jpg');
+      expect(res.status).toBe(400);
+      expect((await res.json()).error).toBe(UNSUPPORTED_IMAGE);
+    }
+    expect(existsSync(join(root, 'data', 'screenshots'))).toBe(false);
+    // a JPEG is saved as .jpg; one saved as .jpeg is still served as a JPEG
+    const { name } = await (await upload(new Blob([new Uint8Array([255, 216])], { type: 'image/jpeg' }), 'x.jpeg')).json();
+    expect(name).toMatch(/^[a-z0-9]{6,40}\.jpg$/);
+    writeFileSync(join(root, 'data', 'screenshots', 'older001.JPEG'), 'x');
+    for (const n of [name, 'older001.JPEG']) {
+      expect((await routes.shot.GET(req(`/api/screenshot?name=${n}`))).headers.get('content-type')).toBe('image/jpeg');
+    }
   });
 
   it('never reads or deletes outside the screenshots folder', async () => {

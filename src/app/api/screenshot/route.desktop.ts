@@ -3,6 +3,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { refuseForeign } from '../local-only';
 import { IMAGE_NAME, SweepError, findUnused, removeUnused, type StoredImage, type SweepFiles } from '@/lib/storage/sweep';
+import { UNSUPPORTED_IMAGE, imageExtension, imageType } from '@/lib/storage/image-types';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -17,14 +18,6 @@ const DIR = path.join(DATA_DIR, 'screenshots');
 /** what is searched for images still referred to (see /api/journal) */
 const JOURNAL = path.join(DATA_DIR, 'journal.json');
 const BACKUP_DIR = path.join(DATA_DIR, 'backups');
-
-const TYPES: Record<string, string> = {
-  png: 'image/png',
-  jpg: 'image/jpeg',
-  jpeg: 'image/jpeg',
-  webp: 'image/webp',
-  gif: 'image/gif',
-};
 
 const MAX_BYTES = 8 * 1024 * 1024;
 
@@ -42,10 +35,9 @@ export async function GET(request: Request) {
 
   try {
     const file = await fs.readFile(path.join(DIR, name));
-    const ext = name.split('.').pop()?.toLowerCase() ?? 'png';
     return new NextResponse(new Uint8Array(file), {
       headers: {
-        'Content-Type': TYPES[ext] ?? 'application/octet-stream',
+        'Content-Type': imageType(name) ?? 'application/octet-stream',
         'Cache-Control': 'private, max-age=31536000, immutable',
         // the type was only ever claimed by whoever uploaded it; never let a
         // browser second-guess it into something runnable such as HTML
@@ -140,13 +132,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, error: 'That image is larger than 8MB.' }, { status: 400 });
     }
 
-    const ext = Object.keys(TYPES).find((e) => TYPES[e] === file.type);
-    if (!ext) {
-      return NextResponse.json(
-        { ok: false, error: 'Only PNG, JPEG, WebP and GIF images can be saved.' },
-        { status: 400 },
-      );
-    }
+    const ext = imageExtension(file.type);
+    if (!ext) return NextResponse.json({ ok: false, error: UNSUPPORTED_IMAGE }, { status: 400 });
 
     await fs.mkdir(DIR, { recursive: true });
     const name = `${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36).slice(-4)}.${ext}`;

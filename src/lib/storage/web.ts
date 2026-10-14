@@ -90,9 +90,10 @@ export const webStorage: JournalStorage = {
     return (json.path as string) ?? null;
   },
 
-  async saveImage(blob: Blob, extension: string): Promise<string> {
+  async saveImage(blob: Blob): Promise<string> {
+    // the server names it, from its type
     const form = new FormData();
-    form.append('file', new File([blob], `chart.${extension}`, { type: blob.type }));
+    form.append('file', new File([blob], 'chart', { type: blob.type }));
     const res = await fetch('/api/screenshot', { method: 'POST', body: form });
     const json = await res.json();
     if (!json?.ok || !json.name) throw new Error(json?.error ?? 'Could not save the image.');

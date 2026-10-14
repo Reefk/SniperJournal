@@ -1,4 +1,5 @@
 import { storage } from './storage';
+import { UNSUPPORTED_IMAGE, imageExtension } from './storage/image-types';
 import type { UnusedImage } from './storage/sweep';
 import type { Trade } from './types';
 
@@ -54,11 +55,12 @@ export async function uploadScreenshot(file: File): Promise<UploadResult> {
   if (!file.type.startsWith('image/')) return { error: 'That file is not an image.' };
 
   const blob = await shrink(file);
-  const ext =
-    blob.type === 'image/webp' ? 'webp' : blob.type === 'image/png' ? 'png' : blob.type === 'image/gif' ? 'gif' : 'jpg';
+  // still the file as it came when it was small enough to keep, or the
+  // browser could not draw it (HEIC, say): an AVIF or BMP stays one
+  if (!imageExtension(blob.type)) return { error: UNSUPPORTED_IMAGE };
 
   try {
-    return { name: await storage.saveImage(blob, ext) };
+    return { name: await storage.saveImage(blob) };
   } catch (err) {
     // a plain Error carries the storage's own explanation; anything else
     // (a failed fetch, an unreadable reply) means the folder was unreachable
