@@ -674,7 +674,13 @@ async function journey() {
   );
   await b.run(`$t('Merge into one trade', $modal()).click(); true`);
   await b.until(`!$modal()`, 'merged');
-  const mergedOnDisk = await savedSoon((j) => j.trades.filter((t) => t.symbol === 'MERGE').length === 1);
+  // the merged trade itself (both parts' quantity): one MERGE trade alone can
+  // also be the file from before the merge, when the merge came within the
+  // second part's autosave pause and only the first part had been saved
+  const mergedOnDisk = await savedSoon((j) => {
+    const merge = j.trades.filter((t) => t.symbol === 'MERGE');
+    return merge.length === 1 && merge[0].quantity === 2;
+  });
   const mergedTrade = journalOnDisk().trades.find((t) => t.symbol === 'MERGE');
   const mergedChart = mergedTrade?.screenshotFile;
   check(
