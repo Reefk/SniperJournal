@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { CircleAlert, Download, Info, RotateCw } from 'lucide-react';
-import { useJournal } from '@/store/JournalProvider';
+import { useJournal, useSaveState } from '@/store/JournalProvider';
 import type { CopyMiss } from '@/store/mirror';
 import { exportBackup } from '@/lib/backup';
 import { storage } from '@/lib/storage';
@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/Button';
  * saved. This window's version is kept as a copy first.
  */
 export function SaveConflictDialog() {
-  const { conflict } = useJournal();
+  const { conflict } = useSaveState();
   if (!conflict) return null;
 
   return (
@@ -83,7 +83,8 @@ const native = storage.kind === 'native';
  * gets the second.
  */
 export function CopyNotice() {
-  const { copyMiss, saveStatus, data } = useJournal();
+  const { data } = useJournal();
+  const { copyMiss, saveStatus } = useSaveState();
   const [seen, setSeen] = useState<Array<'off' | 'lost'>>([]);
   if (!copyMiss || saveStatus === 'conflict') return null;
   const lost = saveStatus === 'unsaved' || saveStatus === 'error';
@@ -136,7 +137,7 @@ export function CopyNotice() {
  * rather than opening them over newer work.
  */
 export function RecoveredNotice() {
-  const { recovered, dismissRecovered } = useJournal();
+  const { recovered, dismissRecovered } = useSaveState();
   if (!recovered) return null;
 
   return (

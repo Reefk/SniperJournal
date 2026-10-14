@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { Download, LayoutDashboard, RotateCw, TriangleAlert } from 'lucide-react';
-import { useJournal } from '@/store/JournalProvider';
+import { useJournal, useSaveState } from '@/store/JournalProvider';
 import { exportBackup } from '@/lib/backup';
 import { Button } from '@/components/ui/Button';
 
@@ -12,7 +12,8 @@ import { Button } from '@/components/ui/Button';
  * A crash in those parts themselves is global-error.tsx.
  */
 export default function PageError({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {
-  const { data, filePath } = useJournal();
+  const { data } = useJournal();
+  const { filePath } = useSaveState();
 
   return (
     <div className="mx-auto max-w-xl py-10">

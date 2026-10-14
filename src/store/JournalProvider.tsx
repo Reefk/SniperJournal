@@ -108,9 +108,29 @@ interface Actions {
   resetAll: () => void;
 }
 
-interface JournalContextValue {
+/** what the journal shows, worked out again only when the journal changes */
+interface Derived {
+  accountTrades: Trade[];
+  activeAccount: Account | null;
+  activeLabel: string;
+  startingBalance: number;
+  balances: Record<string, number>;
+  sampleCount: number;
+}
+
+interface JournalContextValue extends Derived {
   data: JournalData;
   ready: boolean;
+  actions: Actions;
+}
+
+/**
+ * How saving is going. Kept apart from the journal: it changes twice for
+ * every edit ('saving', then 'saved'), and every page reads the journal, so
+ * sharing one context would draw them all again each time. Read it with
+ * `useSaveState`.
+ */
+interface SaveState {
   saveStatus: SaveStatus;
   filePath: string | null;
   /** set once this window stopped saving because the file changed elsewhere */
@@ -127,16 +147,10 @@ interface JournalContextValue {
    * phone only while its folder can't be written.
    */
   copyMiss: CopyMiss | null;
-  actions: Actions;
-  accountTrades: Trade[];
-  activeAccount: Account | null;
-  activeLabel: string;
-  startingBalance: number;
-  balances: Record<string, number>;
-  sampleCount: number;
 }
 
 const JournalContext = createContext<JournalContextValue | null>(null);
+const SaveStateContext = createContext<SaveState | null>(null);
 
 export function JournalProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<JournalData>(createDefaultData);
@@ -467,7 +481,9 @@ export function JournalProvider({ children }: { children: ReactNode }) {
     [mutate],
   );
 
-  const value = useMemo<JournalContextValue>(() => {
+  // keyed on the journal alone: every page's statistics are keyed on
+  // `accountTrades`, so a new array here means computing them all again
+  const derived = useMemo<Derived>(() => {
     const isAll = data.activeAccountId === 'all';
     const accountTrades = isAll ? data.trades : data.trades.filter((t) => t.accountId === data.activeAccountId);
     const activeAccount = data.accounts.find((a) => a.id === data.activeAccountId) ?? null;
@@ -477,16 +493,6 @@ export function JournalProvider({ children }: { children: ReactNode }) {
     const balances = accountBalances(data, data.settings.countExcludedInBalance === true);
 
     return {
-      data,
-      ready,
-      // "kept in the browser" only while it really is
-      saveStatus: saveStatus === 'browser' && copyMiss ? 'unsaved' : saveStatus,
-      filePath,
-      conflict,
-      recovered,
-      dismissRecovered,
-      copyMiss,
-      actions,
       accountTrades,
       activeAccount,
       activeLabel: isAll ? 'All accounts' : (activeAccount?.name ?? 'Portfolio'),
@@ -496,13 +502,39 @@ export function JournalProvider({ children }: { children: ReactNode }) {
       balances,
       sampleCount: data.trades.filter((t) => t.isSample).length,
     };
-  }, [data, ready, saveStatus, filePath, conflict, recovered, dismissRecovered, copyMiss, actions]);
+  }, [data]);
 
-  return <JournalContext.Provider value={value}>{children}</JournalContext.Provider>;
+  const value = useMemo<JournalContextValue>(() => ({ data, ready, actions, ...derived }), [data, ready, actions, derived]);
+
+  const saveState = useMemo<SaveState>(
+    () => ({
+      // "kept in the browser" only while it really is
+      saveStatus: saveStatus === 'browser' && copyMiss ? 'unsaved' : saveStatus,
+      filePath,
+      conflict,
+      recovered,
+      dismissRecovered,
+      copyMiss,
+    }),
+    [saveStatus, filePath, conflict, recovered, dismissRecovered, copyMiss],
+  );
+
+  return (
+    <JournalContext.Provider value={value}>
+      <SaveStateContext.Provider value={saveState}>{children}</SaveStateContext.Provider>
+    </JournalContext.Provider>
+  );
 }
 
 export function useJournal(): JournalContextValue {
   const ctx = useContext(JournalContext);
   if (!ctx) throw new Error('useJournal must be used inside JournalProvider');
+  return ctx;
+}
+
+/** how saving is going; only what shows it should read this (see SaveState) */
+export function useSaveState(): SaveState {
+  const ctx = useContext(SaveStateContext);
+  if (!ctx) throw new Error('useSaveState must be used inside JournalProvider');
   return ctx;
 }

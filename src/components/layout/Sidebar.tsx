@@ -18,7 +18,7 @@ import {
   Settings,
   Sun,
 } from 'lucide-react';
-import { useJournal, type SaveStatus } from '@/store/JournalProvider';
+import { useJournal, useSaveState, type SaveStatus } from '@/store/JournalProvider';
 import { useUI } from '@/store/UIProvider';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { exportBackup } from '@/lib/backup';
@@ -52,7 +52,8 @@ const SHOW_ONLINE = storage.kind === 'web';
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { data, actions, saveStatus } = useJournal();
+  const { data, actions } = useJournal();
+  const { saveStatus } = useSaveState();
   const online = useOnlineStatus();
   const theme = data.settings.theme;
 
@@ -167,7 +168,8 @@ const MORE = [
 /** The phone's navigation: a tab bar at the bottom, with a sheet for the rest */
 export function MobileNav() {
   const pathname = usePathname();
-  const { data, actions, saveStatus } = useJournal();
+  const { data, actions } = useJournal();
+  const { saveStatus } = useSaveState();
   const { toast } = useUI();
   const [more, setMore] = useState(false);
   const theme = data.settings.theme;

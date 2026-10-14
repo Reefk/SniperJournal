@@ -1,7 +1,7 @@
 'use client';
 
 import { FolderOpen, HardDrive, Keyboard, LifeBuoy, ShieldCheck, Upload } from 'lucide-react';
-import { useJournal, type SaveStatus } from '@/store/JournalProvider';
+import { useSaveState, type SaveStatus } from '@/store/JournalProvider';
 import type { CopyMiss } from '@/store/mirror';
 import { WHY_NO_COPY } from '@/components/layout/SaveConflict';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -107,7 +107,7 @@ function fileStatus(status: SaveStatus, copyMiss: CopyMiss | null): string {
 }
 
 export function SupportView() {
-  const { filePath, saveStatus, copyMiss } = useJournal();
+  const { filePath, saveStatus, copyMiss } = useSaveState();
 
   return (
     <>
