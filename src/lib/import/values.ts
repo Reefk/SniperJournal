@@ -295,3 +295,17 @@ export function parsePutCall(raw: string): 'C' | 'P' | null {
   if (s === 'put' || s === 'p') return 'P';
   return null;
 }
+
+// ---- free text -------------------------------------------------------------
+
+/**
+ * Spreadsheet formula injection: Excel and its kin run a cell that starts
+ * with = + - @ (or a tab or carriage return) as a formula, so a note such as
+ * =HYPERLINK(...) could do something when the export is opened. Free-text
+ * cells that start that way get a leading apostrophe, which spreadsheets show
+ * as plain text; the importer takes it off again. Numbers are never touched,
+ * so -12.50 stays a number.
+ */
+const FORMULA_START = /^[=+\-@\t\r]/;
+export const formulaSafe = (v: string) => (FORMULA_START.test(v) ? `'${v}` : v);
+export const unescapeFormula = (v: string) => (v.startsWith("'") && FORMULA_START.test(v.slice(1)) ? v.slice(1) : v);

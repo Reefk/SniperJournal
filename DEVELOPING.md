@@ -158,7 +158,9 @@ the first place both showed up.
    and the JSX all sit in that one file.
 3. If it should survive a CSV round trip, add it to `CSV_COLUMNS` in
    `src/lib/csv.ts`, give it a role and its column names in
-   `src/lib/import/columns.ts`, and read it in `importTradesFromCsv`.
+   `src/lib/import/columns.ts`, and read it in `assembleTrade`
+   (`src/lib/import/rows.ts`), and in `assemblePosition`
+   (`src/lib/import/positions.ts`) if a file of single fills can carry it.
 
 Old journals keep working: `normalize()` in `src/lib/journal.ts` fills in
 anything an existing `journal.json` does not have yet.
