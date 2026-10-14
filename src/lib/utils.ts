@@ -4,8 +4,29 @@ export function cn(...parts: Array<string | false | null | undefined>): string {
   return parts.filter(Boolean).join(' ');
 }
 
+const ID_CHARS = '0123456789abcdefghijklmnopqrstuvwxyz';
+
+/**
+ * A new record's id: 16 letters and digits from the browser's secure random
+ * generator, about 82 bits, so two never clash. Shorter than a UUID on
+ * purpose: every trade carries its own id and its account's, and the whole
+ * journal has to fit in the browser's spare copy (MIRROR_LIMIT). Where there
+ * is no crypto at all, the id every record had before, which is only a few
+ * characters shorter. Ids are only ever compared, so both kinds sit side by
+ * side in one journal.
+ */
 export function uid(): string {
-  return Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+  if (typeof crypto === 'undefined' || typeof crypto.getRandomValues !== 'function') {
+    return Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+  }
+  let id = '';
+  while (id.length < 16) {
+    for (const byte of crypto.getRandomValues(new Uint8Array(24))) {
+      // 252 is the largest multiple of 36 under 256; the bytes above it would favour some characters
+      if (byte < 252 && id.length < 16) id += ID_CHARS[byte % 36];
+    }
+  }
+  return id;
 }
 
 export const pad2 = (n: number) => String(n).padStart(2, '0');

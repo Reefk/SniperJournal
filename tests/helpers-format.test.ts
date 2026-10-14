@@ -1,10 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { formatBytes, formatDuration, formatMoney, formatPct, formatPrice, formatRatio } from '@/lib/format';
 import { buildInsights, buildSignals } from '@/lib/insights';
 import { rangeStart, splitByRange } from '@/lib/ranges';
 import { computeStats } from '@/lib/stats';
 import { detectSession } from '@/lib/sessions';
-import { dateKey, parseDateKey, parseLocal, toNumberOrNull } from '@/lib/utils';
+import { dateKey, parseDateKey, parseLocal, toNumberOrNull, uid } from '@/lib/utils';
 import type { Settings } from '@/lib/types';
 import { pnl, seeded, trade } from './helpers';
 
@@ -31,6 +31,32 @@ describe('toNumberOrNull: what the trade form accepts', () => {
     expect(toNumberOrNull(Number.NaN)).toBeNull();
     expect(toNumberOrNull(Number.POSITIVE_INFINITY)).toBeNull();
     expect(toNumberOrNull(null)).toBeNull();
+  });
+});
+
+describe('uid: the id of a new record', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('is 16 letters and digits from the secure random generator, never the same twice', () => {
+    const ids = Array.from({ length: 20_000 }, uid);
+    for (const id of ids) expect(id).toMatch(/^[0-9a-z]{16}$/);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('favours no character: each of the 36 turns up as often as the others', () => {
+    const counts = new Map<string, number>();
+    for (let i = 0; i < 20_000; i++) for (const c of uid()) counts.set(c, (counts.get(c) ?? 0) + 1);
+    expect(counts.size).toBe(36);
+    // 320,000 characters, about 8,889 each; 5% either way is more than 4 standard deviations
+    const expected = (20_000 * 16) / 36;
+    for (const n of counts.values()) expect(Math.abs(n - expected)).toBeLessThan(expected * 0.05);
+  });
+
+  it('is the short id of older records where there is no crypto at all', () => {
+    vi.stubGlobal('crypto', undefined);
+    for (let i = 0; i < 50; i++) expect(uid()).toMatch(/^[a-z0-9]{1,12}$/);
   });
 });
 
