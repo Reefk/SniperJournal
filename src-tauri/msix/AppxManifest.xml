@@ -3,8 +3,10 @@
   The Windows app's package manifest, for the Microsoft Store.
   scripts/package-msix.mjs fills in the Identity's Version from package.json.
   The identity (Name, Publisher, PublisherDisplayName) is the one Partner
-  Center reserved for "Sniper Journal" (Product management > Product
-  identity); the Store refuses a package with any other.
+  Center reserved for the app (Product management > Product identity); the
+  Store refuses a package with any other. Properties' DisplayName must be a
+  name reserved there too: "SniperJournal", since "Sniper Journal" was taken.
+  The Start menu shows the VisualElements' DisplayName, which keeps the space.
 -->
 <Package
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
@@ -19,7 +21,7 @@
     ProcessorArchitecture="x64" />
 
   <Properties>
-    <DisplayName>Sniper Journal</DisplayName>
+    <DisplayName>SniperJournal</DisplayName>
     <PublisherDisplayName>Mr.SandMan1</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
     <Description>A private trading journal. Log trades, import them from your broker and see how you really trade. Everything stays on this PC.</Description>
