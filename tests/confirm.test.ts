@@ -7,7 +7,7 @@ async function state(answer: Promise<boolean>): Promise<boolean | 'waiting'> {
 }
 
 describe('the confirmation dialog', () => {
-  it('gives the user\'s answer to whoever asked', async () => {
+  it("gives the user's answer to whoever asked", async () => {
     const gate = createConfirmGate();
     const yes = gate.ask();
     expect(await state(yes)).toBe('waiting');

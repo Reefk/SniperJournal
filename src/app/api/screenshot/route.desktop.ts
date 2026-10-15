@@ -2,7 +2,14 @@ import { NextResponse } from 'next/server';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { refuseForeign } from '../local-only';
-import { IMAGE_NAME, SweepError, findUnused, removeUnused, type StoredImage, type SweepFiles } from '@/lib/storage/sweep';
+import {
+  IMAGE_NAME,
+  SweepError,
+  findUnused,
+  removeUnused,
+  type StoredImage,
+  type SweepFiles,
+} from '@/lib/storage/sweep';
 import { UNSUPPORTED_IMAGE, imageExtension, imageType } from '@/lib/storage/image-types';
 
 export const runtime = 'nodejs';
@@ -113,7 +120,9 @@ async function unused(request: Request) {
     return NextResponse.json({ ok: true, images });
   } catch (err) {
     const error =
-      err instanceof SweepError ? err.message : 'Could not tell which chart images are still used, so none was deleted.';
+      err instanceof SweepError
+        ? err.message
+        : 'Could not tell which chart images are still used, so none was deleted.';
     return NextResponse.json({ ok: false, error }, { status: 500 });
   }
 }

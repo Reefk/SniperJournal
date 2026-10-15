@@ -1,5 +1,15 @@
 import { spawn } from 'node:child_process';
-import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync, mkdirSync, existsSync, utimesSync, promises as fsp } from 'node:fs';
+import {
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+  mkdirSync,
+  existsSync,
+  utimesSync,
+  promises as fsp,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -36,7 +46,11 @@ const req = (path: string, init: RequestInit & { headers?: Record<string, string
   new Request(`http://127.0.0.1:3000${path}`, { ...init, headers: { ...own, ...(init.headers ?? {}) } });
 const put = (body: unknown, headers: Record<string, string> = {}) =>
   routes.journal.PUT(
-    req('/api/journal', { method: 'PUT', body: typeof body === 'string' ? body : JSON.stringify(body), headers: { 'content-type': 'application/json', ...headers } }),
+    req('/api/journal', {
+      method: 'PUT',
+      body: typeof body === 'string' ? body : JSON.stringify(body),
+      headers: { 'content-type': 'application/json', ...headers },
+    }),
   );
 const valid = (n: number) => ({ version: 1, updatedAt: `n${n}`, trades: [{ id: `t${n}` }], accounts: [] });
 const file = () => JSON.parse(readFileSync(join(root, 'data', 'journal.json'), 'utf8'));
@@ -45,7 +59,12 @@ describe('/api/journal', () => {
   it('reports no journal on a first run', async () => {
     const res = await routes.journal.GET(req('/api/journal'));
     // where it will be kept is known before the first save
-    expect(await res.json()).toEqual({ ok: true, data: null, version: 'none', path: join(root, 'data', 'journal.json') });
+    expect(await res.json()).toEqual({
+      ok: true,
+      data: null,
+      version: 'none',
+      path: join(root, 'data', 'journal.json'),
+    });
   });
 
   it('saves a journal atomically and reads it back', async () => {
@@ -59,7 +78,10 @@ describe('/api/journal', () => {
 
   it('saves that arrive together are written one at a time: every one succeeds and the file is never mixed up', async () => {
     // a big journal takes long enough to write that the saves overlap
-    const big = (n: number) => ({ ...valid(n), trades: Array.from({ length: 20000 }, (_, i) => ({ id: `t${n}-${i}`, notes: 'x'.repeat(100) })) });
+    const big = (n: number) => ({
+      ...valid(n),
+      trades: Array.from({ length: 20000 }, (_, i) => ({ id: `t${n}-${i}`, notes: 'x'.repeat(100) })),
+    });
     const bodies = Array.from({ length: 12 }, (_, n) => (n % 2 ? valid(n) : big(n)));
     const results = await Promise.all(bodies.map((body) => put(body)));
     expect(results.map((r) => r.status)).toEqual(bodies.map(() => 200));
@@ -81,14 +103,17 @@ describe('/api/journal', () => {
       });
     };
 
-    it.each(['EPERM', 'EBUSY', 'EACCES'])('a rename refused with %s is tried again, and the save goes through', async (code) => {
-      await put(valid(1));
-      const rename = failing(code, 2);
-      const res = await put(valid(2));
-      expect(res.status).toBe(200);
-      expect(rename).toHaveBeenCalledTimes(3);
-      expect(file()).toEqual(valid(2));
-    });
+    it.each(['EPERM', 'EBUSY', 'EACCES'])(
+      'a rename refused with %s is tried again, and the save goes through',
+      async (code) => {
+        await put(valid(1));
+        const rename = failing(code, 2);
+        const res = await put(valid(2));
+        expect(res.status).toBe(200);
+        expect(rename).toHaveBeenCalledTimes(3);
+        expect(file()).toEqual(valid(2));
+      },
+    );
 
     it('a file held for too long fails the save, keeps the journal as it was, and leaves no temp file', async () => {
       await put(valid(1));
@@ -109,20 +134,24 @@ describe('/api/journal', () => {
 
     // the real thing: Windows refuses to replace a file that another program
     // has open without delete sharing, which is how scanners open files
-    it.runIf(process.platform === 'win32')('a real lock held for half a second does not fail the save', async () => {
-      await put(valid(1));
-      const target = join(root, 'data', 'journal.json');
-      const locker = spawn('powershell', [
-        '-NoProfile',
-        '-Command',
-        `$f = [IO.File]::Open('${target}', 'Open', 'Read', 'Read'); 'locked'; Start-Sleep -Milliseconds 500; $f.Close()`,
-      ]);
-      await new Promise((resolve) => locker.stdout.once('data', resolve));
-      const res = await put(valid(2));
-      if (locker.exitCode === null) await new Promise((resolve) => locker.once('exit', resolve));
-      expect(res.status).toBe(200);
-      expect(file()).toEqual(valid(2));
-    }, 20000);
+    it.runIf(process.platform === 'win32')(
+      'a real lock held for half a second does not fail the save',
+      async () => {
+        await put(valid(1));
+        const target = join(root, 'data', 'journal.json');
+        const locker = spawn('powershell', [
+          '-NoProfile',
+          '-Command',
+          `$f = [IO.File]::Open('${target}', 'Open', 'Read', 'Read'); 'locked'; Start-Sleep -Milliseconds 500; $f.Close()`,
+        ]);
+        await new Promise((resolve) => locker.stdout.once('data', resolve));
+        const res = await put(valid(2));
+        if (locker.exitCode === null) await new Promise((resolve) => locker.once('exit', resolve));
+        expect(res.status).toBe(200);
+        expect(file()).toEqual(valid(2));
+      },
+      20000,
+    );
   });
 
   it('the new journal is flushed to the disk before it replaces the old one', async () => {
@@ -172,7 +201,8 @@ describe('/api/journal', () => {
 
   it('prunes dated copies to the newest 30', async () => {
     mkdirSync(join(root, 'data', 'backups'), { recursive: true });
-    for (let d = 1; d <= 31; d++) writeFileSync(join(root, 'data', 'backups', `journal-2025-12-${String(d).padStart(2, '0')}.json`), '{}');
+    for (let d = 1; d <= 31; d++)
+      writeFileSync(join(root, 'data', 'backups', `journal-2025-12-${String(d).padStart(2, '0')}.json`), '{}');
     await put(valid(1));
     await put(valid(2));
     expect(readdirSync(join(root, 'data', 'backups'))).toHaveLength(30);
@@ -181,7 +211,11 @@ describe('/api/journal', () => {
   it('keeps a separate copy before a restore replaces the journal', async () => {
     await put(valid(1));
     const res = await routes.journal.POST(
-      req('/api/journal?copy=before-restore', { method: 'POST', body: JSON.stringify(valid(1)), headers: { 'content-type': 'application/json' } }),
+      req('/api/journal?copy=before-restore', {
+        method: 'POST',
+        body: JSON.stringify(valid(1)),
+        headers: { 'content-type': 'application/json' },
+      }),
     );
     expect(res.status).toBe(200);
     const copies = readdirSync(join(root, 'data', 'backups')).filter((f) => f.startsWith('before-restore-'));
@@ -248,7 +282,11 @@ describe('/api/journal', () => {
 
     it('keeps the version of a refused window as a conflict copy when asked', async () => {
       const res = await routes.journal.POST(
-        req('/api/journal?copy=conflict', { method: 'POST', body: JSON.stringify(valid(5)), headers: { 'content-type': 'application/json' } }),
+        req('/api/journal?copy=conflict', {
+          method: 'POST',
+          body: JSON.stringify(valid(5)),
+          headers: { 'content-type': 'application/json' },
+        }),
       );
       expect(res.status).toBe(200);
       const copies = readdirSync(join(root, 'data', 'backups')).filter((f) => f.startsWith('conflict-'));
@@ -259,7 +297,13 @@ describe('/api/journal', () => {
 
   it('accepts the app itself under its other loopback names', async () => {
     for (const host of ['localhost:3000', '[::1]:3000']) {
-      expect((await routes.journal.GET(req('/api/journal', { headers: { host, origin: `http://${host}`, 'sec-fetch-site': 'same-origin' } }))).status).toBe(200);
+      expect(
+        (
+          await routes.journal.GET(
+            req('/api/journal', { headers: { host, origin: `http://${host}`, 'sec-fetch-site': 'same-origin' } }),
+          )
+        ).status,
+      ).toBe(200);
     }
   });
 });
@@ -295,7 +339,9 @@ describe('/api/screenshot', () => {
     }
     expect(existsSync(join(root, 'data', 'screenshots'))).toBe(false);
     // a JPEG is saved as .jpg; one saved as .jpeg is still served as a JPEG
-    const { name } = await (await upload(new Blob([new Uint8Array([255, 216])], { type: 'image/jpeg' }), 'x.jpeg')).json();
+    const { name } = await (
+      await upload(new Blob([new Uint8Array([255, 216])], { type: 'image/jpeg' }), 'x.jpeg')
+    ).json();
     expect(name).toMatch(/^[a-z0-9]{6,40}\.jpg$/);
     writeFileSync(join(root, 'data', 'screenshots', 'older001.JPEG'), 'x');
     for (const n of [name, 'older001.JPEG']) {
@@ -325,13 +371,26 @@ describe('/api/screenshot', () => {
     const mentioning = (...names: string[]) => JSON.stringify({ trades: names.map((n) => ({ screenshotFile: n })) });
     const unused = (body: unknown, headers: Record<string, string> = {}) =>
       routes.shot.POST(
-        req('/api/screenshot?unused', { method: 'POST', body: JSON.stringify(body), headers: { 'content-type': 'application/json', ...headers } }),
+        req('/api/screenshot?unused', {
+          method: 'POST',
+          body: JSON.stringify(body),
+          headers: { 'content-type': 'application/json', ...headers },
+        }),
       );
     const left = () => readdirSync(shots).sort();
-    const named = async (res: Response) => ((await res.json()).images as { name: string; bytes: number }[]).sort((a, b) => a.name.localeCompare(b.name));
+    const named = async (res: Response) =>
+      ((await res.json()).images as { name: string; bytes: number }[]).sort((a, b) => a.name.localeCompare(b.name));
 
     it('finds, with their sizes, the images neither the open journal, the saved one, a kept copy nor the last day uses', async () => {
-      for (const name of ['shown001.png', 'saved001.png', 'daily001.png', 'other001.webp', 'orphan01.jpg', 'orphan002.png']) shot(name);
+      for (const name of [
+        'shown001.png',
+        'saved001.png',
+        'daily001.png',
+        'other001.webp',
+        'orphan01.jpg',
+        'orphan002.png',
+      ])
+        shot(name);
       shot('fresh001.png', new Date(Date.now() - 23 * 60 * 60 * 1000));
       shot('desktop.ini'); // not a name the app gives, so never touched
       writeFileSync(join(root, 'data', 'journal.json'), mentioning('saved001.png'));
@@ -348,11 +407,20 @@ describe('/api/screenshot', () => {
       ]);
       expect(left()).toEqual(everything); // finding deletes nothing
 
-      expect(await named(await unused({ inUse: ['shown001.png'], remove: ['orphan01.jpg', 'orphan002.png'] }))).toEqual([
-        { name: 'orphan002.png', bytes: 13 },
-        { name: 'orphan01.jpg', bytes: 12 },
+      expect(await named(await unused({ inUse: ['shown001.png'], remove: ['orphan01.jpg', 'orphan002.png'] }))).toEqual(
+        [
+          { name: 'orphan002.png', bytes: 13 },
+          { name: 'orphan01.jpg', bytes: 12 },
+        ],
+      );
+      expect(left()).toEqual([
+        'daily001.png',
+        'desktop.ini',
+        'fresh001.png',
+        'other001.webp',
+        'saved001.png',
+        'shown001.png',
       ]);
-      expect(left()).toEqual(['daily001.png', 'desktop.ini', 'fresh001.png', 'other001.webp', 'saved001.png', 'shown001.png']);
     });
 
     it('deletes only the images it was told to, of those still unused', async () => {
@@ -420,13 +488,17 @@ describe('/api/screenshot', () => {
       expect((await unused({ inUse: [1], remove: ['orphan01.png'] })).status).toBe(400);
       // "delete whatever is unused", as a page from before this change asked
       expect((await unused({ inUse: [], remove: true })).status).toBe(400);
-      expect((await unused({ inUse: [], remove: ['orphan01.png'] }, { origin: 'https://evil.example' })).status).toBe(403);
+      expect((await unused({ inUse: [], remove: ['orphan01.png'] }, { origin: 'https://evil.example' })).status).toBe(
+        403,
+      );
       expect(left()).toEqual(['orphan01.png']);
     });
   });
 
   it('a cross-site upload is refused before anything is written', async () => {
-    const res = await upload(new Blob([new Uint8Array([1])], { type: 'image/png' }), 'x.png', { origin: 'https://evil.example' });
+    const res = await upload(new Blob([new Uint8Array([1])], { type: 'image/png' }), 'x.png', {
+      origin: 'https://evil.example',
+    });
     expect(res.status).toBe(403);
     expect(existsSync(join(root, 'data', 'screenshots'))).toBe(false);
   });

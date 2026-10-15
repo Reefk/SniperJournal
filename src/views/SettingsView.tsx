@@ -264,9 +264,9 @@ export function SettingsView() {
             <span>
               <span className="text-fg">Count excluded trades in the balance</span>
               <span className="mt-0.5 block text-xs leading-relaxed text-muted">
-                Off: a trade you exclude with the eye icon is left out of the balance as well as the statistics. On:
-                the balance counts it, so it matches your broker&apos;s statement. Win rate, net profit, the equity
-                curve and drawdown always leave excluded trades out.
+                Off: a trade you exclude with the eye icon is left out of the balance as well as the statistics. On: the
+                balance counts it, so it matches your broker&apos;s statement. Win rate, net profit, the equity curve
+                and drawdown always leave excluded trades out.
               </span>
             </span>
           </label>

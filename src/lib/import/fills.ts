@@ -62,7 +62,13 @@ function chronological(fills: Fill[]): Fill[] {
     ordered.reverse();
   }
   if (timed.length === fills.length) {
-    ordered = ordered.sort((a, b) => ((a.time as Moment).sortKey < (b.time as Moment).sortKey ? -1 : (a.time as Moment).sortKey > (b.time as Moment).sortKey ? 1 : 0));
+    ordered = ordered.sort((a, b) =>
+      (a.time as Moment).sortKey < (b.time as Moment).sortKey
+        ? -1
+        : (a.time as Moment).sortKey > (b.time as Moment).sortKey
+          ? 1
+          : 0,
+    );
   }
   return ordered;
 }
@@ -118,7 +124,13 @@ function byPosition(fills: Fill[]): Position[] {
         continue;
       }
       open.set(fill.key, {
-        position: { key: fill.key, side: signed > 0 ? 'LONG' : 'SHORT', entries: [part(fill, fill.quantity, false)], exits: [], orphan: false },
+        position: {
+          key: fill.key,
+          side: signed > 0 ? 'LONG' : 'SHORT',
+          entries: [part(fill, fill.quantity, false)],
+          exits: [],
+          orphan: false,
+        },
         signed,
       });
       continue;
@@ -145,10 +157,22 @@ function byPosition(fills: Fill[]): Position[] {
     const rest = tidy(fill.quantity - closing);
     if (rest > EPS) {
       if (fill.effect === 'close') {
-        done.push({ key: fill.key, side: signed < 0 ? 'LONG' : 'SHORT', entries: [], exits: [part(fill, rest, false)], orphan: true });
+        done.push({
+          key: fill.key,
+          side: signed < 0 ? 'LONG' : 'SHORT',
+          entries: [],
+          exits: [part(fill, rest, false)],
+          orphan: true,
+        });
       } else {
         open.set(fill.key, {
-          position: { key: fill.key, side: signed > 0 ? 'LONG' : 'SHORT', entries: [part(fill, rest, false)], exits: [], orphan: false },
+          position: {
+            key: fill.key,
+            side: signed > 0 ? 'LONG' : 'SHORT',
+            entries: [part(fill, rest, false)],
+            exits: [],
+            orphan: false,
+          },
           signed: Math.sign(signed) * rest,
         });
       }
@@ -217,7 +241,10 @@ export function summarise(p: Position): Summary[] {
   const exitFees = p.exits.reduce((a, x) => a + x.fees, 0);
   const times = (parts: Part[]) => parts.map((x) => x.fill.time).filter((t): t is Moment => t != null);
   const first = (parts: Part[]) => times(parts).sort((a, b) => a.sortKey.localeCompare(b.sortKey))[0] ?? null;
-  const last = (parts: Part[]) => times(parts).sort((a, b) => a.sortKey.localeCompare(b.sortKey)).at(-1) ?? null;
+  const last = (parts: Part[]) =>
+    times(parts)
+      .sort((a, b) => a.sortKey.localeCompare(b.sortKey))
+      .at(-1) ?? null;
   const base = {
     key: p.key,
     side: p.side,
@@ -233,21 +260,64 @@ export function summarise(p: Position): Summary[] {
   };
 
   if (p.orphan) {
-    return [{ ...base, quantity: exited, exitPrice, closedAt: last(p.exits), fees: exitFees, reportedPnl: reported, move: null, closed: true }];
+    return [
+      {
+        ...base,
+        quantity: exited,
+        exitPrice,
+        closedAt: last(p.exits),
+        fees: exitFees,
+        reportedPnl: reported,
+        move: null,
+        closed: true,
+      },
+    ];
   }
 
-  const moveOf = (q: number) => (entryPrice != null && exitPrice != null ? (exitPrice - entryPrice) * q * direction : null);
+  const moveOf = (q: number) =>
+    entryPrice != null && exitPrice != null ? (exitPrice - entryPrice) * q * direction : null;
   if (exited < EPS) {
-    return [{ ...base, quantity: entered, exitPrice: null, closedAt: null, fees: entryFees, reportedPnl: null, move: null, closed: false }];
+    return [
+      {
+        ...base,
+        quantity: entered,
+        exitPrice: null,
+        closedAt: null,
+        fees: entryFees,
+        reportedPnl: null,
+        move: null,
+        closed: false,
+      },
+    ];
   }
   if (Math.abs(entered - exited) < EPS) {
-    return [{ ...base, quantity: entered, exitPrice, closedAt: last(p.exits), fees: entryFees + exitFees, reportedPnl: reported, move: moveOf(entered), closed: true }];
+    return [
+      {
+        ...base,
+        quantity: entered,
+        exitPrice,
+        closedAt: last(p.exits),
+        fees: entryFees + exitFees,
+        reportedPnl: reported,
+        move: moveOf(entered),
+        closed: true,
+      },
+    ];
   }
 
   // partly closed: split the entry (and its fees) between the two
   const share = exited / entered;
   return [
-    { ...base, quantity: exited, exitPrice, closedAt: last(p.exits), fees: entryFees * share + exitFees, reportedPnl: reported, move: moveOf(exited), closed: true },
+    {
+      ...base,
+      quantity: exited,
+      exitPrice,
+      closedAt: last(p.exits),
+      fees: entryFees * share + exitFees,
+      reportedPnl: reported,
+      move: moveOf(exited),
+      closed: true,
+    },
     // the open rest keeps its entry fills' ids, so importing the file again skips it too
     {
       ...base,

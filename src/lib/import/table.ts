@@ -119,7 +119,9 @@ const SECTION_KINDS = new Set(['header', 'data', 'subtotal', 'total', 'notes', '
  * "Trades,Data,Order,...". Returns the trades section as an ordinary table,
  * or null when the file is not laid out that way.
  */
-function statementSection(rows: string[][]): { header: string[]; data: string[][]; lines: number[]; skipped: number } | null {
+function statementSection(
+  rows: string[][],
+): { header: string[]; data: string[][]; lines: number[]; skipped: number } | null {
   const kindOf = (r: string[]) => (r[1] ?? '').trim().toLowerCase();
   const tagged = rows.filter((r) => SECTION_KINDS.has(kindOf(r)));
   if (tagged.length < rows.length * 0.6 || tagged.length < 2) return null;
@@ -222,7 +224,10 @@ export function findTable(rows: string[][]): Table {
       continue;
     }
     // a lone title line, or another table's header, means this table has ended
-    if ((filled.length === 1 && row.length < header.length / 2) || (i > headerAt + 1 && headerScore(row) >= Math.max(3, bestScore - 1))) {
+    if (
+      (filled.length === 1 && row.length < header.length / 2) ||
+      (i > headerAt + 1 && headerScore(row) >= Math.max(3, bestScore - 1))
+    ) {
       if (data.length) break;
       skipped++;
       continue;

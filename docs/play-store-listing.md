@@ -89,16 +89,16 @@ First release: log trades with charts and self-ratings, see your win rate, profi
 
 ## Other Play Console answers
 
-| Field | Suggested answer |
-|---|---|
-| App category | **Finance** (or Productivity) |
-| Tags | Trading, Finance, Productivity |
-| Contact email | *your address* — Play shows it publicly |
-| Privacy policy URL | the public address where `docs/privacy-policy.md` is hosted |
-| Ads | No ads |
-| Target audience | 18 and over |
-| Data safety | No data collected; no data shared. Users delete their data by uninstalling the app or clearing its storage |
-| Financial features | The app provides none: it does not trade, hold money, give advice or connect to financial institutions |
+| Field              | Suggested answer                                                                                           |
+| ------------------ | ---------------------------------------------------------------------------------------------------------- |
+| App category       | **Finance** (or Productivity)                                                                              |
+| Tags               | Trading, Finance, Productivity                                                                             |
+| Contact email      | _your address_ — Play shows it publicly                                                                    |
+| Privacy policy URL | the public address where `docs/privacy-policy.md` is hosted                                                |
+| Ads                | No ads                                                                                                     |
+| Target audience    | 18 and over                                                                                                |
+| Data safety        | No data collected; no data shared. Users delete their data by uninstalling the app or clearing its storage |
+| Financial features | The app provides none: it does not trade, hold money, give advice or connect to financial institutions     |
 
 Wording rules followed above, so a reviewer has nothing to object to: no
 claims of being "the best" or "#1", no promises of profit, no mention of

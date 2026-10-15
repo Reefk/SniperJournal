@@ -74,7 +74,10 @@ describe('which journal opens', () => {
   });
 
   it('the file, when the browser copy is not newer', () => {
-    expect(pickJournal(disk, 'v1', mirror('v1', journal('2026-10-12T09:00:00Z')))).toEqual({ journal: disk, stale: null });
+    expect(pickJournal(disk, 'v1', mirror('v1', journal('2026-10-12T09:00:00Z')))).toEqual({
+      journal: disk,
+      stale: null,
+    });
   });
 
   it('the browser copy, when it holds newer changes made on top of the file as it is (the app closed before saving)', () => {
@@ -94,7 +97,11 @@ describe('which journal opens', () => {
 describe('after a save', () => {
   it("this tab's copy moves on to the version it just wrote", () => {
     const raw = encodeMirror(journal('t2'), 'v1', 'tabA');
-    expect(decodeMirror(rebaseMirror(raw, 'tabA', 'v1', 'v2'))).toEqual({ journal: journal('t2'), base: 'v2', tab: 'tabA' });
+    expect(decodeMirror(rebaseMirror(raw, 'tabA', 'v1', 'v2'))).toEqual({
+      journal: journal('t2'),
+      base: 'v2',
+      tab: 'tabA',
+    });
   });
 
   it("another tab's copy is left alone: it does not hold the changes this save wrote", () => {

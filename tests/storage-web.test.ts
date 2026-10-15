@@ -19,9 +19,16 @@ function heldFetch(): Call[] {
             body: String(init?.body),
             answer: (ok) =>
               resolve(
-                new Response(JSON.stringify(ok ? { ok: true, path: 'C:\\journal\\data\\journal.json' } : { ok: false, error: 'Could not write the journal file.' }), {
-                  status: ok ? 200 : 500,
-                }),
+                new Response(
+                  JSON.stringify(
+                    ok
+                      ? { ok: true, path: 'C:\\journal\\data\\journal.json' }
+                      : { ok: false, error: 'Could not write the journal file.' },
+                  ),
+                  {
+                    status: ok ? 200 : 500,
+                  },
+                ),
               ),
           });
         }),
@@ -102,7 +109,14 @@ describe('saving from two windows', () => {
   it('a save the server refuses because the file changed is a JournalConflict, and changes nothing here', async () => {
     scripted([
       { status: 200, body: { ok: true, data: journal(1), version: 'v1' } },
-      { status: 412, body: { ok: false, conflict: true, error: 'The journal was changed in another window since this one opened it.' } },
+      {
+        status: 412,
+        body: {
+          ok: false,
+          conflict: true,
+          error: 'The journal was changed in another window since this one opened it.',
+        },
+      },
     ]);
     await webStorage.readJournal();
     const refused = webStorage.writeJournal(journal(2));
@@ -139,7 +153,9 @@ describe('reclaiming the chart images', () => {
       }),
     );
     expect(await webStorage.findUnusedImages(['shown001.png'])).toEqual([{ name: 'orphan01.png', bytes: 70 }]);
-    expect(await webStorage.removeUnusedImages(['shown001.png'], ['orphan01.png'])).toEqual([{ name: 'orphan01.png', bytes: 70 }]);
+    expect(await webStorage.removeUnusedImages(['shown001.png'], ['orphan01.png'])).toEqual([
+      { name: 'orphan01.png', bytes: 70 },
+    ]);
     expect(sent).toEqual([
       { url: '/api/screenshot?unused', method: 'POST', body: { inUse: ['shown001.png'] } },
       // only the images the person was shown
@@ -149,7 +165,10 @@ describe('reclaiming the chart images', () => {
 
   it("an answer the server could not give is an error carrying the server's reason", async () => {
     const reason = 'Your journal file is damaged (it is not a complete journal), so no chart image was deleted.';
-    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ ok: false, error: reason }), { status: 500 })));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(JSON.stringify({ ok: false, error: reason }), { status: 500 })),
+    );
     await expect(webStorage.findUnusedImages([])).rejects.toThrow(reason);
   });
 });

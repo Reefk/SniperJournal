@@ -117,9 +117,7 @@ export function SupportView() {
         <section className="rounded-xl border border-line bg-surface p-5">
           <HardDrive className="size-5 text-accent" />
           <h2 className="mt-3 text-sm font-semibold text-fg">Your journal file</h2>
-          <p className="mt-1.5 text-sm leading-relaxed text-muted">
-            {fileStatus(saveStatus, copyMiss)}
-          </p>
+          <p className="mt-1.5 text-sm leading-relaxed text-muted">{fileStatus(saveStatus, copyMiss)}</p>
           {filePath && (
             <p className="num mt-3 break-all rounded-md border border-line bg-app px-3 py-2 text-xs text-muted">
               {filePath}

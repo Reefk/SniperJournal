@@ -22,7 +22,11 @@ describe('grossPnl and netPnl', () => {
     ['long winner', { side: 'LONG', entryPrice: 100, exitPrice: 110, quantity: 10 }, 100],
     ['short winner', { side: 'SHORT', entryPrice: 100, exitPrice: 90, quantity: 10 }, 100],
     ['short loser', { side: 'SHORT', entryPrice: 100, exitPrice: 110, quantity: 2 }, -20],
-    ['futures ES, 2 contracts, 2.25 points', { side: 'LONG', entryPrice: 5000, exitPrice: 5002.25, quantity: 2, multiplier: 50 }, 225],
+    [
+      'futures ES, 2 contracts, 2.25 points',
+      { side: 'LONG', entryPrice: 5000, exitPrice: 5002.25, quantity: 2, multiplier: 50 },
+      225,
+    ],
     ['forex, 47k units', { side: 'LONG', entryPrice: 1.07979, exitPrice: 1.08706, quantity: 47000 }, 341.69],
     ['fractional crypto size', { side: 'LONG', entryPrice: 60000, exitPrice: 60500, quantity: 0.0015 }, 0.75],
     ['scratch: exit equals entry', { side: 'LONG', entryPrice: 100, exitPrice: 100, quantity: 5 }, 0],
@@ -166,7 +170,9 @@ describe('sortChronological', () => {
     const rand = seeded(7);
     const trades = Array.from({ length: 2000 }, (_, i) => {
       const t = stamp(rand);
-      return rand() < 0.2 ? trade({ id: `o${i}`, openedAt: t, closedAt: undefined }) : trade({ id: `c${i}`, closedAt: t });
+      return rand() < 0.2
+        ? trade({ id: `o${i}`, openedAt: t, closedAt: undefined })
+        : trade({ id: `c${i}`, closedAt: t });
     });
     const when = (t: (typeof trades)[number]) => t.closedAt || t.openedAt;
     const before = [...trades].sort((a, b) => when(a).localeCompare(when(b)));

@@ -31,7 +31,12 @@ if (!existsSync('android/keystore.properties')) {
 let javaHome = process.env.JAVA_HOME;
 if (!javaHome) {
   const root = 'C:\\Program Files\\Android\\openjdk';
-  const jdk = existsSync(root) ? readdirSync(root).filter((d) => d.startsWith('jdk')).sort().at(-1) : undefined;
+  const jdk = existsSync(root)
+    ? readdirSync(root)
+        .filter((d) => d.startsWith('jdk'))
+        .sort()
+        .at(-1)
+    : undefined;
   if (!jdk) fail('No JDK found. Set JAVA_HOME to a JDK 21.');
   javaHome = join(root, jdk);
 }
@@ -66,4 +71,6 @@ if (!/jar verified/i.test(verify.stdout ?? '')) fail(`${aab} is not signed:\n${v
 const version = JSON.parse(readFileSync('package.json', 'utf8')).version;
 const size = (statSync(aab).size / 1024 / 1024).toFixed(1);
 console.log(`\n  Signed bundle ready: ${aab} (${size} MB, version ${version})`);
-console.log('  Upload it in Play Console. Next time, run "npm version patch" first: Play refuses a version it has already seen.\n');
+console.log(
+  '  Upload it in Play Console. Next time, run "npm version patch" first: Play refuses a version it has already seen.\n',
+);

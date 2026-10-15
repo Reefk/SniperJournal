@@ -573,209 +573,64 @@ export function TradesView() {
           </div>
         ) : (
           <>
-          {/* phone: ten columns cannot fit, so each trade is a card */}
-          <ul className="divide-y divide-line md:hidden">
-            {rows.map((t) => {
-              const r = rMultiple(t);
-              const setupName = t.setupId ? setupNames.get(t.setupId) : undefined;
-              const fills = t.fillCount ?? 1;
-              return (
-                <li key={t.id} className={cn('flex items-start gap-1 py-1 pl-1 pr-0.5', selected.has(t.id) && 'bg-accent/5')}>
-                  <label className="grid size-11 shrink-0 cursor-pointer place-items-center">
-                    <input
-                      type="checkbox"
-                      className="size-[18px] cursor-pointer"
-                      checked={selected.has(t.id)}
-                      aria-label={`Select ${t.symbol} trade`}
-                      onChange={() =>
-                        setSelected((s) => {
-                          const next = new Set(s);
-                          if (next.has(t.id)) next.delete(t.id);
-                          else next.add(t.id);
-                          return next;
-                        })
-                      }
-                    />
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => openTradeForm({ trade: t })}
-                    className={cn('min-w-0 flex-1 py-2.5 text-left', t.excluded && 'opacity-50')}
+            {/* phone: ten columns cannot fit, so each trade is a card */}
+            <ul className="divide-y divide-line md:hidden">
+              {rows.map((t) => {
+                const r = rMultiple(t);
+                const setupName = t.setupId ? setupNames.get(t.setupId) : undefined;
+                const fills = t.fillCount ?? 1;
+                return (
+                  <li
+                    key={t.id}
+                    className={cn('flex items-start gap-1 py-1 pl-1 pr-0.5', selected.has(t.id) && 'bg-accent/5')}
                   >
-                    <div className="flex items-center gap-2">
-                      <span className="truncate font-semibold text-fg">{t.symbol}</span>
-                      <SideBadge side={t.side} />
-                      {(t.screenshotFile || t.screenshotUrl) && (
-                        <ImageIcon className="size-3.5 shrink-0 text-faint" aria-label="Has a chart" />
-                      )}
-                      <span className="ml-auto shrink-0">
-                        {isIncomplete(t) ? (
-                          <StatusBadge tone="warn">needs details</StatusBadge>
-                        ) : (
-                          <PnlValue value={netPnl(t)} open={!isClosed(t)} currency={currency} />
-                        )}
-                      </span>
-                    </div>
-                    <div className="mt-1 flex items-center gap-1.5 text-xs text-faint">
-                      <span className="shrink-0">{formatDate(t.openedAt)}</span>
-                      <span className="num shrink-0">{formatTime(t.openedAt)}</span>
-                      {setupName && <span className="truncate">· {setupName}</span>}
-                      {r != null && !isIncomplete(t) && (
-                        <span className="num ml-auto shrink-0">{`${r >= 0 ? '+' : ''}${r.toFixed(2)}R`}</span>
-                      )}
-                    </div>
-                    {(t.tags.length > 0 || fills > 1) && (
-                      <div className="mt-1.5 flex flex-wrap gap-1">
-                        {fills > 1 && <span className="px-0.5 text-[11px] text-accent">{fills} fills</span>}
-                        {t.tags.slice(0, 3).map((tag) => (
-                          <span key={tag} className="rounded bg-raised px-1.5 py-0.5 text-[11px] text-muted ring-1 ring-line">
-                            {tag}
-                          </span>
-                        ))}
-                        {t.tags.length > 3 && <span className="px-1 text-[11px] text-faint">+{t.tags.length - 3}</span>}
-                      </div>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => actions.setExcluded([t.id], !t.excluded)}
-                    aria-label={t.excluded ? 'Include in statistics' : 'Exclude from statistics'}
-                    className={cn('grid size-11 shrink-0 place-items-center', t.excluded ? 'text-warn' : 'text-faint')}
-                  >
-                    {t.excluded ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-          <div className="overflow-x-auto max-md:hidden">
-            <table className="w-full text-sm">
-              <thead className="border-b border-line bg-app/50 text-xs text-muted">
-                <tr>
-                  <th className="w-[84px] px-4 py-3 text-left">
-                    <input
-                      ref={headerCheckbox}
-                      type="checkbox"
-                      className="size-4 cursor-pointer align-middle"
-                      checked={allOnPageSelected}
-                      aria-label="Select all on this page"
-                      onChange={() =>
-                        setSelected((s) => {
-                          const next = new Set(s);
-                          rows.forEach((t) => (allOnPageSelected ? next.delete(t.id) : next.add(t.id)));
-                          return next;
-                        })
-                      }
-                    />
-                  </th>
-                  <SortHeader label="Date & time" k="date" />
-                  <SortHeader label="Pair / asset" k="symbol" />
-                  <th className="px-3 py-3 text-left font-medium">Side</th>
-                  <SortHeader label="Qty" k="qty" align="right" />
-                  <th className="px-3 py-3 text-right font-medium">Entry</th>
-                  <th className="px-3 py-3 text-right font-medium">Exit</th>
-                  <SortHeader label="PNL" k="pnl" align="right" />
-                  <th className="px-3 py-3 text-left font-medium">Tags</th>
-                  <th className="px-4 py-3 text-right font-medium">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                {rows.map((t) => {
-                  const r = rMultiple(t);
-                  const dim = t.excluded ? 'opacity-50' : '';
-                  return (
-                    <tr
-                      key={t.id}
+                    <label className="grid size-11 shrink-0 cursor-pointer place-items-center">
+                      <input
+                        type="checkbox"
+                        className="size-[18px] cursor-pointer"
+                        checked={selected.has(t.id)}
+                        aria-label={`Select ${t.symbol} trade`}
+                        onChange={() =>
+                          setSelected((s) => {
+                            const next = new Set(s);
+                            if (next.has(t.id)) next.delete(t.id);
+                            else next.add(t.id);
+                            return next;
+                          })
+                        }
+                      />
+                    </label>
+                    <button
+                      type="button"
                       onClick={() => openTradeForm({ trade: t })}
-                      className={cn(
-                        'group cursor-pointer transition-colors hover:bg-raised/70',
-                        selected.has(t.id) && 'bg-accent/5',
-                      )}
+                      className={cn('min-w-0 flex-1 py-2.5 text-left', t.excluded && 'opacity-50')}
                     >
-                      <td className="px-4 py-2.5" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center gap-3">
-                          <input
-                            type="checkbox"
-                            className="size-4 cursor-pointer"
-                            checked={selected.has(t.id)}
-                            aria-label={`Select ${t.symbol} trade`}
-                            onChange={() =>
-                              setSelected((s) => {
-                                const next = new Set(s);
-                                if (next.has(t.id)) next.delete(t.id);
-                                else next.add(t.id);
-                                return next;
-                              })
-                            }
-                          />
-                          <button
-                            type="button"
-                            onClick={() => actions.setExcluded([t.id], !t.excluded)}
-                            title={
-                              t.excluded
-                                ? 'Excluded from statistics. Click to include.'
-                                : 'Included in statistics. Click to exclude.'
-                            }
-                            className={cn('transition hover:text-fg', t.excluded ? 'text-warn' : 'text-faint')}
-                          >
-                            {t.excluded ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                          </button>
-                        </div>
-                      </td>
-                      <td className={cn('whitespace-nowrap px-3 py-2.5', dim)}>
-                        <div className="text-fg">{formatDate(t.openedAt)}</div>
-                        <div className="num text-xs text-faint">
-                          {formatTime(t.openedAt)}
-                          {t.closedAt && ` – ${formatTime(t.closedAt)}`}
-                        </div>
-                      </td>
-                      <td className={cn('px-3 py-2.5', dim)}>
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-fg">{t.symbol}</span>
-                          {(t.screenshotFile || t.screenshotUrl) && (
-                            <ImageIcon className="size-3.5 shrink-0 text-faint" aria-label="Has a chart" />
-                          )}
-                          {isIncomplete(t) && <StatusBadge tone="warn">needs details</StatusBadge>}
-                        </div>
-                        <div className="flex max-w-[190px] items-center gap-1.5 truncate text-xs text-faint">
-                          {(t.fillCount ?? 1) > 1 && <span className="text-accent">{t.fillCount} fills</span>}
-                          {(t.fillCount ?? 1) > 1 && t.setupId && setupNames.get(t.setupId) && <span>·</span>}
-                          {t.setupId && setupNames.get(t.setupId) && (
-                            <span className="truncate">{setupNames.get(t.setupId)}</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className={cn('px-3 py-2.5', dim)}>
+                      <div className="flex items-center gap-2">
+                        <span className="truncate font-semibold text-fg">{t.symbol}</span>
                         <SideBadge side={t.side} />
-                      </td>
-                      <td className={cn('num px-3 py-2.5 text-right text-fg', dim)}>
-                        {t.quantity > 0 ? formatNumber(t.quantity, 4) : '—'}
-                      </td>
-                      <td className={cn('num px-3 py-2.5 text-right text-muted', dim)}>
-                        {t.entryPrice ? formatPrice(t.entryPrice) : '—'}
-                      </td>
-                      <td className={cn('num px-3 py-2.5 text-right text-muted', dim)}>
-                        {t.manualPnl != null && t.exitPrice == null ? (
-                          <span className="text-faint">manual</span>
-                        ) : (
-                          formatPrice(t.exitPrice)
+                        {(t.screenshotFile || t.screenshotUrl) && (
+                          <ImageIcon className="size-3.5 shrink-0 text-faint" aria-label="Has a chart" />
                         )}
-                      </td>
-                      <td className={cn('px-3 py-2.5 text-right', dim)}>
-                        {isIncomplete(t) ? (
-                          <span className="text-xs text-warn">needs {missingDetails(t).join(', ')}</span>
-                        ) : (
-                          <>
+                        <span className="ml-auto shrink-0">
+                          {isIncomplete(t) ? (
+                            <StatusBadge tone="warn">needs details</StatusBadge>
+                          ) : (
                             <PnlValue value={netPnl(t)} open={!isClosed(t)} currency={currency} />
-                            {r != null && (
-                              <div className="num text-[11px] text-faint">{`${r >= 0 ? '+' : ''}${r.toFixed(2)}R`}</div>
-                            )}
-                          </>
+                          )}
+                        </span>
+                      </div>
+                      <div className="mt-1 flex items-center gap-1.5 text-xs text-faint">
+                        <span className="shrink-0">{formatDate(t.openedAt)}</span>
+                        <span className="num shrink-0">{formatTime(t.openedAt)}</span>
+                        {setupName && <span className="truncate">· {setupName}</span>}
+                        {r != null && !isIncomplete(t) && (
+                          <span className="num ml-auto shrink-0">{`${r >= 0 ? '+' : ''}${r.toFixed(2)}R`}</span>
                         )}
-                      </td>
-                      <td className={cn('px-3 py-2.5', dim)}>
-                        <div className="flex max-w-[220px] flex-wrap gap-1">
-                          {t.tags.slice(0, 2).map((tag) => (
+                      </div>
+                      {(t.tags.length > 0 || fills > 1) && (
+                        <div className="mt-1.5 flex flex-wrap gap-1">
+                          {fills > 1 && <span className="px-0.5 text-[11px] text-accent">{fills} fills</span>}
+                          {t.tags.slice(0, 3).map((tag) => (
                             <span
                               key={tag}
                               className="rounded bg-raised px-1.5 py-0.5 text-[11px] text-muted ring-1 ring-line"
@@ -783,38 +638,194 @@ export function TradesView() {
                               {tag}
                             </span>
                           ))}
-                          {t.tags.length > 2 && (
-                            <span className="px-1 text-[11px] text-faint">+{t.tags.length - 2}</span>
+                          {t.tags.length > 3 && (
+                            <span className="px-1 text-[11px] text-faint">+{t.tags.length - 3}</span>
                           )}
                         </div>
-                      </td>
-                      <td className="px-4 py-2.5 text-right" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex justify-end gap-0.5 opacity-60 transition group-hover:opacity-100">
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => openTradeForm({ trade: t })}
-                            aria-label={`Edit ${t.symbol} trade`}
-                          >
-                            <Pencil className="size-3.5" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="hover:bg-loss/10 hover:text-loss"
-                            onClick={() => deleteIds([t.id])}
-                            aria-label={`Delete ${t.symbol} trade`}
-                          >
-                            <Trash2 className="size-3.5" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => actions.setExcluded([t.id], !t.excluded)}
+                      aria-label={t.excluded ? 'Include in statistics' : 'Exclude from statistics'}
+                      className={cn(
+                        'grid size-11 shrink-0 place-items-center',
+                        t.excluded ? 'text-warn' : 'text-faint',
+                      )}
+                    >
+                      {t.excluded ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+            <div className="overflow-x-auto max-md:hidden">
+              <table className="w-full text-sm">
+                <thead className="border-b border-line bg-app/50 text-xs text-muted">
+                  <tr>
+                    <th className="w-[84px] px-4 py-3 text-left">
+                      <input
+                        ref={headerCheckbox}
+                        type="checkbox"
+                        className="size-4 cursor-pointer align-middle"
+                        checked={allOnPageSelected}
+                        aria-label="Select all on this page"
+                        onChange={() =>
+                          setSelected((s) => {
+                            const next = new Set(s);
+                            rows.forEach((t) => (allOnPageSelected ? next.delete(t.id) : next.add(t.id)));
+                            return next;
+                          })
+                        }
+                      />
+                    </th>
+                    <SortHeader label="Date & time" k="date" />
+                    <SortHeader label="Pair / asset" k="symbol" />
+                    <th className="px-3 py-3 text-left font-medium">Side</th>
+                    <SortHeader label="Qty" k="qty" align="right" />
+                    <th className="px-3 py-3 text-right font-medium">Entry</th>
+                    <th className="px-3 py-3 text-right font-medium">Exit</th>
+                    <SortHeader label="PNL" k="pnl" align="right" />
+                    <th className="px-3 py-3 text-left font-medium">Tags</th>
+                    <th className="px-4 py-3 text-right font-medium">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-line">
+                  {rows.map((t) => {
+                    const r = rMultiple(t);
+                    const dim = t.excluded ? 'opacity-50' : '';
+                    return (
+                      <tr
+                        key={t.id}
+                        onClick={() => openTradeForm({ trade: t })}
+                        className={cn(
+                          'group cursor-pointer transition-colors hover:bg-raised/70',
+                          selected.has(t.id) && 'bg-accent/5',
+                        )}
+                      >
+                        <td className="px-4 py-2.5" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="checkbox"
+                              className="size-4 cursor-pointer"
+                              checked={selected.has(t.id)}
+                              aria-label={`Select ${t.symbol} trade`}
+                              onChange={() =>
+                                setSelected((s) => {
+                                  const next = new Set(s);
+                                  if (next.has(t.id)) next.delete(t.id);
+                                  else next.add(t.id);
+                                  return next;
+                                })
+                              }
+                            />
+                            <button
+                              type="button"
+                              onClick={() => actions.setExcluded([t.id], !t.excluded)}
+                              title={
+                                t.excluded
+                                  ? 'Excluded from statistics. Click to include.'
+                                  : 'Included in statistics. Click to exclude.'
+                              }
+                              className={cn('transition hover:text-fg', t.excluded ? 'text-warn' : 'text-faint')}
+                            >
+                              {t.excluded ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                            </button>
+                          </div>
+                        </td>
+                        <td className={cn('whitespace-nowrap px-3 py-2.5', dim)}>
+                          <div className="text-fg">{formatDate(t.openedAt)}</div>
+                          <div className="num text-xs text-faint">
+                            {formatTime(t.openedAt)}
+                            {t.closedAt && ` – ${formatTime(t.closedAt)}`}
+                          </div>
+                        </td>
+                        <td className={cn('px-3 py-2.5', dim)}>
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-fg">{t.symbol}</span>
+                            {(t.screenshotFile || t.screenshotUrl) && (
+                              <ImageIcon className="size-3.5 shrink-0 text-faint" aria-label="Has a chart" />
+                            )}
+                            {isIncomplete(t) && <StatusBadge tone="warn">needs details</StatusBadge>}
+                          </div>
+                          <div className="flex max-w-[190px] items-center gap-1.5 truncate text-xs text-faint">
+                            {(t.fillCount ?? 1) > 1 && <span className="text-accent">{t.fillCount} fills</span>}
+                            {(t.fillCount ?? 1) > 1 && t.setupId && setupNames.get(t.setupId) && <span>·</span>}
+                            {t.setupId && setupNames.get(t.setupId) && (
+                              <span className="truncate">{setupNames.get(t.setupId)}</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className={cn('px-3 py-2.5', dim)}>
+                          <SideBadge side={t.side} />
+                        </td>
+                        <td className={cn('num px-3 py-2.5 text-right text-fg', dim)}>
+                          {t.quantity > 0 ? formatNumber(t.quantity, 4) : '—'}
+                        </td>
+                        <td className={cn('num px-3 py-2.5 text-right text-muted', dim)}>
+                          {t.entryPrice ? formatPrice(t.entryPrice) : '—'}
+                        </td>
+                        <td className={cn('num px-3 py-2.5 text-right text-muted', dim)}>
+                          {t.manualPnl != null && t.exitPrice == null ? (
+                            <span className="text-faint">manual</span>
+                          ) : (
+                            formatPrice(t.exitPrice)
+                          )}
+                        </td>
+                        <td className={cn('px-3 py-2.5 text-right', dim)}>
+                          {isIncomplete(t) ? (
+                            <span className="text-xs text-warn">needs {missingDetails(t).join(', ')}</span>
+                          ) : (
+                            <>
+                              <PnlValue value={netPnl(t)} open={!isClosed(t)} currency={currency} />
+                              {r != null && (
+                                <div className="num text-[11px] text-faint">{`${r >= 0 ? '+' : ''}${r.toFixed(2)}R`}</div>
+                              )}
+                            </>
+                          )}
+                        </td>
+                        <td className={cn('px-3 py-2.5', dim)}>
+                          <div className="flex max-w-[220px] flex-wrap gap-1">
+                            {t.tags.slice(0, 2).map((tag) => (
+                              <span
+                                key={tag}
+                                className="rounded bg-raised px-1.5 py-0.5 text-[11px] text-muted ring-1 ring-line"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                            {t.tags.length > 2 && (
+                              <span className="px-1 text-[11px] text-faint">+{t.tags.length - 2}</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-2.5 text-right" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex justify-end gap-0.5 opacity-60 transition group-hover:opacity-100">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => openTradeForm({ trade: t })}
+                              aria-label={`Edit ${t.symbol} trade`}
+                            >
+                              <Pencil className="size-3.5" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="hover:bg-loss/10 hover:text-loss"
+                              onClick={() => deleteIds([t.id])}
+                              aria-label={`Delete ${t.symbol} trade`}
+                            >
+                              <Trash2 className="size-3.5" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </>
         )}
 

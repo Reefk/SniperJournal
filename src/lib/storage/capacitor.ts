@@ -204,7 +204,13 @@ export const capacitorStorage: JournalStorage = {
     // in the same queue as saves, so the copy is of a settled journal
     const run = writes.then(async () => {
       const path = `${BACKUP_DIR}/${reason}-${copyStamp()}.json`;
-      await Filesystem.writeFile({ path, data: JSON.stringify(journal), encoding: Encoding.UTF8, recursive: true, ...data });
+      await Filesystem.writeFile({
+        path,
+        data: JSON.stringify(journal),
+        encoding: Encoding.UTF8,
+        recursive: true,
+        ...data,
+      });
       await prune(`${reason}-`, KEEP_COPIES).catch(() => undefined);
       return decodeURIComponent(`${baseUri}/${path}`.replace(/^file:\/\//, ''));
     });

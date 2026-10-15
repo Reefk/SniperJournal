@@ -72,7 +72,10 @@ export interface Moment {
 const TIME = String.raw`(\d{1,2}):(\d{2})(?::(\d{2}))?(?:[.,]\d+)?\s*(AM|PM|am|pm)?`;
 const ZONE = String.raw`\s*((?:UTC|GMT)?\s*[+-]\d{2}:?\d{2}|Z|UTC|GMT)?`;
 const ISO_DATE = new RegExp(String.raw`^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(?:[ T,]+${TIME})?${ZONE}`, 'i');
-const NUMERIC_DATE = new RegExp(String.raw`^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4}|\d{2})(?![\d])(?:[ T,]+${TIME})?${ZONE}`, 'i');
+const NUMERIC_DATE = new RegExp(
+  String.raw`^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4}|\d{2})(?![\d])(?:[ T,]+${TIME})?${ZONE}`,
+  'i',
+);
 const COMPACT_DATE = /^(\d{4})(\d{2})(\d{2})(?:[;,\sT-]*(\d{2}):?(\d{2}):?(\d{2})?)?$/;
 const DAY_MONTH_NAME = new RegExp(
   String.raw`^(?:[a-z]{3,9},?\s+)?(\d{1,2})(?:st|nd|rd|th)?[\s\-/.]+([a-z]{3,9})\.?[\s\-/.,]+(\d{4}|\d{2})(?![\d])(?:[ T,]+${TIME})?${ZONE}`,
@@ -89,7 +92,10 @@ const fullYear = (y: string) => (y.length === 2 ? (Number(y) < 70 ? 2000 : 1900)
 /** minutes east of UTC for Z / UTC / GMT / +02:00 / -0500, or null when none is given */
 export function zoneOffset(zone: string | undefined): number | null {
   if (!zone) return null;
-  const rest = zone.trim().replace(/^(utc|gmt)/i, '').trim();
+  const rest = zone
+    .trim()
+    .replace(/^(utc|gmt)/i, '')
+    .trim();
   if (!rest || /^z$/i.test(rest)) return 0;
   const m = rest.match(/^([+-])(\d{1,2}):?(\d{2})?$/);
   if (!m) return null;
@@ -153,13 +159,23 @@ export function parseMoment(raw: string, order?: DateOrder, columnOffset: number
 
   const compact = s.match(COMPACT_DATE);
   if (compact) {
-    return fromParts(Number(compact[1]), Number(compact[2]), Number(compact[3]), compact[4], compact[5], compact[6], undefined, columnOffset);
+    return fromParts(
+      Number(compact[1]),
+      Number(compact[2]),
+      Number(compact[3]),
+      compact[4],
+      compact[5],
+      compact[6],
+      undefined,
+      columnOffset,
+    );
   }
 
   const zoneIn = (z: string | undefined) => zoneOffset(z) ?? columnOffset;
 
   const iso = s.match(ISO_DATE);
-  if (iso) return fromParts(Number(iso[1]), Number(iso[2]), Number(iso[3]), iso[4], iso[5], iso[6], iso[7], zoneIn(iso[8]));
+  if (iso)
+    return fromParts(Number(iso[1]), Number(iso[2]), Number(iso[3]), iso[4], iso[5], iso[6], iso[7], zoneIn(iso[8]));
 
   const numeric = s.match(NUMERIC_DATE);
   if (numeric) {
@@ -170,7 +186,16 @@ export function parseMoment(raw: string, order?: DateOrder, columnOffset: number
     // most broker exports use
     const dayFirst = order ? order === 'dmy' : a > 12;
     const [day, month] = dayFirst ? [a, b] : [b, a];
-    return fromParts(fullYear(numeric[3]), month, day, numeric[4], numeric[5], numeric[6], numeric[7], zoneIn(numeric[8]));
+    return fromParts(
+      fullYear(numeric[3]),
+      month,
+      day,
+      numeric[4],
+      numeric[5],
+      numeric[6],
+      numeric[7],
+      zoneIn(numeric[8]),
+    );
   }
 
   const dmy = s.match(DAY_MONTH_NAME);
@@ -228,12 +253,78 @@ export interface Action {
 
 const ACTIONS: Record<string, Action> = {};
 const define = (action: Action, words: string[]) => words.forEach((w) => (ACTIONS[w] = action));
-define({ side: 'BUY' }, ['buy', 'b', 'bot', 'bought', 'long', 'l', '1', 'purchase', 'buy long', 'long buy', 'market buy', 'limit buy', 'buy market', 'buy limit', 'buy stop']);
-define({ side: 'SELL' }, ['sell', 's', 'sld', 'sold', 'short', 'sht', '-1', 'sale', 'market sell', 'limit sell', 'sell market', 'sell limit', 'sell stop']);
-define({ side: 'BUY', effect: 'open' }, ['buy to open', 'bto', 'entry long', 'long entry', 'open long', 'buy open', 'buy to open long']);
-define({ side: 'SELL', effect: 'close' }, ['sell to close', 'stc', 'exit long', 'long exit', 'close long', 'sell close']);
-define({ side: 'SELL', effect: 'open' }, ['sell to open', 'sto', 'sell short', 'short sell', 'sellshort', 'ss', 'entry short', 'short entry', 'open short', 'sell open']);
-define({ side: 'BUY', effect: 'close' }, ['buy to close', 'btc', 'buy to cover', 'cover', 'buy cover', 'exit short', 'short exit', 'close short', 'buy close']);
+define({ side: 'BUY' }, [
+  'buy',
+  'b',
+  'bot',
+  'bought',
+  'long',
+  'l',
+  '1',
+  'purchase',
+  'buy long',
+  'long buy',
+  'market buy',
+  'limit buy',
+  'buy market',
+  'buy limit',
+  'buy stop',
+]);
+define({ side: 'SELL' }, [
+  'sell',
+  's',
+  'sld',
+  'sold',
+  'short',
+  'sht',
+  '-1',
+  'sale',
+  'market sell',
+  'limit sell',
+  'sell market',
+  'sell limit',
+  'sell stop',
+]);
+define({ side: 'BUY', effect: 'open' }, [
+  'buy to open',
+  'bto',
+  'entry long',
+  'long entry',
+  'open long',
+  'buy open',
+  'buy to open long',
+]);
+define({ side: 'SELL', effect: 'close' }, [
+  'sell to close',
+  'stc',
+  'exit long',
+  'long exit',
+  'close long',
+  'sell close',
+]);
+define({ side: 'SELL', effect: 'open' }, [
+  'sell to open',
+  'sto',
+  'sell short',
+  'short sell',
+  'sellshort',
+  'ss',
+  'entry short',
+  'short entry',
+  'open short',
+  'sell open',
+]);
+define({ side: 'BUY', effect: 'close' }, [
+  'buy to close',
+  'btc',
+  'buy to cover',
+  'cover',
+  'buy cover',
+  'exit short',
+  'short exit',
+  'close short',
+  'buy close',
+]);
 
 const normalWords = (raw: string) =>
   raw
@@ -281,9 +372,17 @@ export function parseEffect(raw: string): 'open' | 'close' | null {
 export function parseStatus(raw: string): 'filled' | 'unfilled' | null {
   const s = normalWords(raw);
   if (!s) return null;
-  if (/^(partially )?(filled|executed|complete|completed|done|traded|fill|partial fill|partially executed|part filled)( partially)?$/.test(s))
+  if (
+    /^(partially )?(filled|executed|complete|completed|done|traded|fill|partial fill|partially executed|part filled)( partially)?$/.test(
+      s,
+    )
+  )
     return 'filled';
-  if (/^(cancel+ed|cancel+ed by user|rejected|expired|working|pending|new|submitted|inactive|accepted|queued|suspended|received|replaced|open|cancel+ation requested|pending cancel|triggered|not filled|unfilled|failed)$/.test(s))
+  if (
+    /^(cancel+ed|cancel+ed by user|rejected|expired|working|pending|new|submitted|inactive|accepted|queued|suspended|received|replaced|open|cancel+ation requested|pending cancel|triggered|not filled|unfilled|failed)$/.test(
+      s,
+    )
+  )
     return 'unfilled';
   return null;
 }

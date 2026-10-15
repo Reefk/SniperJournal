@@ -44,7 +44,17 @@ describe('normalize: loading a journal', () => {
       version: 1,
       accounts: [{ id: 'acc1', name: 'Main', startingBalance: 0 }],
       activeAccountId: 'acc1',
-      trades: [{ id: 't', accountId: 'acc1', symbol: 'AAPL', side: 'LONG', openedAt: '2026-01-02T10:00', quantity: 1, entryPrice: 1 }],
+      trades: [
+        {
+          id: 't',
+          accountId: 'acc1',
+          symbol: 'AAPL',
+          side: 'LONG',
+          openedAt: '2026-01-02T10:00',
+          quantity: 1,
+          entryPrice: 1,
+        },
+      ],
       settings: { currency: 'EUR' },
     };
     const j = normalize(old);
@@ -56,7 +66,8 @@ describe('normalize: loading a journal', () => {
   });
 
   it('"count excluded trades in the balance" is off unless set, kept as set, and survives a backup', () => {
-    const withSetting = (value: unknown) => journal({ settings: { ...base, countExcludedInBalance: value as boolean } });
+    const withSetting = (value: unknown) =>
+      journal({ settings: { ...base, countExcludedInBalance: value as boolean } });
     expect(normalize(journal()).settings.countExcludedInBalance).toBeUndefined();
     expect(normalize(withSetting(true)).settings.countExcludedInBalance).toBe(true);
     expect(normalize(withSetting(false)).settings.countExcludedInBalance).toBe(false);
@@ -67,7 +78,13 @@ describe('normalize: loading a journal', () => {
   it('values of the wrong type are replaced instead of crashing a screen', () => {
     const j = normalize(
       journal({
-        settings: { currency: 'US', theme: 'neon' as never, timezone: 'Mars/Base', maxDailyLoss: 'lots' as never, maxTradesPerDay: null },
+        settings: {
+          currency: 'US',
+          theme: 'neon' as never,
+          timezone: 'Mars/Base',
+          maxDailyLoss: 'lots' as never,
+          maxTradesPerDay: null,
+        },
         trades: [{ ...trade({ id: 'x' }), tags: 'oops' as never, symbol: 42 as never }, null as never, 'junk' as never],
       }),
     );
@@ -86,7 +103,9 @@ describe('normalize: loading a journal', () => {
   });
 
   it('duplicate trade ids are made unique, so editing or deleting one trade can never touch another', () => {
-    const j = normalize(journal({ trades: [trade({ id: 'dup', symbol: 'A' }), trade({ id: 'dup', symbol: 'B' }), trade({ id: 'u' })] }));
+    const j = normalize(
+      journal({ trades: [trade({ id: 'dup', symbol: 'A' }), trade({ id: 'dup', symbol: 'B' }), trade({ id: 'u' })] }),
+    );
     expect(j.trades).toHaveLength(3);
     expect(new Set(j.trades.map((t) => t.id)).size).toBe(3);
     expect(j.trades[0].id).toBe('dup'); // the first keeps its id
@@ -163,7 +182,11 @@ describe('restoring a backup file', () => {
   it.each([
     ['not JSON', '{"version":1,', 'That file is not valid JSON.'],
     ['a JSON string', '"hello"', 'That file is not a Sniper Journal backup.'],
-    ['an object without trades', '{"version":1,"accounts":[]}', 'That file does not contain a trades and accounts list.'],
+    [
+      'an object without trades',
+      '{"version":1,"accounts":[]}',
+      'That file does not contain a trades and accounts list.',
+    ],
     ['an empty file', '', 'That file is not valid JSON.'],
   ])('refuses %s with a clear message', (_, text, message) => {
     const { data, error } = parseBackup(text);

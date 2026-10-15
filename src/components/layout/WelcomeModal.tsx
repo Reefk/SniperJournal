@@ -63,7 +63,12 @@ export function WelcomeModal() {
 
         <div className="mt-5 grid grid-cols-2 gap-4">
           <Field label="Your name" hint="optional" className="col-span-2">
-            <Input autoFocus={storage.kind === 'web'} value={name} onChange={(e) => setName(e.target.value)} placeholder="Shown in the header" />
+            <Input
+              autoFocus={storage.kind === 'web'}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Shown in the header"
+            />
           </Field>
           <Field label="Account name">
             <Input value={accountName} onChange={(e) => setAccountName(e.target.value)} />

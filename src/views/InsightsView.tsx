@@ -55,10 +55,7 @@ export function InsightsView() {
   if (closedCount < MIN_TRADES_FOR_INSIGHTS) {
     return (
       <>
-        <PageHeader
-          title="Insights & Signals"
-          description="Patterns found in your own trades, not generic advice."
-        />
+        <PageHeader title="Insights & Signals" description="Patterns found in your own trades, not generic advice." />
         <EmptyState
           icon={Lightbulb}
           title={
@@ -167,7 +164,10 @@ export function InsightsView() {
         </div>
         <div className="mt-4 space-y-2.5">
           {score.axes.map((axis) => (
-            <div key={axis.axis} className="grid grid-cols-[96px_1fr_auto] items-center gap-3 md:grid-cols-[120px_1fr_auto]">
+            <div
+              key={axis.axis}
+              className="grid grid-cols-[96px_1fr_auto] items-center gap-3 md:grid-cols-[120px_1fr_auto]"
+            >
               <span className="truncate text-sm text-muted">{axis.axis}</span>
               <div className="h-1.5 overflow-hidden rounded-full bg-line">
                 <div

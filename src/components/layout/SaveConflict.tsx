@@ -56,8 +56,8 @@ export function SaveConflictDialog() {
           </p>
         ) : (
           <p className="text-loss">
-            This window&apos;s version could not be kept as a copy. Download it before you reload, or the changes made in
-            this window are lost.
+            This window&apos;s version could not be kept as a copy. Download it before you reload, or the changes made
+            in this window are lost.
           </p>
         )}
         <p>Reload to carry on with the journal as it is saved now.</p>

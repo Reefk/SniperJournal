@@ -97,7 +97,9 @@ beforeEach(async () => {
 
   root = createRoot(document.createElement('div'));
   await act(async () => {
-    root.render(h(JournalProvider, null, h(Page, { onRender: rendered, compute: computed }), h(Indicator, { onRender: status })));
+    root.render(
+      h(JournalProvider, null, h(Page, { onRender: rendered, compute: computed }), h(Indicator, { onRender: status })),
+    );
   });
   await until(() => seen.journal?.ready === true);
 });

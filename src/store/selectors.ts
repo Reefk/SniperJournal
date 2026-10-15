@@ -32,7 +32,10 @@ export function excludedRealised(trades: Trade[]): number {
  * only when `countExcluded` is on (Settings → Accounts); then the balance no
  * longer equals the end of the equity curve, which stays a statistic.
  */
-export function accountBalances(data: Pick<JournalData, 'accounts' | 'trades'>, countExcluded = false): Record<string, number> {
+export function accountBalances(
+  data: Pick<JournalData, 'accounts' | 'trades'>,
+  countExcluded = false,
+): Record<string, number> {
   const balances: Record<string, number> = {};
   for (const account of data.accounts) {
     const trades = data.trades.filter((t) => t.accountId === account.id);

@@ -18,14 +18,7 @@ export function LogoMark({ size = 30 }: { size?: number }) {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const id = (part: string) => `logo-${part}-${uid}`;
   return (
-    <svg
-      viewBox="0 0 1024 1024"
-      width={size}
-      height={size}
-      className="shrink-0"
-      role="img"
-      aria-label="Sniper Journal"
-    >
+    <svg viewBox="0 0 1024 1024" width={size} height={size} className="shrink-0" role="img" aria-label="Sniper Journal">
       <defs>
         <linearGradient id={id('bg')} x1="0" y1="0" x2="1" y2="1">
           <stop offset="0%" stopColor="#1b2747" />
@@ -50,7 +43,17 @@ export function LogoMark({ size = 30 }: { size?: number }) {
       <rect width="1024" height="1024" rx="232" fill={`url(#${id('bg')})`} />
       <rect width="1024" height="1024" rx="232" fill={`url(#${id('glow')})`} />
       {/* a hairline so the dark tile still has an edge on a dark surface */}
-      <rect x="8" y="8" width="1008" height="1008" rx="224" fill="none" stroke="#ffffff" strokeOpacity="0.12" strokeWidth="16" />
+      <rect
+        x="8"
+        y="8"
+        width="1008"
+        height="1008"
+        rx="224"
+        fill="none"
+        stroke="#ffffff"
+        strokeOpacity="0.12"
+        strokeWidth="16"
+      />
 
       <g stroke={`url(#${id('ring')})`} strokeWidth="46" strokeLinecap="round" fill="none">
         <circle cx="512" cy="512" r="296" />

@@ -440,8 +440,8 @@ function ImportBody({ onClose }: { onClose: () => void }) {
             <span className="num">Filled</span>, <span className="num">Market pos.</span>,{' '}
             <span className="num">Comm/Fee</span>, <span className="num">Net P&amp;L (USD)</span>,{' '}
             <span className="num">Date/Time</span>, separate date and time columns — and several fee columns add up.
-            Title lines above the table and total lines below it are skipped. Anything read wrongly can be changed
-            under Columns. Separate several tags with a | character.
+            Title lines above the table and total lines below it are skipped. Anything read wrongly can be changed under
+            Columns. Separate several tags with a | character.
           </p>
           <p>
             What one point is worth comes from a multiplier column, the amount against the price, or the file&apos;s

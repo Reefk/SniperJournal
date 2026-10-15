@@ -1,12 +1,12 @@
 # Sniper Journal: quality, reliability and engineering audit
 
-| | |
-|---|---|
-| Date | 2026-10-09 |
-| Baseline | `main` at `5dcff10` ("Merge the GitHub repository's initial commit"), clean working tree |
-| Result | 26 defects fixed (23 verified by tests; 3 small UI fixes checked by code review and typecheck only); 17 open findings (4 Medium, 6 Low, 7 Informational) |
-| Machine | Windows 11 Pro 10.0.26200, Intel i7-13620H, 24 GB RAM, Node v24.21.0, npm 11.12.0 |
-| Android | Emulator `pixel_8_pro_api35` (Android 15, `userdebug` image, Android System WebView 124.0.6367.219) |
+|           |                                                                                                                                                                                        |
+| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Date      | 2026-10-09                                                                                                                                                                             |
+| Baseline  | `main` at `5dcff10` ("Merge the GitHub repository's initial commit"), clean working tree                                                                                               |
+| Result    | 26 defects fixed (23 verified by tests; 3 small UI fixes checked by code review and typecheck only); 17 open findings (4 Medium, 6 Low, 7 Informational)                               |
+| Machine   | Windows 11 Pro 10.0.26200, Intel i7-13620H, 24 GB RAM, Node v24.21.0, npm 11.12.0                                                                                                      |
+| Android   | Emulator `pixel_8_pro_api35` (Android 15, `userdebug` image, Android System WebView 124.0.6367.219)                                                                                    |
 | Data used | Synthetic only: generated in tests, a 4-row CSV written by the E2E script, and the app's own "Load test data" journal on the emulator. No real journal was opened, copied or uploaded. |
 
 All changes are uncommitted in the working tree. Nothing was pushed.
@@ -44,15 +44,15 @@ review and typecheck only. The serious ones were in three places:
 
 **How it was verified.** Tests were built from nothing and run on the final code. The figures below were refreshed on 2026-10-12 (commit `964df19` plus the uncommitted changes of that day). At the end of the audit itself they were 212 tests, 79.3% of statements, 73.8% of branches, 37 E2E checks and 16 Android checks.
 
-| Check | Result |
-|---|---|
-| Unit and integration tests (`npm test`) | 279 / 279 pass, 14 files |
-| Coverage of logic, storage and API code | 85.9% statements, 79.4% branches |
-| E2E journey on the production desktop build, headless Edge | 65 / 65 checks pass |
-| Android flow on the emulator (minified release build) | 20 / 20 checks pass, plus back button, share sheet and a clean log |
-| Back-button sequence on Android | Correct at all 5 steps (audit run) |
-| Typecheck, lint, desktop build, mobile build, production `npm audit` | All clean (lint: 0 errors, 27 known warnings) |
-| CI on GitHub (Windows and Linux) | Green on every push to `main` since 2026-10-12 |
+| Check                                                                | Result                                                             |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Unit and integration tests (`npm test`)                              | 279 / 279 pass, 14 files                                           |
+| Coverage of logic, storage and API code                              | 85.9% statements, 79.4% branches                                   |
+| E2E journey on the production desktop build, headless Edge           | 65 / 65 checks pass                                                |
+| Android flow on the emulator (minified release build)                | 20 / 20 checks pass, plus back button, share sheet and a clean log |
+| Back-button sequence on Android                                      | Correct at all 5 steps (audit run)                                 |
+| Typecheck, lint, desktop build, mobile build, production `npm audit` | All clean (lint: 0 errors, 27 known warnings)                      |
+| CI on GitHub (Windows and Linux)                                     | Green on every push to `main` since 2026-10-12                     |
 
 **What remains open.** The most important items:
 
@@ -106,18 +106,18 @@ scripts/           build-mobile.mjs, bundle-android.mjs, make-icons.mjs
 
 ## 3. Baseline (before any change)
 
-| Command | Result | Notes |
-|---|---|---|
-| `git status` | clean, `main` @ `5dcff10` | |
-| `npm ci` | **PASS** (135 s) | 1 deprecation warning (`uuid@7`, via `@capacitor/cli`) |
-| `npm run typecheck` | **PASS** | `tsc --noEmit`, strict mode |
-| `npm run build` | **PASS** | routes `/api/journal`, `/api/screenshot` present |
-| `npm run build:mobile` | **PASS** | |
-| `npm audit` | 3 moderate | all in the dev-only `@capacitor/cli → xcode → uuid` chain |
-| `npm audit --omit=dev` | **PASS**, 0 vulnerabilities | |
-| tests | **NOT RUN**: none existed | no `tests/`, no test runner, no `*.test.*` files |
-| lint | **NOT RUN**: not configured | no ESLint config; Prettier config present but Prettier not installed |
-| CI | none | no `.github/` |
+| Command                | Result                      | Notes                                                                |
+| ---------------------- | --------------------------- | -------------------------------------------------------------------- |
+| `git status`           | clean, `main` @ `5dcff10`   |                                                                      |
+| `npm ci`               | **PASS** (135 s)            | 1 deprecation warning (`uuid@7`, via `@capacitor/cli`)               |
+| `npm run typecheck`    | **PASS**                    | `tsc --noEmit`, strict mode                                          |
+| `npm run build`        | **PASS**                    | routes `/api/journal`, `/api/screenshot` present                     |
+| `npm run build:mobile` | **PASS**                    |                                                                      |
+| `npm audit`            | 3 moderate                  | all in the dev-only `@capacitor/cli → xcode → uuid` chain            |
+| `npm audit --omit=dev` | **PASS**, 0 vulnerabilities |                                                                      |
+| tests                  | **NOT RUN**: none existed   | no `tests/`, no test runner, no `*.test.*` files                     |
+| lint                   | **NOT RUN**: not configured | no ESLint config; Prettier config present but Prettier not installed |
+| CI                     | none                        | no `.github/`                                                        |
 
 ---
 
@@ -135,61 +135,61 @@ No Critical findings were made.
 
 ### Status values
 
-| Status | Meaning |
-|---|---|
-| Fixed and Verified | The defect was shown (each finding says how: a test failing on the old code, a reproduction, or code reading), the code was changed, and a test or E2E check now passes. |
-| Fixed (untested wiring) | Fixed, but only checked by code review and typecheck; no test exercises it. |
-| Confirmed | Reproduced or proven from code, not fixed. |
-| Unverified | Could not be checked here. |
-| Accepted Risk | Known and deliberately left. |
+| Status                  | Meaning                                                                                                                                                                  |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Fixed and Verified      | The defect was shown (each finding says how: a test failing on the old code, a reproduction, or code reading), the code was changed, and a test or E2E check now passes. |
+| Fixed (untested wiring) | Fixed, but only checked by code review and typecheck; no test exercises it.                                                                                              |
+| Confirmed               | Reproduced or proven from code, not fixed.                                                                                                                               |
+| Unverified              | Could not be checked here.                                                                                                                                               |
+| Accepted Risk           | Known and deliberately left.                                                                                                                                             |
 
 ### Summary
 
-| ID | Sev. | Category | Title | Status |
-|---|---|---|---|---|
-| SJ-01 | High | CSV | A stray quote in an unquoted field swallowed the rest of the file | Fixed and Verified |
-| SJ-02 | High | CSV / Validation | Decimal-comma and European numbers misread by up to 10⁵× (CSV and the trade form) | Fixed and Verified |
-| SJ-03 | High | CSV / Financial | "Sell Short"/"Short Sell" and unknown directions imported as LONG without warning | Fixed and Verified |
-| SJ-04 | High | CSV | Day/month order decided per row, so one file mixed two date orders | Fixed and Verified |
-| SJ-05 | High | Persistence | Restore and Erase kept no copy of the journal they replaced | Fixed and Verified |
-| SJ-06 | High | State / Data loss | Bulk actions included trades hidden by search, filters or account | Fixed and Verified |
-| SJ-07 | Medium | CSV | "1:05 PM" after an ISO date read as 01:05; impossible dates stored | Fixed and Verified |
-| SJ-08 | Medium | CSV / Financial | Net P&L column plus a commission column charged commission twice | Fixed and Verified |
-| SJ-09 | Medium | CSV / Persistence | The app's own export, re-imported, turned manual-P&L trades into open $0 trades | Fixed and Verified |
-| SJ-10 | Medium | Security / CSV | CSV export open to spreadsheet formula injection | Fixed and Verified |
-| SJ-11 | Medium | Persistence | Backups from a newer app version restored with their newer data dropped | Fixed and Verified |
-| SJ-12 | Medium | Persistence / Validation | Duplicate trade/account ids kept, so deleting one trade deleted both | Fixed and Verified |
-| SJ-13 | Medium | Validation / Financial | Multiplier ≤ 0 accepted by import and restore (the form refuses it), turning wins into losses | Fixed and Verified |
-| SJ-14 | Medium | Financial | Floating-point noise made a $0.00 trade a loss | Fixed and Verified |
-| SJ-15 | Medium | Financial | SQN used population SD and the wrong N | Fixed and Verified |
-| SJ-16 | Medium | Financial / State | Sidebar/Settings balances disagreed with the equity curve | Fixed and Verified |
-| SJ-17 | Medium | Accessibility | Form labels not associated with their inputs | Fixed and Verified |
-| SJ-18 | Medium | Accessibility | Dialogs unnamed, focus not moved in or restored | Fixed and Verified |
-| SJ-19 | Low | Financial | "Open" count included closed trades missing a detail | Fixed and Verified |
-| SJ-20 | Low | Financial | Reports drawdown ignored P&L before the selected range | Fixed (untested wiring) |
-| SJ-21 | Low | State | Calendar day dialog total disagreed with the day cell | Fixed (untested wiring) |
-| SJ-22 | Low | UI | Best/Worst day always green/red, whatever the sign | Fixed (untested wiring) |
-| SJ-23 | Low | UI | Durations shown as "60m" and "1h 60m" | Fixed and Verified |
-| SJ-24 | Low | Security | Android built an image URL from an unsafe screenshot name | Fixed and Verified |
-| SJ-25 | Low | Security | Desktop pages could be framed by any site (clickjacking) | Fixed and Verified |
-| SJ-26 | Info | Docs | README said the calculations were tested; no tests existed | Fixed and Verified |
-| SJ-27 | Medium | CSV | Re-importing a file without trade IDs duplicates every trade | Confirmed |
-| SJ-28 | Medium | CSV | Separate Date and Time columns: the time is dropped (00:00) | Fixed and Verified (2026-10-09) |
-| SJ-29 | Medium | Accessibility | Several text colours below WCAG AA contrast | Fixed and Verified (2026-10-12) |
-| SJ-30 | Medium | Process | No CI, no lint; tests run only when someone remembers | Fixed and Verified (2026-10-12) |
-| SJ-31 | Low | CSV | Time-zone suffixes (`Z`, `+02:00`) ignored without a warning | Fixed and Verified (2026-10-09) |
-| SJ-32 | Low | Persistence | A newer-version journal on disk is silently downgraded on load | Confirmed |
-| SJ-33 | Low | Accessibility | Dialogs do not trap Tab focus | Fixed and Verified (2026-10-12) |
-| SJ-34 | Low | Accessibility | Charts have no text alternative | Confirmed (code) |
-| SJ-35 | Low | Product / Store | UI says "AI Insights"; the analysis is rule-based and the store listing avoids "AI" | Fixed (2026-10-09; store screenshot 05 still to retake) |
-| SJ-36 | Low | Persistence | Screenshots: orphaned on account delete/reset; not in backups | Orphans fixed (2026-10-12; merges, and Settings → Reclaim unused chart images, 2026-10-13); backups still exclude images (documented) |
-| SJ-37 | Info | Persistence | Desktop `localStorage` mirror fails silently past about 5 MB | Fixed and Verified (2026-10-13) |
-| SJ-38 | Info | Dependencies | Dev-only advisories: `@capacitor/cli` (3 moderate) and, since 2026-10-12, `eslint-config-next` (5 high, `braces`) | Accepted Risk |
-| SJ-39 | Info | Persistence | A cleaned-up journal is only written back on the next change | Accepted Risk |
-| SJ-40 | Info | Accessibility | Two different inputs are both named "Search trades" | Confirmed |
-| SJ-41 | Info | Android | Real devices and WebView ≥ 140 (edge-to-edge) not tested | Unverified |
-| SJ-42 | Info | Performance | Large journals on phones not measured | Unverified |
-| SJ-43 | Info | Security | Journal API has no request-size limit (loopback only) | Accepted Risk |
+| ID    | Sev.   | Category                 | Title                                                                                                             | Status                                                                                                                                |
+| ----- | ------ | ------------------------ | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| SJ-01 | High   | CSV                      | A stray quote in an unquoted field swallowed the rest of the file                                                 | Fixed and Verified                                                                                                                    |
+| SJ-02 | High   | CSV / Validation         | Decimal-comma and European numbers misread by up to 10⁵× (CSV and the trade form)                                 | Fixed and Verified                                                                                                                    |
+| SJ-03 | High   | CSV / Financial          | "Sell Short"/"Short Sell" and unknown directions imported as LONG without warning                                 | Fixed and Verified                                                                                                                    |
+| SJ-04 | High   | CSV                      | Day/month order decided per row, so one file mixed two date orders                                                | Fixed and Verified                                                                                                                    |
+| SJ-05 | High   | Persistence              | Restore and Erase kept no copy of the journal they replaced                                                       | Fixed and Verified                                                                                                                    |
+| SJ-06 | High   | State / Data loss        | Bulk actions included trades hidden by search, filters or account                                                 | Fixed and Verified                                                                                                                    |
+| SJ-07 | Medium | CSV                      | "1:05 PM" after an ISO date read as 01:05; impossible dates stored                                                | Fixed and Verified                                                                                                                    |
+| SJ-08 | Medium | CSV / Financial          | Net P&L column plus a commission column charged commission twice                                                  | Fixed and Verified                                                                                                                    |
+| SJ-09 | Medium | CSV / Persistence        | The app's own export, re-imported, turned manual-P&L trades into open $0 trades                                   | Fixed and Verified                                                                                                                    |
+| SJ-10 | Medium | Security / CSV           | CSV export open to spreadsheet formula injection                                                                  | Fixed and Verified                                                                                                                    |
+| SJ-11 | Medium | Persistence              | Backups from a newer app version restored with their newer data dropped                                           | Fixed and Verified                                                                                                                    |
+| SJ-12 | Medium | Persistence / Validation | Duplicate trade/account ids kept, so deleting one trade deleted both                                              | Fixed and Verified                                                                                                                    |
+| SJ-13 | Medium | Validation / Financial   | Multiplier ≤ 0 accepted by import and restore (the form refuses it), turning wins into losses                     | Fixed and Verified                                                                                                                    |
+| SJ-14 | Medium | Financial                | Floating-point noise made a $0.00 trade a loss                                                                    | Fixed and Verified                                                                                                                    |
+| SJ-15 | Medium | Financial                | SQN used population SD and the wrong N                                                                            | Fixed and Verified                                                                                                                    |
+| SJ-16 | Medium | Financial / State        | Sidebar/Settings balances disagreed with the equity curve                                                         | Fixed and Verified                                                                                                                    |
+| SJ-17 | Medium | Accessibility            | Form labels not associated with their inputs                                                                      | Fixed and Verified                                                                                                                    |
+| SJ-18 | Medium | Accessibility            | Dialogs unnamed, focus not moved in or restored                                                                   | Fixed and Verified                                                                                                                    |
+| SJ-19 | Low    | Financial                | "Open" count included closed trades missing a detail                                                              | Fixed and Verified                                                                                                                    |
+| SJ-20 | Low    | Financial                | Reports drawdown ignored P&L before the selected range                                                            | Fixed (untested wiring)                                                                                                               |
+| SJ-21 | Low    | State                    | Calendar day dialog total disagreed with the day cell                                                             | Fixed (untested wiring)                                                                                                               |
+| SJ-22 | Low    | UI                       | Best/Worst day always green/red, whatever the sign                                                                | Fixed (untested wiring)                                                                                                               |
+| SJ-23 | Low    | UI                       | Durations shown as "60m" and "1h 60m"                                                                             | Fixed and Verified                                                                                                                    |
+| SJ-24 | Low    | Security                 | Android built an image URL from an unsafe screenshot name                                                         | Fixed and Verified                                                                                                                    |
+| SJ-25 | Low    | Security                 | Desktop pages could be framed by any site (clickjacking)                                                          | Fixed and Verified                                                                                                                    |
+| SJ-26 | Info   | Docs                     | README said the calculations were tested; no tests existed                                                        | Fixed and Verified                                                                                                                    |
+| SJ-27 | Medium | CSV                      | Re-importing a file without trade IDs duplicates every trade                                                      | Confirmed                                                                                                                             |
+| SJ-28 | Medium | CSV                      | Separate Date and Time columns: the time is dropped (00:00)                                                       | Fixed and Verified (2026-10-09)                                                                                                       |
+| SJ-29 | Medium | Accessibility            | Several text colours below WCAG AA contrast                                                                       | Fixed and Verified (2026-10-12)                                                                                                       |
+| SJ-30 | Medium | Process                  | No CI, no lint; tests run only when someone remembers                                                             | Fixed and Verified (2026-10-12)                                                                                                       |
+| SJ-31 | Low    | CSV                      | Time-zone suffixes (`Z`, `+02:00`) ignored without a warning                                                      | Fixed and Verified (2026-10-09)                                                                                                       |
+| SJ-32 | Low    | Persistence              | A newer-version journal on disk is silently downgraded on load                                                    | Confirmed                                                                                                                             |
+| SJ-33 | Low    | Accessibility            | Dialogs do not trap Tab focus                                                                                     | Fixed and Verified (2026-10-12)                                                                                                       |
+| SJ-34 | Low    | Accessibility            | Charts have no text alternative                                                                                   | Confirmed (code)                                                                                                                      |
+| SJ-35 | Low    | Product / Store          | UI says "AI Insights"; the analysis is rule-based and the store listing avoids "AI"                               | Fixed (2026-10-09; store screenshot 05 still to retake)                                                                               |
+| SJ-36 | Low    | Persistence              | Screenshots: orphaned on account delete/reset; not in backups                                                     | Orphans fixed (2026-10-12; merges, and Settings → Reclaim unused chart images, 2026-10-13); backups still exclude images (documented) |
+| SJ-37 | Info   | Persistence              | Desktop `localStorage` mirror fails silently past about 5 MB                                                      | Fixed and Verified (2026-10-13)                                                                                                       |
+| SJ-38 | Info   | Dependencies             | Dev-only advisories: `@capacitor/cli` (3 moderate) and, since 2026-10-12, `eslint-config-next` (5 high, `braces`) | Accepted Risk                                                                                                                         |
+| SJ-39 | Info   | Persistence              | A cleaned-up journal is only written back on the next change                                                      | Accepted Risk                                                                                                                         |
+| SJ-40 | Info   | Accessibility            | Two different inputs are both named "Search trades"                                                               | Confirmed                                                                                                                             |
+| SJ-41 | Info   | Android                  | Real devices and WebView ≥ 140 (edge-to-edge) not tested                                                          | Unverified                                                                                                                            |
+| SJ-42 | Info   | Performance              | Large journals on phones not measured                                                                             | Unverified                                                                                                                            |
+| SJ-43 | Info   | Security                 | Journal API has no request-size limit (loopback only)                                                             | Accepted Risk                                                                                                                         |
 
 ---
 
@@ -215,12 +215,13 @@ No Critical findings were made.
   - `src/lib/csv.ts:265` `parseMoney`
 - **Reproduction:**
 
-  | Input | Value before the fix | Correct value |
-  |---|---|---|
-  | `1.234,50` | 1.2345 | 1234.5 |
-  | `1,08640` | 108640 | 1.0864 |
-  | `1.234.567` | 0 | 1234567 |
-  | `4,25` (typed in the form) | 425 | 4.25 |
+  | Input                      | Value before the fix | Correct value |
+  | -------------------------- | -------------------- | ------------- |
+  | `1.234,50`                 | 1.2345               | 1234.5        |
+  | `1,08640`                  | 108640               | 1.0864        |
+  | `1.234.567`                | 0                    | 1234567       |
+  | `4,25` (typed in the form) | 425                  | 4.25          |
+
 - **Evidence:** 4 cases in `tests/csv.test.ts` and 2 in `tests/helpers-format.test.ts` failed on the original code with exactly these values, and pass now. The US cases `1,234.50`, `$1,234.50` and `(120)` are kept passing.
 - **Impact:** Prices and P&L wrong by orders of magnitude, accepted without a warning. Any broker export from a decimal-comma locale is affected.
 - **Fix:** One parser decides the separators:
@@ -563,14 +564,15 @@ No Critical findings were made.
 - **Location:** `src/app/globals.css:6-36`
 - **Evidence:** Contrast ratios computed with the WCAG 2.x formula against the three background tokens (`app`, `surface`, `raised`):
 
-  | Token | Dark (min) | Light (min) | Suggested value (≥ 4.5:1 on all 3 backgrounds) |
-  |---|---|---|---|
-  | `faint` (used ~70 times in 22 files) | **2.81** | **2.31** | dark `#818a9e`, light `#66707f` |
-  | `muted` | 5.33 | **4.29** (on `raised`) | light `#617086` |
-  | `loss` | **4.28** (on `raised`) | **4.23** | dark `#f54966`, light `#d91c45` |
-  | `profit` | 8.17 | **3.40** | light `#047f59` |
-  | `warn` | 7.31 | **2.87** | light `#a85c05` |
-  | `fg`, `accent` | ≥ 5.26 | ≥ 5.67 | ok |
+  | Token                                | Dark (min)             | Light (min)            | Suggested value (≥ 4.5:1 on all 3 backgrounds) |
+  | ------------------------------------ | ---------------------- | ---------------------- | ---------------------------------------------- |
+  | `faint` (used ~70 times in 22 files) | **2.81**               | **2.31**               | dark `#818a9e`, light `#66707f`                |
+  | `muted`                              | 5.33                   | **4.29** (on `raised`) | light `#617086`                                |
+  | `loss`                               | **4.28** (on `raised`) | **4.23**               | dark `#f54966`, light `#d91c45`                |
+  | `profit`                             | 8.17                   | **3.40**               | light `#047f59`                                |
+  | `warn`                               | 7.31                   | **2.87**               | light `#a85c05`                                |
+  | `fg`, `accent`                       | ≥ 5.26                 | ≥ 5.67                 | ok                                             |
+
 - **Impact:** Hints, timestamps and light-theme P&L figures are hard to read, especially in sunlight on a phone.
 - **Recommended fix:** Adopt the suggested shades, or similar ones. This is a visual design decision, so it was left to the owner. Re-check large-text uses, where only 3:1 is required.
 - **Fix (2026-10-12):** The nearest passing shades of the same hues: dark `faint` `#7e8ba6` and `loss` `#ff6879`; light `muted` `#5f6f86`, `faint` `#616f83`, `profit` `#056e4c`, `loss` `#ba0236` and `warn` `#9a5304`. Every text token is now at least 4.5:1 on `app`, `surface` and `raised`, and `profit`, `loss` and `warn` also on the 10–15% tinted fills of their own badges and toggles. The shades suggested above did not allow for those fills: light `#047f59` is about 4:1 on its own badge. The chart palette in `useChartTheme.ts` was changed to match.
@@ -652,7 +654,7 @@ No Critical findings were made.
 - **Trade-off, chosen by the owner:** the copy Settings keeps before a restore or an erase (`before-restore`, `before-erase`) holds the journal only, so if it is restored later its trades come back without those charts. The restore and erase confirmations and their messages now say so.
 - **Also found:** in the trade form, removing or replacing a chart deletes the old file at once, before the trade is saved, so Cancel leaves the trade pointing at a deleted image; and merging trades keeps one leg's chart and leaves the other legs' images behind.
 - **Update (2026-10-13):**
-  - Merging trades deletes the charts of the parts the merged trade no longer shows (it keeps the earliest part's that has one), unless another trade shows them. Chart *links* (`screenshotUrl`) were dropped the same way, silently; now the earliest stays the link and the others are added to the notes (`linksMovedToNotes`, `src/lib/merge.ts`). The merge confirmation says what happens to both.
+  - Merging trades deletes the charts of the parts the merged trade no longer shows (it keeps the earliest part's that has one), unless another trade shows them. Chart _links_ (`screenshotUrl`) were dropped the same way, silently; now the earliest stays the link and the others are added to the notes (`linksMovedToNotes`, `src/lib/merge.ts`). The merge confirmation says what happens to both.
   - Remove test data, and Regenerate test data (which replaces it), also delete a chart image attached by hand to a test trade, unless one of your own trades shows it (`chartsOnlyInSample`). The Remove test data confirmations (Settings and the banner) say so; Regenerate asks nothing, as before, since the trades the chart belonged to are replaced either way.
   - Images left behind anyway (by older versions, by a trade form closed by shutting the app, by a delete that failed) can be deleted from **Settings → Chart images → Reclaim unused chart images**. It first says how many there are and the space they take, and asks; afterwards it reports the space freed. An image counts as unused only when no trade in the open journal, the saved journal or any copy in `backups/` mentions its name, and it was added more than a day ago, since a trade form in another window may hold a newer one. If the journal or any copy cannot be read, or is not a whole journal (each is parsed as JSON once and every image name in it collected, ignoring case), nothing is deleted, and the message names the file; a backup pruned by a save during the search is skipped. Delete removes only the images the dialog showed, if they are still unused. A file whose name the app did not generate is never touched (checked in `sweep.ts` itself too). These last rules came from a code review on 2026-10-13.
   - `src/lib/storage/sweep.ts`, shared by `POST /api/screenshot?unused` on a PC and `capacitorStorage` on a phone (`findUnusedImages`, `removeUnusedImages`). Tested by `tests/sweep.test.ts`, the API and storage tests, `npm run e2e` section 14b and `npm run e2e:android`.
@@ -663,7 +665,7 @@ No Critical findings were made.
 - **Severity / category:** Informational, Persistence
 - **Location:** `src/store/JournalProvider.tsx:20-30,147-160`
 - **Behaviour:** On desktop the journal is also mirrored to `localStorage`, and on load the newer of disk and mirror (by `updatedAt`) wins. Above roughly 5 MB (about 10,000 trades; the 10k benchmark journal is 5.36 MB), the browser rejects the mirror write. The error is swallowed by design.
-- **Impact:** None while the disk save works. Only if the server cannot write to `data/` *and* the journal is past the limit is the latest change kept nowhere. The status pill does show "browser" in that state.
+- **Impact:** None while the disk save works. Only if the server cannot write to `data/` _and_ the journal is past the limit is the latest change kept nowhere. The status pill does show "browser" in that state.
 - **Status:** Fixed and Verified (2026-10-13).
 - **Fix:** a copy over `MIRROR_LIMIT` (4,000,000 characters, about 7,500 trades) is not tried, and one the browser refuses is caught (`storeMirror`, `src/store/mirror.ts`). Either way the context's `copyMiss` says why. While the file saves as usual, a calm notice says so once a session. If the file can't be written either, the status is the new `unsaved` ("Not saved", red) instead of "Saved in browser", and the notice comes back offering a backup download. Support explains each case.
 - **Verified:** `tests/mirror.test.ts` (fits, over the limit and not tried, full, storage blocked). `npm run e2e` section 16 fills the browser's real storage to the last character, then: the calm notice, the change still on disk, "Saved to disk", the old copy untouched, not said again once dismissed; with the journal file held open, "Not saved" and the notice with a backup download, both gone once the save lands; with room again, the copy is kept.
@@ -723,18 +725,18 @@ No Critical findings were made.
 
 The tests in `tests/stats.test.ts` use a hand-calculated mixed record, boundary cases, and 400 seeded property runs. The properties are checked against an independent reference implementation written in the test, not against the app's own code.
 
-| Metric | Definition (as implemented and tested) |
-|---|---|
-| Net P&L | gross − fees. Gross = (exit − entry) × qty × multiplier × direction, or the manual P&L. Settled to 1e-8 (SJ-14). |
-| Win / loss / breakeven | net > 0 / net < 0 / net = 0 |
-| Win rate | wins ÷ (wins + losses + breakevens). Breakevens are in the denominator. |
-| Profit factor | gross wins ÷ \|gross losses\|. `Infinity` with no losses; `null` with neither. |
-| Expectancy | mean net per trade |
-| R multiple | net ÷ risk, where risk = \|entry − stop\| × qty × multiplier. `null` without a stop. |
-| Max drawdown | realised only, trade by trade, from the balance when the range opens (SJ-20). |
-| SQN | mean ÷ sample SD × √N over R values when at least 5 and at least half the trades have a stop, otherwise over money (SJ-15). |
-| Counted trades | closed, not excluded, and complete. "Open" = not excluded and not closed (SJ-19). |
-| Balance | starting balance + realised net of counted trades (SJ-16); plus excluded trades when the owner's setting "Count excluded trades in the balance" is on (off by default). |
+| Metric                 | Definition (as implemented and tested)                                                                                                                                  |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Net P&L                | gross − fees. Gross = (exit − entry) × qty × multiplier × direction, or the manual P&L. Settled to 1e-8 (SJ-14).                                                        |
+| Win / loss / breakeven | net > 0 / net < 0 / net = 0                                                                                                                                             |
+| Win rate               | wins ÷ (wins + losses + breakevens). Breakevens are in the denominator.                                                                                                 |
+| Profit factor          | gross wins ÷ \|gross losses\|. `Infinity` with no losses; `null` with neither.                                                                                          |
+| Expectancy             | mean net per trade                                                                                                                                                      |
+| R multiple             | net ÷ risk, where risk = \|entry − stop\| × qty × multiplier. `null` without a stop.                                                                                    |
+| Max drawdown           | realised only, trade by trade, from the balance when the range opens (SJ-20).                                                                                           |
+| SQN                    | mean ÷ sample SD × √N over R values when at least 5 and at least half the trades have a stop, otherwise over money (SJ-15).                                             |
+| Counted trades         | closed, not excluded, and complete. "Open" = not excluded and not closed (SJ-19).                                                                                       |
+| Balance                | starting balance + realised net of counted trades (SJ-16); plus excluded trades when the owner's setting "Count excluded trades in the balance" is on (off by default). |
 
 Also covered:
 
@@ -770,7 +772,7 @@ Also covered:
 
 **Verified behaviour.**
 
-*Desktop* (`tests/api-desktop.test.ts`, 19 tests; plus E2E):
+_Desktop_ (`tests/api-desktop.test.ts`, 19 tests; plus E2E):
 
 - `PUT /api/journal` writes the journal and rolls a daily backup, keeping 30.
 - `POST ?copy=before-restore|before-erase` keeps a safety copy, keeping 10. An unknown kind of copy or an invalid payload gets a 400.
@@ -778,7 +780,7 @@ Also covered:
 - Screenshot upload limits (type, 8 MB) and name validation are enforced.
 - After a server restart, in a browser profile with no `localStorage`, the E2E journey shows the same 3 trades, $143.00 net and balance. They came from `data/journal.json`.
 
-*Android* (`tests/storage-native.test.ts`, 15 tests with an in-memory Filesystem mock; plus on the emulator):
+_Android_ (`tests/storage-native.test.ts`, 15 tests with an in-memory Filesystem mock; plus on the emulator):
 
 - **Upgrade:** Installing the new build over the old one (`adb install -r`) kept the 78-trade journal.
 - **Restore:** It kept `before-restore-*.json` holding the 78 trades it replaced.
@@ -844,11 +846,11 @@ Also covered:
 - Times are in milliseconds. `sniperScore` is timed on its own, given the stats; until 2026-10-12 the benchmark timed it together with a `computeStats` call.
 
 | Trades | Journal JSON | computeStats | sniperScore | buildInsights | CSV import | CSV import, one row per fill | CSV export | Save (stringify) | Launch (parse + normalize) |
-|---|---|---|---|---|---|---|---|---|---|
-| 100 | 0.05 MB | 0.32 | 0.02 | 0.55 | 1.60 | 1.93 | 0.20 | 0.09 | 0.14 |
-| 1,000 | 0.54 MB | 3.37 | 0.12 | 5.01 | 12.2 | 18.3 | 2.11 | 1.08 | 1.35 |
-| 10,000 | 5.36 MB | 34.1 | 1.25 | 51.8 | 129 | 183 | 24.0 | 11.4 | 15.2 |
-| 50,000 | 26.83 MB | 193 | 8.87 | 280 | 732 | 1,147 | 155 | 76.6 | 117 |
+| ------ | ------------ | ------------ | ----------- | ------------- | ---------- | ---------------------------- | ---------- | ---------------- | -------------------------- |
+| 100    | 0.05 MB      | 0.32         | 0.02        | 0.55          | 1.60       | 1.93                         | 0.20       | 0.09             | 0.14                       |
+| 1,000  | 0.54 MB      | 3.37         | 0.12        | 5.01          | 12.2       | 18.3                         | 2.11       | 1.08             | 1.35                       |
+| 10,000 | 5.36 MB      | 34.1         | 1.25        | 51.8          | 129        | 183                          | 24.0       | 11.4             | 15.2                       |
+| 50,000 | 26.83 MB     | 193          | 8.87        | 280           | 732        | 1,147                        | 155        | 76.6             | 117                        |
 
 **Assessment.** Everything scales roughly linearly. Up to about 10,000 trades every operation stays under about 185 ms on this PC, which is comfortable for a personal journal. At 50,000 trades:
 
@@ -867,45 +869,45 @@ No optimisation was made for speed alone, because nothing measured justifies one
 
 **Added:** Vitest 5.0.3 and `@vitest/coverage-v8` 5.0.3, both dev-only. Tests run in Node with `TZ=UTC`, and DST tests set their own zone. All data is synthetic (`tests/helpers.ts`), and property tests use a seeded PRNG so they are repeatable.
 
-| Suite | Tests | Scope |
-|---|---|---|
-| `tests/trade-math.test.ts` | 29 | P&L, fees, R, outcome, hold time across DST and midnight, completeness, chronological order |
-| `tests/stats.test.ts` | 27 | hand-calculated record, boundaries, open count, SQN, 400 property runs vs a reference, days and groups, Sniper Score |
-| `tests/merge.test.ts` | 16 | scale-in and scale-out merging, P&L preserved, refusal reasons |
-| `tests/csv.test.ts` | 52 | parser, structure, numbers, dates, direction, P&L/fees, multiplier, duplicates/paired fills, export round trip, formula injection |
-| `tests/import-formats.test.ts` | 33 | broker layouts (whole trades, fills, TradingView pairs), column mapping, time zones, multipliers |
-| `tests/journal-data.test.ts` | 20 | normalize, sanitize rules, multiplier, backup parsing incl. newer versions and 20,000 trades |
-| `tests/storage-native.test.ts` | 15 | Capacitor storage on a mock filesystem: atomic save, rolling backups, safety copies, corrupt files, screenshots |
-| `tests/storage-web.test.ts` | 2 | desktop saves sent one at a time |
-| `tests/api-desktop.test.ts` | 27 | desktop API routes in a temp folder: guard, save, overlapping saves, locked files, backups, safety copy, screenshots |
-| `tests/autosave.test.ts` | 10 | save retries and the startup read retry |
-| `tests/helpers-format.test.ts` | 34 | number parsing, dates, ranges, sessions, formatting, insights and signals |
-| `tests/selectors.test.ts` | 7 | balances and equity-curve consistency |
-| `tests/confirm.test.ts` | 3 | a confirmation replaced by a newer one is answered "no" |
-| `tests/screenshots.test.ts` | 4 | which chart images go with removed trades |
-| **Total** | **279** | |
-| `tests/e2e/desktop-journey.mjs` | 65 checks | production desktop build in headless Edge/Chrome over the DevTools protocol, temp data folder, no extra packages |
-| `tests/bench/workloads.bench.ts` | n/a | timings (`npm run bench`) |
+| Suite                            | Tests     | Scope                                                                                                                             |
+| -------------------------------- | --------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `tests/trade-math.test.ts`       | 29        | P&L, fees, R, outcome, hold time across DST and midnight, completeness, chronological order                                       |
+| `tests/stats.test.ts`            | 27        | hand-calculated record, boundaries, open count, SQN, 400 property runs vs a reference, days and groups, Sniper Score              |
+| `tests/merge.test.ts`            | 16        | scale-in and scale-out merging, P&L preserved, refusal reasons                                                                    |
+| `tests/csv.test.ts`              | 52        | parser, structure, numbers, dates, direction, P&L/fees, multiplier, duplicates/paired fills, export round trip, formula injection |
+| `tests/import-formats.test.ts`   | 33        | broker layouts (whole trades, fills, TradingView pairs), column mapping, time zones, multipliers                                  |
+| `tests/journal-data.test.ts`     | 20        | normalize, sanitize rules, multiplier, backup parsing incl. newer versions and 20,000 trades                                      |
+| `tests/storage-native.test.ts`   | 15        | Capacitor storage on a mock filesystem: atomic save, rolling backups, safety copies, corrupt files, screenshots                   |
+| `tests/storage-web.test.ts`      | 2         | desktop saves sent one at a time                                                                                                  |
+| `tests/api-desktop.test.ts`      | 27        | desktop API routes in a temp folder: guard, save, overlapping saves, locked files, backups, safety copy, screenshots              |
+| `tests/autosave.test.ts`         | 10        | save retries and the startup read retry                                                                                           |
+| `tests/helpers-format.test.ts`   | 34        | number parsing, dates, ranges, sessions, formatting, insights and signals                                                         |
+| `tests/selectors.test.ts`        | 7         | balances and equity-curve consistency                                                                                             |
+| `tests/confirm.test.ts`          | 3         | a confirmation replaced by a newer one is answered "no"                                                                           |
+| `tests/screenshots.test.ts`      | 4         | which chart images go with removed trades                                                                                         |
+| **Total**                        | **279**   |                                                                                                                                   |
+| `tests/e2e/desktop-journey.mjs`  | 65 checks | production desktop build in headless Edge/Chrome over the DevTools protocol, temp data folder, no extra packages                  |
+| `tests/bench/workloads.bench.ts` | n/a       | timings (`npm run bench`)                                                                                                         |
 
 **Coverage** (`npm run coverage`, 2026-10-12). This covers `src/lib`, the plain modules of `src/store` (`src/store/**/*.ts`: autosave, confirm, sanitize, selectors) and `src/app/api`. Components, views and the `.tsx` providers (`JournalProvider.tsx`, `UIProvider.tsx`) are not instrumented; they need React render tests first.
 
-| | Statements | Branches | Functions | Lines |
-|---|---|---|---|---|
-| All covered files | **85.89%** (1912/2226) | **79.35%** (1491/1879) | 86.45% (415/480) | 87.71% (1578/1799) |
-| `stats.ts` | 97.53 | 86.99 | 100 | 100 |
-| `store/` (autosave, confirm, sanitize, selectors) | 98.54 | 96.8 | 100 | 100 |
-| `journal.ts` (normalize) | 100 | 100 | 100 | 100 |
-| `import/` (columns, fills, table, values) | 95.1 | 86.25 | 97.47 | 97.63 |
-| `csv.ts` | 92.27 | 86.74 | 94.54 | 94.33 |
-| `trade-math.ts` | 91.52 | 82.66 | 94.44 | 93.02 |
-| `merge.ts` | 94.18 | 83.95 | 95.12 | 94.82 |
-| `storage/capacitor.ts` | 89.36 | 78.78 | 78.57 | 97.46 |
-| `api/journal/route.desktop.ts` | 87.25 | 84.37 | 83.33 | 89.88 |
-| `insights.ts` | 72.54 | 60.24 | 61.29 | 74.59 |
-| `format.ts` | 64.7 | 67.1 | 46.66 | 64.15 |
-| `storage/web.ts` | 30 | 16.66 | 33.33 | 27.27 (the rest is exercised by the E2E journey, which coverage does not measure) |
-| `screenshots.ts` | 11.53 | 5.12 | 36.36 | 7.31 |
-| `sample.ts` | 0 | 0 | 0 | 0 |
+|                                                   | Statements             | Branches               | Functions        | Lines                                                                             |
+| ------------------------------------------------- | ---------------------- | ---------------------- | ---------------- | --------------------------------------------------------------------------------- |
+| All covered files                                 | **85.89%** (1912/2226) | **79.35%** (1491/1879) | 86.45% (415/480) | 87.71% (1578/1799)                                                                |
+| `stats.ts`                                        | 97.53                  | 86.99                  | 100              | 100                                                                               |
+| `store/` (autosave, confirm, sanitize, selectors) | 98.54                  | 96.8                   | 100              | 100                                                                               |
+| `journal.ts` (normalize)                          | 100                    | 100                    | 100              | 100                                                                               |
+| `import/` (columns, fills, table, values)         | 95.1                   | 86.25                  | 97.47            | 97.63                                                                             |
+| `csv.ts`                                          | 92.27                  | 86.74                  | 94.54            | 94.33                                                                             |
+| `trade-math.ts`                                   | 91.52                  | 82.66                  | 94.44            | 93.02                                                                             |
+| `merge.ts`                                        | 94.18                  | 83.95                  | 95.12            | 94.82                                                                             |
+| `storage/capacitor.ts`                            | 89.36                  | 78.78                  | 78.57            | 97.46                                                                             |
+| `api/journal/route.desktop.ts`                    | 87.25                  | 84.37                  | 83.33            | 89.88                                                                             |
+| `insights.ts`                                     | 72.54                  | 60.24                  | 61.29            | 74.59                                                                             |
+| `format.ts`                                       | 64.7                   | 67.1                   | 46.66            | 64.15                                                                             |
+| `storage/web.ts`                                  | 30                     | 16.66                  | 33.33            | 27.27 (the rest is exercised by the E2E journey, which coverage does not measure) |
+| `screenshots.ts`                                  | 11.53                  | 5.12                   | 36.36            | 7.31                                                                              |
+| `sample.ts`                                       | 0                      | 0                      | 0                | 0                                                                                 |
 
 **Gaps:**
 
@@ -956,25 +958,25 @@ No optimisation was made for speed alone, because nothing measured justifies one
 
 Run on the machine above, from a clean `npm ci` in a copy of the working tree. The audit's own final run (commit `509f512`) had 212 tests, 79.34% of statements, 37 E2E checks and 16 Android checks, with no linter.
 
-| Command | Result | Details |
-|---|---|---|
-| `npm ci` | **PASS** | 540 packages, 16 s |
-| `npm run typecheck` | **PASS** | `tsc --noEmit`, no errors (with `noUnusedLocals`, `noUnusedParameters`, `noFallthroughCasesInSwitch`) |
-| `npm run lint` | **PASS** | 0 errors, 27 known warnings (React hooks rules, see SJ-30) |
-| `npm test` | **PASS** | 14 files, 279 / 279 tests |
-| `npm run coverage` | **PASS** | 279 / 279; statements 85.89%, branches 79.35% |
-| `npm run build:mobile` | **PASS** | static export to `out/`, no API routes |
-| `npm run build` | **PASS** | desktop server build incl. `/api/journal`, `/api/screenshot` |
-| `npm run e2e` | **PASS** | 65 / 65 checks |
-| `npm run bench` | **PASS** | timings in [section 11](#11-performance) |
-| `npm audit` | **FAIL** (exit 1) | 8 dev-only: 3 moderate (`@capacitor/cli`), 5 high (`braces` via `eslint-config-next`) (SJ-38) |
-| `npm audit --omit=dev` | **PASS** | 0 vulnerabilities |
-| CI on GitHub | **PASS** | the same steps (without E2E and bench) on Windows and Linux |
-| Android: release bundle with R8 (`minifyEnabled true`) | **PASS**, unsigned | `gradlew bundleRelease`: 2.9 MB `.aab`; `npm run bundle` itself needs the upload key, which does not exist yet |
-| Android: that bundle as a universal APK (bundletool, debug key) on the emulator: restore/erase/persistence/corruption/save-failure script | **PASS** | 20 / 20 checks |
-| Android: same build, back button, share sheet, log | **PASS** | 3 / 3; no crash or missing-class error |
-| Android: back-button sequence (`adb input keyevent BACK`) | **PASS** (audit run) | 5 / 5 steps as expected |
-| Physical device | **BLOCKED** | none available |
+| Command                                                                                                                                   | Result               | Details                                                                                                        |
+| ----------------------------------------------------------------------------------------------------------------------------------------- | -------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `npm ci`                                                                                                                                  | **PASS**             | 540 packages, 16 s                                                                                             |
+| `npm run typecheck`                                                                                                                       | **PASS**             | `tsc --noEmit`, no errors (with `noUnusedLocals`, `noUnusedParameters`, `noFallthroughCasesInSwitch`)          |
+| `npm run lint`                                                                                                                            | **PASS**             | 0 errors, 27 known warnings (React hooks rules, see SJ-30)                                                     |
+| `npm test`                                                                                                                                | **PASS**             | 14 files, 279 / 279 tests                                                                                      |
+| `npm run coverage`                                                                                                                        | **PASS**             | 279 / 279; statements 85.89%, branches 79.35%                                                                  |
+| `npm run build:mobile`                                                                                                                    | **PASS**             | static export to `out/`, no API routes                                                                         |
+| `npm run build`                                                                                                                           | **PASS**             | desktop server build incl. `/api/journal`, `/api/screenshot`                                                   |
+| `npm run e2e`                                                                                                                             | **PASS**             | 65 / 65 checks                                                                                                 |
+| `npm run bench`                                                                                                                           | **PASS**             | timings in [section 11](#11-performance)                                                                       |
+| `npm audit`                                                                                                                               | **FAIL** (exit 1)    | 8 dev-only: 3 moderate (`@capacitor/cli`), 5 high (`braces` via `eslint-config-next`) (SJ-38)                  |
+| `npm audit --omit=dev`                                                                                                                    | **PASS**             | 0 vulnerabilities                                                                                              |
+| CI on GitHub                                                                                                                              | **PASS**             | the same steps (without E2E and bench) on Windows and Linux                                                    |
+| Android: release bundle with R8 (`minifyEnabled true`)                                                                                    | **PASS**, unsigned   | `gradlew bundleRelease`: 2.9 MB `.aab`; `npm run bundle` itself needs the upload key, which does not exist yet |
+| Android: that bundle as a universal APK (bundletool, debug key) on the emulator: restore/erase/persistence/corruption/save-failure script | **PASS**             | 20 / 20 checks                                                                                                 |
+| Android: same build, back button, share sheet, log                                                                                        | **PASS**             | 3 / 3; no crash or missing-class error                                                                         |
+| Android: back-button sequence (`adb input keyevent BACK`)                                                                                 | **PASS** (audit run) | 5 / 5 steps as expected                                                                                        |
+| Physical device                                                                                                                           | **BLOCKED**          | none available                                                                                                 |
 
 ---
 
@@ -1018,39 +1020,39 @@ A build that compiles is not evidence of readiness. These items are.
 
 ### P0: before any wider release
 
-| Item | Finding | Effort |
-|---|---|---|
-| ~~Rename "AI Insights & Signals" to "Insights & Signals"~~ Done 2026-10-09; retake store screenshot 05 | SJ-35 | XS |
-| Test on at least one physical phone and read Play's pre-launch report | SJ-41 | S |
-| ~~Add CI: `npm ci`, typecheck, test, build, `build:mobile` on every push~~ Done 2026-10-12 | SJ-30 | S |
+| Item                                                                                                   | Finding | Effort |
+| ------------------------------------------------------------------------------------------------------ | ------- | ------ |
+| ~~Rename "AI Insights & Signals" to "Insights & Signals"~~ Done 2026-10-09; retake store screenshot 05 | SJ-35   | XS     |
+| Test on at least one physical phone and read Play's pre-launch report                                  | SJ-41   | S      |
+| ~~Add CI: `npm ci`, typecheck, test, build, `build:mobile` on every push~~ Done 2026-10-12             | SJ-30   | S      |
 
 ### P1: before production rollout
 
-| Item | Finding | Effort |
-|---|---|---|
-| Warn about possible duplicate trades on import (fingerprint), skipped by default | SJ-27 | M |
-| ~~Join separate Date and Time columns~~ Done 2026-10-09 | SJ-28 | S |
-| ~~Adopt AA-compliant colour tokens~~ Done 2026-10-12 | SJ-29 | S |
-| ~~Owner confirms "excluded trades don't count toward balance"~~ Done 2026-10-09: a Settings option, off by default | SJ-16 | XS |
-| ~~ESLint with `eslint-config-next` (hook rules)~~ Done 2026-10-12 | SJ-30 | S |
+| Item                                                                                                               | Finding | Effort |
+| ------------------------------------------------------------------------------------------------------------------ | ------- | ------ |
+| Warn about possible duplicate trades on import (fingerprint), skipped by default                                   | SJ-27   | M      |
+| ~~Join separate Date and Time columns~~ Done 2026-10-09                                                            | SJ-28   | S      |
+| ~~Adopt AA-compliant colour tokens~~ Done 2026-10-12                                                               | SJ-29   | S      |
+| ~~Owner confirms "excluded trades don't count toward balance"~~ Done 2026-10-09: a Settings option, off by default | SJ-16   | XS     |
+| ~~ESLint with `eslint-config-next` (hook rules)~~ Done 2026-10-12                                                  | SJ-30   | S      |
 
 ### P2: next iterations
 
-| Item | Finding | Effort |
-|---|---|---|
-| Refuse or read-only a newer-version journal on load | SJ-32 | S |
-| ~~Focus trap in `Modal` (or native `<dialog>`)~~ Done 2026-10-12 | SJ-33 | S |
-| Text alternatives for charts | SJ-34 | S |
-| ~~Warn about or convert time-zone suffixes~~ Done 2026-10-09: converted | SJ-31 | S |
-| Component tests for TradeForm, ImportTradesModal and Settings | §12 | M |
-| Tests for each insights rule | §12 | M |
-| Distinct names for the two search inputs | SJ-40 | XS |
+| Item                                                                    | Finding | Effort |
+| ----------------------------------------------------------------------- | ------- | ------ |
+| Refuse or read-only a newer-version journal on load                     | SJ-32   | S      |
+| ~~Focus trap in `Modal` (or native `<dialog>`)~~ Done 2026-10-12        | SJ-33   | S      |
+| Text alternatives for charts                                            | SJ-34   | S      |
+| ~~Warn about or convert time-zone suffixes~~ Done 2026-10-09: converted | SJ-31   | S      |
+| Component tests for TradeForm, ImportTradesModal and Settings           | §12     | M      |
+| Tests for each insights rule                                            | §12     | M      |
+| Distinct names for the two search inputs                                | SJ-40   | XS     |
 
 ### P3: when it matters
 
-| Item | Finding | Effort |
-|---|---|---|
-| Measure on a phone (`sniperScore` already reuses the stats it is given) | SJ-42 | S |
-| Include screenshots in backups (they are documented as excluded; orphans cleaned up since 2026-10-12, and reclaimable from Settings since 2026-10-13) | SJ-36 | M |
-| Body-size limit on the journal API | SJ-43 | XS |
-| Re-check the `@capacitor/cli` advisory when Capacitor updates | SJ-38 | XS |
+| Item                                                                                                                                                  | Finding | Effort |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ------ |
+| Measure on a phone (`sniperScore` already reuses the stats it is given)                                                                               | SJ-42   | S      |
+| Include screenshots in backups (they are documented as excluded; orphans cleaned up since 2026-10-12, and reclaimable from Settings since 2026-10-13) | SJ-36   | M      |
+| Body-size limit on the journal API                                                                                                                    | SJ-43   | XS     |
+| Re-check the `@capacitor/cli` advisory when Capacitor updates                                                                                         | SJ-38   | XS     |

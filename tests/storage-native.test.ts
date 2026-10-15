@@ -22,7 +22,8 @@ const fs = vi.hoisted(() => {
     vanishOnRead: '',
   };
   const key = (dir: string | undefined, path: string) => `${dir ?? 'DATA'}:${path}`;
-  const notFound = (path: string) => Object.assign(new Error(`'${path}' does not exist`), { code: 'OS-PLUG-FILE-0008' });
+  const notFound = (path: string) =>
+    Object.assign(new Error(`'${path}' does not exist`), { code: 'OS-PLUG-FILE-0008' });
   return { files, mtimes, failures, key, notFound };
 });
 
@@ -91,7 +92,10 @@ vi.mock('@capacitor/filesystem', () => ({
   },
 }));
 vi.mock('@capacitor/core', () => ({
-  Capacitor: { convertFileSrc: (uri: string) => uri.replace('file://', 'https://localhost/_capacitor_file_'), isNativePlatform: () => true },
+  Capacitor: {
+    convertFileSrc: (uri: string) => uri.replace('file://', 'https://localhost/_capacitor_file_'),
+    isNativePlatform: () => true,
+  },
 }));
 const share = vi.hoisted(() => ({ calls: [] as unknown[], cancel: false }));
 vi.mock('@capacitor/share', () => ({
@@ -104,7 +108,12 @@ vi.mock('@capacitor/share', () => ({
 }));
 
 const journal = (n: number): JournalData =>
-  ({ version: 1, updatedAt: `2026-03-0${n}T00:00:00.000Z`, trades: [{ id: `t${n}` }], accounts: [] }) as unknown as JournalData;
+  ({
+    version: 1,
+    updatedAt: `2026-03-0${n}T00:00:00.000Z`,
+    trades: [{ id: `t${n}` }],
+    accounts: [],
+  }) as unknown as JournalData;
 
 async function freshStorage() {
   vi.resetModules();
@@ -243,7 +252,9 @@ describe('chart images and exports', () => {
     const name = await s.saveImage(new Blob([new Uint8Array([1, 2, 3])], { type: 'image/png' }));
     expect(name).toMatch(/^[a-z0-9]{6,40}\.png$/);
     expect(fs.files.get(`DATA:screenshots/${name}`)).toBe('AQID');
-    expect(s.imageSrc(name)).toBe(`https://localhost/_capacitor_file_/data/user/0/com.sniperjournal.app/files/screenshots/${name}`);
+    expect(s.imageSrc(name)).toBe(
+      `https://localhost/_capacitor_file_/data/user/0/com.sniperjournal.app/files/screenshots/${name}`,
+    );
   });
 
   it('refuses file types it does not serve', async () => {
@@ -277,7 +288,11 @@ describe('chart images and exports', () => {
       fs.mtimes.set(`DATA:screenshots/${name}`, Date.now() - age);
     };
     const mentioning = (...names: string[]) => JSON.stringify({ trades: names.map((n) => ({ screenshotFile: n })) });
-    const left = () => [...fs.files.keys()].filter((k) => k.startsWith('DATA:screenshots/')).map((k) => k.slice(17)).sort();
+    const left = () =>
+      [...fs.files.keys()]
+        .filter((k) => k.startsWith('DATA:screenshots/'))
+        .map((k) => k.slice(17))
+        .sort();
 
     it('finds, then deletes, only what neither the open journal, the saved one, a kept copy nor the last day uses', async () => {
       const s = await freshStorage();
@@ -288,7 +303,9 @@ describe('chart images and exports', () => {
       fs.files.set('DATA:backups/conflict-20261012-101500.json', mentioning('other001.webp'));
       expect(await s.findUnusedImages(['shown001.png'])).toEqual([{ name: 'orphan01.jpg', bytes: 1 }]);
       expect(left()).toContain('orphan01.jpg');
-      expect(await s.removeUnusedImages(['shown001.png'], ['orphan01.jpg'])).toEqual([{ name: 'orphan01.jpg', bytes: 1 }]);
+      expect(await s.removeUnusedImages(['shown001.png'], ['orphan01.jpg'])).toEqual([
+        { name: 'orphan01.jpg', bytes: 1 },
+      ]);
       expect(left()).toEqual(['fresh001.png', 'notes.txt', 'other001.webp', 'saved001.png', 'shown001.png']);
     });
 

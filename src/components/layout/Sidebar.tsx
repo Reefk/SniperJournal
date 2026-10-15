@@ -41,8 +41,22 @@ const NAV = [
 
 const SAVE_LABEL: Record<SaveStatus, string> =
   storage.kind === 'native'
-    ? { saved: 'Saved on this device', saving: 'Saving…', browser: 'Saved temporarily', unsaved: 'Not saved', error: 'Journal file unreadable', conflict: 'Changed elsewhere' }
-    : { saved: 'Saved to disk', saving: 'Saving…', browser: 'Saved in browser', unsaved: 'Not saved', error: 'Journal file unreadable', conflict: 'Changed elsewhere' };
+    ? {
+        saved: 'Saved on this device',
+        saving: 'Saving…',
+        browser: 'Saved temporarily',
+        unsaved: 'Not saved',
+        error: 'Journal file unreadable',
+        conflict: 'Changed elsewhere',
+      }
+    : {
+        saved: 'Saved to disk',
+        saving: 'Saving…',
+        browser: 'Saved in browser',
+        unsaved: 'Not saved',
+        error: 'Journal file unreadable',
+        conflict: 'Changed elsewhere',
+      };
 
 /** the states where changes are not reaching the file */
 const ALARM: SaveStatus[] = ['unsaved', 'error', 'conflict'];
@@ -254,7 +268,11 @@ export function MobileNav() {
         </div>
 
         <div className="mt-4 flex items-center justify-between gap-3 border-t border-line pt-4">
-          <div className="grid w-44 grid-cols-2 rounded-lg border border-line bg-app p-0.5" role="group" aria-label="Color theme">
+          <div
+            className="grid w-44 grid-cols-2 rounded-lg border border-line bg-app p-0.5"
+            role="group"
+            aria-label="Color theme"
+          >
             {(['dark', 'light'] as const).map((mode) => {
               const Icon = mode === 'dark' ? Moon : Sun;
               return (

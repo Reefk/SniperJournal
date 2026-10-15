@@ -166,9 +166,9 @@ describe('when a journal or copy cannot be trusted, nothing is unused', () => {
     await expect(
       findUnused({ ...files, journals: () => Promise.reject(new Error('EACCES')) }, [], NOW),
     ).rejects.toThrow('The backups folder could not be read, so no chart image was deleted.');
-    await expect(
-      findUnused({ ...files, images: () => Promise.reject(new Error('EIO')) }, [], NOW),
-    ).rejects.toThrow('The screenshots folder could not be read');
+    await expect(findUnused({ ...files, images: () => Promise.reject(new Error('EIO')) }, [], NOW)).rejects.toThrow(
+      'The screenshots folder could not be read',
+    );
   });
 });
 

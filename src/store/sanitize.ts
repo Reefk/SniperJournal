@@ -26,7 +26,8 @@ const num = (v: unknown, fallback = 0) => (isNum(v) ? v : fallback);
 const optNum = (v: unknown) => (isNum(v) ? v : undefined);
 const optBool = (v: unknown) => (typeof v === 'boolean' ? v : undefined);
 /** a number that may legitimately be null or absent */
-const nullableNum = (v: unknown): number | null | undefined => (v == null || isNum(v) ? (v as number | null | undefined) : null);
+const nullableNum = (v: unknown): number | null | undefined =>
+  v == null || isNum(v) ? (v as number | null | undefined) : null;
 const strings = (v: unknown) => (Array.isArray(v) ? v.filter((s): s is string => typeof s === 'string') : []);
 
 /**
@@ -136,7 +137,11 @@ export function cleanTrades(v: unknown): Trade[] {
       screenshotUrl: optText(t.screenshotUrl),
       screenshotFile: optText(t.screenshotFile),
       review: isRecord(t.review)
-        ? { discipline: optNum(t.review.discipline), execution: optNum(t.review.execution), patience: optNum(t.review.patience) }
+        ? {
+            discipline: optNum(t.review.discipline),
+            execution: optNum(t.review.execution),
+            patience: optNum(t.review.patience),
+          }
         : undefined,
       excluded: optBool(t.excluded),
       needsReview: optBool(t.needsReview),

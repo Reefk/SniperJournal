@@ -116,16 +116,16 @@ any chart image you attached to one of them. Your own entries are never touched.
 
 ## What each page does
 
-| Page                      | What it is for                                                                                                       |
-| ------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| **Dashboard**             | Net profit, win rate, profit factor, average R:R, expectancy, SQN, equity curve, daily P&L and your Sniper Score.    |
-| **Calendar**              | A month at a glance: each day shows its net P&L and trade count. Click a day to see the trades behind the number.    |
-| **The Playbook**          | The setups you allow yourself to trade and their rules, with the real performance of each one underneath.            |
-| **Trades**                | The full table, with filters for pair, session, leverage, setup, date, direction and result. Click a row to edit it. |
-| **Insights & Signals**    | Patterns found in your own trades: your best session, revenge trading, holding losers too long, fee drag, and more.  |
-| **Resources**             | Your own shortlist of tools and links.                                                                               |
-| **Support**               | How the app works, where your data is, and the keyboard shortcuts.                                                   |
-| **Reports**               | A printable summary, month by month and per symbol and setup.                                                        |
+| Page                   | What it is for                                                                                                       |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| **Dashboard**          | Net profit, win rate, profit factor, average R:R, expectancy, SQN, equity curve, daily P&L and your Sniper Score.    |
+| **Calendar**           | A month at a glance: each day shows its net P&L and trade count. Click a day to see the trades behind the number.    |
+| **The Playbook**       | The setups you allow yourself to trade and their rules, with the real performance of each one underneath.            |
+| **Trades**             | The full table, with filters for pair, session, leverage, setup, date, direction and result. Click a row to edit it. |
+| **Insights & Signals** | Patterns found in your own trades: your best session, revenge trading, holding losers too long, fee drag, and more.  |
+| **Resources**          | Your own shortlist of tools and links.                                                                               |
+| **Support**            | How the app works, where your data is, and the keyboard shortcuts.                                                   |
+| **Reports**            | A printable summary, month by month and per symbol and setup.                                                        |
 
 ---
 
@@ -345,7 +345,7 @@ whose storage is full or turned off refuses it. Nothing else changes: the
 journal file is saved after every change as before. The message is shown once
 each time you open the app; **Support** says the same under "Your journal file".
 
-**The sidebar says "Not saved".** The app can't reach its data folder *and* the
+**The sidebar says "Not saved".** The app can't reach its data folder _and_ the
 browser can't keep a copy, so your latest changes are only on the screen. Keep
 the app open: they are written to disk as soon as the folder can be reached
 (restart it with `start.bat` if that doesn't happen). To be safe, use

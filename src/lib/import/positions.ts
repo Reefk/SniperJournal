@@ -37,14 +37,22 @@ export type FillSkip =
  * fills read so far; this one's is added. `net` says the file's P&L column
  * is after fees.
  */
-export function parseFillRow(row: string[], line: number, r: Reader, seen: Set<string>, net: boolean): FillRow | FillSkip {
+export function parseFillRow(
+  row: string[],
+  line: number,
+  r: Reader,
+  seen: Set<string>,
+  net: boolean,
+): FillRow | FillSkip {
   const { has, cell } = r.sheet;
   if (has('status') && parseStatus(cell(row, 'status')) === 'unfilled') return { skip: 'unfilled' };
   const symbol = r.symbolOf(row);
   const rawQuantity = parseMoney(cell(row, 'quantity'));
   // without a side column, the sign of the quantity is the direction, and there is none
   if (!has('side') && !rawQuantity) return { skip: 'no quantity' };
-  let action = has('side') ? parseAction(cell(row, 'side')) : { side: (rawQuantity as number) < 0 ? ('SELL' as const) : ('BUY' as const) };
+  let action = has('side')
+    ? parseAction(cell(row, 'side'))
+    : { side: (rawQuantity as number) < 0 ? ('SELL' as const) : ('BUY' as const) };
   if (!action) return { skip: 'not a trade', what: cell(row, 'side') || 'blank' };
   if (!symbol) return { skip: 'no symbol' };
   const effect = parseEffect(cell(row, 'effect')) ?? action.effect;
@@ -162,7 +170,10 @@ export function assemblePosition(s: Summary, read: ReadonlyMap<number, FillRow>,
     setupId: r.setupIdFor(r.textCell(first.row, 'setup')),
     tags: [...new Set(rows.flatMap(r.tagsOf))],
     // a broker's description column describes the instrument, not the trade
-    notes: (at('notes') != null && plan.columns[at('notes') as number].header.toLowerCase() !== 'description' ? r.textCell(first.row, 'notes') : '') || undefined,
+    notes:
+      (at('notes') != null && plan.columns[at('notes') as number].header.toLowerCase() !== 'description'
+        ? r.textCell(first.row, 'notes')
+        : '') || undefined,
     excluded: false,
     externalId: s.ids.length ? s.ids.join('|') : undefined,
     fillCount: s.fillCount,
@@ -236,14 +247,24 @@ export function tradesFromFills(r: Reader): RowsRead {
   notices.push(
     `Each row is one fill: ${fills.length} ${fills.length === 1 ? 'fill was' : 'fills were'} put back together into ${trades.length} ${trades.length === 1 ? 'trade' : 'trades'}, following the position in each symbol.`,
   );
-  if (unfilled) notices.push(`${unfilled} ${unfilled === 1 ? 'order that was' : 'orders that were'} cancelled or never filled ${unfilled === 1 ? 'was' : 'were'} left out.`);
+  if (unfilled)
+    notices.push(
+      `${unfilled} ${unfilled === 1 ? 'order that was' : 'orders that were'} cancelled or never filled ${unfilled === 1 ? 'was' : 'were'} left out.`,
+    );
   if (notTrades.size) {
     const total = [...notTrades.values()].reduce((a, b) => a + b, 0);
-    const examples = [...notTrades.keys()].slice(0, 3).map((v) => `"${v}"`).join(', ');
-    notices.push(`${total} ${total === 1 ? 'row is' : 'rows are'} not a buy or a sell (${examples}), so ${total === 1 ? 'it was' : 'they were'} left out.`);
+    const examples = [...notTrades.keys()]
+      .slice(0, 3)
+      .map((v) => `"${v}"`)
+      .join(', ');
+    notices.push(
+      `${total} ${total === 1 ? 'row is' : 'rows are'} not a buy or a sell (${examples}), so ${total === 1 ? 'it was' : 'they were'} left out.`,
+    );
   }
-  if (noQuantity.length) errors.push(rowsNote(noQuantity, 'no quantity, so the fill was left out.', 'no quantity, so they were left out.'));
-  if (noPrice.length) errors.push(rowsNote(noPrice, 'no price, so the fill was left out.', 'no price, so they were left out.'));
+  if (noQuantity.length)
+    errors.push(rowsNote(noQuantity, 'no quantity, so the fill was left out.', 'no quantity, so they were left out.'));
+  if (noPrice.length)
+    errors.push(rowsNote(noPrice, 'no price, so the fill was left out.', 'no price, so they were left out.'));
   if (open) {
     notices.push(
       `${open} ${open === 1 ? 'position was' : 'positions were'} still open at the end of the file, so ${open === 1 ? 'it was' : 'they were'} imported as open ${open === 1 ? 'trade' : 'trades'}.`,

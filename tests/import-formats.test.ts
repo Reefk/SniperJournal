@@ -61,8 +61,19 @@ describe('one row per trade', () => {
     );
     expect(r.trades).toHaveLength(2);
     const eur = bySymbol(r.trades, 'EURUSD');
-    expect([eur.side, eur.quantity, eur.entryPrice, eur.exitPrice, eur.multiplier]).toEqual(['LONG', 0.1, 1.085, 1.0875, 100000]);
-    expect([eur.openedAt, eur.closedAt, eur.stopLoss, eur.takeProfit]).toEqual(['2026-03-02T09:30', '2026-03-02T11:15', 1.083, 1.089]);
+    expect([eur.side, eur.quantity, eur.entryPrice, eur.exitPrice, eur.multiplier]).toEqual([
+      'LONG',
+      0.1,
+      1.085,
+      1.0875,
+      100000,
+    ]);
+    expect([eur.openedAt, eur.closedAt, eur.stopLoss, eur.takeProfit]).toEqual([
+      '2026-03-02T09:30',
+      '2026-03-02T11:15',
+      1.083,
+      1.089,
+    ]);
     expect([money(eur.fees), money(netPnl(eur))]).toEqual([0.7, 24.3]);
     const gold = bySymbol(r.trades, 'XAUUSD');
     expect([gold.side, gold.multiplier, money(gold.fees), money(netPnl(gold))]).toEqual(['SHORT', 100, 0.47, 25.53]);
@@ -100,18 +111,31 @@ describe('one row per trade', () => {
 
   it('separate date and time columns are joined (they used to lose the time)', () => {
     const t = read(
-      lines('Entry Date,Entry Time,Exit Date,Exit Time,Symbol,Side,Qty,Entry Price,Exit Price', '03/02/2026,9:30 AM,03/02/2026,10:15 AM,AAPL,Long,10,100,110'),
+      lines(
+        'Entry Date,Entry Time,Exit Date,Exit Time,Symbol,Side,Qty,Entry Price,Exit Price',
+        '03/02/2026,9:30 AM,03/02/2026,10:15 AM,AAPL,Long,10,100,110',
+      ),
     ).trades[0];
     expect([t.openedAt, t.closedAt]).toEqual(['2026-03-02T09:30', '2026-03-02T10:15']);
   });
 
   it('title lines above the header, a total line below it, and tab or pipe separated files', () => {
-    const r = read(lines('My Broker - Closed Trades', 'Account: 12345', 'Symbol,Side,Qty,Entry,Exit', 'AAPL,Long,10,100,110', 'Total,,10,,'));
+    const r = read(
+      lines(
+        'My Broker - Closed Trades',
+        'Account: 12345',
+        'Symbol,Side,Qty,Entry,Exit',
+        'AAPL,Long,10,100,110',
+        'Total,,10,,',
+      ),
+    );
     expect(r.trades.map((t) => t.symbol)).toEqual(['AAPL']);
     expect(r.notices.join(' ')).toMatch(/line 3/);
     expect(r.notices.join(' ')).toMatch(/1 total/);
     for (const sep of ['\t', '|']) {
-      const t = read(['symbol', 'side', 'qty', 'entry', 'exit'].join(sep) + '\n' + ['AAPL', 'Long', '10', '100', '110'].join(sep)).trades[0];
+      const t = read(
+        ['symbol', 'side', 'qty', 'entry', 'exit'].join(sep) + '\n' + ['AAPL', 'Long', '10', '100', '110'].join(sep),
+      ).trades[0];
       expect(netPnl(t), JSON.stringify(sep)).toBe(100);
     }
   });
@@ -146,7 +170,13 @@ describe('one row per fill', () => {
     expect(r.layout?.rowKind).toBe('fills');
     expect(r.trades).toHaveLength(2);
     const aapl = bySymbol(r.trades, 'AAPL');
-    expect([aapl.side, aapl.quantity, aapl.entryPrice, aapl.exitPrice, aapl.multiplier]).toEqual(['LONG', 100, 187.4, 189.1, 1]);
+    expect([aapl.side, aapl.quantity, aapl.entryPrice, aapl.exitPrice, aapl.multiplier]).toEqual([
+      'LONG',
+      100,
+      187.4,
+      189.1,
+      1,
+    ]);
     expect([aapl.openedAt, aapl.closedAt]).toEqual(['2026-03-02T09:35', '2026-03-02T10:12']);
     expect(money(netPnl(aapl))).toBe(167.98); // IBKR's own realised P/L, after commissions
     const spy = bySymbol(r.trades, 'SPY 20MAR26 580 C');
@@ -198,7 +228,13 @@ describe('one row per fill', () => {
     );
     expect(r.trades).toHaveLength(1);
     const t = r.trades[0];
-    expect([t.entryPrice, t.exitPrice, t.quantity, t.openedAt, t.closedAt]).toEqual([187.4, 189.1, 100, '2026-03-02T09:31', '2026-03-02T10:12']);
+    expect([t.entryPrice, t.exitPrice, t.quantity, t.openedAt, t.closedAt]).toEqual([
+      187.4,
+      189.1,
+      100,
+      '2026-03-02T09:31',
+      '2026-03-02T10:12',
+    ]);
     expect(r.notices.join(' ')).toMatch(/1 order that was cancelled or never filled was left out/);
   });
 
@@ -232,7 +268,13 @@ describe('one row per fill', () => {
       ),
     );
     const t = r.trades[0];
-    expect([t.symbol, t.quantity, t.multiplier, t.openedAt, t.closedAt]).toEqual(['BTCUSDT', 0.5, 1, '2026-03-02T16:00', '2026-03-02T18:30']);
+    expect([t.symbol, t.quantity, t.multiplier, t.openedAt, t.closedAt]).toEqual([
+      'BTCUSDT',
+      0.5,
+      1,
+      '2026-03-02T16:00',
+      '2026-03-02T18:30',
+    ]);
     expect([t.fees, money(netPnl(t))]).toEqual([30.5, 469.5]);
     expect(r.errors.join(' ')).toMatch(/Fees paid in BNB were left out/);
   });
@@ -247,7 +289,14 @@ describe('one row per fill', () => {
     const r = read(csv);
     expect(r.trades).toHaveLength(1);
     const t = r.trades[0];
-    expect([t.symbol, t.side, t.quantity, t.multiplier, money(grossPnl(t)), t.externalId]).toEqual(['MNQH6', 'LONG', 2, 2, 42, '1001|1002']);
+    expect([t.symbol, t.side, t.quantity, t.multiplier, money(grossPnl(t)), t.externalId]).toEqual([
+      'MNQH6',
+      'LONG',
+      2,
+      2,
+      42,
+      '1001|1002',
+    ]);
     expect(r.notices.join(' ')).toMatch(/MNQH6: one point taken as worth 2 a point \(MNQ futures\)/);
     const again = read(csv, { existing: r.trades });
     expect([again.trades.length, again.duplicates]).toEqual([0, 1]);
@@ -264,7 +313,14 @@ describe('one row per fill', () => {
     );
     expect(r.trades).toHaveLength(1);
     const t = r.trades[0];
-    expect([t.side, t.quantity, t.multiplier, money(t.fees), money(netPnl(t)), t.externalId]).toEqual(['LONG', 0.1, 100000, 0.7, 24.3, '2|3']);
+    expect([t.side, t.quantity, t.multiplier, money(t.fees), money(netPnl(t)), t.externalId]).toEqual([
+      'LONG',
+      0.1,
+      100000,
+      0.7,
+      24.3,
+      '2|3',
+    ]);
   });
 
   it('TradingView list of trades: no symbol column, entry and exit rows paired by trade number, newest first', () => {
@@ -294,7 +350,9 @@ describe('one row per fill', () => {
         '2026-03-02 10:10,AAPL,Sell,1,102,0', // sells 1 of 4: 3 still open at the end
       ),
     );
-    expect(r.trades.map((t) => [t.side, t.quantity, isClosed(t), isClosed(t) ? money(grossPnl(t)) : null, money(t.fees)])).toEqual([
+    expect(
+      r.trades.map((t) => [t.side, t.quantity, isClosed(t), isClosed(t) ? money(grossPnl(t)) : null, money(t.fees)]),
+    ).toEqual([
       ['LONG', 2, true, 20, 0.4],
       ['SHORT', 3, true, 15, 0.6],
       ['LONG', 1, true, 2, 0],
@@ -314,7 +372,14 @@ describe('one row per fill', () => {
     );
     expect(r.trades).toHaveLength(1);
     const t = r.trades[0];
-    expect([t.quantity, t.entryPrice, t.exitPrice, t.openedAt, t.closedAt, t.fillCount]).toEqual([100, 400.5, 405, '2026-03-02T09:30', '2026-03-02T10:30', 3]);
+    expect([t.quantity, t.entryPrice, t.exitPrice, t.openedAt, t.closedAt, t.fillCount]).toEqual([
+      100,
+      400.5,
+      405,
+      '2026-03-02T09:30',
+      '2026-03-02T10:30',
+      3,
+    ]);
     expect([money(grossPnl(t)), money(netPnl(t))]).toEqual([450, 448]);
   });
 
@@ -328,7 +393,11 @@ describe('one row per fill', () => {
 
 describe('when the importer cannot tell', () => {
   it('column names it does not know are mapped by hand in the preview', () => {
-    const csv = lines('Ticker Name,Lots Traded,Buy Or Sell Flag,Fill,When', 'AAPL,100,B,187.40,2026-03-02 09:31', 'AAPL,100,S,189.10,2026-03-02 10:12');
+    const csv = lines(
+      'Ticker Name,Lots Traded,Buy Or Sell Flag,Fill,When',
+      'AAPL,100,B,187.40,2026-03-02 09:31',
+      'AAPL,100,S,189.10,2026-03-02 10:12',
+    );
     expect(read(csv).trades).toHaveLength(0);
     const r = read(csv, { mapping: { 0: 'symbol', 1: 'quantity', 2: 'side', 3: 'price', 4: 'time' } });
     expect(r.layout?.rowKind).toBe('fills');
@@ -337,7 +406,11 @@ describe('when the importer cannot tell', () => {
   });
 
   it('each row can be read as a whole trade instead of a fill, and a column can be switched off', () => {
-    const csv = lines('time,symbol,side,qty,price', '2026-03-02 09:30,AAPL,Buy,2,100', '2026-03-02 09:40,AAPL,Sell,2,110');
+    const csv = lines(
+      'time,symbol,side,qty,price',
+      '2026-03-02 09:30,AAPL,Buy,2,100',
+      '2026-03-02 09:40,AAPL,Sell,2,110',
+    );
     expect(read(csv).trades).toHaveLength(1);
     expect(read(csv, { rowKind: 'trades' }).trades).toHaveLength(2);
     expect(read(csv, { mapping: { 1: '' } }).trades).toHaveLength(0);

@@ -20,7 +20,12 @@ const accounts: Account[] = [
   { id: 'acc1', name: 'Main Portfolio', startingBalance: 0, createdAt: '' },
   { id: 'acc2', name: 'Prop Challenge', startingBalance: 0, createdAt: '' },
 ];
-const target = (extra: Partial<ImportTarget> = {}): ImportTarget => ({ accountId: 'acc1', accounts, setups: [] as Setup[], ...extra });
+const target = (extra: Partial<ImportTarget> = {}): ImportTarget => ({
+  accountId: 'acc1',
+  accounts,
+  setups: [] as Setup[],
+  ...extra,
+});
 
 function sheetOf(csv: string, choices: LayoutChoices = {}): Sheet {
   const sheet = detectLayout(csv, choices);
@@ -82,7 +87,9 @@ describe('stage 1: the layout of the file', () => {
   });
 
   it('without a symbol column nothing can be read, unless a symbol is typed for every row', () => {
-    expect(missingSymbol(sheetOf('ticker_name,qty\nAAPL,1'))).toMatch(/^No symbol column found\. The columns in this file are: ticker_name, qty\./);
+    expect(missingSymbol(sheetOf('ticker_name,qty\nAAPL,1'))).toMatch(
+      /^No symbol column found\. The columns in this file are: ticker_name, qty\./,
+    );
     const typed = sheetOf('ticker_name,qty\nAAPL,1', { defaultSymbol: ' nq ' });
     expect(typed.fallbackSymbol).toBe('NQ');
     expect(missingSymbol(typed)).toBeNull();
@@ -129,7 +136,11 @@ describe('stage 2: reading the values of a row', () => {
     expect(r.setupIdFor('vwap reclaim')).toBe(made);
     expect(r.newSetups.map((s) => [s.id, s.name])).toEqual([[made, 'VWAP Reclaim']]);
     expect(r.setupIdFor('')).toBeUndefined();
-    expect([r.accountIdFor('prop challenge'), r.accountIdFor('Unknown'), r.accountIdFor('')]).toEqual(['acc2', 'acc1', 'acc1']);
+    expect([r.accountIdFor('prop challenge'), r.accountIdFor('Unknown'), r.accountIdFor('')]).toEqual([
+      'acc2',
+      'acc1',
+      'acc1',
+    ]);
   });
 
   it('tags split on | or ;', () => {
@@ -169,7 +180,9 @@ describe('stage 2: reading the values of a row', () => {
 
 describe('stage 3: rows of whole trades, or of paired fills', () => {
   it('a row is read for its direction, times, prices and fees; one with no symbol is not', () => {
-    const r = readerOf('symbol,side,entry time,exit time,entry,exit,qty,fees\nAAPL,short,2026-03-02 10:00,2026-03-02 11:00,101,100,10,1.5\n,long,,,1,2,1,');
+    const r = readerOf(
+      'symbol,side,entry time,exit time,entry,exit,qty,fees\nAAPL,short,2026-03-02 10:00,2026-03-02 11:00,101,100,10,1.5\n,long,,,1,2,1,',
+    );
     const [row, blank] = r.sheet.table.data;
     expect(parseTradeRow(blank, 3, r)).toBeNull();
     expect(parseTradeRow(row, 2, r)).toMatchObject({
@@ -194,7 +207,9 @@ describe('stage 3: rows of whole trades, or of paired fills', () => {
   });
 
   it('a paired row: the fill that came first opened it, and the fill ids name it', () => {
-    const r = readerOf('symbol,qty,buyPrice,sellPrice,boughtTimestamp,soldTimestamp,buyFillId,sellFillId\nMNQ,1,18040,18050,03/04/2026 11:00:05,03/04/2026 11:00:00,B3,S3');
+    const r = readerOf(
+      'symbol,qty,buyPrice,sellPrice,boughtTimestamp,soldTimestamp,buyFillId,sellFillId\nMNQ,1,18040,18050,03/04/2026 11:00:05,03/04/2026 11:00:00,B3,S3',
+    );
     expect(parseTradeRow(r.sheet.table.data[0], 2, r)).toMatchObject({
       side: 'SHORT',
       entryPrice: 18050,
@@ -247,9 +262,13 @@ describe('stage 3: rows of whole trades, or of paired fills', () => {
   });
 
   it('every row made a trade, except rows with no symbol and those already imported or listed twice', () => {
-    const r = readerOf('symbol,qty,entry,exit,id\nAAPL,1,100,101,7\n,1,1,1,8\nAAPL,1,100,101,7\nMSFT,1,10,11,9', {}, {
-      existing: [trade({ externalId: '9' })],
-    });
+    const r = readerOf(
+      'symbol,qty,entry,exit,id\nAAPL,1,100,101,7\n,1,1,1,8\nAAPL,1,100,101,7\nMSFT,1,10,11,9',
+      {},
+      {
+        existing: [trade({ externalId: '9' })],
+      },
+    );
     const read = tradesFromRows(r);
     expect(read.trades.map((t) => t.externalId)).toEqual(['7']);
     expect(r.findings.noSymbol).toEqual([3]);
@@ -278,7 +297,16 @@ describe('stage 4: rows of single fills', () => {
     expect(got).toMatchObject({
       symbol: 'AAPL',
       accountId: 'acc1',
-      fill: { line: 2, key: 'acc1|AAPL', side: 'BUY', quantity: 5, price: 100, fees: 1, id: 'F1', time: { value: '2026-03-02T10:00' } },
+      fill: {
+        line: 2,
+        key: 'acc1|AAPL',
+        side: 'BUY',
+        quantity: 5,
+        price: 100,
+        fees: 1,
+        id: 'F1',
+        time: { value: '2026-03-02T10:00' },
+      },
     });
   });
 
@@ -305,7 +333,9 @@ describe('stage 4: rows of single fills', () => {
 
   it('a signed quantity is the direction when there is no side column', () => {
     const r = fills('2026-03-02 10:00,AAPL,-3,100', 'time,symbol,qty,price');
-    expect(parseFillRow(r.sheet.table.data[0], 2, r, new Set(), false)).toMatchObject({ fill: { side: 'SELL', quantity: 3 } });
+    expect(parseFillRow(r.sheet.table.data[0], 2, r, new Set(), false)).toMatchObject({
+      fill: { side: 'SELL', quantity: 3 },
+    });
   });
 
   it('fills put back together into one trade per position, with what was left out said', () => {
@@ -319,7 +349,9 @@ describe('stage 4: rows of single fills', () => {
       ].join('\n'),
     );
     const read = tradesFromFills(r);
-    expect(read.trades.map((t) => [t.symbol, t.quantity, t.entryPrice, t.exitPrice, t.fees, t.fillCount, t.externalId])).toEqual([
+    expect(
+      read.trades.map((t) => [t.symbol, t.quantity, t.entryPrice, t.exitPrice, t.fees, t.fillCount, t.externalId]),
+    ).toEqual([
       ['AAPL', 4, 101, 105, 3, 3, 'F1|F2|F3'],
       ['MSFT', 1, 50, null, 0, 1, 'F4'],
     ]);
@@ -331,8 +363,16 @@ describe('stage 4: rows of single fills', () => {
   });
 
   it('a sell that the file says closed a position, with no buy before it: opened before the file, no entry, flagged', () => {
-    const read = tradesFromFills(fills('2026-03-02 10:30,AAPL,sell,4,105,1,F3,close', 'time,symbol,side,qty,price,fee,id,effect'));
-    expect(read.trades[0]).toMatchObject({ side: 'LONG', openedAt: '', entryPrice: 0, exitPrice: 105, needsReview: true });
+    const read = tradesFromFills(
+      fills('2026-03-02 10:30,AAPL,sell,4,105,1,F3,close', 'time,symbol,side,qty,price,fee,id,effect'),
+    );
+    expect(read.trades[0]).toMatchObject({
+      side: 'LONG',
+      openedAt: '',
+      entryPrice: 0,
+      exitPrice: 105,
+      needsReview: true,
+    });
     expect(read.errors[0]).toMatch(/^1 trade closes a position opened before this file starts/);
   });
 
@@ -354,7 +394,10 @@ describe('stage 4: rows of single fills', () => {
   });
 
   it('a point value from the amount against the price, when every fill agrees on one', () => {
-    const r = fills(['2026-03-02 10:00,ESH6,buy,1,5000,0,F1,250000', '2026-03-02 10:30,ESH6,sell,1,5002,0,F2,250100'].join('\n'), 'time,symbol,side,qty,price,fee,id,notional');
+    const r = fills(
+      ['2026-03-02 10:00,ESH6,buy,1,5000,0,F1,250000', '2026-03-02 10:30,ESH6,sell,1,5002,0,F2,250100'].join('\n'),
+      'time,symbol,side,qty,price,fee,id,notional',
+    );
     expect(tradesFromFills(r).trades[0].multiplier).toBe(50);
     expect([...r.findings.inferred]).toEqual([['ESH6', '50 (from the amount against the price)']]);
     expect([believable(49.97), believable(0.1), believable(3.3), believable(-1)]).toEqual([50, 0.1, null, null]);
@@ -372,7 +415,15 @@ describe('stage 5: the messages', () => {
     duplicates: 0,
     ...extra,
   });
-  const table = (extra: Partial<Table> = {}): Table => ({ header: [], data: [], lines: [], preamble: 0, skipped: 0, statement: false, ...extra });
+  const table = (extra: Partial<Table> = {}): Table => ({
+    header: [],
+    data: [],
+    lines: [],
+    preamble: 0,
+    skipped: 0,
+    statement: false,
+    ...extra,
+  });
 
   it('rows without a symbol first, then what the rows turned up, then what was left out', () => {
     const { errors } = collectMessages(
@@ -395,10 +446,14 @@ describe('stage 5: the messages', () => {
   });
 
   it('notices: what the rows said, values worked out, then how the table was found', () => {
-    const { notices } = collectMessages(findings({ inferred: new Map([['ESH6', '50 a point (ES futures)']]), zoned: 2 }), table({ preamble: 3, skipped: 1 }), {
-      errors: [],
-      notices: ['from the rows'],
-    });
+    const { notices } = collectMessages(
+      findings({ inferred: new Map([['ESH6', '50 a point (ES futures)']]), zoned: 2 }),
+      table({ preamble: 3, skipped: 1 }),
+      {
+        errors: [],
+        notices: ['from the rows'],
+      },
+    );
     expect(notices).toEqual([
       'from the rows',
       'ESH6: one point taken as worth 50 a point (ES futures). Check it if that is not right.',
@@ -406,9 +461,9 @@ describe('stage 5: the messages', () => {
       '1 total, summary or repeated header line was left out.',
       "Times in this file carry a time zone, so they were converted to this device's local time.",
     ]);
-    expect(collectMessages(findings(), table({ statement: true, preamble: 3 }), { errors: [], notices: [] }).notices).toEqual([
-      'Read the Trades section of this Interactive Brokers statement.',
-    ]);
+    expect(
+      collectMessages(findings(), table({ statement: true, preamble: 3 }), { errors: [], notices: [] }).notices,
+    ).toEqual(['Read the Trades section of this Interactive Brokers statement.']);
   });
 
   it('nothing to say when nothing turned up, and what the rows said is not changed', () => {
@@ -422,11 +477,25 @@ describe('stage 5: the messages', () => {
 
 describe('stage 6: a position split over several rows put back together', () => {
   const part = (id: string, extra: Partial<Trade> = {}) =>
-    trade({ id, symbol: 'MNQ', quantity: 1, entryPrice: 18000, exitPrice: 18010, closedAt: '2026-03-04T10:05', ...extra });
+    trade({
+      id,
+      symbol: 'MNQ',
+      quantity: 1,
+      entryPrice: 18000,
+      exitPrice: 18010,
+      closedAt: '2026-03-04T10:05',
+      ...extra,
+    });
 
   it('rows that share the fill that opened them become one trade', () => {
     const trades = [part('a'), part('b', { exitPrice: 18020 }), part('c')];
-    const out = combinePartials(trades, new Map([['a', 'B1'], ['b', 'B1']]));
+    const out = combinePartials(
+      trades,
+      new Map([
+        ['a', 'B1'],
+        ['b', 'B1'],
+      ]),
+    );
     expect(out.combined).toBe(2);
     expect(out.trades).toHaveLength(2);
     expect(out.trades[0]).toMatchObject({ quantity: 2, entryPrice: 18000, exitPrice: 18015 });
@@ -435,7 +504,15 @@ describe('stage 6: a position split over several rows put back together', () => 
 
   it('rows that cannot be merged stay apart, and nothing changes without opening fills', () => {
     const open = [part('a'), part('b', { exitPrice: null, closedAt: undefined })];
-    expect(combinePartials(open, new Map([['a', 'B1'], ['b', 'B1']]))).toEqual({ trades: open, combined: 0 });
+    expect(
+      combinePartials(
+        open,
+        new Map([
+          ['a', 'B1'],
+          ['b', 'B1'],
+        ]),
+      ),
+    ).toEqual({ trades: open, combined: 0 });
     const trades = [part('a')];
     expect(combinePartials(trades, new Map()).trades).toBe(trades);
   });

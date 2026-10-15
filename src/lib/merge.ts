@@ -40,8 +40,9 @@ function weightedAverage(parts: Array<{ price: number; quantity: number }>, deci
 const byOpening = (trades: Trade[]) => [...trades].sort((a, b) => (a.openedAt || '').localeCompare(b.openedAt || ''));
 
 /** the parts' chart links, in that order, each once */
-const chartLinks = (legs: Trade[]) =>
-  [...new Set(legs.map((t) => t.screenshotUrl?.trim()).filter((u): u is string => Boolean(u)))];
+const chartLinks = (legs: Trade[]) => [
+  ...new Set(legs.map((t) => t.screenshotUrl?.trim()).filter((u): u is string => Boolean(u))),
+];
 
 /**
  * The chart links a merge moves into the notes. A trade has one chart link, so

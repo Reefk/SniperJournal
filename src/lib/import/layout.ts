@@ -82,8 +82,10 @@ export function detectLayout(text: string, choices: LayoutChoices): Sheet | null
   // ---- which rows are which ------------------------------------------------
   const paired = has('buy_price') && has('sell_price');
   const timed = has('time') || has('date') || has('opened_at') || has('opened_date');
-  const signedQuantities = has('quantity') && !has('side') && table.data.some((r) => (parseMoney(cell(r, 'quantity')) ?? 0) < 0);
-  const canBeFills = !paired && (has('price') || has('entry_price')) && (has('side') || signedQuantities) && has('quantity') && timed;
+  const signedQuantities =
+    has('quantity') && !has('side') && table.data.some((r) => (parseMoney(cell(r, 'quantity')) ?? 0) < 0);
+  const canBeFills =
+    !paired && (has('price') || has('entry_price')) && (has('side') || signedQuantities) && has('quantity') && timed;
   const looksLikeFills =
     canBeFills &&
     !has('exit_price') &&
@@ -101,7 +103,16 @@ export function detectLayout(text: string, choices: LayoutChoices): Sheet | null
           : 'trades';
 
   // ---- one date order for the whole file, from every date in it -------------
-  const dateRoles: Role[] = ['opened_at', 'opened_date', 'closed_at', 'closed_date', 'time', 'date', 'bought_at', 'sold_at'];
+  const dateRoles: Role[] = [
+    'opened_at',
+    'opened_date',
+    'closed_at',
+    'closed_date',
+    'time',
+    'date',
+    'bought_at',
+    'sold_at',
+  ];
   const detected = dateOrderOf(table.data.flatMap((row) => dateRoles.map((r) => cell(row, r))));
   const order = choices.dateOrder ?? detected.order;
 

@@ -10,8 +10,22 @@ describe('merging partial fills back into one position', () => {
   it('scale-in then scale-out: size adds up, prices average, P&L stays the sum of the parts', () => {
     // buy 2 @ 100, add 1 @ 103; sell 2 @ 105, sell 1 @ 110 (as the broker paired them)
     const legs = [
-      trade({ quantity: 2, entryPrice: 100, exitPrice: 105, fees: 1.5, openedAt: '2026-03-02T09:30', closedAt: '2026-03-02T10:00' }),
-      trade({ quantity: 1, entryPrice: 103, exitPrice: 110, fees: 0.75, openedAt: '2026-03-02T09:45', closedAt: '2026-03-02T10:30' }),
+      trade({
+        quantity: 2,
+        entryPrice: 100,
+        exitPrice: 105,
+        fees: 1.5,
+        openedAt: '2026-03-02T09:30',
+        closedAt: '2026-03-02T10:00',
+      }),
+      trade({
+        quantity: 1,
+        entryPrice: 103,
+        exitPrice: 110,
+        fees: 0.75,
+        openedAt: '2026-03-02T09:45',
+        closedAt: '2026-03-02T10:30',
+      }),
     ];
     const merged = mergeTrades(legs);
     expect(merged.quantity).toBe(3);
@@ -55,7 +69,10 @@ describe('merging partial fills back into one position', () => {
   });
 
   it('a leg with a manual P&L keeps the merged total exact', () => {
-    const legs = [trade({ manualPnl: 12.34, exitPrice: null }), trade({ entryPrice: 100, exitPrice: 101, quantity: 2 })];
+    const legs = [
+      trade({ manualPnl: 12.34, exitPrice: null }),
+      trade({ entryPrice: 100, exitPrice: 101, quantity: 2 }),
+    ];
     expect(grossPnl(mergeTrades(legs))).toBeCloseTo(14.34, 10);
   });
 
@@ -104,7 +121,9 @@ describe('merging partial fills back into one position', () => {
     ];
     const merged = mergeTrades(legs);
     expect(merged.screenshotUrl).toBe('https://charts.example/a');
-    expect(merged.notes).toBe('entry / added / Chart links of the merged parts: https://charts.example/b https://charts.example/c');
+    expect(merged.notes).toBe(
+      'entry / added / Chart links of the merged parts: https://charts.example/b https://charts.example/c',
+    );
     expect(linksMovedToNotes(legs)).toEqual(['https://charts.example/b', 'https://charts.example/c']);
   });
 
@@ -112,7 +131,10 @@ describe('merging partial fills back into one position', () => {
     const one = mergeTrades([trade({ screenshotUrl: 'https://charts.example/a' }), trade({ notes: 'n' })]);
     expect(one.screenshotUrl).toBe('https://charts.example/a');
     expect(one.notes).toBe('n');
-    const same = [trade({ screenshotUrl: 'https://charts.example/a' }), trade({ screenshotUrl: 'https://charts.example/a' })];
+    const same = [
+      trade({ screenshotUrl: 'https://charts.example/a' }),
+      trade({ screenshotUrl: 'https://charts.example/a' }),
+    ];
     expect(mergeTrades(same).notes).toBeUndefined();
     expect(linksMovedToNotes(same)).toEqual([]);
     expect(mergeTrades([trade(), trade()]).screenshotUrl).toBeUndefined();
@@ -123,11 +145,31 @@ describe('when trades cannot be merged', () => {
   it.each([
     ['one trade', [trade()], 'Select at least two trades to merge.'],
     ['different symbols', [trade({ symbol: 'A' }), trade({ symbol: 'B' })], 'They have to be the same symbol.'],
-    ['different directions', [trade({ side: 'LONG' }), trade({ side: 'SHORT' })], 'They have to be the same direction.'],
-    ['different accounts', [trade({ accountId: 'a' }), trade({ accountId: 'b' })], 'They have to be in the same account.'],
-    ['a part without size', [trade(), trade({ quantity: 0 })], 'Every part needs a quantity before they can be merged.'],
-    ['a part without an entry price', [trade(), trade({ entryPrice: 0 })], 'Every part needs an entry price before they can be merged.'],
-    ['open mixed with closed', [trade(), trade({ exitPrice: null, closedAt: undefined })], 'Some of these are still open. Merge the closed ones, or close the rest first.'],
+    [
+      'different directions',
+      [trade({ side: 'LONG' }), trade({ side: 'SHORT' })],
+      'They have to be the same direction.',
+    ],
+    [
+      'different accounts',
+      [trade({ accountId: 'a' }), trade({ accountId: 'b' })],
+      'They have to be in the same account.',
+    ],
+    [
+      'a part without size',
+      [trade(), trade({ quantity: 0 })],
+      'Every part needs a quantity before they can be merged.',
+    ],
+    [
+      'a part without an entry price',
+      [trade(), trade({ entryPrice: 0 })],
+      'Every part needs an entry price before they can be merged.',
+    ],
+    [
+      'open mixed with closed',
+      [trade(), trade({ exitPrice: null, closedAt: undefined })],
+      'Some of these are still open. Merge the closed ones, or close the rest first.',
+    ],
   ])('%s', (_, trades, message) => {
     expect(mergeIssue(trades)).toBe(message);
   });

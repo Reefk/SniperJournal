@@ -79,7 +79,6 @@ export function ChartImage({
           <img src={screenshotSrc(file)} alt="Chart for this trade" className="block max-h-44 w-full object-cover" />
           {/* no hover on a touch screen: there the buttons sit along the bottom, always visible */}
           <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/55 opacity-0 transition group-hover:opacity-100 max-md:top-auto max-md:py-2 max-md:opacity-100">
-
             <Button size="sm" variant="secondary" onClick={() => setZoomed(true)}>
               <Maximize2 className="size-3.5" /> View
             </Button>

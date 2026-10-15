@@ -16,7 +16,9 @@ describe('colour channels', () => {
 
   it('writes "colour at N% over transparent" as the same tint in rgb()', () => {
     const known = new Set(['profit']);
-    expect(withoutColorMix('color-mix(in oklab, var(--profit) 15%, transparent)', known)).toBe('rgb(var(--profit-rgb) / 15%)');
+    expect(withoutColorMix('color-mix(in oklab, var(--profit) 15%, transparent)', known)).toBe(
+      'rgb(var(--profit-rgb) / 15%)',
+    );
     expect(withoutColorMix('color-mix(in srgb, #000 60%, transparent)', known)).toBe('rgb(0 0 0 / 60%)');
     expect(withoutColorMix('drop-shadow(0 0 6px color-mix(in srgb, var(--profit) 55%, transparent))', known)).toBe(
       'drop-shadow(0 0 6px rgb(var(--profit-rgb) / 55%))',
@@ -28,7 +30,10 @@ describe('colour channels', () => {
     expect(withoutColorMix('color-mix(in oklab, var(--unknown) 15%, transparent)', known)).toBeNull();
     expect(withoutColorMix('color-mix(in oklab, currentcolor 50%, transparent)', known)).toBeNull();
     expect(
-      withoutColorMix('color-mix(in oklab, color-mix(in oklab, var(--profit) 40%, transparent) var(--tw-shadow-alpha), transparent)', known),
+      withoutColorMix(
+        'color-mix(in oklab, color-mix(in oklab, var(--profit) 40%, transparent) var(--tw-shadow-alpha), transparent)',
+        known,
+      ),
     ).toBeNull();
   });
 });
@@ -52,7 +57,9 @@ describe('the stylesheet, as Tailwind writes it', () => {
         }`),
     );
     expect(out).toContain('.bg-profit\\/15 { background-color: rgb(var(--profit-rgb) / 15%);');
-    expect(out).toContain('@supports (color: color-mix(in lab, red, red)) { background-color: color-mix(in oklab, var(--profit) 15%, transparent); }');
+    expect(out).toContain(
+      '@supports (color: color-mix(in lab, red, red)) { background-color: color-mix(in oklab, var(--profit) 15%, transparent); }',
+    );
   });
 
   it('does the same in the flattened shape of a production build', async () => {
@@ -62,7 +69,9 @@ describe('the stylesheet, as Tailwind writes it', () => {
         @supports (color: color-mix(in lab, red, red)) { .bg-profit\\/15 { background-color: color-mix(in oklab, var(--profit) 15%, transparent); } }`),
     );
     expect(out).toContain('.bg-profit\\/15 { background-color: rgb(var(--profit-rgb) / 15%); } @supports');
-    expect(out).toContain('{ .bg-profit\\/15 { background-color: color-mix(in oklab, var(--profit) 15%, transparent); } }');
+    expect(out).toContain(
+      '{ .bg-profit\\/15 { background-color: color-mix(in oklab, var(--profit) 15%, transparent); } }',
+    );
   });
 
   it('adds a fallback rule when a flattened block has none just before it', async () => {
@@ -85,13 +94,21 @@ describe('the stylesheet, as Tailwind writes it', () => {
   });
 
   it('writes a mix that is itself the fallback (shadow colours) plainly', async () => {
-    const out = squash(await run('.shadow-black\\/40 { --tw-shadow-color: color-mix(in srgb, #000 40%, transparent); }'));
+    const out = squash(
+      await run('.shadow-black\\/40 { --tw-shadow-color: color-mix(in srgb, #000 40%, transparent); }'),
+    );
     expect(out).toBe('.shadow-black\\/40 { --tw-shadow-color: rgb(0 0 0 / 40%); }');
   });
 
   it('adds a fallback before a color-mix() written without one', async () => {
-    const out = squash(await run(':root { --accent: #818cf8; } ::selection { background: color-mix(in srgb, var(--accent) 35%, transparent); }'));
-    expect(out).toContain('::selection { background: rgb(var(--accent-rgb) / 35%); background: color-mix(in srgb, var(--accent) 35%, transparent); }');
+    const out = squash(
+      await run(
+        ':root { --accent: #818cf8; } ::selection { background: color-mix(in srgb, var(--accent) 35%, transparent); }',
+      ),
+    );
+    expect(out).toContain(
+      '::selection { background: rgb(var(--accent-rgb) / 35%); background: color-mix(in srgb, var(--accent) 35%, transparent); }',
+    );
   });
 
   it('gives 100dvh a 100vh fallback for engines without dvh, in its own @supports block', async () => {
@@ -100,7 +117,8 @@ describe('the stylesheet, as Tailwind writes it', () => {
   });
 
   it('changes nothing else', async () => {
-    const css = '.p-4 { padding: 1rem; } .text-fg { color: var(--fg); } @media (min-width: 48rem) { .md\\:flex { display: flex; } }';
+    const css =
+      '.p-4 { padding: 1rem; } .text-fg { color: var(--fg); } @media (min-width: 48rem) { .md\\:flex { display: flex; } }';
     expect(await run(css)).toBe(css);
   });
 });

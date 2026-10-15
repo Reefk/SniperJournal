@@ -68,13 +68,23 @@ describe('import: structure of the file', () => {
       ctx(),
     );
     const t = r.trades[0];
-    expect([t.symbol, t.side, t.quantity, t.entryPrice, t.exitPrice, t.fees]).toEqual(['AAPL', 'LONG', 10, 100, 110, 1.5]);
+    expect([t.symbol, t.side, t.quantity, t.entryPrice, t.exitPrice, t.fees]).toEqual([
+      'AAPL',
+      'LONG',
+      10,
+      100,
+      110,
+      1.5,
+    ]);
     expect(netPnl(t)).toBeCloseTo(98.5, 10);
     expect(r.ignored).toEqual(['Broker Note']);
   });
 
   it('rows without a symbol are skipped with a reason; rows missing details are kept but flagged', () => {
-    const r = importTradesFromCsv('symbol,side,qty,entry,exit\n,Buy,1,100,101\nAAPL,Buy,,100,101\nMSFT,Buy,-3,100,101', ctx());
+    const r = importTradesFromCsv(
+      'symbol,side,qty,entry,exit\n,Buy,1,100,101\nAAPL,Buy,,100,101\nMSFT,Buy,-3,100,101',
+      ctx(),
+    );
     expect(r.errors).toEqual(['Row 2: no symbol, so the row was skipped.']);
     expect(r.trades.map((t) => t.symbol)).toEqual(['AAPL', 'MSFT']);
     expect(r.trades.every((t) => t.needsReview)).toBe(true);
@@ -256,7 +266,8 @@ describe('import: duplicates and partial fills', () => {
   // from a new one. Planned: warn about likely duplicates (same account,
   // symbol, side, entry time and quantity) without blocking them.
   it('current behaviour, under review: a file without trade ids imported again adds every trade again, without a word', () => {
-    const csv = 'symbol,side,opened_at,qty,entry,exit\nAAPL,long,2026-03-02 10:00,1,100,101\nMSFT,short,2026-03-02 11:00,2,50,49';
+    const csv =
+      'symbol,side,opened_at,qty,entry,exit\nAAPL,long,2026-03-02 10:00,1,100,101\nMSFT,short,2026-03-02 11:00,2,50,49';
     const first = importTradesFromCsv(csv, ctx());
     const again = importTradesFromCsv(csv, ctx({ existing: first.trades }));
     expect(again.trades).toHaveLength(2);
@@ -274,8 +285,25 @@ describe('import: duplicates and partial fills', () => {
 describe('export', () => {
   const setups: Setup[] = [{ id: 's1', name: 'Opening Range, v2', rules: [] }];
   const trades = [
-    trade({ symbol: 'AAPL', entryPrice: 187.4, exitPrice: 189.1, quantity: 100, fees: 1.3, setupId: 's1', tags: ['a', 'b'], notes: 'Took it, "early"\nsecond line ₪ שלום' }),
-    trade({ symbol: 'ES', side: 'SHORT', entryPrice: 5002.25, exitPrice: 4995.5, quantity: 2, multiplier: 50, stopLoss: 5010 }),
+    trade({
+      symbol: 'AAPL',
+      entryPrice: 187.4,
+      exitPrice: 189.1,
+      quantity: 100,
+      fees: 1.3,
+      setupId: 's1',
+      tags: ['a', 'b'],
+      notes: 'Took it, "early"\nsecond line ₪ שלום',
+    }),
+    trade({
+      symbol: 'ES',
+      side: 'SHORT',
+      entryPrice: 5002.25,
+      exitPrice: 4995.5,
+      quantity: 2,
+      multiplier: 50,
+      stopLoss: 5010,
+    }),
     trade({ symbol: 'EURUSD', manualPnl: -42.35, exitPrice: null, fees: 0.5 }),
     trade({ symbol: 'NQ', exitPrice: null, closedAt: undefined }),
   ];

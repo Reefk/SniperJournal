@@ -187,9 +187,7 @@ export function Modal({
       <div
         className={cn(
           'animate-pop flex w-full flex-col border-line bg-surface shadow-2xl shadow-black/40',
-          phone === 'full'
-            ? 'h-full pt-safe'
-            : 'max-h-[calc(100%-1rem)] rounded-t-2xl border-x border-t',
+          phone === 'full' ? 'h-full pt-safe' : 'max-h-[calc(100%-1rem)] rounded-t-2xl border-x border-t',
           'md:block md:h-auto md:max-h-none md:rounded-xl md:border md:pt-0',
           SIZES[size],
         )}
@@ -214,7 +212,12 @@ export function Modal({
             )}
           </div>
         )}
-        <div className={cn('min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 md:overflow-visible', !footer && 'max-md:pb-safe-4')}>
+        <div
+          className={cn(
+            'min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 md:overflow-visible',
+            !footer && 'max-md:pb-safe-4',
+          )}
+        >
           {children}
         </div>
         {footer && (

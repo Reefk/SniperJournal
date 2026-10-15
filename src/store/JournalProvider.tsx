@@ -346,7 +346,11 @@ export function JournalProvider({ children }: { children: ReactNode }) {
         // a deleted trade should not leave its chart behind in the data folder
         const trades = dataRef.current.trades;
         const removed = trades.filter((t) => set.has(t.id));
-        for (const name of imagesOnlyIn(removed, trades.filter((t) => !set.has(t.id)))) void deleteScreenshot(name);
+        for (const name of imagesOnlyIn(
+          removed,
+          trades.filter((t) => !set.has(t.id)),
+        ))
+          void deleteScreenshot(name);
         mutate((d) => ({ ...d, trades: d.trades.filter((t) => !set.has(t.id)) }));
       },
       setExcluded: (ids, excluded) => {
@@ -504,7 +508,10 @@ export function JournalProvider({ children }: { children: ReactNode }) {
     };
   }, [data]);
 
-  const value = useMemo<JournalContextValue>(() => ({ data, ready, actions, ...derived }), [data, ready, actions, derived]);
+  const value = useMemo<JournalContextValue>(
+    () => ({ data, ready, actions, ...derived }),
+    [data, ready, actions, derived],
+  );
 
   const saveState = useMemo<SaveState>(
     () => ({

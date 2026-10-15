@@ -9,8 +9,8 @@ import { storage } from '@/lib/storage';
 const somethingOpen = () =>
   Boolean(
     document.querySelector('[data-modal-root]') ||
-      document.querySelector('[data-popover]') ||
-      document.activeElement?.closest('header input'),
+    document.querySelector('[data-popover]') ||
+    document.activeElement?.closest('header input'),
   );
 
 /**

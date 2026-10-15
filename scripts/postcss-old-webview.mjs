@@ -112,7 +112,9 @@ export default function oldWebview() {
         const m = VIEWPORT.exec(decl.value);
         if (!m || isOwnGuard(decl.parent)) return;
         const guard = new AtRule({ name: 'supports', params: `not (${decl.prop}: 1${m[2]})` });
-        guard.append(new Declaration({ prop: decl.prop, value: decl.value.replace(new RegExp(VIEWPORT.source, 'g'), '$1vh') }));
+        guard.append(
+          new Declaration({ prop: decl.prop, value: decl.value.replace(new RegExp(VIEWPORT.source, 'g'), '$1vh') }),
+        );
         decl.after(guard);
       });
     },

@@ -144,7 +144,12 @@ export function importTradesFromCsv(text: string, ctx: ImportOptions): ImportRes
   if (!sheet) return nothingImported({ errors: ['The file has no data rows.'] });
   const noSymbol = missingSymbol(sheet);
   if (noSymbol) {
-    return nothingImported({ recognised: sheet.recognised, ignored: sheet.ignored, layout: sheet.layout, errors: [noSymbol] });
+    return nothingImported({
+      recognised: sheet.recognised,
+      ignored: sheet.ignored,
+      layout: sheet.layout,
+      errors: [noSymbol],
+    });
   }
 
   const reader = createReader(sheet, ctx);

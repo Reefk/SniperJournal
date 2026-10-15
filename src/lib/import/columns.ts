@@ -103,12 +103,31 @@ export const ADDITIVE: ReadonlySet<Role> = new Set<Role>(['fees']);
 const ALIASES: Record<string, [Role, number]> = {};
 const alias = (role: Role, priority: number, keys: string[]) => keys.forEach((k) => (ALIASES[k] = [role, priority]));
 
-alias('symbol', 3, ['symbol', 'ticker', 'tickersymbol', 'pair', 'symbolpair', 'tradingpair', 'contractsymbol', 'contractname']);
+alias('symbol', 3, [
+  'symbol',
+  'ticker',
+  'tickersymbol',
+  'pair',
+  'symbolpair',
+  'tradingpair',
+  'contractsymbol',
+  'contractname',
+]);
 alias('symbol', 2, ['instrument', 'instrumentname', 'contract', 'securitysymbol']);
 alias('symbol', 1, ['market', 'asset', 'security', 'stock', 'product', 'item', 'coin']);
 alias('underlying', 2, ['underlying', 'underlyingsymbol', 'rootsymbol', 'root']);
 
-alias('side', 3, ['side', 'buysell', 'bs', 'direction', 'marketpos', 'marketposition', 'openingdirection', 'tradeside', 'orderside']);
+alias('side', 3, [
+  'side',
+  'buysell',
+  'bs',
+  'direction',
+  'marketpos',
+  'marketposition',
+  'openingdirection',
+  'tradeside',
+  'orderside',
+]);
 alias('side', 2, ['action', 'transcode', 'transactioncode', 'buyorsell']);
 alias('side', 1, ['type', 'transactiontype', 'tradetype', 'position', 'positiontype', 'dealtype']);
 alias('effect', 3, ['poseffect', 'positioneffect', 'openclose', 'ex', 'entryexit', 'openorclose', 'openingclosing']);
@@ -118,14 +137,73 @@ alias('status', 3, ['status', 'orderstatus', 'fillstatus']);
 alias('status', 1, ['state']);
 alias('trade_no', 3, ['tradeno', 'tradenumber', 'tradenum', 'tradeidx']);
 
-alias('external_id', 3, ['tradeid', 'executionid', 'execid', 'fillid', 'dealid', 'ticket', 'ticketno', 'transactionid', 'confirmationno', 'tradeidentifier']);
-alias('external_id', 2, ['id', 'orderid', 'orderno', 'ordernumber', 'positionid', 'deal', 'referenceno', 'refno', 'reference']);
+alias('external_id', 3, [
+  'tradeid',
+  'executionid',
+  'execid',
+  'fillid',
+  'dealid',
+  'ticket',
+  'ticketno',
+  'transactionid',
+  'confirmationno',
+  'tradeidentifier',
+]);
+alias('external_id', 2, [
+  'id',
+  'orderid',
+  'orderno',
+  'ordernumber',
+  'positionid',
+  'deal',
+  'referenceno',
+  'refno',
+  'reference',
+]);
 
-alias('opened_at', 3, ['openedat', 'opentime', 'entrytime', 'entrydatetime', 'entrytimestamp', 'opendatetime', 'timeopened', 'enteredat', 'openingtime', 'opentimestamp', 'timeopen', 'entryat', 'starttime']);
+alias('opened_at', 3, [
+  'openedat',
+  'opentime',
+  'entrytime',
+  'entrydatetime',
+  'entrytimestamp',
+  'opendatetime',
+  'timeopened',
+  'enteredat',
+  'openingtime',
+  'opentimestamp',
+  'timeopen',
+  'entryat',
+  'starttime',
+]);
 alias('opened_date', 3, ['entrydate', 'opendate', 'dateopened', 'openingdate', 'startdate']);
-alias('closed_at', 3, ['closedat', 'closetime', 'exittime', 'exitdatetime', 'exittimestamp', 'closedatetime', 'timeclosed', 'exitedat', 'closingtime', 'closetimestamp', 'timeclose', 'exitat', 'endtime']);
+alias('closed_at', 3, [
+  'closedat',
+  'closetime',
+  'exittime',
+  'exitdatetime',
+  'exittimestamp',
+  'closedatetime',
+  'timeclosed',
+  'exitedat',
+  'closingtime',
+  'closetimestamp',
+  'timeclose',
+  'exitat',
+  'endtime',
+]);
 alias('closed_date', 3, ['exitdate', 'closedate', 'dateclosed', 'closingdate', 'enddate']);
-alias('time', 3, ['exectime', 'executiontime', 'filltime', 'filledtime', 'tradetime', 'executedat', 'filledat', 'executiondatetime', 'filldatetime']);
+alias('time', 3, [
+  'exectime',
+  'executiontime',
+  'filltime',
+  'filledtime',
+  'tradetime',
+  'executedat',
+  'filledat',
+  'executiondatetime',
+  'filldatetime',
+]);
 alias('time', 2, ['time', 'datetime', 'timestamp', 'transactiontime', 'tradedat', 'transacttime', 'datetimeutc']);
 alias('time', 1, ['updatetime', 'createdat', 'created', 'lastupdated']);
 alias('date', 3, ['activitydate', 'executiondate', 'filldate', 'tradedate']);
@@ -141,16 +219,70 @@ alias('buy_fill_id', 3, ['buyfillid']);
 alias('sell_fill_id', 3, ['sellfillid']);
 alias('tick_size', 3, ['ticksize']);
 
-alias('entry_price', 3, ['entryprice', 'openprice', 'priceopen', 'avgentryprice', 'averageentryprice', 'openingprice', 'entryavgprice']);
+alias('entry_price', 3, [
+  'entryprice',
+  'openprice',
+  'priceopen',
+  'avgentryprice',
+  'averageentryprice',
+  'openingprice',
+  'entryavgprice',
+]);
 alias('entry_price', 2, ['entry']);
-alias('exit_price', 3, ['exitprice', 'closeprice', 'priceclose', 'avgexitprice', 'averageexitprice', 'closingprice', 'exitavgprice']);
+alias('exit_price', 3, [
+  'exitprice',
+  'closeprice',
+  'priceclose',
+  'avgexitprice',
+  'averageexitprice',
+  'closingprice',
+  'exitavgprice',
+]);
 alias('exit_price', 2, ['exit']);
-alias('price', 3, ['fillprice', 'filledprice', 'avgfillprice', 'averagefillprice', 'executionprice', 'execprice', 'tradeprice', 'tprice', 'dealprice', 'executedprice', 'avgexecutionprice']);
+alias('price', 3, [
+  'fillprice',
+  'filledprice',
+  'avgfillprice',
+  'averagefillprice',
+  'executionprice',
+  'execprice',
+  'tradeprice',
+  'tprice',
+  'dealprice',
+  'executedprice',
+  'avgexecutionprice',
+]);
 alias('price', 2, ['avgprice', 'averageprice', 'pricepershare']);
 alias('price', 1, ['price', 'netprice']);
 
-alias('quantity', 3, ['filledqty', 'filledquantity', 'filled', 'executedqty', 'executedquantity', 'executed', 'qtyfilled', 'quantityfilled', 'fillqty', 'fillquantity', 'fillsize', 'closingquantity', 'positionsizeqty', 'tradesize']);
-alias('quantity', 2, ['quantity', 'qty', 'size', 'volume', 'shares', 'contracts', 'lots', 'units', 'amountshares', 'lotsize']);
+alias('quantity', 3, [
+  'filledqty',
+  'filledquantity',
+  'filled',
+  'executedqty',
+  'executedquantity',
+  'executed',
+  'qtyfilled',
+  'quantityfilled',
+  'fillqty',
+  'fillquantity',
+  'fillsize',
+  'closingquantity',
+  'positionsizeqty',
+  'tradesize',
+]);
+alias('quantity', 2, [
+  'quantity',
+  'qty',
+  'size',
+  'volume',
+  'shares',
+  'contracts',
+  'lots',
+  'units',
+  'amountshares',
+  'lotsize',
+]);
 alias('quantity', 1, ['totalqty', 'orderqty', 'orderquantity', 'quantityordered']);
 alias('notional', 3, ['proceeds', 'notional', 'tradevalue', 'grossamount', 'positionsizevalue', 'principal']);
 alias('notional', 2, ['amount', 'total', 'value', 'tradeamount']);
@@ -162,12 +294,54 @@ alias('take_profit', 3, ['takeprofit', 'profittarget', 'targetprice', 'takeprofi
 alias('take_profit', 2, ['target', 'tp']);
 
 alias('fees', 3, [
-  'fees', 'fee', 'commission', 'commissions', 'comm', 'commfee', 'commfees', 'commissionfee', 'commissionfees',
-  'commissionandfees', 'commissionsfees', 'commissionsandfees', 'feesandcommissions', 'totalfees', 'totalcommission', 'totalcommissions', 'clearingfee',
-  'clearingfees', 'exchangefee', 'exchangefees', 'ipfee', 'nfafee', 'nfafees', 'regfee', 'regfees', 'regulatoryfee',
-  'regulatoryfees', 'secfee', 'taffee', 'brokerfee', 'brokerage', 'brokeragefee', 'ibcommission', 'swap', 'swaps',
-  'rollover', 'financing', 'taxes', 'tax', 'transactionfee', 'transactionfees', 'tradingfee', 'tradingfees',
-  'transactioncost', 'tradingcost', 'charges', 'otherfees', 'miscfees',
+  'fees',
+  'fee',
+  'commission',
+  'commissions',
+  'comm',
+  'commfee',
+  'commfees',
+  'commissionfee',
+  'commissionfees',
+  'commissionandfees',
+  'commissionsfees',
+  'commissionsandfees',
+  'feesandcommissions',
+  'totalfees',
+  'totalcommission',
+  'totalcommissions',
+  'clearingfee',
+  'clearingfees',
+  'exchangefee',
+  'exchangefees',
+  'ipfee',
+  'nfafee',
+  'nfafees',
+  'regfee',
+  'regfees',
+  'regulatoryfee',
+  'regulatoryfees',
+  'secfee',
+  'taffee',
+  'brokerfee',
+  'brokerage',
+  'brokeragefee',
+  'ibcommission',
+  'swap',
+  'swaps',
+  'rollover',
+  'financing',
+  'taxes',
+  'tax',
+  'transactionfee',
+  'transactionfees',
+  'tradingfee',
+  'tradingfees',
+  'transactioncost',
+  'tradingcost',
+  'charges',
+  'otherfees',
+  'miscfees',
 ]);
 alias('multiplier', 3, ['multiplier', 'mult', 'pointvalue', 'bigpointvalue', 'contractmultiplier', 'valueperpoint']);
 alias('multiplier', 2, ['contractsize']);
@@ -175,9 +349,33 @@ alias('leverage', 3, ['leverage', 'lev']);
 
 // a P&L column that does not say is taken as gross, before commissions; one
 // that says "net" already has them taken off
-alias('pnl', 2, ['pnl', 'profit', 'pl', 'profitloss', 'realizedpnl', 'realizedpl', 'realizedprofit', 'closedpnl', 'tradepnl', 'tradepl', 'gainloss', 'result', 'gain', 'realizedprofitloss']);
+alias('pnl', 2, [
+  'pnl',
+  'profit',
+  'pl',
+  'profitloss',
+  'realizedpnl',
+  'realizedpl',
+  'realizedprofit',
+  'closedpnl',
+  'tradepnl',
+  'tradepl',
+  'gainloss',
+  'result',
+  'gain',
+  'realizedprofitloss',
+]);
 alias('pnl', 1, ['realized']);
-alias('net_pnl', 3, ['netpnl', 'netprofit', 'netpl', 'netprofitloss', 'netrealizedpnl', 'netresult', 'net', 'netgainloss']);
+alias('net_pnl', 3, [
+  'netpnl',
+  'netprofit',
+  'netpl',
+  'netprofitloss',
+  'netrealizedpnl',
+  'netresult',
+  'net',
+  'netgainloss',
+]);
 alias('gross_pnl', 3, ['grosspnl', 'grossprofit', 'grosspl', 'gross', 'grossprofitloss']);
 
 alias('session', 3, ['session', 'marketsession', 'tradingsession']);
@@ -186,14 +384,24 @@ alias('tags', 3, ['tags', 'tag', 'labels', 'label']);
 alias('notes', 3, ['notes', 'note', 'comment', 'comments', 'memo', 'journal']);
 alias('notes', 1, ['description']);
 alias('account', 3, ['account', 'accountname', 'portfolio', 'accountnumber', 'accountid']);
-alias('asset_class', 3, ['assetcategory', 'assetclass', 'instrumenttype', 'sectype', 'securitytype', 'assettype', 'producttype']);
+alias('asset_class', 3, [
+  'assetcategory',
+  'assetclass',
+  'instrumenttype',
+  'sectype',
+  'securitytype',
+  'assettype',
+  'producttype',
+]);
 alias('put_call', 3, ['putcall', 'callput', 'callorput', 'optiontype', 'right']);
 alias('strike', 3, ['strike', 'strikeprice']);
 alias('expiry', 3, ['exp', 'expiry', 'expiration', 'expirationdate', 'expdate', 'maturity']);
 alias('duration', 2, ['duration', 'tradeduration', 'holdtime']);
 
 const CURRENCIES = new Set(
-  'usd eur gbp jpy chf aud cad nzd ils nis hkd sgd cnh cny inr krw sek nok dkk pln zar mxn brl try usdt usdc busd'.split(' '),
+  'usd eur gbp jpy chf aud cad nzd ils nis hkd sgd cnh cny inr krw sek nok dkk pln zar mxn brl try usdt usdc busd'.split(
+    ' ',
+  ),
 );
 
 /** the lookup key of a header, and the time zone it declares (minutes east of UTC), if any */
@@ -243,7 +451,11 @@ const share = (values: string[], test: (v: string) => boolean) => {
  * CALL/PUT says which option. `overrides` (column index -> role) are the
  * choices made in the import preview, and always win.
  */
-export function planColumns(headers: string[], sample: string[][], overrides: Record<number, Role | ''> = {}): ColumnPlan {
+export function planColumns(
+  headers: string[],
+  sample: string[][],
+  overrides: Record<number, Role | ''> = {},
+): ColumnPlan {
   const values = (i: number) => sample.map((row) => row[i] ?? '');
   const infos = headers.map(headerInfo);
   const candidates: Array<{ role: Role | ''; priority: number }> = infos.map((info, i) => {

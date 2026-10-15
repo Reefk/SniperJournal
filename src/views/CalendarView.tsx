@@ -154,7 +154,10 @@ export function CalendarView() {
           <div className="mt-4 overflow-hidden rounded-xl border border-line bg-surface">
             <div className="grid grid-cols-7 border-b border-line bg-app/40">
               {WEEKDAYS.map((d) => (
-                <div key={d} className="py-2 text-center text-[11px] font-medium text-muted md:px-3 md:py-2.5 md:text-xs">
+                <div
+                  key={d}
+                  className="py-2 text-center text-[11px] font-medium text-muted md:px-3 md:py-2.5 md:text-xs"
+                >
                   {d}
                 </div>
               ))}

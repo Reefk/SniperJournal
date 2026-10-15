@@ -3,7 +3,16 @@ import { uid } from '../utils';
 import type { Role } from './columns';
 import { OPTION_MULTIPLIER, futuresPointValue, isOption, optionSymbol } from './instruments';
 import type { Sheet } from './layout';
-import { asClock, isTimeOfDay, parseMoment, parseMoney, parseNumber, parsePutCall, unescapeFormula, type Moment } from './values';
+import {
+  asClock,
+  isTimeOfDay,
+  parseMoment,
+  parseMoney,
+  parseNumber,
+  parsePutCall,
+  unescapeFormula,
+  type Moment,
+} from './values';
 
 /**
  * Reading the values of one row the same way, whichever kind of row it is

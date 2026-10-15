@@ -146,13 +146,22 @@ describe('formatting', () => {
 });
 
 describe('insights and signals', () => {
-  const settings: Settings = { currency: 'USD', theme: 'dark', timezone: 'local', maxDailyLoss: 500, maxTradesPerDay: 3 };
+  const settings: Settings = {
+    currency: 'USD',
+    theme: 'dark',
+    timezone: 'local',
+    maxDailyLoss: 500,
+    maxTradesPerDay: 3,
+  };
   const now = new Date(2026, 2, 10, 16, 0);
-  const today = (net: number, i: number) => pnl(net, { closedAt: `2026-03-10T1${i}:00`, openedAt: `2026-03-10T0${i}:00` });
+  const today = (net: number, i: number) =>
+    pnl(net, { closedAt: `2026-03-10T1${i}:00`, openedAt: `2026-03-10T0${i}:00` });
 
   it('warns at 70% of the daily loss limit and stops at 100%', () => {
     expect(buildSignals([today(-350, 1)], settings, now).map((s) => s.id)).toContain('daily-loss-near');
-    expect(buildSignals([today(-300, 1), today(-200, 2)], settings, now).map((s) => s.id)).toContain('daily-loss-breached');
+    expect(buildSignals([today(-300, 1), today(-200, 2)], settings, now).map((s) => s.id)).toContain(
+      'daily-loss-breached',
+    );
     expect(buildSignals([today(-100, 1)], settings, now).map((s) => s.id)).not.toContain('daily-loss-near');
   });
 

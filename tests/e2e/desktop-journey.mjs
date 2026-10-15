@@ -12,7 +12,16 @@
 // No extra packages: it speaks the DevTools protocol over Node's WebSocket.
 
 import { spawn } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  utimesSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -42,7 +51,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let server;
 async function startServer() {
   const next = join(project, 'node_modules', 'next', 'dist', 'bin', 'next');
-  server = spawn(process.execPath, [next, 'start', project, '-H', '127.0.0.1', '-p', String(port)], { cwd: work, stdio: 'ignore' });
+  server = spawn(process.execPath, [next, 'start', project, '-H', '127.0.0.1', '-p', String(port)], {
+    cwd: work,
+    stdio: 'ignore',
+  });
   for (let i = 0; i < 100; i++) {
     try {
       if ((await fetch(`${base}/api/journal`)).ok) return;
@@ -51,7 +63,8 @@ async function startServer() {
   }
   throw new Error('the server did not start');
 }
-const exited = (proc) => (proc.exitCode !== null || proc.signalCode !== null ? Promise.resolve() : new Promise((r) => proc.once('exit', r)));
+const exited = (proc) =>
+  proc.exitCode !== null || proc.signalCode !== null ? Promise.resolve() : new Promise((r) => proc.once('exit', r));
 async function stopServer() {
   server.kill();
   await exited(server);
@@ -65,7 +78,11 @@ async function stopServer() {
 const holders = new Set();
 async function holdJournal(ms, share) {
   const file = join(work, 'data', 'journal.json');
-  const proc = spawn('powershell', ['-NoProfile', '-Command', `$f = [IO.File]::Open('${file}', 'Open', 'Read', '${share}'); 'held'; Start-Sleep -Milliseconds ${ms}; $f.Close()`]);
+  const proc = spawn('powershell', [
+    '-NoProfile',
+    '-Command',
+    `$f = [IO.File]::Open('${file}', 'Open', 'Read', '${share}'); 'held'; Start-Sleep -Milliseconds ${ms}; $f.Close()`,
+  ]);
   holders.add(proc);
   await new Promise((resolve, reject) => {
     proc.stdout.once('data', resolve);
@@ -79,7 +96,18 @@ const browsers = new Set(); // still open, so a failed run can close them too
 async function openBrowser() {
   const debugPort = 9500 + Math.floor(Math.random() * 400);
   const profile = mkdtempSync(join(work, 'profile-')); // removed with the work folder
-  const proc = spawn(browserPath, ['--headless=new', '--disable-gpu', `--remote-debugging-port=${debugPort}`, `--user-data-dir=${profile}`, '--window-size=1440,900', 'about:blank'], { stdio: 'ignore' });
+  const proc = spawn(
+    browserPath,
+    [
+      '--headless=new',
+      '--disable-gpu',
+      `--remote-debugging-port=${debugPort}`,
+      `--user-data-dir=${profile}`,
+      '--window-size=1440,900',
+      'about:blank',
+    ],
+    { stdio: 'ignore' },
+  );
   let ws;
   for (let i = 0; i < 100 && !ws; i++) {
     await sleep(150);
@@ -97,7 +125,13 @@ async function openBrowser() {
     const target = await (await fetch(`http://127.0.0.1:${debugPort}/json/new?about:blank`, { method: 'PUT' })).json();
     const tabWs = new WebSocket(target.webSocketDebuggerUrl);
     await new Promise((r) => tabWs.addEventListener('open', r, { once: true }));
-    return { ...drive(tabWs), close: async () => { tabWs.close(); await fetch(`http://127.0.0.1:${debugPort}/json/close/${target.id}`); } };
+    return {
+      ...drive(tabWs),
+      close: async () => {
+        tabWs.close();
+        await fetch(`http://127.0.0.1:${debugPort}/json/close/${target.id}`);
+      },
+    };
   };
   // Edge hands off to another process at launch, so killing the one started
   // here leaves the real browser running: ask the browser itself to quit,
@@ -139,7 +173,8 @@ function drive(ws) {
     });
   const run = async (expression) => {
     const res = await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true });
-    if (res.result?.exceptionDetails) throw new Error(`${expression.slice(0, 80)}: ${res.result.exceptionDetails.exception?.description}`);
+    if (res.result?.exceptionDetails)
+      throw new Error(`${expression.slice(0, 80)}: ${res.result.exceptionDetails.exception?.description}`);
     return res.result?.result?.value;
   };
   const until = async (expression, label, timeout = 8000) => {
@@ -198,22 +233,49 @@ writeFileSync(
 
 // a broker's execution report: three fills that make one trade
 const fillsPath = join(work, 'fills.csv');
-writeFileSync(fillsPath, ['time,symbol,side,qty,price', '2026-03-06 09:30,NVDA,Buy,10,100', '2026-03-06 09:45,NVDA,Buy,10,102', '2026-03-06 10:00,NVDA,Sell,20,105'].join('\n'));
+writeFileSync(
+  fillsPath,
+  [
+    'time,symbol,side,qty,price',
+    '2026-03-06 09:30,NVDA,Buy,10,100',
+    '2026-03-06 09:45,NVDA,Buy,10,102',
+    '2026-03-06 10:00,NVDA,Sell,20,105',
+  ].join('\n'),
+);
 // columns no importer could know, set by hand in the preview
 const oddPath = join(work, 'odd.csv');
-writeFileSync(oddPath, ['Ticker Name,Lots Traded,Buy Or Sell Flag,Fill,When', 'AMD,10,B,150,2026-03-06 11:00', 'AMD,10,S,155,2026-03-06 11:30'].join('\n'));
+writeFileSync(
+  oddPath,
+  [
+    'Ticker Name,Lots Traded,Buy Or Sell Flag,Fill,When',
+    'AMD,10,B,150,2026-03-06 11:00',
+    'AMD,10,S,155,2026-03-06 11:30',
+  ].join('\n'),
+);
 const mapOdd = `$role('Ticker Name', 'symbol'); $role('Lots Traded', 'quantity'); $role('Buy Or Sell Flag', 'side'); $role('Fill', 'price'); $role('When', 'time'); true`;
 
 async function journey() {
   await startServer();
   const page = await fetch(base);
-  check('pages refuse to load inside another site\'s frame', page.headers.get('x-frame-options') === 'DENY' && /frame-ancestors 'none'/.test(page.headers.get('content-security-policy') ?? ''));
+  check(
+    "pages refuse to load inside another site's frame",
+    page.headers.get('x-frame-options') === 'DENY' &&
+      /frame-ancestors 'none'/.test(page.headers.get('content-security-policy') ?? ''),
+  );
   check('the server does not advertise itself', !page.headers.has('x-powered-by'));
-  const foreign = await fetch(`${base}/api/journal`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Sec-Fetch-Site': 'cross-site' }, body: '{}' });
+  const foreign = await fetch(`${base}/api/journal`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'Sec-Fetch-Site': 'cross-site' },
+    body: '{}',
+  });
   check('the journal API refuses a cross-site request', foreign.status === 403);
   let b = await openBrowser();
   // waits that end in a PASS or FAIL rather than stopping the run
-  const seen = (expression, label, timeout) => b.until(expression, label, timeout).then(() => true, () => false);
+  const seen = (expression, label, timeout) =>
+    b.until(expression, label, timeout).then(
+      () => true,
+      () => false,
+    );
   const journalOnDisk = () => JSON.parse(readFileSync(join(work, 'data', 'journal.json'), 'utf8'));
   const savedSoon = async (test) => {
     for (let i = 0; i < 50; i++) {
@@ -225,13 +287,21 @@ async function journey() {
     return false;
   };
   await b.send('Page.navigate', { url: base });
-  await b.until(`document.readyState === 'complete' && document.body.innerText.includes('Set up your journal')`, 'welcome screen');
+  await b.until(
+    `document.readyState === 'complete' && document.body.innerText.includes('Set up your journal')`,
+    'welcome screen',
+  );
   await b.run(PAGE);
 
   // ---- 1. first run --------------------------------------------------------
-  await b.run(`$type($field('Your name'), 'E2E'); $type($field('Starting balance'), '10000'); $t('Start journaling').click(); true`);
+  await b.run(
+    `$type($field('Your name'), 'E2E'); $type($field('Starting balance'), '10000'); $t('Start journaling').click(); true`,
+  );
   await b.until(`!$text().includes('Set up your journal')`, 'welcome closed');
-  check('starts empty, with no sample data', await b.run(`$text().includes('Your dashboard builds itself from your trades')`));
+  check(
+    'starts empty, with no sample data',
+    await b.run(`$text().includes('Your dashboard builds itself from your trades')`),
+  );
 
   // ---- 2. import -----------------------------------------------------------
   await b.run(`$nav('/trades'); true`);
@@ -245,21 +315,38 @@ async function journey() {
   await b.run(`$tStarts('Import 4 trades').click(); true`);
   await b.until(`!$modal()`, 'import dialog closed');
   check('4 trades in the journal', await b.run(`$text().includes('4 trades in Main Portfolio')`));
-  check('"Sell Short" imported as a short', await b.run(`[...document.querySelectorAll('tbody tr')].some((r) => r.innerText.includes('ES') && r.innerText.includes('SHORT'))`));
+  check(
+    '"Sell Short" imported as a short',
+    await b.run(
+      `[...document.querySelectorAll('tbody tr')].some((r) => r.innerText.includes('ES') && r.innerText.includes('SHORT'))`,
+    ),
+  );
 
   // ---- 2b. other layouts in the preview: fills, and columns set by hand -------
   await b.run(`$tStarts('Import CSV').click(); true`);
   await b.until(`!!$modal()?.querySelector('input[type=file]')`, 'import dialog');
   await b.setFile('[data-modal-root] input[type=file]', fillsPath);
   await b.until(`/1\\s*ready to import/.test($modal().innerText)`, 'fills preview');
-  check('a file of single fills is put back together (3 fills, 1 trade)', await b.run(`$modal().innerText.includes('3 fills were put back together into 1 trade')`));
+  check(
+    'a file of single fills is put back together (3 fills, 1 trade)',
+    await b.run(`$modal().innerText.includes('3 fills were put back together into 1 trade')`),
+  );
   await b.run(`$type($field('Each row is', $modal()), 'trades'); true`);
-  check('read as whole trades instead, the same file gives 3 rows', await seen(`/3\\s*ready to import/.test($modal().innerText)`, 'whole-trade preview', 5000));
+  check(
+    'read as whole trades instead, the same file gives 3 rows',
+    await seen(`/3\\s*ready to import/.test($modal().innerText)`, 'whole-trade preview', 5000),
+  );
   await b.setFile('[data-modal-root] input[type=file]', oddPath);
   await b.until(`$modal().innerText.includes('No symbol column found')`, 'unknown columns');
-  check('columns it cannot read open the Columns panel', await b.run(`!!$modal().querySelector('details[open]')?.innerText.includes('Columns:')`));
+  check(
+    'columns it cannot read open the Columns panel',
+    await b.run(`!!$modal().querySelector('details[open]')?.innerText.includes('Columns:')`),
+  );
   await b.run(mapOdd);
-  check('columns set by hand read the file (2 fills, 1 trade)', await seen(`/1\\s*ready to import/.test($modal().innerText)`, 'mapped preview', 5000));
+  check(
+    'columns set by hand read the file (2 fills, 1 trade)',
+    await seen(`/1\\s*ready to import/.test($modal().innerText)`, 'mapped preview', 5000),
+  );
   await b.run(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); true`);
   await b.until(`!$modal()`, 'import dialog closed');
 
@@ -278,7 +365,10 @@ async function journey() {
     check(`${label}: net profit ${money(expectNet)}`, text.includes(net), text.match(/Net profit[^\n]*\n[^\n]+/)?.[0]);
     check(`${label}: win rate ${expectWinRate.toFixed(1)}%`, text.includes(`${expectWinRate.toFixed(1)}%`));
     const sidebar = await b.run(`document.querySelector('aside').innerText`);
-    check(`${label}: sidebar balance equals the equity curve's current balance`, sidebar.includes(money(10000 + expectNet)) && text.includes(money(10000 + expectNet)));
+    check(
+      `${label}: sidebar balance equals the equity curve's current balance`,
+      sidebar.includes(money(10000 + expectNet)) && text.includes(money(10000 + expectNet)),
+    );
   };
   await dashboard(111, 75, 'after import');
 
@@ -304,24 +394,43 @@ async function journey() {
   // ---- 5b. a bulk action only ever touches trades that are still shown ------
   await b.run(`$nav('/trades'); true`);
   await b.until(`!!document.querySelector('main input[aria-label="Search trades"]')`, 'trades page');
-  const tick = (symbol) => `[...document.querySelectorAll('input[aria-label="Select ${symbol} trade"]')].find((c) => c.offsetParent !== null).click(); true`;
+  const tick = (symbol) =>
+    `[...document.querySelectorAll('input[aria-label="Select ${symbol} trade"]')].find((c) => c.offsetParent !== null).click(); true`;
   const selectedCount = `Number(document.body.innerText.match(/(\\d+)\\s*selected/)?.[1] ?? 0)`;
   await b.run(tick('TSLA'));
   await b.run(tick('AAPL'));
   await b.until(`${selectedCount} === 2`, '2 selected');
   await b.run(`$type(document.querySelector('main input[aria-label="Search trades"]'), 'AAPL'); true`);
-  await b.until(`![...document.querySelectorAll('tbody tr')].some((r) => r.innerText.includes('TSLA')) && [...document.querySelectorAll('tbody tr')].some((r) => r.innerText.includes('AAPL'))`, 'search applied');
-  check('filtering a selected trade out of view drops it from the selection', await b.run(`${selectedCount} === 1`), `selected: ${await b.run(selectedCount)}`);
+  await b.until(
+    `![...document.querySelectorAll('tbody tr')].some((r) => r.innerText.includes('TSLA')) && [...document.querySelectorAll('tbody tr')].some((r) => r.innerText.includes('AAPL'))`,
+    'search applied',
+  );
+  check(
+    'filtering a selected trade out of view drops it from the selection',
+    await b.run(`${selectedCount} === 1`),
+    `selected: ${await b.run(selectedCount)}`,
+  );
   await b.run(`$type(document.querySelector('main input[aria-label="Search trades"]'), ''); true`);
-  await b.until(`[...document.querySelectorAll('tbody tr')].some((r) => r.innerText.includes('TSLA'))`, 'search cleared');
-  check('clearing the search does not bring the hidden one back into the selection', await b.run(`${selectedCount} === 1`));
+  await b.until(
+    `[...document.querySelectorAll('tbody tr')].some((r) => r.innerText.includes('TSLA'))`,
+    'search cleared',
+  );
+  check(
+    'clearing the search does not bring the hidden one back into the selection',
+    await b.run(`${selectedCount} === 1`),
+  );
   await b.run(tick('AAPL'));
   await b.until(`${selectedCount} === 0`, 'selection cleared');
 
   // ---- 5c. the insights are rules over your own trades, and say so ----------
   await b.run(`$nav('/insights'); true`);
   await b.until(`document.querySelector('main h1')?.textContent === 'Insights & Signals'`, 'insights page');
-  check('the Insights page and the menu make no claim to be AI', await b.run(`!/\\bAI\\b/.test(document.querySelector('main').innerText + document.querySelector('aside').innerText)`));
+  check(
+    'the Insights page and the menu make no claim to be AI',
+    await b.run(
+      `!/\\bAI\\b/.test(document.querySelector('main').innerText + document.querySelector('aside').innerText)`,
+    ),
+  );
 
   // ---- 6. export and backup ------------------------------------------------
   await b.run(`$nav('/trades'); true`);
@@ -338,16 +447,24 @@ async function journey() {
   const csvOut = files.find((f) => f.endsWith('.csv'));
   const backup = files.find((f) => f.endsWith('.json'));
   check('CSV export downloaded', Boolean(csvOut));
-  check('CSV export holds the 3 trades', csvOut && readFileSync(join(downloads, csvOut), 'utf8').trim().split('\n').length === 4);
+  check(
+    'CSV export holds the 3 trades',
+    csvOut && readFileSync(join(downloads, csvOut), 'utf8').trim().split('\n').length === 4,
+  );
   check('backup downloaded', Boolean(backup));
-  check('backup holds the 3 trades', backup && JSON.parse(readFileSync(join(downloads, backup), 'utf8')).trades.length === 3);
+  check(
+    'backup holds the 3 trades',
+    backup && JSON.parse(readFileSync(join(downloads, backup), 'utf8')).trades.length === 3,
+  );
 
   // ---- 7. change, then restore the backup ----------------------------------
   await b.run(`document.querySelector('button[aria-label="Delete AAPL trade"]').click(); true`);
   await b.until(`!!$modal() && !!$t('Delete trade', $modal())`, 'confirm');
   await b.run(`$t('Delete trade', $modal()).click(); true`);
   await b.until(`$text().includes('2 trades in Main Portfolio')`, 'second delete');
-  await b.run(`[...document.querySelectorAll('aside a')].find((a) => a.getAttribute('href') === '/settings').click(); true`);
+  await b.run(
+    `[...document.querySelectorAll('aside a')].find((a) => a.getAttribute('href') === '/settings').click(); true`,
+  );
   await b.until(`!!document.querySelector('input[type=file][accept*=json]')`, 'settings');
   await b.setFile('input[type=file][accept*=json]', join(downloads, backup));
   await b.until(`!!$modal() && !!$t('Replace my journal', $modal())`, 'restore confirm');
@@ -355,7 +472,11 @@ async function journey() {
   await b.until(`$text().includes('Journal restored')`, 'restored');
   const copies = readdirSync(join(work, 'data', 'backups')).filter((f) => f.startsWith('before-restore-'));
   check('a safety copy was kept before the restore', copies.length === 1);
-  check('the safety copy holds the journal that was replaced (2 trades)', copies.length === 1 && JSON.parse(readFileSync(join(work, 'data', 'backups', copies[0]), 'utf8')).trades.length === 2);
+  check(
+    'the safety copy holds the journal that was replaced (2 trades)',
+    copies.length === 1 &&
+      JSON.parse(readFileSync(join(work, 'data', 'backups', copies[0]), 'utf8')).trades.length === 2,
+  );
   await dashboard(143, 100, 'after restoring the backup');
 
   // ---- 8. accessibility spot checks ----------------------------------------
@@ -369,10 +490,19 @@ async function journey() {
     }, 800));
   })()`);
   check('every field on the Trades page has an accessible name', a11y.fields.length === 0, a11y.fields.join(' | '));
-  check('every icon-only button on the Trades page has an accessible name', a11y.buttons.length === 0, a11y.buttons.join(' | '));
+  check(
+    'every icon-only button on the Trades page has an accessible name',
+    a11y.buttons.length === 0,
+    a11y.buttons.join(' | '),
+  );
   await b.run(`window.$opener = $tStarts('Import CSV'); $opener.focus(); $opener.click(); true`);
   await b.until(`!!$modal()`, 'dialog');
-  check('a dialog is named by its title', await b.run(`document.getElementById($modal().getAttribute('aria-labelledby'))?.textContent.trim() === 'Import trades from CSV'`));
+  check(
+    'a dialog is named by its title',
+    await b.run(
+      `document.getElementById($modal().getAttribute('aria-labelledby'))?.textContent.trim() === 'Import trades from CSV'`,
+    ),
+  );
   check('focus moves into a dialog when it opens', await b.run(`$modal().contains(document.activeElement)`));
   await b.run(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); true`);
   await b.until(`!$modal()`, 'dialog closed by Escape');
@@ -386,15 +516,24 @@ async function journey() {
     const status = `document.querySelector('aside').innerText`;
     const { released } = await holdJournal(6000, 'Read'); // longer than the server's own retries
     await b.run(`$nav('/trades'); true`);
-    await b.until(`[...document.querySelectorAll('tbody tr')].some((r) => r.innerText.includes('AAPL'))`, 'trades table');
+    await b.until(
+      `[...document.querySelectorAll('tbody tr')].some((r) => r.innerText.includes('AAPL'))`,
+      'trades table',
+    );
     await b.run(`[...document.querySelectorAll('tbody tr')].find((r) => r.innerText.includes('AAPL')).click(); true`);
     await b.until(`!!$modal() && !!$field('Notes', $modal())`, 'trade form');
     await b.run(`$type($field('Notes', $modal()), ${JSON.stringify(note)}); $t('Save changes').click(); true`);
     await b.until(`!$modal()`, 'form closed');
-    check('a save refused by a held file says the change is kept in the browser', await seen(`${status}.includes('Saved in browser')`, 'failed save shown', 10000));
+    check(
+      'a save refused by a held file says the change is kept in the browser',
+      await seen(`${status}.includes('Saved in browser')`, 'failed save shown', 10000),
+    );
     check('meanwhile the file on disk is left as it was', !onDisk());
     await released;
-    check('once the file is free the change is saved, with no further edit', await seen(`${status}.includes('Saved to disk')`, 'saving recovered', 20000));
+    check(
+      'once the file is free the change is saved, with no further edit',
+      await seen(`${status}.includes('Saved to disk')`, 'saving recovered', 20000),
+    );
     check('and it is in the file on disk', onDisk());
   }
 
@@ -411,7 +550,10 @@ async function journey() {
   await b.until(`!!${balanceBox}`, 'balance setting');
   check('"Count excluded trades in the balance" starts off', await b.run(`${balanceBox}.checked === false`));
   await b.run(`${balanceBox}.click(); true`);
-  check('turned on, the sidebar balance counts the excluded trade', await seen(sidebarShows(10143), 'balance with AAPL', 5000));
+  check(
+    'turned on, the sidebar balance counts the excluded trade',
+    await seen(sidebarShows(10143), 'balance with AAPL', 5000),
+  );
   check('the setting is saved in the journal file', await savedSoon((j) => j.settings.countExcludedInBalance === true));
   await b.run(`$nav('/'); true`);
   await b.until(`!!$t('All')`, 'dashboard');
@@ -419,7 +561,10 @@ async function journey() {
   await b.until(`$text().includes('Net profit')`, 'metrics');
   const withExcluded = await b.run(`$text()`);
   check('the statistics still leave it out (net profit +$44.00)', withExcluded.includes(`+${money(44)}`));
-  check('the dashboard balance counts it, and says so', withExcluded.includes(money(10143)) && withExcluded.includes('incl. excluded trades'));
+  check(
+    'the dashboard balance counts it, and says so',
+    withExcluded.includes(money(10143)) && withExcluded.includes('incl. excluded trades'),
+  );
   await b.run(`$nav('/settings'); true`);
   await b.until(`!!${balanceBox}`, 'balance setting');
   await b.run(`${balanceBox}.click(); true`);
@@ -432,7 +577,9 @@ async function journey() {
   // changes must be in the file before this one closes (saves wait 350ms)
   check(
     'the last changes are in the file before the browser closes',
-    await savedSoon((j) => j.settings.countExcludedInBalance !== true && j.trades.some((t) => t.symbol === 'AAPL' && !t.excluded)),
+    await savedSoon(
+      (j) => j.settings.countExcludedInBalance !== true && j.trades.some((t) => t.symbol === 'AAPL' && !t.excluded),
+    ),
   );
   await b.close();
 
@@ -468,7 +615,11 @@ async function journey() {
   await importOdd();
   check(
     'the next file with the same columns is read the same way, without asking',
-    await seen(`/1\\s*ready to import/.test($modal().innerText) && $modal().innerText.includes('as you set them for this layout last time')`, 'remembered layout', 5000),
+    await seen(
+      `/1\\s*ready to import/.test($modal().innerText) && $modal().innerText.includes('as you set them for this layout last time')`,
+      'remembered layout',
+      5000,
+    ),
   );
   await b.run(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); true`);
   await b.until(`!$modal()`, 'import dialog closed');
@@ -477,7 +628,10 @@ async function journey() {
   const press = async (key, shift = false) => {
     const code = { Tab: 9, Escape: 27, Enter: 13 }[key];
     const event = { key, code: key, windowsVirtualKeyCode: code, nativeVirtualKeyCode: code, modifiers: shift ? 8 : 0 };
-    await b.send('Input.dispatchKeyEvent', { ...event, ...(key === 'Enter' ? { type: 'keyDown', text: '\r' } : { type: 'rawKeyDown' }) });
+    await b.send('Input.dispatchKeyEvent', {
+      ...event,
+      ...(key === 'Enter' ? { type: 'keyDown', text: '\r' } : { type: 'rawKeyDown' }),
+    });
     await b.send('Input.dispatchKeyEvent', { ...event, type: 'keyUp' });
   };
   // how many of `times` presses of Tab left the dialog on top
@@ -491,25 +645,40 @@ async function journey() {
   };
   await b.run(`document.querySelector('tbody tr').click(); true`);
   await b.until(`!!$modal() && !!$t('Delete', $modal())`, 'trade form');
-  check('Tab and Shift+Tab go round the trade form, never to the page behind', (await tabsOutside(40)) + (await tabsOutside(40, true)) === 0);
+  check(
+    'Tab and Shift+Tab go round the trade form, never to the page behind',
+    (await tabsOutside(40)) + (await tabsOutside(40, true)) === 0,
+  );
   await b.run(`$t('Delete', $modal()).focus(); true`);
   await press('Enter');
   await b.until(`document.querySelectorAll('[data-modal-root]').length === 2`, 'confirmation over the form');
   check('in a confirmation over the form, Tab stays in the confirmation', (await tabsOutside(10)) === 0);
   await press('Escape');
   await b.until(`document.querySelectorAll('[data-modal-root]').length === 1`, 'confirmation closed');
-  check('Escape closes only the confirmation, and focus goes back to Delete', await b.run(`document.activeElement === $t('Delete', $modal())`));
+  check(
+    'Escape closes only the confirmation, and focus goes back to Delete',
+    await b.run(`document.activeElement === $t('Delete', $modal())`),
+  );
   await press('Escape');
   await b.until(`!$modal()`, 'trade form closed');
 
   // ---- 12. deleting an account deletes its charts, and only its charts --------
   const png = join(work, 'chart.png');
-  writeFileSync(png, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64'));
-  const images = () => (existsSync(join(work, 'data', 'screenshots')) ? readdirSync(join(work, 'data', 'screenshots')) : []);
+  writeFileSync(
+    png,
+    Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+      'base64',
+    ),
+  );
+  const images = () =>
+    existsSync(join(work, 'data', 'screenshots')) ? readdirSync(join(work, 'data', 'screenshots')) : [];
   const logWithChart = async (symbol) => {
     await b.run(`$tStarts('Log trade').click(); true`);
     await b.until(`!!$modal() && !!$field('Symbol', $modal())`, 'trade form');
-    await b.run(`$type($field('Symbol', $modal()), '${symbol}'); $type($field('Quantity', $modal()), '1'); $type($field('Entry price', $modal()), '10'); true`);
+    await b.run(
+      `$type($field('Symbol', $modal()), '${symbol}'); $type($field('Quantity', $modal()), '1'); $type($field('Entry price', $modal()), '10'); true`,
+    );
     await b.setFile('[data-modal-root] input[type=file]', png);
     await b.until(`!!$modal().querySelector('img')`, 'chart saved');
     await b.run(`$t('Save trade', $modal()).click(); true`);
@@ -519,7 +688,9 @@ async function journey() {
   const kept = images();
   await b.run(`$nav('/settings'); true`);
   await b.until(`!!$field('Add an account')`, 'settings');
-  await b.run(`$type($field('Add an account'), 'Second'); $tStarts('Add', $field('Add an account').closest('form')).click(); true`);
+  await b.run(
+    `$type($field('Add an account'), 'Second'); $tStarts('Add', $field('Add an account').closest('form')).click(); true`,
+  );
   await b.until(`!!document.querySelector('button[aria-label="Delete Second"]')`, 'second account');
   await logWithChart('GONE');
   const both = images();
@@ -546,7 +717,11 @@ async function journey() {
   await b.until(`!!$modal() && !!$t('Replace my journal', $modal())`, 'restore confirmation');
   await b.run(`$t('Replace my journal', $modal()).click(); true`);
   await b.until(`$text().includes('Journal restored')`, 'restored');
-  check('restoring a backup deletes the chart images its trades don\'t use', (await imagesSoon(0)).length === 0, JSON.stringify(images()));
+  check(
+    "restoring a backup deletes the chart images its trades don't use",
+    (await imagesSoon(0)).length === 0,
+    JSON.stringify(images()),
+  );
   await logWithChart('ERASEME');
   const beforeErase = images();
   await b.run(`$nav('/settings'); true`);
@@ -555,13 +730,19 @@ async function journey() {
   await b.until(`!!$modal() && !!$t('Erase my journal', $modal())`, 'erase confirmation');
   await b.run(`$t('Erase my journal', $modal()).click(); true`);
   await b.until(`$text().includes('Journal erased')`, 'erased');
-  check('Erase all data deletes every chart image', beforeErase.length === 1 && (await imagesSoon(0)).length === 0, JSON.stringify({ beforeErase, after: images() }));
+  check(
+    'Erase all data deletes every chart image',
+    beforeErase.length === 1 && (await imagesSoon(0)).length === 0,
+    JSON.stringify({ beforeErase, after: images() }),
+  );
 
   // ---- 13. two tabs on the same journal: neither writes over the other -------
   const logTrade = async (tab, symbol) => {
     await tab.run(`$tStarts('Log trade').click(); true`);
     await tab.until(`!!$modal() && !!$field('Symbol', $modal())`, 'trade form');
-    await tab.run(`$type($field('Symbol', $modal()), '${symbol}'); $type($field('Quantity', $modal()), '1'); $type($field('Entry price', $modal()), '10'); $t('Save trade', $modal()).click(); true`);
+    await tab.run(
+      `$type($field('Symbol', $modal()), '${symbol}'); $type($field('Quantity', $modal()), '1'); $type($field('Entry price', $modal()), '10'); $t('Save trade', $modal()).click(); true`,
+    );
     await tab.until(`!$modal()`, 'trade saved');
   };
   const symbolsOnDisk = () => journalOnDisk().trades.map((t) => t.symbol);
@@ -575,34 +756,71 @@ async function journey() {
   // the second tab's save is now based on an older file
   await logTrade(second, 'TABB');
   const refused = await second
-    .until(`/changed in another window/.test($modal()?.innerText ?? '') && /conflict-/.test($modal().innerText)`, 'conflict dialog', 10000)
-    .then(() => true, () => false);
+    .until(
+      `/changed in another window/.test($modal()?.innerText ?? '') && /conflict-/.test($modal().innerText)`,
+      'conflict dialog',
+      10000,
+    )
+    .then(
+      () => true,
+      () => false,
+    );
   check("the second tab's save is refused, and it says so", refused);
-  check('the first tab\'s trade is still in the file, the second\'s is not', symbolsOnDisk().includes('TABA') && !symbolsOnDisk().includes('TABB'), JSON.stringify(symbolsOnDisk()));
+  check(
+    "the first tab's trade is still in the file, the second's is not",
+    symbolsOnDisk().includes('TABA') && !symbolsOnDisk().includes('TABB'),
+    JSON.stringify(symbolsOnDisk()),
+  );
   const conflictCopies = readdirSync(join(work, 'data', 'backups')).filter((f) => f.startsWith('conflict-'));
-  const keptB = conflictCopies.length === 1 && JSON.parse(readFileSync(join(work, 'data', 'backups', conflictCopies[0]), 'utf8'));
-  check("the second tab's version is kept as a conflict copy, with its trade", Boolean(keptB) && keptB.trades.some((t) => t.symbol === 'TABB'), conflictCopies.join(','));
-  check('the sidebar of the second tab says it is not saving', await second.run(`document.querySelector('aside').innerText.includes('Changed elsewhere')`));
+  const keptB =
+    conflictCopies.length === 1 && JSON.parse(readFileSync(join(work, 'data', 'backups', conflictCopies[0]), 'utf8'));
+  check(
+    "the second tab's version is kept as a conflict copy, with its trade",
+    Boolean(keptB) && keptB.trades.some((t) => t.symbol === 'TABB'),
+    conflictCopies.join(','),
+  );
+  check(
+    'the sidebar of the second tab says it is not saving',
+    await second.run(`document.querySelector('aside').innerText.includes('Changed elsewhere')`),
+  );
   // the old page looks ready until the reload has actually begun, so it is
   // marked first, and only a page without the mark counts as reloaded
   const reloaded = async (tab, how, label) => {
     await tab.run(`window.__beforeReload = true; true`);
     await tab.run(how);
-    await tab.until(`!window.__beforeReload && document.readyState === 'complete' && !!document.querySelector('aside')`, label, 15000);
+    await tab.until(
+      `!window.__beforeReload && document.readyState === 'complete' && !!document.querySelector('aside')`,
+      label,
+      15000,
+    );
     await tab.run(PAGE);
   };
   // reload the second tab: it opens what the first saved, not its own copy from the browser
-  await reloaded(second, `[...document.querySelectorAll('[data-modal-root] button')].find((x) => x.textContent.includes('Reload')).click(); true`, 'second tab reloaded');
+  await reloaded(
+    second,
+    `[...document.querySelectorAll('[data-modal-root] button')].find((x) => x.textContent.includes('Reload')).click(); true`,
+    'second tab reloaded',
+  );
   check('after Reload the conflict dialog is gone', await second.run(`!document.querySelector('[data-modal-root]')`));
   await second.run(`$nav('/trades'); true`);
-  await second.until(`[...document.querySelectorAll('tbody tr')].some((r) => r.innerText.includes('TABA'))`, 'trades after reload');
-  check('after Reload the second tab shows what the first saved, and not its own refused trade', await second.run(`![...document.querySelectorAll('tbody tr')].some((r) => r.innerText.includes('TABB'))`));
+  await second.until(
+    `[...document.querySelectorAll('tbody tr')].some((r) => r.innerText.includes('TABA'))`,
+    'trades after reload',
+  );
+  check(
+    'after Reload the second tab shows what the first saved, and not its own refused trade',
+    await second.run(`![...document.querySelectorAll('tbody tr')].some((r) => r.innerText.includes('TABB'))`),
+  );
   // both carry on, one after the other, with nothing refused
   await logTrade(second, 'TABC');
   check('the reloaded second tab saves again', await savedSoon((j) => j.trades.some((t) => t.symbol === 'TABC')));
   await reloaded(b, `location.reload(); true`, 'first tab reloaded');
   await logTrade(b, 'TABD');
-  check('and so does the first, after a reload', await savedSoon((j) => ['TABA', 'TABC', 'TABD'].every((s) => j.trades.some((t) => t.symbol === s))), JSON.stringify(symbolsOnDisk()));
+  check(
+    'and so does the first, after a reload',
+    await savedSoon((j) => ['TABA', 'TABC', 'TABD'].every((s) => j.trades.some((t) => t.symbol === s))),
+    JSON.stringify(symbolsOnDisk()),
+  );
   await second.close();
 
   // ---- 14. the trade form deletes a chart only once the trade is saved -------
@@ -612,7 +830,10 @@ async function journey() {
   const original = chartOf();
   const openChart = async () => {
     await b.run(`$nav('/trades'); true`);
-    await b.until(`[...document.querySelectorAll('tbody tr')].some((r) => r.innerText.includes('CHART'))`, 'trades table');
+    await b.until(
+      `[...document.querySelectorAll('tbody tr')].some((r) => r.innerText.includes('CHART'))`,
+      'trades table',
+    );
     await b.run(`[...document.querySelectorAll('tbody tr')].find((r) => r.innerText.includes('CHART')).click(); true`);
     await b.until(`!!$modal()?.querySelector('img')`, 'trade form with its chart');
   };
@@ -629,17 +850,29 @@ async function journey() {
   await b.run(`$modal().querySelector('button[aria-label="Remove chart"]').click(); true`);
   await b.until(`!$modal().querySelector('img')`, 'chart removed in the form');
   await closeWith('Cancel');
-  check('Remove chart, then Cancel: the image file is still there, and the trade still shows it', images().includes(original) && chartOf() === original, JSON.stringify({ original, files: images(), now: chartOf() }));
+  check(
+    'Remove chart, then Cancel: the image file is still there, and the trade still shows it',
+    images().includes(original) && chartOf() === original,
+    JSON.stringify({ original, files: images(), now: chartOf() }),
+  );
   await openChart();
   await replaceChart();
   await closeWith('Cancel');
-  check('Replace, then Cancel: the original stays, and the unsaved upload is deleted', JSON.stringify(await imagesSoon(1)) === JSON.stringify([original]) && chartOf() === original, JSON.stringify({ original, files: images() }));
+  check(
+    'Replace, then Cancel: the original stays, and the unsaved upload is deleted',
+    JSON.stringify(await imagesSoon(1)) === JSON.stringify([original]) && chartOf() === original,
+    JSON.stringify({ original, files: images() }),
+  );
   await openChart();
   await replaceChart();
   await closeWith('Save changes');
   await savedSoon((j) => j.trades.some((t) => t.symbol === 'CHART' && t.screenshotFile !== original));
   const replaced = chartOf();
-  check('Replace, then Save: the trade shows the new image, and the old file is deleted', Boolean(replaced) && replaced !== original && JSON.stringify(await imagesSoon(1)) === JSON.stringify([replaced]), JSON.stringify({ original, replaced, files: images() }));
+  check(
+    'Replace, then Save: the trade shows the new image, and the old file is deleted',
+    Boolean(replaced) && replaced !== original && JSON.stringify(await imagesSoon(1)) === JSON.stringify([replaced]),
+    JSON.stringify({ original, replaced, files: images() }),
+  );
 
   // ---- 14b. merging keeps one chart; Settings reclaims images nothing uses ----
   // a part with a chart image and a chart link; returns the image's file name
@@ -647,7 +880,9 @@ async function journey() {
     const before = images();
     await b.run(`$tStarts('Log trade').click(); true`);
     await b.until(`!!$modal() && !!$field('Symbol', $modal())`, 'trade form');
-    await b.run(`$type($field('Symbol', $modal()), 'MERGE'); $type($field('Quantity', $modal()), '1'); $type($field('Entry price', $modal()), '10'); [...$modal().querySelectorAll('button[aria-expanded]')].find((x) => x.textContent.includes('Futures, forex')).click(); true`);
+    await b.run(
+      `$type($field('Symbol', $modal()), 'MERGE'); $type($field('Quantity', $modal()), '1'); $type($field('Entry price', $modal()), '10'); [...$modal().querySelectorAll('button[aria-expanded]')].find((x) => x.textContent.includes('Futures, forex')).click(); true`,
+    );
     await b.until(`!!$field('Chart link', $modal())`, 'chart link field');
     await b.run(`$type($field('Chart link', $modal()), '${link}'); true`);
     await b.setFile('[data-modal-root] input[type=file]', png);
@@ -669,7 +904,9 @@ async function journey() {
   await b.until(`!!$modal() && !!$t('Merge into one trade', $modal())`, 'merge confirmation');
   check(
     "the merge confirmation says the other part's chart image is deleted and its chart link goes into the notes",
-    await b.run(`$modal().innerText.includes('the other chart image is deleted') && $modal().innerText.includes('the other link is added to its notes')`),
+    await b.run(
+      `$modal().innerText.includes('the other chart image is deleted') && $modal().innerText.includes('the other link is added to its notes')`,
+    ),
     await b.run(`$modal().innerText`),
   );
   await b.run(`$t('Merge into one trade', $modal()).click(); true`);
@@ -685,12 +922,16 @@ async function journey() {
   const mergedChart = mergedTrade?.screenshotFile;
   check(
     "merging keeps the first part's chart and deletes the other part's image",
-    Boolean(firstLeg && secondLeg) && mergedOnDisk && mergedChart === firstLeg && JSON.stringify((await imagesSoon(2)).sort()) === JSON.stringify([firstLeg, replaced].sort()),
+    Boolean(firstLeg && secondLeg) &&
+      mergedOnDisk &&
+      mergedChart === firstLeg &&
+      JSON.stringify((await imagesSoon(2)).sort()) === JSON.stringify([firstLeg, replaced].sort()),
     JSON.stringify({ firstLeg, secondLeg, mergedChart, files: images() }),
   );
   check(
     "it keeps the first part's chart link, and the other part's link is in its notes",
-    mergedTrade?.screenshotUrl === 'https://charts.example/first' && (mergedTrade?.notes ?? '').includes('https://charts.example/second'),
+    mergedTrade?.screenshotUrl === 'https://charts.example/first' &&
+      (mergedTrade?.notes ?? '').includes('https://charts.example/second'),
     JSON.stringify({ link: mergedTrade?.screenshotUrl, notes: mergedTrade?.notes }),
   );
 
@@ -705,7 +946,10 @@ async function journey() {
   plant('orphan0002.png'); // nothing uses it either
   plant('copykeep01.png'); // only a kept copy mentions it
   plant('fresh00001.png', new Date()); // nothing uses it, but it was just added
-  writeFileSync(join(work, 'data', 'backups', 'conflict-20260101-000000.json'), JSON.stringify({ version: 1, trades: [{ id: 'x', screenshotFile: 'copykeep01.png' }], accounts: [] }));
+  writeFileSync(
+    join(work, 'data', 'backups', 'conflict-20260101-000000.json'),
+    JSON.stringify({ version: 1, trades: [{ id: 'x', screenshotFile: 'copykeep01.png' }], accounts: [] }),
+  );
   for (const name of [replaced, firstLeg]) utimesSync(join(shots, name), monthAgo, monthAgo); // in use, and old
   const planted = images();
   const reclaim = async () => {
@@ -718,7 +962,9 @@ async function journey() {
   const asking = await b.run(`$modal().innerText`);
   check(
     'Reclaim unused chart images says how many there are and the space they take before deleting anything',
-    /Delete 2 unused chart images\?/.test(asking) && asking.includes(`frees ${2 * statSync(png).size} bytes`) && images().length === planted.length,
+    /Delete 2 unused chart images\?/.test(asking) &&
+      asking.includes(`frees ${2 * statSync(png).size} bytes`) &&
+      images().length === planted.length,
     asking,
   );
   await b.run(`$t('Cancel', $modal()).click(); true`);
@@ -727,14 +973,24 @@ async function journey() {
   await reclaim();
   await b.until(`!!$modal() && !!$t('Delete them', $modal())`, 'reclaim confirmation');
   await b.run(`$t('Delete them', $modal()).click(); true`);
-  const freed = await seen(`$text().includes('${2 * statSync(png).size} bytes freed: 2 unused chart images deleted')`, 'reclaimed', 10000);
+  const freed = await seen(
+    `$text().includes('${2 * statSync(png).size} bytes freed: 2 unused chart images deleted')`,
+    'reclaimed',
+    10000,
+  );
   check(
     'confirmed, it deletes the images nothing uses and reports the space freed; ones in use, in a kept copy, or new stay',
-    freed && JSON.stringify(images().sort()) === JSON.stringify(['copykeep01.png', 'fresh00001.png', firstLeg, replaced].sort()),
+    freed &&
+      JSON.stringify(images().sort()) ===
+        JSON.stringify(['copykeep01.png', 'fresh00001.png', firstLeg, replaced].sort()),
     JSON.stringify(images()),
   );
   await reclaim();
-  check('asked again, it says there is nothing left to reclaim', await seen(`$text().includes('There is nothing to reclaim')`, 'nothing to reclaim', 10000) && !(await b.run(`!!$modal()`)));
+  check(
+    'asked again, it says there is nothing left to reclaim',
+    (await seen(`$text().includes('There is nothing to reclaim')`, 'nothing to reclaim', 10000)) &&
+      !(await b.run(`!!$modal()`)),
+  );
 
   // removing the test data takes a chart attached to a test trade with it
   const balanceBefore = journalOnDisk().accounts[0].startingBalance;
@@ -771,7 +1027,9 @@ async function journey() {
   }
   check(
     'Remove test data says it takes their charts, and deletes the chart attached to a test trade (and only that)',
-    Boolean(sampleChart) && removing.includes('any chart images you attached to them') && JSON.stringify(afterSample) === JSON.stringify(beforeSample),
+    Boolean(sampleChart) &&
+      removing.includes('any chart images you attached to them') &&
+      JSON.stringify(afterSample) === JSON.stringify(beforeSample),
     JSON.stringify({ sampleSymbol, sampleChart, removing, afterSample }),
   );
   // loading test data gave the account a starting balance; section 15 needs the old one
@@ -784,7 +1042,9 @@ async function journey() {
   const logClosed = async (symbol, exit) => {
     await b.run(`$tStarts('Log trade').click(); true`);
     await b.until(`!!$modal() && !!$field('Symbol', $modal())`, 'trade form');
-    await b.run(`$type($field('Symbol', $modal()), '${symbol}'); $type($field('Quantity', $modal()), '1'); $type($field('Entry price', $modal()), '100'); $type($field('Exit price', $modal()), '${exit}'); $t('Save trade', $modal()).click(); true`);
+    await b.run(
+      `$type($field('Symbol', $modal()), '${symbol}'); $type($field('Quantity', $modal()), '1'); $type($field('Entry price', $modal()), '100'); $type($field('Exit price', $modal()), '${exit}'); $t('Save trade', $modal()).click(); true`,
+    );
     await b.until(`!$modal()`, 'trade saved');
   };
   await logClosed('BOOM', '4342.42'); // its P&L is 4,242.42
@@ -832,28 +1092,70 @@ async function journey() {
   };
   // a page that crashes: the page is replaced, the app around it carries on
   await b.send('Page.navigate', { url: `${base}/trades?sj-crash=4242.42` });
-  const pageError = await seen(`document.body.innerText.includes("This page couldn't be shown")`, 'page error screen', 10000);
+  const pageError = await seen(
+    `document.body.innerText.includes("This page couldn't be shown")`,
+    'page error screen',
+    10000,
+  );
   await b.run(PAGE);
-  check('a page that crashes shows a calm error screen, inside the app', pageError && (await b.run(`!!document.querySelector('aside')`)));
-  check('it says where the journal is kept', await b.run(`document.querySelector('main').innerText.includes('journal.json')`));
+  check(
+    'a page that crashes shows a calm error screen, inside the app',
+    pageError && (await b.run(`!!document.querySelector('aside')`)),
+  );
+  check(
+    'it says where the journal is kept',
+    await b.run(`document.querySelector('main').innerText.includes('journal.json')`),
+  );
   let since = Date.now() - 1000;
   await b.run(`$tStarts('Download a backup', document.querySelector('main')).click(); true`);
   const fromPage = await newDownload(since);
-  check('its "Download a backup" hands over the whole journal', Boolean(fromPage?.trades?.some((t) => t.symbol === 'BOOM')));
+  check(
+    'its "Download a backup" hands over the whole journal',
+    Boolean(fromPage?.trades?.some((t) => t.symbol === 'BOOM')),
+  );
   await b.run(`$nav('/settings'); true`);
-  check('the rest of the app still works (Settings opens from the sidebar)', await seen(`!!$tStarts('Erase all data')`, 'settings', 8000));
+  check(
+    'the rest of the app still works (Settings opens from the sidebar)',
+    await seen(`!!$tStarts('Erase all data')`, 'settings', 8000),
+  );
   // the app itself crashing (the sidebar shows the balance): the whole page is replaced
   await b.send('Page.navigate', { url: `${base}/?sj-crash=4342.42` });
-  const appError = await seen(`document.body.innerText.includes('Sniper Journal ran into a problem')`, 'global error screen', 10000);
-  check('a crash in the app itself shows its own calm screen', appError && (await b.run(`!document.querySelector('aside')`)));
-  check('it still finds the journal on its own, and says where it is', await seen(`/The backup holds \\d+ trades/.test(document.body.innerText) && document.body.innerText.includes('journal.json')`, 'rescued journal', 8000));
+  const appError = await seen(
+    `document.body.innerText.includes('Sniper Journal ran into a problem')`,
+    'global error screen',
+    10000,
+  );
+  check(
+    'a crash in the app itself shows its own calm screen',
+    appError && (await b.run(`!document.querySelector('aside')`)),
+  );
+  check(
+    'it still finds the journal on its own, and says where it is',
+    await seen(
+      `/The backup holds \\d+ trades/.test(document.body.innerText) && document.body.innerText.includes('journal.json')`,
+      'rescued journal',
+      8000,
+    ),
+  );
   since = Date.now() - 1000;
-  await b.run(`[...document.querySelectorAll('button')].find((x) => x.textContent.trim() === 'Download a backup').click(); true`);
+  await b.run(
+    `[...document.querySelectorAll('button')].find((x) => x.textContent.trim() === 'Download a backup').click(); true`,
+  );
   const fromApp = await newDownload(since);
-  check('its "Download a backup" hands over the whole journal too', Boolean(fromApp?.trades?.some((t) => t.symbol === 'BOOM')));
+  check(
+    'its "Download a backup" hands over the whole journal too',
+    Boolean(fromApp?.trades?.some((t) => t.symbol === 'BOOM')),
+  );
   await b.send('Page.removeScriptToEvaluateOnNewDocument', { identifier: crashScript.identifier });
   await b.send('Page.navigate', { url: base });
-  check('opened normally again, the app is back', await seen(`!!document.querySelector('aside') && !document.body.innerText.includes('ran into a problem')`, 'app back', 10000));
+  check(
+    'opened normally again, the app is back',
+    await seen(
+      `!!document.querySelector('aside') && !document.body.innerText.includes('ran into a problem')`,
+      'app back',
+      10000,
+    ),
+  );
 
   // ---- 16. a browser too full for its copy of the journal says so -----------
   // The browser's storage is filled for real, to the last character, so the
@@ -861,7 +1163,8 @@ async function journey() {
   await b.run(PAGE);
   const sidebar = `document.querySelector('aside').innerText`;
   const notice = `(document.querySelector('main [role=status]')?.innerText ?? '')`;
-  const inCopy = (symbol) => b.run(`(localStorage.getItem('sniper-journal:v1') ?? '').includes('"symbol":"${symbol}"')`);
+  const inCopy = (symbol) =>
+    b.run(`(localStorage.getItem('sniper-journal:v1') ?? '').includes('"symbol":"${symbol}"')`);
   const filler = await b.run(`(() => {
     let lo = 0, hi = 12e6;
     while (lo < hi) {
@@ -873,11 +1176,24 @@ async function journey() {
   })()`);
   check('the browser storage is full (test setup)', filler > 1e6, String(filler));
   await logClosed('FULL1', '110');
-  check('a copy the browser refuses brings a calm notice', await seen(`${notice}.includes("won't keep a spare copy")`, 'copy notice', 8000), await b.run(notice));
-  check('it offers no backup download while the file is saved as usual', !(await b.run(`${notice}.includes('Download a backup')`)));
+  check(
+    'a copy the browser refuses brings a calm notice',
+    await seen(`${notice}.includes("won't keep a spare copy")`, 'copy notice', 8000),
+    await b.run(notice),
+  );
+  check(
+    'it offers no backup download while the file is saved as usual',
+    !(await b.run(`${notice}.includes('Download a backup')`)),
+  );
   check('the change is in the file all the same', await savedSoon((j) => j.trades.some((t) => t.symbol === 'FULL1')));
-  check('and the sidebar says "Saved to disk", as it is', await seen(`${sidebar}.includes('Saved to disk')`, 'saved', 8000));
-  check('the browser copy is the one from before, untouched', !(await inCopy('FULL1')) && Boolean(await b.run(`localStorage.getItem('sniper-journal:v1')`)));
+  check(
+    'and the sidebar says "Saved to disk", as it is',
+    await seen(`${sidebar}.includes('Saved to disk')`, 'saved', 8000),
+  );
+  check(
+    'the browser copy is the one from before, untouched',
+    !(await inCopy('FULL1')) && Boolean(await b.run(`localStorage.getItem('sniper-journal:v1')`)),
+  );
   await b.run(`$t('OK', document.querySelector('main [role=status]')).click(); true`);
   await logClosed('FULL2', '120');
   await savedSoon((j) => j.trades.some((t) => t.symbol === 'FULL2'));
@@ -886,16 +1202,37 @@ async function journey() {
   if (windows) {
     const { released } = await holdJournal(6000, 'Read');
     await logClosed('FULL3', '130');
-    check('when the file cannot be written either, the sidebar says "Not saved"', await seen(`${sidebar}.includes('Not saved')`, 'not saved', 10000), await b.run(sidebar));
-    check('and the notice comes back, this time offering a backup', await seen(`${notice}.includes("aren't saved anywhere") && ${notice}.includes('Download a backup')`, 'lost notice', 5000), await b.run(notice));
+    check(
+      'when the file cannot be written either, the sidebar says "Not saved"',
+      await seen(`${sidebar}.includes('Not saved')`, 'not saved', 10000),
+      await b.run(sidebar),
+    );
+    check(
+      'and the notice comes back, this time offering a backup',
+      await seen(
+        `${notice}.includes("aren't saved anywhere") && ${notice}.includes('Download a backup')`,
+        'lost notice',
+        5000,
+      ),
+      await b.run(notice),
+    );
     check('meanwhile the file on disk is left as it was', !journalOnDisk().trades.some((t) => t.symbol === 'FULL3'));
     await released;
-    check('once the file is free the change is saved, and the sidebar says so', await seen(`${sidebar}.includes('Saved to disk')`, 'saved again', 20000));
-    check('the warning goes once the change is in the file', (await b.run(notice)) === '' && journalOnDisk().trades.some((t) => t.symbol === 'FULL3'));
+    check(
+      'once the file is free the change is saved, and the sidebar says so',
+      await seen(`${sidebar}.includes('Saved to disk')`, 'saved again', 20000),
+    );
+    check(
+      'the warning goes once the change is in the file',
+      (await b.run(notice)) === '' && journalOnDisk().trades.some((t) => t.symbol === 'FULL3'),
+    );
   }
   await b.run(`localStorage.removeItem('sj-filler'); true`);
   await logClosed('FULL4', '140');
-  check('with room again, the browser keeps its copy', await seen(`(localStorage.getItem('sniper-journal:v1') ?? '').includes('"symbol":"FULL4"')`, 'copy kept', 5000));
+  check(
+    'with room again, the browser keeps its copy',
+    await seen(`(localStorage.getItem('sniper-journal:v1') ?? '').includes('"symbol":"FULL4"')`, 'copy kept', 5000),
+  );
 
   await b.close();
   await stopServer();

@@ -315,7 +315,16 @@ describe('aggregateDays and groupTrades', () => {
     );
     expect(groups).toEqual([
       { key: 'A', label: 'A', trades: 2, net: 5, wins: 1, winRate: 50, avg: 2.5, profitFactor: 2 },
-      { key: 'B', label: 'B', trades: 1, net: 3, wins: 1, winRate: 100, avg: 3, profitFactor: Number.POSITIVE_INFINITY },
+      {
+        key: 'B',
+        label: 'B',
+        trades: 1,
+        net: 3,
+        wins: 1,
+        winRate: 100,
+        avg: 3,
+        profitFactor: Number.POSITIVE_INFINITY,
+      },
     ]);
   });
 });
@@ -329,7 +338,10 @@ describe('sniperScore', () => {
   });
 
   it('documents the formula: win rate x1.4, PF/3, (avg R + 0.5) x 50, ratings / 5', () => {
-    const trades = series([10, -5, 10, 10, -5, 10], (i) => ({ review: { discipline: 4, execution: 3, patience: 5 }, closedAt: `2026-03-${String(2 + i).padStart(2, '0')}T11:00` }));
+    const trades = series([10, -5, 10, 10, -5, 10], (i) => ({
+      review: { discipline: 4, execution: 3, patience: 5 },
+      closedAt: `2026-03-${String(2 + i).padStart(2, '0')}T11:00`,
+    }));
     const stats = computeStats(trades);
     const score = sniperScore(trades, stats);
     const axis = (name: string) => score.axes.find((a) => a.axis === name);

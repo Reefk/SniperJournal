@@ -25,7 +25,8 @@ async function put(data: JournalData): Promise<string | null> {
     body: JSON.stringify(data),
   });
   const json = await res.json();
-  if (res.status === 412 || json?.conflict) throw new JournalConflict(json?.error ?? 'The journal was changed elsewhere.');
+  if (res.status === 412 || json?.conflict)
+    throw new JournalConflict(json?.error ?? 'The journal was changed elsewhere.');
   if (!json?.ok) throw new Error(json?.error ?? 'Could not save the journal.');
   if (typeof json.version === 'string') base = json.version;
   if (typeof json.path === 'string') where = json.path;
@@ -40,7 +41,8 @@ async function unusedImages(body: { inUse: string[]; remove?: string[] }): Promi
     body: JSON.stringify(body),
   });
   const json = await res.json();
-  if (!json?.ok) throw new Error(json?.error ?? 'Could not tell which chart images are still used, so none was deleted.');
+  if (!json?.ok)
+    throw new Error(json?.error ?? 'Could not tell which chart images are still used, so none was deleted.');
   return json.images as UnusedImage[];
 }
 

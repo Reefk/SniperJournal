@@ -1,6 +1,15 @@
 import type { Trade } from './types';
 import { mean } from './utils';
-import { grossPnl, holdMinutes, isClosed, netPnl, rMultiple, sortChronological, statTrades, tradeDay } from './trade-math';
+import {
+  grossPnl,
+  holdMinutes,
+  isClosed,
+  netPnl,
+  rMultiple,
+  sortChronological,
+  statTrades,
+  tradeDay,
+} from './trade-math';
 
 export interface DayAgg {
   day: string;

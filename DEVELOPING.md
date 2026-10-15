@@ -113,8 +113,8 @@ data/               your journal and its backups, created at runtime
 | The Sniper Score axes and how they are scored      | `sniperScore()` in `src/lib/stats.ts`                                               |
 | The wording and rules of the insights              | `src/lib/insights.ts`                                                               |
 | Which CSV column names are recognised              | the `alias(...)` lists in `src/lib/import/columns.ts`                               |
-| How a file of single fills becomes trades          | `src/lib/import/fills.ts`                                                          |
-| Futures point values the importer knows            | `POINT_VALUES` in `src/lib/import/instruments.ts`                                  |
+| How a file of single fills becomes trades          | `src/lib/import/fills.ts`                                                           |
+| Futures point values the importer knows            | `POINT_VALUES` in `src/lib/import/instruments.ts`                                   |
 | How partial fills are combined into one trade      | `src/lib/merge.ts`                                                                  |
 | Chart image upload, scaling and storage            | `src/lib/screenshots.ts`, `src/app/api/screenshot/`                                 |
 | The app icon                                       | `assets/icon.svg`, then rebuild `sniper-journal.ico` and `src/app/icon.png` from it |
@@ -203,7 +203,7 @@ journal as it is saved now) and **Download this window's version**.
 All tabs share one copy of the journal in the browser, so that copy records
 which tab wrote it and which file version it was made on top of
 (`src/store/mirror.ts`). At startup it only wins over the file while it is
-newer *and* based on the file as it is now; a newer copy made on top of an
+newer _and_ based on the file as it is now; a newer copy made on top of an
 older file is kept as a conflict copy instead of being opened.
 
 **When the browser can't keep its copy.** A copy over `MIRROR_LIMIT` (4

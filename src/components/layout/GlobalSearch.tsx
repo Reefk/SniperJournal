@@ -94,49 +94,49 @@ export function GlobalSearch() {
             Ctrl K
           </kbd>
 
-      {focused && query.trim() && (
-        <div
-          className="animate-pop absolute left-0 right-0 top-full z-40 mt-2 overflow-hidden rounded-lg border border-line bg-surface shadow-2xl shadow-black/40"
-          onMouseDown={(e) => e.preventDefault()}
-        >
-          {results.length === 0 ? (
-            <div className="px-4 py-6 text-center text-sm text-muted">No trades match that search.</div>
-          ) : (
-            <ul className="p-1">
-              {results.map((t) => (
-                <li key={t.id}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      openTradeForm({ trade: t });
-                      inputRef.current?.blur();
-                    }}
-                    className="flex w-full items-center gap-3 rounded-md px-3 py-3 text-left transition hover:bg-raised md:py-2"
-                  >
-                    <span className="w-16 truncate font-semibold text-fg">{t.symbol}</span>
-                    <SideBadge side={t.side} />
-                    <span className="flex-1 truncate text-xs text-muted">{formatDate(t.openedAt)}</span>
-                    <PnlValue
-                      value={netPnl(t)}
-                      open={!isClosed(t)}
-                      currency={data.settings.currency}
-                      className="text-sm"
-                    />
-                  </button>
-                </li>
-              ))}
-            </ul>
+          {focused && query.trim() && (
+            <div
+              className="animate-pop absolute left-0 right-0 top-full z-40 mt-2 overflow-hidden rounded-lg border border-line bg-surface shadow-2xl shadow-black/40"
+              onMouseDown={(e) => e.preventDefault()}
+            >
+              {results.length === 0 ? (
+                <div className="px-4 py-6 text-center text-sm text-muted">No trades match that search.</div>
+              ) : (
+                <ul className="p-1">
+                  {results.map((t) => (
+                    <li key={t.id}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          openTradeForm({ trade: t });
+                          inputRef.current?.blur();
+                        }}
+                        className="flex w-full items-center gap-3 rounded-md px-3 py-3 text-left transition hover:bg-raised md:py-2"
+                      >
+                        <span className="w-16 truncate font-semibold text-fg">{t.symbol}</span>
+                        <SideBadge side={t.side} />
+                        <span className="flex-1 truncate text-xs text-muted">{formatDate(t.openedAt)}</span>
+                        <PnlValue
+                          value={netPnl(t)}
+                          open={!isClosed(t)}
+                          currency={data.settings.currency}
+                          className="text-sm"
+                        />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <button
+                type="button"
+                onClick={showAll}
+                className="flex w-full items-center justify-between border-t border-line px-4 py-2.5 text-xs text-muted transition hover:bg-raised hover:text-fg"
+              >
+                Show all matches in Trades
+                <CornerDownLeft className="size-3.5" />
+              </button>
+            </div>
           )}
-          <button
-            type="button"
-            onClick={showAll}
-            className="flex w-full items-center justify-between border-t border-line px-4 py-2.5 text-xs text-muted transition hover:bg-raised hover:text-fg"
-          >
-            Show all matches in Trades
-            <CornerDownLeft className="size-3.5" />
-          </button>
-        </div>
-      )}
         </div>
         {/* blurring the box closes it; the button is there to be seen */}
         <Button size="sm" variant="ghost" className="md:hidden" onClick={() => setPhoneOpen(false)}>
