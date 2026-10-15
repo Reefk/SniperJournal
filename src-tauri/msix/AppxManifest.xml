@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The Windows app's package manifest, for the Microsoft Store.
+  scripts/package-msix.mjs fills in the Identity's Version from package.json.
+  The identity (Name, Publisher, PublisherDisplayName) is the one Partner
+  Center reserved for "Sniper Journal" (Product management > Product
+  identity); the Store refuses a package with any other.
+-->
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  IgnorableNamespaces="uap rescap">
+
+  <Identity
+    Name="Mr.SandMan1.SniperJournal"
+    Publisher="CN=2B0B07A1-0DF3-419A-B016-FD72A3F39401"
+    Version="$VERSION$"
+    ProcessorArchitecture="x64" />
+
+  <Properties>
+    <DisplayName>Sniper Journal</DisplayName>
+    <PublisherDisplayName>Mr.SandMan1</PublisherDisplayName>
+    <Logo>Assets\StoreLogo.png</Logo>
+    <Description>A private trading journal. Log trades, import them from your broker and see how you really trade. Everything stays on this PC.</Description>
+  </Properties>
+
+  <!-- Windows 10 1809 and later: what Tauri and WebView2 need -->
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.26100.0" />
+  </Dependencies>
+
+  <Resources>
+    <Resource Language="en-us" />
+  </Resources>
+
+  <Applications>
+    <Application Id="SniperJournal" Executable="Sniper Journal.exe" EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements
+        DisplayName="Sniper Journal"
+        Description="A private trading journal. Everything stays on this PC."
+        BackgroundColor="transparent"
+        Square150x150Logo="Assets\Square150x150Logo.png"
+        Square44x44Logo="Assets\Square44x44Logo.png">
+        <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png" />
+      </uap:VisualElements>
+    </Application>
+  </Applications>
+
+  <!--
+    runFullTrust is what every ordinary desktop program runs with, and the
+    one capability the app declares. The app itself uses no network and
+    touches no file outside Documents\Sniper Journal (src-tauri/src/folder.rs).
+  -->
+  <Capabilities>
+    <rescap:Capability Name="runFullTrust" />
+  </Capabilities>
+</Package>
