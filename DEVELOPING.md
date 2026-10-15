@@ -54,13 +54,15 @@ npm run lint        # React, hooks, accessibility and TypeScript rules (ESLint)
 npm run build       # fails loudly if anything is broken
 npm test            # the calculation, CSV, storage and API tests (a few seconds)
 npm run test:watch  # the same, again on every save
-npm run check       # typecheck, lint and tests in one go
+npm run check       # typecheck, lint, formatting and tests in one go
 npm run coverage    # the tests, with a coverage report
 npm run e2e         # after npm run build: the whole app in a headless Edge/Chrome,
                     # with made-up trades in a throwaway folder
 npm run e2e:android # the Android app on a running emulator (tests/android/)
 npm run bench       # timings for 100 to 50,000 trades
 npm run format -- <files>   # Prettier on the files you name (VS Code does it on save)
+npm run format -- .         # the same on every file
+npm run format:check        # lists any file Prettier would change
 npm run clean       # delete build leftovers: .next/dev and cache, out/, Android build
 ```
 
@@ -74,11 +76,17 @@ It is there so the behaviour can't change by accident in the meantime; the
 change that settles it updates that test on purpose. `grep -rn "under review"
 tests/` lists them.
 
-GitHub runs typecheck, lint, the tests and both builds (desktop and the
-Android export) on Windows and Linux for every push to `main` and every pull
-request: `.github/workflows/ci.yml`. It only reads the code; nothing is signed
-or published. Lint warnings don't fail it, errors do. The warnings left today
-are known (see the comment in `eslint.config.mjs`); don't add new ones.
+GitHub runs typecheck, lint, a formatting check, the tests and both builds
+(desktop and the Android export) on Windows and Linux for every push to `main`
+and every pull request: `.github/workflows/ci.yml`. It only reads the code;
+nothing is signed or published. Lint warnings don't fail it, errors do. The
+warnings left today are known (see the comment in `eslint.config.mjs`); don't
+add new ones. A file Prettier would change fails it too: `npm run format -- .`
+fixes them all.
+
+Every file was formatted at once in one commit, listed in
+`.git-blame-ignore-revs` so that GitHub's blame skips it. To skip it locally
+too: `git config blame.ignoreRevsFile .git-blame-ignore-revs`.
 
 ## Where everything lives
 

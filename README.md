@@ -89,8 +89,9 @@ npm install          # once
 npm run dev          # http://localhost:3000, with live reload
 npm run typecheck    # the project is strict TypeScript
 npm run lint         # ESLint with Next's React, hooks and accessibility rules
+npm run format:check # every file formatted as Prettier would (npm run format -- . fixes them)
 npm test             # the calculation, CSV, storage and API tests
-npm run check        # all three of the above, before calling anything done
+npm run check        # all four of the above, before calling anything done
 npm run build        # the desktop app
 npm run clean        # delete build leftovers (keeps the desktop build and data/)
 ```
@@ -160,8 +161,9 @@ Anything else that differs between PC and phone reads `storage.kind`.
    `npm test`. Every number in the app rests on them.
 2. The desktop app must keep working after every change. Run `npm run build`
    and open it on the PC before calling something done.
-3. Run `npm run typecheck` and `npm run lint` before finishing anything. GitHub
-   runs both, with the tests and builds, on every push to `main`.
+3. Run `npm run typecheck`, `npm run lint` and `npm run format:check` before
+   finishing anything. GitHub runs all three, with the tests and builds, on
+   every push to `main`.
 4. If you change the shape of the journal, update `normalize()` in
    `src/lib/journal.ts` so existing journals still load.
 5. Keep it offline. The app makes no network requests and keeps no telemetry.

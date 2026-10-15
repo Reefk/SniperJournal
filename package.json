@@ -13,13 +13,14 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "format": "prettier --write",
+    "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",
     "bench": "vitest run",
     "e2e": "node tests/e2e/desktop-journey.mjs",
     "e2e:android": "node tests/android/emulator-journey.mjs",
-    "check": "npm run typecheck && npm run lint && npm test",
+    "check": "npm run typecheck && npm run lint && npm run format:check && npm test",
     "clean": "node scripts/clean.mjs"
   },
   "dependencies": {

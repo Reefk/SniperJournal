@@ -9,7 +9,7 @@
 - **The desktop app must keep working** after every change: `npm run build`,
   then it opens at <http://localhost:3000> and reads and writes
   `data/journal.json`.
-- **`npm run check`** (typecheck, lint, tests) before calling anything done.
+- **`npm run check`** (typecheck, lint, formatting, tests) before calling anything done.
   `npm run e2e` after `npm run build` for anything a user can see;
   `npm run e2e:android` on an emulator for anything the phone touches.
 - **A change to a calculation in `src/lib/` comes with a test** in `tests/`

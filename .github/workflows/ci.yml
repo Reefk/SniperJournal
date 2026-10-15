@@ -1,6 +1,7 @@
-# Checks every push to main and every pull request: types, lint, tests and both
-# builds (the desktop server and the static export the Android app is made
-# from). It only reads the code. Nothing is signed, published or uploaded.
+# Checks every push to main and every pull request: types, lint, formatting,
+# tests and both builds (the desktop server and the static export the Android
+# app is made from). It only reads the code. Nothing is signed, published or
+# uploaded.
 name: CI
 
 on:
@@ -43,6 +44,7 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
+      - run: npm run format:check
       - run: npm test
       - run: npm run build
       - run: npm run build:mobile
