@@ -62,6 +62,8 @@ npm run e2e:android # the Android app on a running emulator (tests/android/)
 npm run desktop     # the Windows app in its own window, from a dev server on port 3100;
                     # its journal is Documents\Sniper Journal (development)
 npm run build:desktop  # the Windows app: src-tauri/target/release/Sniper Journal.exe
+npm run package:desktop  # after build:desktop: the .msix for the Microsoft Store
+                    # (identity from Partner Center in src-tauri/msix/AppxManifest.xml)
 npm run e2e:desktop # after build:desktop: the Windows app, with made-up trades
                     # in a throwaway folder (never Documents\Sniper Journal)
 npm run bench       # timings for 100 to 50,000 trades

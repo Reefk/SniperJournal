@@ -128,6 +128,7 @@ Needs [Rust](https://rustup.rs) and the Visual Studio C++ build tools.
 ```bash
 npm run desktop          # the app in its window, from a dev server on port 3100, with live reload
 npm run build:desktop    # build:mobile, then src-tauri/target/release/Sniper Journal.exe
+npm run package:desktop  # then the Store package: src-tauri/target/msix/SniperJournal_<version>_x64.msix
 npm run e2e:desktop      # after build:desktop: the whole app, made-up trades, a throwaway folder
 cd src-tauri && cargo test   # the Rust side's own tests
 ```
