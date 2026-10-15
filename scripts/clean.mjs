@@ -14,6 +14,7 @@ const LEFTOVERS = [
   'coverage',
   'android/app/build', // Gradle output
   'android/build',
+  'src-tauri/target', // the Windows app's Rust build, made again by build:desktop (a few GB)
   'tsconfig.tsbuildinfo',
 ];
 

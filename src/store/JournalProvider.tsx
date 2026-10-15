@@ -287,6 +287,9 @@ export function JournalProvider({ children }: { children: ReactNode }) {
     return () => document.removeEventListener('visibilitychange', flush);
   }, [autosave]);
 
+  // and a desktop window closed within that moment waits for it
+  useEffect(() => storage.whenClosing?.(() => autosave.flush()), [autosave]);
+
   // the merge action needs to read the trades it is folding together
   useEffect(() => {
     dataRef.current = data;

@@ -34,6 +34,9 @@ const eslintConfig = defineConfig([
     'data/**',
     // the Android project, including the copy of the web build inside it
     'android/**',
+    // the Windows app's Rust build output and generated schemas
+    'src-tauri/target/**',
+    'src-tauri/gen/**',
     // Claude Code skills installed on this PC, not part of the app
     '.claude/**',
   ]),

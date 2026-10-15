@@ -6,6 +6,7 @@ import { useUI } from '@/store/UIProvider';
 import { CURRENCIES } from '@/lib/format';
 import { toNumberOrNull } from '@/lib/utils';
 import { storage } from '@/lib/storage';
+import { CAN_BRING_OVER, useBringOver } from '@/hooks/useBringOver';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Field, Input, Select } from '@/components/ui/Field';
@@ -19,6 +20,7 @@ export function WelcomeModal() {
   const [accountName, setAccountName] = useState('Main Portfolio');
   const [balance, setBalance] = useState('');
   const [currency, setCurrency] = useState('USD');
+  const bringOver = useBringOver();
 
   if (data.onboarded) return null;
 
@@ -58,6 +60,20 @@ export function WelcomeModal() {
           <p className="mt-4 rounded-lg border border-warn/30 bg-warn/10 px-3 py-2.5 text-xs leading-relaxed text-fg">
             Your journal lives only inside this app. Uninstalling it deletes your trades, so back it up now and then
             from <span className="font-medium">More → Back up your journal</span>.
+          </p>
+        )}
+
+        {CAN_BRING_OVER && (
+          <p className="mt-4 rounded-lg border border-line bg-app px-3 py-2.5 text-xs leading-relaxed text-muted">
+            Used Sniper Journal before, from its own folder with INSTALLER.bat?{' '}
+            <button
+              type="button"
+              onClick={() => void bringOver()}
+              className="font-medium text-accent underline-offset-4 hover:underline"
+            >
+              Bring your journal over
+            </button>{' '}
+            and carry on where you left off.
           </p>
         )}
 

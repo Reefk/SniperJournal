@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "What the app's own pages may use: Tauri's basics (events, the window) and the app's commands. No file, shell or network access beyond the journal folder.",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}

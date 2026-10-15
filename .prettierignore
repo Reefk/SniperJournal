@@ -7,5 +7,8 @@ package-lock.json
 coverage
 # the Android project, including the copy of the web build inside it
 android
+# the Windows app's Rust build output and generated schemas (its Rust is formatted by rustfmt)
+src-tauri/target
+src-tauri/gen
 # Claude Code skills installed on this PC, not part of the app
 .claude

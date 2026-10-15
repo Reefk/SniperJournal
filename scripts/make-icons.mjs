@@ -4,8 +4,8 @@
 //   node scripts/make-icons.mjs
 //
 // Writes the Android launcher icons and launch screen, the PWA icons in
-// public/, the browser tab icon, the Windows shortcut's .ico, and the artwork
-// the Play Store listing asks for. Nothing reads these at build time, so the
+// public/, the browser tab icon, the Windows shortcut's .ico, the Windows
+// app's icon in src-tauri/icons, and the artwork the Play Store listing asks for. Nothing reads these at build time, so the
 // results are committed; re-run after editing the logo. The in-app mark is
 // src/components/ui/Logo.tsx — keep the two in step.
 
@@ -217,6 +217,11 @@ write('public/icon-maskable-512.png', await render(icon({ shape: 'square', span:
 write('public/apple-touch-icon.png', await render(icon({ shape: 'square' }), 180));
 write('src/app/icon.png', await render(icon({ shape: 'squircle' }), 64));
 write('assets/sniper-journal.ico', await ico(icon({ shape: 'squircle' }), [16, 32, 48, 64, 128, 256]));
+
+console.log('Windows app');
+// the program's own icon (title bar, taskbar, Alt+Tab), built into the .exe
+write('src-tauri/icons/icon.ico', await ico(icon({ shape: 'squircle' }), [16, 24, 32, 48, 64, 128, 256]));
+write('src-tauri/icons/icon.png', await render(icon({ shape: 'squircle' }), 512));
 
 console.log('Play Store listing');
 // Play wants a full-bleed 512 square — it rounds the corners itself, and a

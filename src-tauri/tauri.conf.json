@@ -1,0 +1,48 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "Sniper Journal",
+  "mainBinaryName": "Sniper Journal",
+  "version": "../package.json",
+  "identifier": "com.sniperjournal.app",
+  "build": {
+    "frontendDist": "../out",
+    "devUrl": "http://127.0.0.1:3100",
+    "beforeDevCommand": "npx next dev -H 127.0.0.1 -p 3100",
+    "beforeBuildCommand": "npm run build:mobile"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "create": false,
+        "title": "Sniper Journal",
+        "width": 1440,
+        "height": 900,
+        "minWidth": 400,
+        "minHeight": 560,
+        "center": true,
+        "backgroundColor": "#0b1120",
+        "dragDropEnabled": false
+      }
+    ],
+    "security": {
+      "csp": {
+        "default-src": "'self'",
+        "script-src": "'self'",
+        "style-src": "'self' 'unsafe-inline'",
+        "img-src": "'self' data: blob: http://chart.localhost",
+        "font-src": "'self' data:",
+        "connect-src": "'self' ipc: http://ipc.localhost",
+        "object-src": "'none'",
+        "base-uri": "'self'",
+        "form-action": "'none'",
+        "frame-ancestors": "'none'"
+      },
+      "dangerousDisableAssetCspModification": ["style-src"]
+    }
+  },
+  "bundle": {
+    "active": false,
+    "icon": ["icons/icon.ico", "icons/icon.png"]
+  }
+}

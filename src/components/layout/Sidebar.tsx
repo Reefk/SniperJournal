@@ -61,7 +61,7 @@ const SAVE_LABEL: Record<SaveStatus, string> =
 /** the states where changes are not reaching the file */
 const ALARM: SaveStatus[] = ['unsaved', 'error', 'conflict'];
 
-/** "online" means nothing to an app that never uses the network on a phone */
+/** "online" means nothing to an app that never uses the network: the phone and the Windows app */
 const SHOW_ONLINE = storage.kind === 'web';
 
 export function Sidebar() {

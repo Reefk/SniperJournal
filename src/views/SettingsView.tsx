@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { Download, FlaskConical, ImageMinus, Plus, RotateCcw, Trash2, Upload, Wallet } from 'lucide-react';
+import { Download, FlaskConical, FolderInput, ImageMinus, Plus, RotateCcw, Trash2, Upload, Wallet } from 'lucide-react';
 import { useJournal } from '@/store/JournalProvider';
 import { useUI } from '@/store/UIProvider';
 import { exportBackup, parseBackup } from '@/lib/backup';
@@ -9,6 +9,7 @@ import { CURRENCIES, formatBytes, formatMoney } from '@/lib/format';
 import { findUnusedCharts, removeUnusedCharts } from '@/lib/screenshots';
 import { toNumberOrNull } from '@/lib/utils';
 import { storage, type CopyReason } from '@/lib/storage';
+import { CAN_BRING_OVER, useBringOver } from '@/hooks/useBringOver';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Field, Input, Select } from '@/components/ui/Field';
@@ -26,6 +27,7 @@ function Section({ title, description, children }: { title: string; description?
 }
 
 const native = storage.kind === 'native';
+const phone = storage.device === 'phone';
 
 export function SettingsView() {
   const { data, actions, balances, sampleCount } = useJournal();
@@ -33,6 +35,7 @@ export function SettingsView() {
   const fileInput = useRef<HTMLInputElement>(null);
   const [newAccount, setNewAccount] = useState('');
   const [reclaiming, setReclaiming] = useState(false);
+  const bringOver = useBringOver();
   const currency = data.settings.currency;
 
   const restore = async (file: File | undefined) => {
@@ -289,6 +292,11 @@ export function SettingsView() {
             <Button onClick={() => fileInput.current?.click()}>
               <Upload className="size-4" /> Restore from a backup
             </Button>
+            {CAN_BRING_OVER && (
+              <Button onClick={() => void bringOver()}>
+                <FolderInput className="size-4" /> Bring over from the earlier version
+              </Button>
+            )}
             <input
               ref={fileInput}
               type="file"
@@ -300,11 +308,18 @@ export function SettingsView() {
               }}
             />
           </div>
-          {native ? (
+          {phone ? (
             <p className="mt-3 text-xs leading-relaxed text-faint">
               A dated copy is also kept inside the app automatically, once on each day you make changes, and the last 30
               are kept. Those copies are deleted along with the app, though, so save a backup to Drive, email or your
               files now and then. Chart images are not included in the backup.
+            </p>
+          ) : native ? (
+            <p className="mt-3 text-xs leading-relaxed text-faint">
+              Your journal is in the Sniper Journal folder in your Documents, and stays there if you uninstall the app.
+              A dated copy is also written into the backups folder next to it automatically, once on each day you make
+              changes. The last 30 are kept. Chart images are saved as files in the screenshots folder rather than
+              inside the backup, so copy that folder too if you are moving to another computer.
             </p>
           ) : (
             <p className="mt-3 text-xs leading-relaxed text-faint">

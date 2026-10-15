@@ -11,6 +11,7 @@ import type { UnusedImage } from './sweep';
  * Implementations live beside this file:
  *   web.ts        the Next.js server on a PC, writing data/journal.json
  *   capacitor.ts  an iPhone or Android app, writing the app's private folder
+ *   tauri.ts      the Windows app, writing Documents\Sniper Journal
  */
 export interface JournalStorage {
   /**
@@ -108,6 +109,15 @@ export interface JournalStorage {
    * opens the share sheet instead.
    */
   exportFile(filename: string, content: string, mimeType: string): Promise<void>;
+
+  /**
+   * A desktop window can be closed while a change still waits out its pause
+   * before saving. Where the platform can hold the close, it calls `save`
+   * (which hands that change to `writeJournal` at once) and closes once the
+   * write is done. Returns a function that stops it. Left out where the
+   * platform has no such moment: a browser tab, a phone.
+   */
+  whenClosing?(save: () => void): () => void;
 }
 
 /** why a copy was kept; also the start of its file name */

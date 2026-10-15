@@ -71,16 +71,48 @@ const PHONE_ANSWERS: Record<string, { q?: string; a: string } | null> = {
   },
 };
 
+/** The Windows app answers them too, minus the background server, the installer and the browser */
+const WINDOWS_APP_ANSWERS: Record<string, { q?: string; a: string } | null> = {
+  'Where exactly is my data kept?': {
+    a: 'In a plain JSON file, journal.json, in the Sniper Journal folder in your Documents. The app uploads nothing and works with your internet disconnected (if OneDrive backs up your Documents, it backs up the journal too). The folder stays when you uninstall the app, so reinstalling picks your journal up again.',
+  },
+  'What happens if I break something?': {
+    a: 'Every day that you make a change, the previous version of the file is copied into the backups folder next to it before the new one is written. The last 30 daily copies are kept. You can also save a backup at any time from your profile menu, and restore it from Settings.',
+  },
+  'Do I need to keep a window open for this to work?': {
+    a: 'Only while you use it. Every change is written to disk within a third of a second, and closing the window waits for the last one, so nothing is lost when you close it.',
+  },
+  'Can I open it in its own window instead of a browser tab?': null,
+  'Why did Windows warn me the first time?': null,
+  'Can I run this on more than one computer?': {
+    a: 'Each computer keeps its own journal. To move yours, save a backup on one computer and restore it on the other from Settings, and copy the screenshots folder across for its chart images.',
+  },
+};
+
+/** asked only of the Windows app */
+const WINDOWS_APP_EXTRA = [
+  {
+    q: 'I used the earlier version. How do I bring my journal over?',
+    a: 'In Settings, under Backups, choose Bring over from the earlier version, then pick the folder you installed it in (the one with INSTALLER.bat). Your trades and chart images are copied over, and the old folder is left exactly as it was.',
+  },
+];
+
 const native = storage.kind === 'native';
 const phone = storage.device === 'phone';
 
+function answered(changes: Record<string, { q?: string; a: string } | null>) {
+  return FAQ.flatMap((item) => {
+    if (!(item.q in changes)) return [item];
+    const changed = changes[item.q];
+    return changed ? [{ q: changed.q ?? item.q, a: changed.a }] : [];
+  });
+}
+
 const QUESTIONS = phone
-  ? FAQ.flatMap((item) => {
-      if (!(item.q in PHONE_ANSWERS)) return [item];
-      const phone = PHONE_ANSWERS[item.q];
-      return phone ? [{ q: phone.q ?? item.q, a: phone.a }] : [];
-    })
-  : FAQ;
+  ? answered(PHONE_ANSWERS)
+  : native
+    ? [...answered(WINDOWS_APP_ANSWERS), ...WINDOWS_APP_EXTRA]
+    : FAQ;
 
 /** what happened to the latest changes, in words */
 function fileStatus(status: SaveStatus, copyMiss: CopyMiss | null): string {

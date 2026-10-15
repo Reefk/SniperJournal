@@ -139,7 +139,7 @@ export function ChartImage({
               alt="Chart for this trade"
               className="max-h-[70vh] w-full rounded-md object-contain"
             />
-            {/* the phone app's image address only works inside the app, so no new tab there */}
+            {/* the apps' image addresses only work inside the app, so no new tab there */}
             {storage.kind === 'web' && (
               <a
                 href={screenshotSrc(file)}
