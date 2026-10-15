@@ -25,7 +25,8 @@
     "e2e:android": "node tests/android/emulator-journey.mjs",
     "e2e:desktop": "node tests/e2e/windows-app-journey.mjs",
     "check": "npm run typecheck && npm run lint && npm run format:check && npm test",
-    "clean": "node scripts/clean.mjs"
+    "clean": "node scripts/clean.mjs",
+    "screenshots:store": "node scripts/store-screenshots.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.2",
