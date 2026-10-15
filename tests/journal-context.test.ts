@@ -17,6 +17,7 @@ vi.mock('@/lib/storage', () => ({
   JournalConflict: class extends Error {},
   storage: {
     kind: 'web',
+    device: 'pc',
     async init() {},
     async readJournal() {
       return disk.journal;

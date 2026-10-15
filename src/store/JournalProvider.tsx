@@ -298,7 +298,7 @@ export function JournalProvider({ children }: { children: ReactNode }) {
     root.classList.toggle('light', data.settings.theme === 'light');
     root.style.colorScheme = data.settings.theme;
     // on a phone the status bar icons sit on the app's own background
-    if (storage.kind === 'native') {
+    if (storage.device === 'phone') {
       void SystemBars.setStyle({
         style: data.settings.theme === 'light' ? SystemBarsStyle.Light : SystemBarsStyle.Dark,
       }).catch(() => undefined);

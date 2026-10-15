@@ -114,7 +114,7 @@ export function ReportsView() {
               <Download className="size-4" /> Export CSV
             </Button>
             {/* the phone's webview has no print dialog; the CSV export is the way out there */}
-            {storage.kind === 'web' && (
+            {storage.device === 'pc' && (
               <Button onClick={() => window.print()}>
                 <Printer className="size-4" /> Print
               </Button>

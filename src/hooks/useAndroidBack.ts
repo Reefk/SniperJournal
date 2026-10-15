@@ -38,7 +38,7 @@ export function useAndroidBack() {
   }, [pathname]);
 
   useEffect(() => {
-    if (storage.kind !== 'native') return;
+    if (storage.device !== 'phone') return;
 
     const listener = App.addListener('backButton', () => {
       if (somethingOpen()) {

@@ -13,8 +13,20 @@ import type { UnusedImage } from './sweep';
  *   capacitor.ts  an iPhone or Android app, writing the app's private folder
  */
 export interface JournalStorage {
-  /** which implementation this is, for messages that differ per platform */
+  /**
+   * How the journal is kept, for messages that differ: 'web' is a browser
+   * talking to the server on a PC, where several tabs can share the file and
+   * the browser keeps a copy; 'native' is an app with one window writing its
+   * own folder, which keeps a copy only while that folder cannot be written.
+   */
   readonly kind: 'web' | 'native';
+
+  /**
+   * What the app runs on, for everything else that differs: a PC with a
+   * keyboard and a print dialog, or a phone with a touch screen, a back
+   * button and a share sheet.
+   */
+  readonly device: 'pc' | 'phone';
 
   /**
    * Called once before anything else, while the app shows its loading screen.

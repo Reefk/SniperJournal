@@ -48,12 +48,12 @@ export function WelcomeModal() {
           <div>
             <h2 className="text-lg font-semibold text-fg">Set up your journal</h2>
             <p className="text-sm text-muted">
-              Everything you enter is saved on this {storage.kind === 'native' ? 'phone' : 'computer'}.
+              Everything you enter is saved on this {storage.device === 'phone' ? 'phone' : 'computer'}.
             </p>
           </div>
         </div>
 
-        {storage.kind === 'native' && (
+        {storage.device === 'phone' && (
           // the one thing a phone does differently that can cost you your journal
           <p className="mt-4 rounded-lg border border-warn/30 bg-warn/10 px-3 py-2.5 text-xs leading-relaxed text-fg">
             Your journal lives only inside this app. Uninstalling it deletes your trades, so back it up now and then
@@ -64,7 +64,7 @@ export function WelcomeModal() {
         <div className="mt-5 grid grid-cols-2 gap-4">
           <Field label="Your name" hint="optional" className="col-span-2">
             <Input
-              autoFocus={storage.kind === 'web'}
+              autoFocus={storage.device === 'pc'}
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Shown in the header"

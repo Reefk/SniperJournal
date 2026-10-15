@@ -165,6 +165,7 @@ const sweepFiles: SweepFiles = {
 
 export const capacitorStorage: JournalStorage = {
   kind: 'native',
+  device: 'phone',
 
   async init() {
     baseUri = (await Filesystem.getUri({ path: '', ...data })).uri.replace(/\/+$/, '');

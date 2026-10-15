@@ -231,7 +231,7 @@ function SetupEditor({
         <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_auto]">
           <Field label="Setup name" error={error}>
             <Input
-              autoFocus={storage.kind === 'web'}
+              autoFocus={storage.device === 'pc'}
               value={draft.name}
               onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
               placeholder="e.g. Opening Range Breakout"

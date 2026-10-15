@@ -72,8 +72,9 @@ const PHONE_ANSWERS: Record<string, { q?: string; a: string } | null> = {
 };
 
 const native = storage.kind === 'native';
+const phone = storage.device === 'phone';
 
-const QUESTIONS = native
+const QUESTIONS = phone
   ? FAQ.flatMap((item) => {
       if (!(item.q in PHONE_ANSWERS)) return [item];
       const phone = PHONE_ANSWERS[item.q];
@@ -127,15 +128,15 @@ export function SupportView() {
 
         <section className="rounded-xl border border-line bg-surface p-5">
           <ShieldCheck className="size-5 text-profit" />
-          <h2 className="mt-3 text-sm font-semibold text-fg">Nothing leaves this {native ? 'phone' : 'PC'}</h2>
+          <h2 className="mt-3 text-sm font-semibold text-fg">Nothing leaves this {phone ? 'phone' : 'PC'}</h2>
           <p className="mt-1.5 text-sm leading-relaxed text-muted">
             There is no account, no server and no telemetry. The app only talks to its own folder on this{' '}
-            {native ? 'phone' : 'machine'}, which is why it keeps working with the network off.
+            {phone ? 'phone' : 'machine'}, which is why it keeps working with the network off.
           </p>
         </section>
 
         {/* keyboard shortcuts mean nothing on a touch screen */}
-        <section className={cn('rounded-xl border border-line bg-surface p-5', native && 'hidden')}>
+        <section className={cn('rounded-xl border border-line bg-surface p-5', phone && 'hidden')}>
           <Keyboard className="size-5 text-accent" />
           <h2 className="mt-3 text-sm font-semibold text-fg">Shortcuts</h2>
           <dl className="mt-3 space-y-2">

@@ -53,6 +53,7 @@ async function unusedImages(body: { inUse: string[]; remove?: string[] }): Promi
  */
 export const webStorage: JournalStorage = {
   kind: 'web',
+  device: 'pc',
 
   async init() {
     // the server is already there; nothing to resolve

@@ -309,7 +309,7 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
           <div className="grid grid-cols-2 gap-3 md:grid-cols-[1.1fr_1fr_auto]">
             <Field label="Symbol" error={errors.symbol}>
               <Input
-                autoFocus={!trade && storage.kind === 'web'}
+                autoFocus={!trade && storage.device === 'pc'}
                 list="sj-symbols"
                 value={form.symbol}
                 onChange={(e) => set('symbol', e.target.value.toUpperCase())}
