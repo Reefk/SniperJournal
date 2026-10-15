@@ -145,6 +145,21 @@ function featureGraphic() {
 </svg>`;
 }
 
+/**
+ * The squircle icon, `size` across, centred on a transparent w x h canvas:
+ * the Windows Start menu's tiles, which keep space around a logo.
+ */
+function tile(w, h, size) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">
+  ${defs()}
+  <g transform="translate(${(w - size) / 2} ${(h - size) / 2}) scale(${(size / 1024).toFixed(5)})">
+    <rect width="1024" height="1024" rx="232" fill="url(#bg)"/>
+    <rect width="1024" height="1024" rx="232" fill="url(#glow)"/>
+    ${scaled(MARK_SPAN)}
+  </g>
+</svg>`;
+}
+
 /** The mark, centred, taking `span` of the square's width. */
 function scaled(span) {
   const scale = (span / MARK_SPAN).toFixed(4);
@@ -222,6 +237,25 @@ console.log('Windows app');
 // the program's own icon (title bar, taskbar, Alt+Tab), built into the .exe
 write('src-tauri/icons/icon.ico', await ico(icon({ shape: 'squircle' }), [16, 24, 32, 48, 64, 128, 256]));
 write('src-tauri/icons/icon.png', await render(icon({ shape: 'squircle' }), 512));
+
+console.log('Windows app package (MSIX): Start menu, taskbar and Store logos');
+// Windows picks the file for the screen's scaling (scale-200 at 200%) and,
+// for the taskbar and Start list, the one drawn at the exact pixel size it
+// needs (targetsize-24); "unplated" is the same, drawn without a tile behind
+const MSIX = 'src-tauri/msix/Assets';
+const SCALES = [100, 200, 400];
+for (const s of SCALES) {
+  const f = s / 100;
+  write(`${MSIX}/Square44x44Logo.scale-${s}.png`, await render(icon({ shape: 'squircle' }), 44 * f));
+  write(`${MSIX}/StoreLogo.scale-${s}.png`, await render(icon({ shape: 'squircle' }), 50 * f));
+  write(`${MSIX}/Square150x150Logo.scale-${s}.png`, await render(tile(150, 150, 100), 150 * f));
+  write(`${MSIX}/Wide310x150Logo.scale-${s}.png`, await render(tile(310, 150, 100), 310 * f, 150 * f));
+}
+for (const size of [16, 24, 32, 48, 256]) {
+  const png = await render(icon({ shape: 'squircle' }), size);
+  write(`${MSIX}/Square44x44Logo.targetsize-${size}.png`, png);
+  write(`${MSIX}/Square44x44Logo.targetsize-${size}_altform-unplated.png`, png);
+}
 
 console.log('Play Store listing');
 // Play wants a full-bleed 512 square — it rounds the corners itself, and a
