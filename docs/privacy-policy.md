@@ -1,8 +1,9 @@
 # Privacy Policy — Sniper Journal
 
-_Last updated: 6 October 2026_
+_Last updated: 16 October 2026_
 
-Sniper Journal is a trading journal that runs entirely on your own device.
+Sniper Journal is a trading journal that runs entirely on your own device. This
+policy covers the Android app and the Windows app.
 
 ## What we collect
 
@@ -14,29 +15,39 @@ app never sends them anywhere.
 ## Where your data lives
 
 Everything you enter — trades, notes, playbook entries, chart screenshots,
-account names and balances — is written to the app's own private storage on
-your device. No other app can read it. It is not synced, uploaded or backed up
-to any server, including ours.
+account names and balances — stays on the device you entered it on. It is not
+synced, uploaded or backed up to any server, including ours.
 
-Android's automatic cloud backup is switched off for this app, so your journal
-is not copied to your Google account either.
+**On Android**, it is written to the app's own private storage. No other app
+can read it. Android's automatic cloud backup is switched off for this app, so
+your journal is not copied to your Google account either. Uninstalling
+Sniper Journal deletes all of it. Use **More → Back up your journal** to export
+a copy you keep yourself.
 
-Uninstalling Sniper Journal deletes all of it. Use **More → Back up your
-journal** to export a copy you keep yourself.
+**On Windows**, it is written to a folder called **Sniper Journal** in your
+Documents folder: the journal itself (`journal.json`), a daily copy of it in
+`backups`, and your chart images in `screenshots`. It is kept there so you can
+see it, copy it and back it up like any other document, and so it survives
+uninstalling the app: reinstalling picks your journal up again, and deleting
+that folder is how you remove it. Like everything in your Documents folder,
+other programs on your PC can read it. If you have set up OneDrive, or another
+service, to back up your Documents folder, that service copies this folder too,
+under your own arrangement with it; Sniper Journal plays no part in that.
 
 ## Network access
 
-Sniper Journal does not request Android's internet permission at all, so it
-has no way to connect to the network. It makes no network requests of its own.
+Sniper Journal makes no network requests and works with your internet switched
+off. On Android it does not even request the internet permission, so it has no
+way to connect to the network.
 
 Two things can open a connection, and only when you ask for them:
 
 - **Links you save or follow.** If you store a chart link (for example a
-  TradingView URL) or open a link from the Resources screen, tapping it hands
-  the address to your browser. Whatever you open is then covered by that site's
-  own privacy policy, not this one.
-- **Sharing.** If you use the share button, Android passes the file you chose
-  to the app you picked. What happens to it next is up to that app.
+  TradingView URL) or open a link from the Resources screen, clicking or
+  tapping it hands the address to your browser. Whatever you open is then
+  covered by that site's own privacy policy, not this one.
+- **Sharing, on Android.** If you use the share button, Android passes the file
+  you chose to the app you picked. What happens to it next is up to that app.
 
 ## Children
 
@@ -52,10 +63,11 @@ and the date above will be updated.
 Questions about this policy: **<your contact email>**
 
 <!--
-Before the Play Store listing goes live:
+Before either store listing goes live:
   - replace the contact email above
   - host this page at a public, permanent URL (GitHub Pages works) and paste
-    that URL into Play Console → App content → Privacy policy
+    that URL into Play Console → App content → Privacy policy, and into
+    Partner Center → Properties → Privacy policy URL
   - the Data safety form should then answer: no data collected, no data
     shared, no data encrypted in transit (nothing is sent), users can delete
     their data by uninstalling or clearing app storage

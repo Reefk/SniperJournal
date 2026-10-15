@@ -66,6 +66,8 @@ npm run package:desktop  # after build:desktop: the .msix for the Microsoft Stor
                     # (identity from Partner Center in src-tauri/msix/AppxManifest.xml)
 npm run e2e:desktop # after build:desktop: the Windows app, with made-up trades
                     # in a throwaway folder (never Documents\Sniper Journal)
+npm run screenshots:store  # after build:desktop: the Microsoft Store screenshots,
+                    # from the app's test trades (assets/microsoft-store/screenshots)
 npm run bench       # timings for 100 to 50,000 trades
 npm run format -- <files>   # Prettier on the files you name (VS Code does it on save)
 npm run format -- .         # the same on every file

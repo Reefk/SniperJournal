@@ -130,6 +130,7 @@ npm run desktop          # the app in its window, from a dev server on port 3100
 npm run build:desktop    # build:mobile, then src-tauri/target/release/Sniper Journal.exe
 npm run package:desktop  # then the Store package: src-tauri/target/msix/SniperJournal_<version>_x64.msix
 npm run e2e:desktop      # after build:desktop: the whole app, made-up trades, a throwaway folder
+npm run screenshots:store  # after build:desktop: the Store screenshots, from the app's test trades
 cd src-tauri && cargo test   # the Rust side's own tests
 ```
 
@@ -157,6 +158,19 @@ build while the dev-server setting is synced in.
 4. Upload it in Play Console. The store listing text is in
    [`docs/play-store-listing.md`](docs/play-store-listing.md) and the artwork in
    `assets/play-store/`. `npm run icons` redraws every icon from the one logo.
+
+### Releasing to the Microsoft Store
+
+1. **Every release:** bump the version as above; the package takes it from
+   `package.json`.
+2. `npm run build:desktop`, then `npm run package:desktop` builds
+   `src-tauri/target/msix/SniperJournal_<version>_x64.msix`. Leave it
+   unsigned: the Store signs it.
+3. Upload it in Partner Center. The listing text, captions and the answers to
+   Partner Center's questions are in
+   [`docs/microsoft-store-listing.md`](docs/microsoft-store-listing.md), the
+   artwork in `assets/microsoft-store/`. `npm run screenshots:store` retakes
+   the screenshots.
 
 ## How the code is organised
 
