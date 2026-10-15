@@ -57,6 +57,9 @@ Your journal never leaves your device.
 
 - **PC:** one JSON file, `data/journal.json`, inside the app folder, with a
   dated copy kept every day you make changes (the last 30 are kept).
+- **Windows app** (being prepared for the Microsoft Store): the same files in
+  `Documents\Sniper Journal`, which uninstalling the app leaves alone. It
+  can bring over the journal and chart images of the version above.
 - **Android:** the app's own private storage. The app requests **no
   permissions at all**, not even internet access, and Android's cloud backup is
   switched off. Uninstalling deletes the journal, so back it up from
@@ -114,6 +117,25 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 `npm run android` does the first two steps and opens Android Studio, if it is
 installed.
+
+### Building the Windows app
+
+The same static export, in a window of its own, built with
+[Tauri](https://tauri.app): a single program with no server and no Node.js,
+showing the pages in WebView2, the Edge engine Windows 10 and 11 already have.
+Needs [Rust](https://rustup.rs) and the Visual Studio C++ build tools.
+
+```bash
+npm run desktop          # the app in its window, from a dev server on port 3100, with live reload
+npm run build:desktop    # build:mobile, then src-tauri/target/release/Sniper Journal.exe
+npm run e2e:desktop      # after build:desktop: the whole app, made-up trades, a throwaway folder
+cd src-tauri && cargo test   # the Rust side's own tests
+```
+
+`src-tauri/src/folder.rs` is the only code that touches the disk: it keeps
+every file inside `Documents\Sniper Journal` and writes each one whole. The
+rules for what is kept where are in `src/lib/storage/tauri.ts`, beside the
+phone's.
 
 **Live reload on a phone:** run `npm run dev`, then
 `adb reverse tcp:3000 tcp:3000`, sync with `CAP_LIVE_URL=http://localhost:3000`

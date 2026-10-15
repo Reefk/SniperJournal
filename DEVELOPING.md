@@ -59,11 +59,16 @@ npm run coverage    # the tests, with a coverage report
 npm run e2e         # after npm run build: the whole app in a headless Edge/Chrome,
                     # with made-up trades in a throwaway folder
 npm run e2e:android # the Android app on a running emulator (tests/android/)
+npm run desktop     # the Windows app in its own window, from a dev server on port 3100;
+                    # its journal is Documents\Sniper Journal (development)
+npm run build:desktop  # the Windows app: src-tauri/target/release/Sniper Journal.exe
+npm run e2e:desktop # after build:desktop: the Windows app, with made-up trades
+                    # in a throwaway folder (never Documents\Sniper Journal)
 npm run bench       # timings for 100 to 50,000 trades
 npm run format -- <files>   # Prettier on the files you name (VS Code does it on save)
 npm run format -- .         # the same on every file
 npm run format:check        # lists any file Prettier would change
-npm run clean       # delete build leftovers: .next/dev and cache, out/, Android build
+npm run clean       # delete build leftovers: .next/dev and cache, out/, the Android and Windows app builds
 ```
 
 The tests are in `tests/` and only ever use made-up trades. They never open
@@ -107,6 +112,8 @@ src/
     UIProvider      modals, confirmations and toasts
   lib/              the thinking parts, plain functions with no React
   hooks/            small bits of shared React behaviour
+src-tauri/          the Windows app: its window, and the only code that
+                    touches its folder (src/folder.rs), in Rust
 data/               your journal and its backups, created at runtime
 ```
 
@@ -245,7 +252,19 @@ the one interface in `src/lib/storage/types.ts`. Nothing else in the app touches
 the filesystem or the network. Supporting a new platform means writing one file
 that implements that interface and returning it from `pick()` in
 `src/lib/storage/index.ts`; `src/lib/storage/capacitor.ts`, the Android app's
-storage, is the worked example.
+storage, is the worked example, and `src/lib/storage/tauri.ts`, the Windows
+app's, follows it.
+
+`storage.kind` says how the journal is kept (`web`: a browser and the server,
+several tabs, the browser's copy; `native`: one app window writing its own
+folder). `storage.device` says what it runs on (`pc` or `phone`): keyboard
+focus, the print button, the back button, the share sheet and the words
+"phone" and "PC" go by that one. The Windows app is `native` on a `pc`.
+
+The Windows app is like the phone in one more way: its window can be closed
+within the 350ms a change waits before saving. So it holds the close, has the
+page save that change at once, and closes once it is written
+(`storage.whenClosing`, and `CloseRequested` in `src-tauri/src/lib.rs`).
 
 Nothing is fetched from anywhere. Every number on every screen is computed from
 that one object in memory, which is why the app works offline.
