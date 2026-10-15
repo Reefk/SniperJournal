@@ -264,9 +264,9 @@ write('assets/play-store/icon-512.png', await renderOpaque(icon({ shape: 'square
 write('assets/play-store/feature-graphic-1024x500.png', await renderOpaque(featureGraphic(), 1024, 500));
 
 console.log('Microsoft Store listing');
-// the "1:1 App tile icon": the Store shows it in place of the package's own
-// logo, so it is the same squircle as the Start menu's
-write('assets/microsoft-store/app-tile-icon-300.png', await render(icon({ shape: 'squircle' }), 300));
+// the 1:1 App tile icon, opaque like the Play icon: a full square the Store
+// shapes itself. Poster and box art are for games and Xbox, so there are none
+write('assets/microsoft-store/app-tile-icon-300.png', await renderOpaque(icon({ shape: 'square', span: 0.62 }), 300));
 
 console.log('the master drawing');
 write('assets/icon.svg', Buffer.from(icon({ shape: 'squircle' })));
