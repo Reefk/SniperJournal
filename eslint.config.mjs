@@ -34,6 +34,8 @@ const eslintConfig = defineConfig([
     'data/**',
     // the Android project, including the copy of the web build inside it
     'android/**',
+    // Claude Code skills installed on this PC, not part of the app
+    '.claude/**',
   ]),
 ]);
 
