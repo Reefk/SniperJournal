@@ -135,11 +135,11 @@ them in this order, each with its caption (200 characters max):
 
 ### Store logos
 
-- **1:1 App tile icon (300 × 300):** `assets/microsoft-store/app-tile-icon-300.png`.
-  Microsoft strongly recommends it; without it the Store uses the package's
-  logo.
-- 2:3 poster art and 1:1 box art: leave empty. They are for games and Xbox.
-- Trailers, 16:9 super hero art: optional, none for now.
+- **1:1 App tile icon (300 × 300):** `assets/microsoft-store/app-tile-icon-300.png`,
+  opaque, drawn by `npm run icons`. Microsoft recommends it for apps; without
+  it the Store uses the package's logo.
+- **9:16 poster art and 1:1 box art:** leave empty. They are for games and Xbox.
+- Trailers and 16:9 super hero art are optional; none for now.
 
 ---
 
@@ -184,18 +184,10 @@ The result should be the lowest rating everywhere (IARC 3+, ESRB Everyone, PEGI 
 
 ## Submission options
 
-### Restricted capabilities: why the app needs runFullTrust
+### Restricted capabilities: why the app needs runFullTrust (500 characters max)
 
 ```
-Sniper Journal is a desktop (Win32) app built with Tauri: a native executable that shows its interface in Microsoft Edge WebView2. It is packaged as a full-trust desktop app, and runFullTrust is what every packaged desktop executable needs to run. The app declares no other capabilities.
-
-What it does with it:
-- It reads and writes the user's trading journal in Documents\Sniper Journal: journal.json, a backups folder with one copy per day, and a screenshots folder for chart images. The folder is in Documents rather than in the package's own app data so the user can see, copy and back up the file like any other document, and so the journal stays when the app is uninstalled.
-- It shows Windows' Save As dialog when the user saves a backup of the journal, and the Open dialog when the user restores one or attaches a chart image.
-- Only when the user asks: it reads the journal from the folder of the earlier, unpackaged version of the app, which the user picks in a folder dialog, and copies it into Documents\Sniper Journal. The old folder is not changed.
-- It opens links the user clicks in the user's default browser.
-
-The app itself checks every file path, so it can only open those few files inside its own folder. It makes no network connections, starts nothing at sign-in, runs no services or background tasks, installs no drivers, and changes nothing in Windows or in other apps.
+Sniper Journal is a Win32 desktop app (Tauri + WebView2) packaged as a full-trust app; runFullTrust is what a packaged desktop executable needs to run. It uses it only to read and write the user's journal in Documents\Sniper Journal (so it survives uninstall), show Save and Open dialogs for backups and chart images, copy in the user's old journal from a folder they pick, and open clicked links in the browser. No network use, no services, nothing at sign-in, no system changes.
 ```
 
 ### Notes for certification
