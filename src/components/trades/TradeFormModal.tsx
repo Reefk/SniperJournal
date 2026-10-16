@@ -18,6 +18,7 @@ import { TagInput } from '@/components/ui/TagInput';
 import { RatingInput } from '@/components/ui/RatingInput';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { ChartImage } from './ChartImage';
+import { ImportBody } from './ImportTradesModal';
 
 interface FormState {
   accountId: string;
@@ -162,9 +163,39 @@ function previewTrade(f: FormState): Trade {
   };
 }
 
+/**
+ * A new trade is logged by hand or from a CSV file. The way last used is
+ * remembered on this device, so someone who always imports gets the file first.
+ */
+type LogWay = 'hand' | 'csv';
+const LOG_WAY_KEY = 'sniper-journal:log-trade-way';
+function rememberedWay(): LogWay {
+  try {
+    return localStorage.getItem(LOG_WAY_KEY) === 'csv' ? 'csv' : 'hand';
+  } catch {
+    return 'hand';
+  }
+}
+function rememberWay(way: LogWay) {
+  try {
+    if (way === 'csv') localStorage.setItem(LOG_WAY_KEY, way);
+    else localStorage.removeItem(LOG_WAY_KEY);
+  } catch {
+    /* storage unavailable: the form simply opens by hand */
+  }
+}
+const LOG_WAYS = [
+  { value: 'hand', label: 'By hand' },
+  { value: 'csv', label: 'From a CSV file' },
+] as const;
+
 export function TradeFormModal() {
   const { tradeForm, closeTradeForm } = useUI();
   const editing = tradeForm.trade;
+  // null until chosen here: the way remembered on this device (read only
+  // once the form is open, as the dialog renders nothing before)
+  const [chosen, setChosen] = useState<LogWay | null>(null);
+  const fromCsv = !editing && (chosen ?? rememberedWay()) === 'csv';
   return (
     <Modal
       open={tradeForm.open}
@@ -176,10 +207,27 @@ export function TradeFormModal() {
       description={
         editing
           ? 'Changes are saved to your journal immediately.'
-          : 'Leave the exit price empty if the position is still open.'
+          : fromCsv
+            ? 'Drop in an export from your broker or trading platform, with one trade or many. Anything missing can be filled in afterwards.'
+            : 'Leave the exit price empty if the position is still open.'
       }
     >
-      <TradeForm key={tradeForm.nonce} trade={editing} defaults={tradeForm.defaults} onDone={closeTradeForm} />
+      {!editing && (
+        <SegmentedControl
+          options={LOG_WAYS}
+          value={fromCsv ? 'csv' : 'hand'}
+          onChange={(way) => {
+            setChosen(way);
+            rememberWay(way);
+          }}
+          className="mb-4"
+        />
+      )}
+      {/* kept while the file is chosen, so switching back finds the form as it was */}
+      <div hidden={fromCsv}>
+        <TradeForm key={tradeForm.nonce} trade={editing} defaults={tradeForm.defaults} onDone={closeTradeForm} />
+      </div>
+      {fromCsv && <ImportBody key={tradeForm.nonce} onClose={closeTradeForm} />}
     </Modal>
   );
 }

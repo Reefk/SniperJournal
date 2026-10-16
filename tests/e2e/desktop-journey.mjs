@@ -3,7 +3,8 @@
 // (with its safety copy), a save while another program holds the journal
 // file (Windows), a server restart, the keyboard inside dialogs, and chart
 // images going with a deleted account, a restore, an erase and a merge, and
-// reclaimed in Settings once nothing uses them. Synthetic data
+// reclaimed in Settings once nothing uses them, and trades logged from a CSV
+// file in the trade form, with the same file again adding nothing. Synthetic data
 // only, in a throwaway folder; your own data/ folder is never touched.
 //
 //   npm run build && npm run e2e
@@ -1174,6 +1175,78 @@ async function journey() {
     'with room again, the browser keeps its copy',
     await seen(`(localStorage.getItem('sniper-journal:v1') ?? '').includes('"symbol":"FULL4"')`, 'copy kept', 5000),
   );
+
+  // ---- 17. Log a trade from a CSV file, and the same file again adds nothing ----
+  const dayPath = join(work, 'day.csv');
+  writeFileSync(
+    dayPath,
+    [
+      'symbol,side,opened_at,closed_at,quantity,entry_price,exit_price,fees',
+      'CSVA,Buy,2026-03-09 09:30,2026-03-09 09:50,2,50,53,1',
+      'CSVB,Sell,2026-03-09 10:15,2026-03-09 10:40,1,80,82,0.5',
+    ].join('\n'),
+  );
+  const csvInput = '[data-modal-root] input[type=file][accept*=csv]';
+  const pressed = (label) => `$t('${label}', $modal())?.getAttribute('aria-pressed') === 'true'`;
+  const openLog = async () => {
+    await b.run(`$tStarts('Log trade').click(); true`);
+    await b.until(`!!$modal() && !!$t('By hand', $modal())`, 'log a trade');
+  };
+  await openLog();
+  check('Log a trade opens by hand the first time', await b.run(pressed('By hand')));
+  await b.run(`$t('From a CSV file', $modal()).click(); true`);
+  await b.until(`!!document.querySelector(${JSON.stringify(csvInput)})`, 'csv side');
+  await b.setFile(csvInput, dayPath);
+  await b.until(`/2\\s*ready to import/.test($modal().innerText)`, 'csv preview in the form');
+  await b.run(`$t('Import 2 trades', $modal()).click(); true`);
+  await b.until(`!$modal()`, 'imported from the form');
+  check(
+    'a file of two trades logged from the form: both in the journal, P&L as in the file',
+    await savedSoon((j) => {
+      const a = j.trades.find((t) => t.symbol === 'CSVA');
+      const s = j.trades.find((t) => t.symbol === 'CSVB');
+      return a?.side === 'LONG' && a.exitPrice === 53 && a.fees === 1 && s?.side === 'SHORT' && s.exitPrice === 82;
+    }),
+  );
+  await openLog();
+  check(
+    'the next time it opens on the file, as last used',
+    await b.run(`${pressed('From a CSV file')} && !!document.querySelector(${JSON.stringify(csvInput)})`),
+  );
+  await b.setFile(csvInput, dayPath);
+  await b.until(`$modal().innerText.includes('already in your journal')`, 'likely duplicates');
+  check(
+    'the same file again: both are likely duplicates, nothing to import',
+    await b.run(
+      `/0\\s*ready to import/.test($modal().innerText) && /2\\s*look like trades already in your journal/.test($modal().innerText) && $tStarts('Import trades', $modal()).disabled`,
+    ),
+  );
+  await b.run(
+    `[...$modal().querySelectorAll('label')].find((l) => l.textContent.includes('Import them anyway')).querySelector('input').click(); true`,
+  );
+  check(
+    'asked for, they can still be imported',
+    await seen(`$t('Import 2 trades', $modal())?.disabled === false`, 'import anyway', 5000),
+  );
+  await b.run(`$t('By hand', $modal()).click(); true`);
+  check(
+    'back to by hand: the form, with nothing imported',
+    await seen(
+      `!!$field('Symbol', $modal())?.offsetParent && !document.querySelector(${JSON.stringify(csvInput)})`,
+      'form',
+      5000,
+    ),
+  );
+  await b.run(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); true`);
+  await b.until(`!$modal()`, 'closed');
+  await openLog();
+  check('and it opens by hand again', await b.run(pressed('By hand')));
+  check(
+    'the journal still has each of the two once',
+    journalOnDisk().trades.filter((t) => t.symbol === 'CSVA' || t.symbol === 'CSVB').length === 2,
+  );
+  await b.run(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); true`);
+  await b.until(`!$modal()`, 'closed');
 
   await b.close();
   await stopServer();
