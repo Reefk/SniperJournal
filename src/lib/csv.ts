@@ -15,6 +15,7 @@ export { ROLE_LABELS, type Role } from './import/columns';
 export type { DateOrder } from './import/values';
 export type { ImportLayout, RowKind } from './import/layout';
 export { PLATFORMS, type Platform, type PlatformGroup } from './import/platforms';
+export { fileTooLarge, sheetTooLarge } from './import/size';
 export {
   WorkbookError,
   isOldExcel,

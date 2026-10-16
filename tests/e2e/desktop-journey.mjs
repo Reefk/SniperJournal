@@ -230,6 +230,9 @@ writeFileSync(
     },
   ]),
 );
+// 11 MB: past the 10 MB one import takes
+const bigPath = join(work, 'too-large.csv');
+writeFileSync(bigPath, `symbol,qty\n${'AAPL,1\n'.repeat((11 * 1024 * 1024 - 11) / 7)}`);
 const mapOdd = `$role('Ticker Name', 'symbol'); $role('Lots Traded', 'quantity'); $role('Buy Or Sell Flag', 'side'); $role('Fill', 'price'); $role('When', 'time'); true`;
 
 async function journey() {
@@ -347,6 +350,24 @@ async function journey() {
   check(
     'the other sheet, a summary, has no trades to read',
     await seen(`$modal().innerText.includes('No symbol column found')`, 'summary sheet', 5000),
+  );
+  await b.setFile('[data-modal-root] input[type=file]', bigPath);
+  check(
+    'a file over 10 MB is refused before it is read, with what to do instead',
+    await seen(
+      `$modal().innerText.includes('This file is 11.0 MB, more than one import takes (10 MB).') && !$modal().innerText.includes('ready to import')`,
+      'too large',
+      5000,
+    ),
+  );
+  await b.setFile('[data-modal-root] input[type=file]', ninjaPath);
+  check(
+    'the next file is read as usual',
+    await seen(
+      `/2\\s*ready to import/.test($modal().innerText) && !$modal().innerText.includes('more than one import takes')`,
+      'after too large',
+      5000,
+    ),
   );
   check(
     'the import window lists which file to export from each platform',

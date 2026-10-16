@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { importTradesFromCsv } from '@/lib/csv';
 import { isOldExcel, isZip, likeliestSheet, readWorkbook, sheetToCsv } from '@/lib/import/xlsx';
+import { UNPACKED_LIMIT } from '@/lib/import/size';
 import { netPnl } from '@/lib/trade-math';
 import { excelSerial, makeXlsx } from './xlsx-writer.mjs';
 
@@ -111,6 +112,20 @@ describe('reading a workbook', () => {
     );
     await expect(readWorkbook(new TextEncoder().encode('symbol,qty\nAAPL,1'))).rejects.toThrow(/not an Excel workbook/);
     await expect(readWorkbook(new Uint8Array([0x50, 0x4b, 3, 4, 0, 0, 0, 0]))).rejects.toThrow(/damaged/);
+  });
+
+  it('a part that unpacks past the limit is refused, whatever size the zip claims for it', async () => {
+    const rows = [['Symbol', 'Qty'], ...Array.from({ length: 2000 }, (_, i) => [`SYM${i}`, i + 1])];
+    const book = [{ name: 'Trades', rows }];
+    expect((await readWorkbook(makeXlsx(book), 1_000_000))[0].rows).toHaveLength(2001);
+    // the sheet's XML is over 100 KB: refused from what the zip says, then
+    // from what it really unpacks to when the zip claims 100 bytes a part
+    for (const options of [{}, { understate: true }]) {
+      await expect(readWorkbook(makeXlsx(book, options), 20_000), JSON.stringify(options)).rejects.toThrow(
+        'This workbook holds more than one import takes (10 MB). Export a shorter period from your platform, or split the file, and import each part.',
+      );
+    }
+    expect(UNPACKED_LIMIT).toBe(80 * 1024 * 1024);
   });
 });
 

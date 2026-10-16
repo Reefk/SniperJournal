@@ -1,5 +1,6 @@
 import { pad2 } from '../utils';
 import { planColumns } from './columns';
+import { UNPACKED_LIMIT, WORKBOOK_TOO_LARGE } from './size';
 import { findTable } from './table';
 
 /**
@@ -31,15 +32,34 @@ export class WorkbookError extends Error {}
 const u16 = (b: Uint8Array, at: number) => b[at] | (b[at + 1] << 8);
 const u32 = (b: Uint8Array, at: number) => (b[at] | (b[at + 1] << 8) | (b[at + 2] << 16) | (b[at + 3] << 24)) >>> 0;
 
-async function inflate(data: Uint8Array): Promise<Uint8Array> {
+/** a part unpacked, refused once it passes `limit` bytes, whatever size the zip claims for it */
+async function inflate(data: Uint8Array, limit: number): Promise<Uint8Array> {
   if (typeof DecompressionStream === 'undefined')
     throw new WorkbookError('This device cannot open Excel files. Save the sheet as CSV and import that.');
-  const stream = new Blob([data.slice()]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
-  return new Uint8Array(await new Response(stream).arrayBuffer());
+  const reader = new Blob([data.slice()]).stream().pipeThrough(new DecompressionStream('deflate-raw')).getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.length;
+    if (total > limit) {
+      await reader.cancel();
+      throw new WorkbookError(WORKBOOK_TOO_LARGE);
+    }
+    chunks.push(value);
+  }
+  const out = new Uint8Array(total);
+  let at = 0;
+  for (const chunk of chunks) {
+    out.set(chunk, at);
+    at += chunk.length;
+  }
+  return out;
 }
 
-/** the files in a zip, by name, each unpacked when it is asked for */
-function zipFiles(b: Uint8Array): Map<string, () => Promise<string>> {
+/** the files in a zip, by name, each unpacked when it is asked for, up to `limit` bytes */
+function zipFiles(b: Uint8Array, limit: number): Map<string, () => Promise<string>> {
   // the end of the central directory is in the last 22 bytes, or before a comment of up to 64 KB
   let end = -1;
   for (let i = b.length - 22; i >= Math.max(0, b.length - 22 - 0xffff); i--) {
@@ -56,15 +76,18 @@ function zipFiles(b: Uint8Array): Map<string, () => Promise<string>> {
     if (u32(b, at) !== 0x02014b50) throw new WorkbookError('This file is damaged, or not an Excel workbook.');
     const method = u16(b, at + 10);
     const size = u32(b, at + 20);
+    const unpacked = u32(b, at + 24);
     const nameLength = u16(b, at + 28);
     const local = u32(b, at + 42);
     const name = decoder.decode(b.subarray(at + 46, at + 46 + nameLength));
     at += 46 + nameLength + u16(b, at + 30) + u16(b, at + 32);
     files.set(name, async () => {
+      // what the zip says first, so an honest large part is refused before any of it is unpacked
+      if (unpacked > limit) throw new WorkbookError(WORKBOOK_TOO_LARGE);
       const start = local + 30 + u16(b, local + 26) + u16(b, local + 28);
       const data = b.subarray(start, start + size);
       if (method === 0) return decoder.decode(data);
-      if (method === 8) return decoder.decode(await inflate(data));
+      if (method === 8) return decoder.decode(await inflate(data, limit));
       throw new WorkbookError('This workbook is packed in a way that cannot be read. Save it as CSV and import that.');
     });
   }
@@ -149,12 +172,15 @@ const columnOf = (ref: string) => {
   return n - 1;
 };
 
-/** Every sheet of an .xlsx workbook, in order, as rows of text. */
-export async function readWorkbook(bytes: Uint8Array): Promise<WorkbookSheet[]> {
+/**
+ * Every sheet of an .xlsx workbook, in order, as rows of text. A part of it
+ * that unpacks to more than `limit` bytes is refused (see size.ts).
+ */
+export async function readWorkbook(bytes: Uint8Array, limit = UNPACKED_LIMIT): Promise<WorkbookSheet[]> {
   if (isOldExcel(bytes))
     throw new WorkbookError('This is an old Excel file (.xls). Open it in Excel and save it as .xlsx or CSV.');
   if (!isZip(bytes)) throw new WorkbookError('This file is not an Excel workbook.');
-  const files = zipFiles(bytes);
+  const files = zipFiles(bytes, limit);
   const read = (name: string) => files.get(name)?.() ?? Promise.resolve('');
   const workbook = await read('xl/workbook.xml');
   if (!workbook) throw new WorkbookError('This zip file is not an Excel workbook.');

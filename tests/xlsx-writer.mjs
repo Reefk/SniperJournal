@@ -12,7 +12,7 @@ const columnName = (i) => {
   return s;
 };
 
-function zip(files, compress) {
+function zip(files, compress, understate) {
   const parts = [];
   const central = [];
   let offset = 0;
@@ -28,7 +28,9 @@ function zip(files, compress) {
     local.writeUInt16LE(method, 8);
     local.writeUInt32LE(crc, 14);
     local.writeUInt32LE(body.length, 18);
-    local.writeUInt32LE(data.length, 22);
+    // `understate`: a damaged or hostile zip claiming its parts unpack to less than they do
+    const claimed = understate ? Math.min(data.length, 100) : data.length;
+    local.writeUInt32LE(claimed, 22);
     local.writeUInt16LE(fileName.length, 26);
     const entry = Buffer.alloc(46);
     entry.writeUInt32LE(0x02014b50, 0);
@@ -37,7 +39,7 @@ function zip(files, compress) {
     entry.writeUInt16LE(method, 10);
     entry.writeUInt32LE(crc, 16);
     entry.writeUInt32LE(body.length, 20);
-    entry.writeUInt32LE(data.length, 24);
+    entry.writeUInt32LE(claimed, 24);
     entry.writeUInt16LE(fileName.length, 28);
     entry.writeUInt32LE(offset, 42);
     parts.push(local, fileName, body);
@@ -61,10 +63,13 @@ function zip(files, compress) {
  * format: a built-in id (22 is m/d/yyyy h:mm) or a format code.
  *
  * @param {Array<{ name: string, rows: Array<Array<string | number | boolean | null | { serial: number, format: number | string }>> }>} sheets
- * @param {{ compress?: boolean, inlineStrings?: boolean, date1904?: boolean }} [options]
+ * @param {{ compress?: boolean, inlineStrings?: boolean, date1904?: boolean, understate?: boolean }} [options]
  * @returns {Uint8Array}
  */
-export function makeXlsx(sheets, { compress = true, inlineStrings = false, date1904 = false } = {}) {
+export function makeXlsx(
+  sheets,
+  { compress = true, inlineStrings = false, date1904 = false, understate = false } = {},
+) {
   const strings = [];
   const stringIndex = new Map();
   const customFormats = [];
@@ -142,7 +147,7 @@ export function makeXlsx(sheets, { compress = true, inlineStrings = false, date1
     ],
     ...sheetXml.map((xml, i) => [`xl/worksheets/sheet${i + 1}.xml`, xml]),
   ];
-  return new Uint8Array(zip(files, compress));
+  return new Uint8Array(zip(files, compress, understate));
 }
 
 /** the Excel date number of a moment given as numbers, in the 1900 date system */

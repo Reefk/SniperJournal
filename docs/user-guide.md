@@ -186,6 +186,10 @@ for every row. Rows that are missing a date, a quantity or an entry price still
 import; they are marked **needs details**, kept out of every statistic, and
 listed at the top of the Trades page so you can fill the gaps by hand.
 
+**One import takes a file of up to 10 MB**, about 60,000 trades or 100,000
+fills. For a bigger one, export a shorter period, or split the file, and import
+each part.
+
 **The exports of 30 platforms work as they are** (see
 [Which file to export](#which-file-to-export) below), and the preview says
 **Recognised:** and the platform when it knows the file. Most other brokers'

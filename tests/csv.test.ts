@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { importTradesFromCsv, parseCsv, tradesToCsv } from '@/lib/csv';
+import { fileTooLarge, importTradesFromCsv, parseCsv, sheetTooLarge, tradesToCsv } from '@/lib/csv';
+import { IMPORT_LIMIT } from '@/lib/import/size';
 import { grossPnl, isClosed, netPnl } from '@/lib/trade-math';
 import type { Account, Setup, Trade } from '@/lib/types';
 import { trade } from './helpers';
@@ -54,6 +55,21 @@ describe('import: structure of the file', () => {
   it('an empty file, or headers with no rows, is reported as having no data', () => {
     expect(importTradesFromCsv('', ctx()).errors).toEqual(['The file has no data rows.']);
     expect(importTradesFromCsv('symbol,side\n', ctx()).errors).toEqual(['The file has no data rows.']);
+  });
+
+  // roadmap 2.3: 10 MB is about 60,000 trades or 100,000 fills, read in one to two seconds on a PC
+  it('a file or a sheet over 10 MB is refused with what to do instead; one at the limit is read', () => {
+    const split = 'Export a shorter period from your platform, or split the file, and import each part.';
+    expect(IMPORT_LIMIT).toBe(10 * 1024 * 1024);
+    expect(fileTooLarge(IMPORT_LIMIT)).toBeNull();
+    expect(fileTooLarge(2_000_000)).toBeNull();
+    // rounded up, so a file just past the limit never reads as "10.0 MB"
+    expect(fileTooLarge(IMPORT_LIMIT + 1)).toBe(`This file is 10.1 MB, more than one import takes (10 MB). ${split}`);
+    expect(fileTooLarge(3 * 1024 ** 3)).toBe(`This file is 3.00 GB, more than one import takes (10 MB). ${split}`);
+    expect(sheetTooLarge('x'.repeat(IMPORT_LIMIT))).toBeNull();
+    expect(sheetTooLarge('x'.repeat(15 * 1024 * 1024))).toBe(
+      `This sheet holds 15.0 MB of data, more than one import takes (10 MB). ${split}`,
+    );
   });
 
   it('without a symbol column nothing is imported, and the columns found are listed', () => {

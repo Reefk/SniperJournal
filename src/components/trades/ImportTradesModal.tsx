@@ -10,12 +10,14 @@ import {
   WorkbookError,
   csvTemplate,
   describeGaps,
+  fileTooLarge,
   importTradesFromCsv,
   isOldExcel,
   isZip,
   likeliestSheet,
   readWorkbook,
   sheetToCsv,
+  sheetTooLarge,
   type DateOrder,
   type PlatformGroup,
   type Role,
@@ -155,10 +157,27 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
     setText(next);
   };
 
+  /** a workbook's sheet to read, unless it holds more than one import takes */
+  const openSheet = (book: WorkbookSheet[], index: number) => {
+    setSheetIndex(index);
+    const csv = sheetToCsv(book[index]);
+    const tooLarge = sheetTooLarge(csv);
+    setFileError(tooLarge ?? '');
+    startOver(tooLarge ? '' : csv);
+  };
+
   const readFile = async (file: File | undefined) => {
     if (!file) return;
     setFileName(file.name);
     setFileError('');
+    // refused before any of it is read
+    const tooLarge = fileTooLarge(file.size);
+    if (tooLarge) {
+      setSheets(null);
+      startOver('');
+      setFileError(tooLarge);
+      return;
+    }
     const bytes = new Uint8Array(await file.arrayBuffer());
     if (!isZip(bytes) && !isOldExcel(bytes)) {
       setSheets(null);
@@ -167,10 +186,8 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
     }
     try {
       const book = await readWorkbook(bytes);
-      const chosen = likeliestSheet(book);
       setSheets(book);
-      setSheetIndex(chosen);
-      startOver(sheetToCsv(book[chosen]));
+      openSheet(book, likeliestSheet(book));
     } catch (e) {
       setSheets(null);
       startOver('');
@@ -183,9 +200,7 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
   };
 
   const chooseSheet = (index: number) => {
-    if (!sheets) return;
-    setSheetIndex(index);
-    startOver(sheetToCsv(sheets[index]));
+    if (sheets) openSheet(sheets, index);
   };
 
   const setRole = (index: number, role: Role | '') =>
