@@ -230,7 +230,9 @@ can check it.
 
 Times that carry a time zone (`Z`, `+02:00`, or a column marked `UTC`, such as
 `Date(UTC)` or `DateUtc`) are converted to this device's local time; times
-without one are kept as written.
+without one are kept as written, and the preview says so. If your platform
+writes another zone's time (the exchange's, say), those trades are off by the
+difference.
 
 **Paired buy/sell exports** — the format Tradovate and similar futures platforms
 produce, with `buyPrice`, `sellPrice`, `boughtTimestamp` and `soldTimestamp` and

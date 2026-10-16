@@ -283,7 +283,10 @@ describe('import: duplicates and partial fills', () => {
     expect(again.trades).toHaveLength(0);
     expect(again.likelyDuplicates.map((t) => t.symbol)).toEqual(['AAPL', 'MSFT']);
     expect(again.duplicates).toBe(0);
-    expect([...again.errors, ...again.notices]).toEqual([]);
+    expect(again.errors).toEqual([]);
+    expect(again.notices).toEqual([
+      "Times in this file carry no time zone, so they were taken as written, in this device's local time.",
+    ]);
   });
 
   it("a daily export overlapping yesterday's adds only the new day's trades", () => {

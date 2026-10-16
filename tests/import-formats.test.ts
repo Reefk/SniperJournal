@@ -448,6 +448,17 @@ describe('reading single values', () => {
     expect(parseMoment('2026-03-02 14:30:00')?.value).toBe('2026-03-02T14:30');
   });
 
+  it('the preview says when times carry no zone and were taken as local; dates alone, or zoned times, are not', () => {
+    const noZone = /carry no time zone, so they were taken as written/;
+    const notices = (csv: string) => read(csv).notices.join(' ');
+    expect(notices('symbol,side,date,time,qty,entry\nAAPL,long,2026-03-02,10:05,1,100')).toMatch(noZone);
+    expect(notices('symbol,side,date,qty,entry\nAAPL,long,2026-03-02,1,100')).not.toMatch(/time zone/);
+    expect(notices('symbol,side,opened_at,qty,entry\nAAPL,long,2026-03-02T15:05:12Z,1,100')).not.toMatch(noZone);
+    expect(parseMoment('2026-03-02')).toMatchObject({ timed: false, zoned: false });
+    expect(parseMoment('20260302;101500')).toMatchObject({ timed: true, zoned: false });
+    expect(parseMoment('1772456700')).toMatchObject({ timed: true, zoned: true });
+  });
+
   it('a futures point value comes only from a full contract code, never from a bare stock ticker', () => {
     expect(futuresPointValue('ESH6')?.value).toBe(50);
     expect(futuresPointValue('/MESZ25:XCME')?.value).toBe(5);

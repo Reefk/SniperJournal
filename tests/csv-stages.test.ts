@@ -103,13 +103,16 @@ describe('stage 2: reading the values of a row', () => {
     expect(r.textCell(r.sheet.table.data[0], 'notes')).toBe('=HYPERLINK("x")');
   });
 
-  it('a moment from one column, or a date column and a time column; a time with a zone is counted', () => {
+  it('a moment from one column, or a date column and a time column; times with a zone and without are counted', () => {
     const r = readerOf('symbol,date,time,exit time\nAAPL,2026-03-02,10:05,2026-03-02T15:00:00Z');
     const row = r.sheet.table.data[0];
     expect(r.moment(row, 'time', 'date')?.value).toBe('2026-03-02T10:05');
-    expect(r.findings.zoned).toBe(0);
+    expect(r.findings).toMatchObject({ zoned: 0, unzoned: 1 });
     expect(r.moment(row, 'closed_at', 'closed_date')?.value).toBe('2026-03-02T15:00');
-    expect(r.findings.zoned).toBe(1);
+    expect(r.findings).toMatchObject({ zoned: 1, unzoned: 1 });
+    // a date with no time of day has no zone to get wrong
+    expect(r.moment(row, 'date', 'date')?.value).toBe('2026-03-02T00:00');
+    expect(r.findings).toMatchObject({ zoned: 1, unzoned: 1 });
   });
 
   it('every fee column adds up, each read with its own sign; a fee in another currency is left out and noted', () => {
@@ -423,6 +426,7 @@ describe('stage 5: the messages', () => {
     inferred: new Map(),
     foreignFees: new Set(),
     zoned: 0,
+    unzoned: 0,
     duplicates: 0,
     ...extra,
   });
@@ -475,6 +479,18 @@ describe('stage 5: the messages', () => {
     expect(
       collectMessages(findings(), table({ statement: true, preamble: 3 }), { errors: [], notices: [] }).notices,
     ).toEqual(['Read the Trades section of this Interactive Brokers statement.']);
+  });
+
+  it('times with no time zone are said to be taken as local; with some zoned, both are said in one notice', () => {
+    const notices = (zoned: number, unzoned: number) =>
+      collectMessages(findings({ zoned, unzoned }), table(), { errors: [], notices: [] }).notices;
+    expect(notices(0, 3)).toEqual([
+      "Times in this file carry no time zone, so they were taken as written, in this device's local time.",
+    ]);
+    expect(notices(2, 3)).toEqual([
+      "Some times in this file carry a time zone, so they were converted to this device's local time; the others carry none and were taken as written.",
+    ]);
+    expect(notices(0, 0)).toEqual([]);
   });
 
   it('nothing to say when nothing turned up, and what the rows said is not changed', () => {

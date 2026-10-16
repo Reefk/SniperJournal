@@ -67,6 +67,8 @@ export interface Moment {
   sortKey: string;
   /** the file said which time zone this was in, and it was converted to local time */
   zoned: boolean;
+  /** it gave a time of day, not only a date */
+  timed: boolean;
 }
 
 const TIME = String.raw`(\d{1,2}):(\d{2})(?::(\d{2}))?(?:[.,]\d+)?\s*(AM|PM|am|pm)?`;
@@ -107,7 +109,7 @@ export function zoneOffset(zone: string | undefined): number | null {
 function local(d: Date, zoned: boolean): Moment {
   const date = `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
   const hm = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-  return { value: `${date}T${hm}`, sortKey: `${date}T${hm}:${pad2(d.getSeconds())}`, zoned };
+  return { value: `${date}T${hm}`, sortKey: `${date}T${hm}:${pad2(d.getSeconds())}`, zoned, timed: true };
 }
 
 /**
@@ -138,12 +140,13 @@ function fromParts(
   const daysInMonth = new Date(year, month, 0).getDate();
   if (month < 1 || month > 12 || day < 1 || day > daysInMonth) return null;
   if (hour > 23 || minute > 59 || second > 59) return null;
+  const timed = hourRaw != null;
   if (offset != null) {
-    return local(new Date(Date.UTC(year, month - 1, day, hour, minute, second) - offset * 60_000), true);
+    return { ...local(new Date(Date.UTC(year, month - 1, day, hour, minute, second) - offset * 60_000), true), timed };
   }
   const date = `${year}-${pad2(month)}-${pad2(day)}`;
   const hm = `${pad2(hour)}:${pad2(minute)}`;
-  return { value: `${date}T${hm}`, sortKey: `${date}T${hm}:${pad2(second)}`, zoned: false };
+  return { value: `${date}T${hm}`, sortKey: `${date}T${hm}:${pad2(second)}`, zoned: false, timed };
 }
 
 /**

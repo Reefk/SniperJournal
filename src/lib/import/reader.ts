@@ -43,6 +43,8 @@ export interface Findings {
   foreignFees: Set<string>;
   /** times read with a time zone, and converted to this device's */
   zoned: number;
+  /** times of day read with no time zone, and kept as written */
+  unzoned: number;
   /** rows already in the journal, or in the file twice */
   duplicates: number;
 }
@@ -97,6 +99,7 @@ export function createReader(sheet: Sheet, target: ImportTarget): Reader {
     inferred: new Map(),
     foreignFees: new Set(),
     zoned: 0,
+    unzoned: 0,
     duplicates: 0,
   };
 
@@ -115,6 +118,7 @@ export function createReader(sheet: Sheet, target: ImportTarget): Reader {
         ? parseMoment(`${day} ${asClock(when)}`, order, offset)
         : ((when ? parseMoment(when, order, offset) : null) ?? (day ? parseMoment(day, order, offset) : null));
     if (m?.zoned) findings.zoned++;
+    else if (m?.timed) findings.unzoned++;
     return m;
   };
 

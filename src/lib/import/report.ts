@@ -61,8 +61,16 @@ export function collectMessages(
     notices.push(
       `${table.skipped} total, summary or repeated header ${table.skipped === 1 ? 'line was' : 'lines were'} left out.`,
     );
-  if (findings.zoned)
+  // a time with no zone is taken as this device's: off by the difference if
+  // the platform wrote another zone's (the exchange's, say), so it is said
+  if (findings.zoned && findings.unzoned)
+    notices.push(
+      "Some times in this file carry a time zone, so they were converted to this device's local time; the others carry none and were taken as written.",
+    );
+  else if (findings.zoned)
     notices.push("Times in this file carry a time zone, so they were converted to this device's local time.");
+  else if (findings.unzoned)
+    notices.push("Times in this file carry no time zone, so they were taken as written, in this device's local time.");
 
   return { errors, notices };
 }
