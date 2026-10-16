@@ -7,12 +7,14 @@ import { combinePartials, tradesFromRows } from './import/rows';
 import { tradesFromFills } from './import/positions';
 import { collectMessages } from './import/report';
 import { splitLikelyDuplicates } from './import/likely';
+import { recognisePlatform } from './import/platforms';
 import { formulaSafe } from './import/values';
 
 export { parseCsv } from './import/table';
 export { ROLE_LABELS, type Role } from './import/columns';
 export type { DateOrder } from './import/values';
 export type { ImportLayout, RowKind } from './import/layout';
+export { PLATFORMS, type Platform, type PlatformGroup } from './import/platforms';
 
 export const CSV_COLUMNS = [
   'symbol',
@@ -109,6 +111,8 @@ export interface ImportResult {
   recognised: string[];
   ignored: string[];
   layout: ImportLayout | null;
+  /** the platform and export the file's columns say it came from (import/platforms.ts), if a known one */
+  platform: { name: string; file: string } | null;
 }
 
 /** a result with nothing imported, and why */
@@ -126,6 +130,7 @@ function nothingImported(why: Partial<ImportResult>): ImportResult {
     recognised: [],
     ignored: [],
     layout: null,
+    platform: null,
     ...why,
   };
 }
@@ -151,12 +156,14 @@ function nothingImported(why: Partial<ImportResult>): ImportResult {
 export function importTradesFromCsv(text: string, ctx: ImportOptions): ImportResult {
   const sheet = detectLayout(text, ctx);
   if (!sheet) return nothingImported({ errors: ['The file has no data rows.'] });
+  const platform = recognisePlatform(sheet.table.header, sheet.table.statement);
   const noSymbol = missingSymbol(sheet);
   if (noSymbol) {
     return nothingImported({
       recognised: sheet.recognised,
       ignored: sheet.ignored,
       layout: sheet.layout,
+      platform,
       errors: [noSymbol],
     });
   }
@@ -188,6 +195,7 @@ export function importTradesFromCsv(text: string, ctx: ImportOptions): ImportRes
     recognised: sheet.recognised,
     ignored: sheet.ignored,
     layout: sheet.layout,
+    platform,
   };
 }
 

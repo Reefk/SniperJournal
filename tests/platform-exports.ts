@@ -285,8 +285,8 @@ export const PLATFORM_EXPORTS: PlatformExport[] = [
 
   // ---- forex and CFDs -------------------------------------------------------
   {
-    platform: 'MetaTrader 4',
-    file: 'Account history',
+    platform: 'MetaTrader 4 and 5',
+    file: 'MetaTrader 4 account history',
     trades: [['EURUSD', 'LONG', 0.1, 1.085, 1.0875, '2026-03-02T09:30', '2026-03-02T11:15', 100000, 24.3]],
     csv: lines(
       'Ticket,Open Time,Type,Size,Item,Price,S / L,T / P,Close Time,Price,Commission,Taxes,Swap,Profit',

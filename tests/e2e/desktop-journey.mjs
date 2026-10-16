@@ -192,6 +192,18 @@ writeFileSync(
     'AMD,10,S,155,2026-03-06 11:30',
   ].join('\n'),
 );
+// a platform's own export, read as it comes: NinjaTrader 8 executions, 4 fills, 2 trades
+const ninjaPath = join(work, 'ninjatrader-executions.csv');
+writeFileSync(
+  ninjaPath,
+  [
+    'Instrument,Action,Quantity,Price,Time,ID,E/X,Position,Order ID,Name,Commission,Rate,Account,Connection',
+    'MNQ 03-26,Buy,2,21000.25,3/9/2026 9:31:05 AM,e1,Entry,2 L,o1,Entry,$0.62,1,Sim101,Playback',
+    'MNQ 03-26,Sell,2,21010.75,3/9/2026 9:45:10 AM,e2,Exit,-,o2,Exit,$0.62,1,Sim101,Playback',
+    'MNQ 03-26,Sell,1,21020.00,3/9/2026 10:02:00 AM,e3,Entry,1 S,o3,Entry,$0.31,1,Sim101,Playback',
+    'MNQ 03-26,Buy,1,21025.50,3/9/2026 10:10:30 AM,e4,Exit,-,o4,Exit,$0.31,1,Sim101,Playback',
+  ].join('\n'),
+);
 const mapOdd = `$role('Ticker Name', 'symbol'); $role('Lots Traded', 'quantity'); $role('Buy Or Sell Flag', 'side'); $role('Fill', 'price'); $role('When', 'time'); true`;
 
 async function journey() {
@@ -286,6 +298,21 @@ async function journey() {
   check(
     'columns set by hand read the file (2 fills, 1 trade)',
     await seen(`/1\\s*ready to import/.test($modal().innerText)`, 'mapped preview', 5000),
+  );
+  await b.setFile('[data-modal-root] input[type=file]', ninjaPath);
+  check(
+    "a platform's own export is read as it comes, and named (NinjaTrader 8 executions: 2 trades)",
+    await seen(
+      `/2\\s*ready to import/.test($modal().innerText) && $modal().innerText.includes('Recognised: NinjaTrader 8, executions')`,
+      'recognised preview',
+      5000,
+    ),
+  );
+  check(
+    'the import window lists which file to export from each platform',
+    await b.run(
+      `[...$modal().querySelectorAll('summary')].some((s) => s.textContent.includes('Which file to export from your platform'))`,
+    ),
   );
   await b.run(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); true`);
   await b.until(`!$modal()`, 'import dialog closed');

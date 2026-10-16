@@ -4,7 +4,16 @@ import { useEffect, useMemo, useState } from 'react';
 import { CircleAlert, CircleCheck, CopyCheck, FileSpreadsheet, Info, Merge, TriangleAlert, Upload } from 'lucide-react';
 import { useJournal } from '@/store/JournalProvider';
 import { useUI } from '@/store/UIProvider';
-import { ROLE_LABELS, csvTemplate, describeGaps, importTradesFromCsv, type DateOrder, type Role } from '@/lib/csv';
+import {
+  PLATFORMS,
+  ROLE_LABELS,
+  csvTemplate,
+  describeGaps,
+  importTradesFromCsv,
+  type DateOrder,
+  type PlatformGroup,
+  type Role,
+} from '@/lib/csv';
 import { formatPrice, formatShortDate, formatTime } from '@/lib/format';
 import { isClosed, netPnl } from '@/lib/trade-math';
 import { cn, downloadFile } from '@/lib/utils';
@@ -38,6 +47,11 @@ interface Choices {
 }
 const AUTOMATIC: Choices = { mapping: {}, defaultSymbol: '' };
 const tradesWord = (n: number) => `${n} ${n === 1 ? 'trade' : 'trades'}`;
+/** the platforms whose exports import as they come, grouped for the list in the import window */
+const PLATFORM_GROUPS = [...new Set(PLATFORMS.map((p) => p.group))].map((group: PlatformGroup) => ({
+  group,
+  platforms: PLATFORMS.filter((p) => p.group === group),
+}));
 const isAutomatic = (c: Choices) => !Object.keys(c.mapping).length && !c.rowKind && !c.dateOrder && !c.defaultSymbol;
 
 /**
@@ -176,8 +190,8 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
           )}
         </span>
         <span className="mt-1 text-xs text-faint">
-          Works with exports from most brokers and platforms, whole trades or individual fills, as well as the template
-          above.
+          Works with the exports of the {PLATFORMS.length} platforms listed below, most other brokers&apos; files, whole
+          trades or individual fills, and the template above.
         </span>
         <input
           type="file"
@@ -190,6 +204,12 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
       {result && (
         <>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-lg border border-line bg-app px-4 py-3 text-sm">
+            {result.platform && (
+              <span className="flex items-center gap-2 text-muted">
+                <FileSpreadsheet className="size-4 text-accent" />
+                Recognised: {result.platform.name}, {result.platform.file}
+              </span>
+            )}
             <span className="flex items-center gap-2 text-fg">
               <CircleCheck className="size-4 text-profit" />
               <span className="num font-semibold">{toImport.length}</span> ready to import
@@ -464,6 +484,30 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
           )}
         </>
       )}
+
+      <details className="text-xs text-muted">
+        <summary className="cursor-pointer select-none text-sm text-muted hover:text-fg">
+          Which file to export from your platform
+        </summary>
+        <div className="mt-2 space-y-3 leading-relaxed">
+          <p>
+            These platforms&apos; exports import as they come, and the preview names the platform when it recognises the
+            file. Any other CSV with a symbol column works too: check the columns in the preview.
+          </p>
+          {PLATFORM_GROUPS.map(({ group, platforms }) => (
+            <div key={group}>
+              <h3 className="text-[11px] font-semibold uppercase tracking-wide text-faint">{group}</h3>
+              <ul className="mt-1 space-y-1">
+                {platforms.map((p) => (
+                  <li key={p.name}>
+                    <span className="text-fg">{p.name}</span>: {p.how}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </details>
 
       <details className="text-xs text-muted">
         <summary className="cursor-pointer select-none text-sm text-muted hover:text-fg">
