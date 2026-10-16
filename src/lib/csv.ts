@@ -6,6 +6,7 @@ import { createReader, type ImportTarget } from './import/reader';
 import { combinePartials, tradesFromRows } from './import/rows';
 import { tradesFromFills } from './import/positions';
 import { collectMessages } from './import/report';
+import { splitLikelyDuplicates } from './import/likely';
 import { formulaSafe } from './import/values';
 
 export { parseCsv } from './import/table';
@@ -86,6 +87,12 @@ export interface ImportOptions extends ImportTarget, LayoutChoices {
 
 export interface ImportResult {
   trades: Trade[];
+  /**
+   * left out of `trades`: no broker id says so, but the account, symbol, side,
+   * entry time and size match a trade already in the journal (import/likely.ts)
+   */
+  likelyDuplicates: Trade[];
+  /** the setups the file names that the journal lacks; some may be used only by `likelyDuplicates` */
   newSetups: Setup[];
   /** things to check: rows skipped, values that could not be read */
   errors: string[];
@@ -108,6 +115,7 @@ export interface ImportResult {
 function nothingImported(why: Partial<ImportResult>): ImportResult {
   return {
     trades: [],
+    likelyDuplicates: [],
     newSetups: [],
     errors: [],
     notices: [],
@@ -138,6 +146,7 @@ function nothingImported(why: Partial<ImportResult>): ImportResult {
  *                 scaled-out positions put back together
  *   positions.ts  a row per fill: read, put into positions, each a trade
  *   report.ts     what to check, and how the file was read
+ *   likely.ts     trades that look like ones already in the journal, left out
  */
 export function importTradesFromCsv(text: string, ctx: ImportOptions): ImportResult {
   const sheet = detectLayout(text, ctx);
@@ -155,13 +164,20 @@ export function importTradesFromCsv(text: string, ctx: ImportOptions): ImportRes
   const reader = createReader(sheet, ctx);
   const read = sheet.rowKind === 'fills' ? tradesFromFills(reader) : tradesFromRows(reader);
   const { errors, notices } = collectMessages(reader.findings, sheet.table, read);
-  const { trades, combined } =
+  const { trades: all, combined } =
     ctx.combinePartials === false || !read.openingFill
       ? { trades: read.trades, combined: 0 }
       : combinePartials(read.trades, read.openingFill);
+  const { fresh: trades, likely, closesOpen } = splitLikelyDuplicates(all, ctx.existing);
+  if (closesOpen) {
+    errors.push(
+      `${closesOpen} ${closesOpen === 1 ? 'trade closes a position' : 'trades close positions'} your journal still has as open. Both are kept: delete the open ${closesOpen === 1 ? 'copy' : 'copies'} once you have checked.`,
+    );
+  }
 
   return {
     trades,
+    likelyDuplicates: likely,
     newSetups: reader.newSetups,
     errors,
     notices,

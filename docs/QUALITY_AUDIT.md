@@ -173,7 +173,7 @@ No Critical findings were made.
 | SJ-24 | Low    | Security                 | Android built an image URL from an unsafe screenshot name                                                         | Fixed and Verified                                                                                                                    |
 | SJ-25 | Low    | Security                 | Desktop pages could be framed by any site (clickjacking)                                                          | Fixed and Verified                                                                                                                    |
 | SJ-26 | Info   | Docs                     | README said the calculations were tested; no tests existed                                                        | Fixed and Verified                                                                                                                    |
-| SJ-27 | Medium | CSV                      | Re-importing a file without trade IDs duplicates every trade                                                      | Confirmed                                                                                                                             |
+| SJ-27 | Medium | CSV                      | Re-importing a file without trade IDs duplicates every trade                                                      | Fixed (2026-10-16)                                                                                                                    |
 | SJ-28 | Medium | CSV                      | Separate Date and Time columns: the time is dropped (00:00)                                                       | Fixed and Verified (2026-10-09)                                                                                                       |
 | SJ-29 | Medium | Accessibility            | Several text colours below WCAG AA contrast                                                                       | Fixed and Verified (2026-10-12)                                                                                                       |
 | SJ-30 | Medium | Process                  | No CI, no lint; tests run only when someone remembers                                                             | Fixed and Verified (2026-10-12)                                                                                                       |
@@ -545,7 +545,7 @@ No Critical findings were made.
 - **Evidence:** A reproduction run during the audit (a throwaway test, removed afterwards).
 - **Impact:** Doubled P&L and statistics if someone imports a monthly export twice. The preview count is the only clue.
 - **Recommended fix:** Fingerprint symbol, side, opened/closed time, quantity and prices. Show "possible duplicates" in the preview, skipped by default with an option to import them anyway. Identical trades can be legitimate, so don't drop them silently.
-- **Status:** Confirmed.
+- **Status:** Fixed 2026-10-16 (`src/lib/import/likely.ts`): the same account, symbol, side, entry time (to the minute) and size as a trade in the journal is left out, listed in the preview with **Import them anyway**. Trades that both carry broker ids are still told apart by the ids; test data matches nothing.
 
 ### SJ-28: Separate Date and Time columns lose the time
 

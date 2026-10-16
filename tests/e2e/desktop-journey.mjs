@@ -552,10 +552,12 @@ async function journey() {
   await b.run(`$tStarts('Import 1 trade', $modal()).click(); true`);
   await b.until(`!$modal()`, 'imported');
   await importOdd();
+  // the same file, so its one trade is now in the journal: read the same way,
+  // it is recognised (before 2026-10-16 it would have been added again)
   check(
     'the next file with the same columns is read the same way, without asking',
     await seen(
-      `/1\\s*ready to import/.test($modal().innerText) && $modal().innerText.includes('as you set them for this layout last time')`,
+      `/1\\s*looks like a trade already in your journal/.test($modal().innerText) && $modal().innerText.includes('as you set them for this layout last time')`,
       'remembered layout',
       5000,
     ),

@@ -262,17 +262,51 @@ describe('import: duplicates and partial fills', () => {
     expect(r.trades).toHaveLength(2);
   });
 
-  // Under review (SJ-27): with no ids, nothing tells a trade already imported
-  // from a new one. Planned: warn about likely duplicates (same account,
-  // symbol, side, entry time and quantity) without blocking them.
-  it('current behaviour, under review: a file without trade ids imported again adds every trade again, without a word', () => {
+  // SJ-27: with no ids, a trade imported before is told by its fields (same
+  // account, symbol, side, entry time and size) and left out, unless asked for
+  // (import/likely.ts). Until 2026-10-16 every trade was added again, without a word.
+  it('a file without trade ids imported again adds nothing: every trade is a likely duplicate', () => {
     const csv =
       'symbol,side,opened_at,qty,entry,exit\nAAPL,long,2026-03-02 10:00,1,100,101\nMSFT,short,2026-03-02 11:00,2,50,49';
     const first = importTradesFromCsv(csv, ctx());
     const again = importTradesFromCsv(csv, ctx({ existing: first.trades }));
-    expect(again.trades).toHaveLength(2);
+    expect(again.trades).toHaveLength(0);
+    expect(again.likelyDuplicates.map((t) => t.symbol)).toEqual(['AAPL', 'MSFT']);
     expect(again.duplicates).toBe(0);
     expect([...again.errors, ...again.notices]).toEqual([]);
+  });
+
+  it("a daily export overlapping yesterday's adds only the new day's trades", () => {
+    const head = 'symbol,side,opened_at,closed_at,qty,entry,exit';
+    const monday = 'AAPL,long,2026-03-02 10:00,2026-03-02 10:30,1,100,101';
+    const tuesday = ['MSFT,short,2026-03-03 11:00,2026-03-03 11:20,2,50,49', 'NVDA,long,2026-03-03 14:05,,3,120,'];
+    const first = importTradesFromCsv([head, monday].join('\n'), ctx());
+    const again = importTradesFromCsv([head, monday, ...tuesday].join('\n'), ctx({ existing: first.trades }));
+    expect(again.trades.map((t) => t.symbol)).toEqual(['MSFT', 'NVDA']);
+    expect(again.likelyDuplicates.map((t) => t.symbol)).toEqual(['AAPL']);
+  });
+
+  it('a trade first logged by hand is recognised in the broker file, ids or not', () => {
+    const byHand = trade({ symbol: 'AAPL', openedAt: '2026-03-02T10:00', quantity: 10 });
+    const r = importTradesFromCsv(
+      'symbol,side,opened_at,qty,entry,exit,id\nAAPL,long,2026-03-02 10:00:41,10,100,101,77',
+      ctx({ existing: [byHand] }),
+    );
+    expect(r.trades).toHaveLength(0);
+    expect(r.likelyDuplicates).toHaveLength(1);
+  });
+
+  it('a trade the journal has open, which the file closes, is imported and flagged', () => {
+    const open = trade({ symbol: 'AAPL', exitPrice: null, closedAt: undefined });
+    const r = importTradesFromCsv(
+      'symbol,side,opened_at,closed_at,qty,entry,exit\nAAPL,long,2026-03-02 10:00,2026-03-02 11:00,1,100,104',
+      ctx({ existing: [open] }),
+    );
+    expect(r.trades).toHaveLength(1);
+    expect(r.likelyDuplicates).toHaveLength(0);
+    expect(r.errors).toEqual([
+      '1 trade closes a position your journal still has as open. Both are kept: delete the open copy once you have checked.',
+    ]);
   });
 
   it('a repeated id inside one file is imported once', () => {

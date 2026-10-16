@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { CircleAlert, CircleCheck, FileSpreadsheet, Info, Merge, TriangleAlert, Upload } from 'lucide-react';
+import { CircleAlert, CircleCheck, CopyCheck, FileSpreadsheet, Info, Merge, TriangleAlert, Upload } from 'lucide-react';
 import { useJournal } from '@/store/JournalProvider';
 import { useUI } from '@/store/UIProvider';
 import { ROLE_LABELS, csvTemplate, describeGaps, importTradesFromCsv, type DateOrder, type Role } from '@/lib/csv';
@@ -62,7 +62,8 @@ function rememberChoices(signature: string, choices: Choices) {
   }
 }
 
-function ImportBody({ onClose }: { onClose: () => void }) {
+/** the import itself, also the "From a CSV file" side of Log a trade */
+export function ImportBody({ onClose }: { onClose: () => void }) {
   const { data, actions } = useJournal();
   const { toast } = useUI();
   const [accountId, setAccountId] = useState(
@@ -72,6 +73,7 @@ function ImportBody({ onClose }: { onClose: () => void }) {
   const [fileName, setFileName] = useState('');
   const [dragging, setDragging] = useState(false);
   const [combinePartials, setCombinePartials] = useState(true);
+  const [importLikely, setImportLikely] = useState(false);
   const [choices, setChoices] = useState<Choices>(AUTOMATIC);
   /** the layout whose remembered choices have been looked up */
   const [lookedUp, setLookedUp] = useState('');
@@ -114,6 +116,7 @@ function ImportBody({ onClose }: { onClose: () => void }) {
     setLookedUp('');
     setRestored(false);
     setShowColumns(false);
+    setImportLikely(false);
     setText(await file.text());
   };
 
@@ -122,7 +125,13 @@ function ImportBody({ onClose }: { onClose: () => void }) {
   const noSymbolColumn = Boolean(layout && !layout.columns.some((c) => c.role === 'symbol' || c.role === 'underlying'));
   const used = layout?.columns.filter((c) => c.role).length ?? 0;
 
-  const preview = result?.trades.slice(0, 6) ?? [];
+  // what the Import button adds: likely duplicates only when asked for, and
+  // only the new setups those trades use
+  const likely = result?.likelyDuplicates ?? [];
+  const toImport = result ? (importLikely ? [...result.trades, ...likely] : result.trades) : [];
+  const incomplete = toImport.filter((t) => t.needsReview).length;
+  const newSetups = result?.newSetups.filter((s) => toImport.some((t) => t.setupId === s.id)) ?? [];
+  const preview = toImport.slice(0, 6);
 
   return (
     <div className="space-y-4">
@@ -183,7 +192,7 @@ function ImportBody({ onClose }: { onClose: () => void }) {
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-lg border border-line bg-app px-4 py-3 text-sm">
             <span className="flex items-center gap-2 text-fg">
               <CircleCheck className="size-4 text-profit" />
-              <span className="num font-semibold">{result.trades.length}</span> ready to import
+              <span className="num font-semibold">{toImport.length}</span> ready to import
             </span>
             {result.duplicates > 0 && (
               <span className="flex items-center gap-2 text-muted">
@@ -191,10 +200,10 @@ function ImportBody({ onClose }: { onClose: () => void }) {
                 <span className="num">{result.duplicates}</span> already in your journal, skipped
               </span>
             )}
-            {result.incomplete > 0 && (
+            {incomplete > 0 && (
               <span className="flex items-center gap-2 text-warn">
                 <TriangleAlert className="size-4" />
-                <span className="num">{result.incomplete}</span> need details before they count
+                <span className="num">{incomplete}</span> need details before they count
               </span>
             )}
             {result.combined > 0 && (
@@ -203,10 +212,46 @@ function ImportBody({ onClose }: { onClose: () => void }) {
                 <span className="num">{result.combined}</span> partial fills folded into whole positions
               </span>
             )}
-            {result.newSetups.length > 0 && (
-              <span className="text-muted">{result.newSetups.length} new playbook setups will be created</span>
+            {newSetups.length > 0 && (
+              <span className="text-muted">{newSetups.length} new playbook setups will be created</span>
             )}
           </div>
+
+          {likely.length > 0 && (
+            <div className="rounded-lg border border-accent/25 bg-accent/5 px-4 py-3 text-sm">
+              <p className="flex items-start gap-2 text-fg">
+                <CopyCheck className="mt-0.5 size-4 shrink-0 text-accent" />
+                <span>
+                  <span className="num font-semibold">{likely.length}</span>{' '}
+                  {likely.length === 1 ? 'looks like a trade' : 'look like trades'} already in your journal: same
+                  account, symbol, side, entry time and size.{' '}
+                  {importLikely
+                    ? `${likely.length === 1 ? 'It' : 'They'} will be imported as well.`
+                    : 'Left out, so nothing is added twice.'}
+                </span>
+              </p>
+              <ul className="mt-2 space-y-0.5 pl-6 text-xs text-muted">
+                {likely.slice(0, 4).map((t) => (
+                  <li key={t.id} className="num">
+                    {t.symbol} {t.side === 'LONG' ? 'long' : 'short'} · {formatShortDate(t.openedAt)}{' '}
+                    {formatTime(t.openedAt)} · {t.quantity}
+                  </li>
+                ))}
+                {likely.length > 4 && <li>…and {likely.length - 4} more</li>}
+              </ul>
+              <label className="mt-2 flex cursor-pointer items-center gap-2 pl-6 text-xs text-muted">
+                <input
+                  type="checkbox"
+                  className="size-4"
+                  checked={importLikely}
+                  onChange={(e) => setImportLikely(e.target.checked)}
+                />
+                {likely.length === 1
+                  ? 'Import it anyway: it is a different trade'
+                  : 'Import them anyway: they are different trades'}
+              </label>
+            </div>
+          )}
 
           {result.notices.length > 0 && (
             <ul className="space-y-1 rounded-lg border border-accent/25 bg-accent/5 px-4 py-2.5 text-xs leading-relaxed text-muted">
@@ -390,9 +435,9 @@ function ImportBody({ onClose }: { onClose: () => void }) {
                   ))}
                 </tbody>
               </table>
-              {result.trades.length > preview.length && (
+              {toImport.length > preview.length && (
                 <div className="border-t border-line px-3 py-2 text-xs text-faint">
-                  …and {result.trades.length - preview.length} more rows.
+                  …and {toImport.length - preview.length} more rows.
                 </div>
               )}
             </div>
@@ -453,6 +498,12 @@ function ImportBody({ onClose }: { onClose: () => void }) {
             <span className="text-warn">needs details</span>, kept out of every statistic, and listed at the top of the
             Trades page so you can complete them by hand.
           </p>
+          <p>
+            Importing the same trades again adds nothing, so a daily export that overlaps the last one is safe. Where
+            the broker numbers its trades or fills, those numbers decide. Otherwise a trade with the same account,
+            symbol, side, entry time and size as one already in your journal is left out, and the preview lists it in
+            case it really is a second trade.
+          </p>
         </div>
       </details>
 
@@ -462,21 +513,21 @@ function ImportBody({ onClose }: { onClose: () => void }) {
         </Button>
         <Button
           variant="primary"
-          disabled={!result?.trades.length}
+          disabled={!toImport.length}
           onClick={() => {
-            if (!result?.trades.length) return;
+            if (!toImport.length) return;
             if (layout) rememberChoices(layout.signature, choices);
-            actions.importTrades(result.trades, result.newSetups);
+            actions.importTrades(toImport, newSetups);
             toast(
-              result.incomplete > 0
-                ? `Imported ${tradesWord(result.trades.length)} — ${result.incomplete} need details`
-                : `Imported ${tradesWord(result.trades.length)}`,
-              result.incomplete > 0 ? 'info' : 'success',
+              incomplete > 0
+                ? `Imported ${tradesWord(toImport.length)} — ${incomplete} need details`
+                : `Imported ${tradesWord(toImport.length)}`,
+              incomplete > 0 ? 'info' : 'success',
             );
             onClose();
           }}
         >
-          Import {result?.trades.length ? tradesWord(result.trades.length) : 'trades'}
+          Import {toImport.length ? tradesWord(toImport.length) : 'trades'}
         </Button>
       </div>
     </div>
