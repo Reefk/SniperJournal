@@ -235,7 +235,7 @@ async function journey() {
 
   // ---- 1. first run --------------------------------------------------------
   await b.run(
-    `$type($field('Your name'), 'E2E'); $type($field('Starting balance'), '10000'); $t('Start journaling').click(); true`,
+    `$type($field('Your name'), 'E2E'); $type($field('Starting balance'), '10000'); $t('Start journalling').click(); true`,
   );
   await b.until(`!$text().includes('Set up your journal')`, 'welcome closed');
   check(

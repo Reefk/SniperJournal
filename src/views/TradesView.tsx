@@ -374,9 +374,9 @@ export function TradesView() {
             className={cn('w-[calc(50%_-_0.25rem)] md:w-36', !showFilters && 'max-md:hidden')}
             value={filters.symbol}
             onChange={(e) => update('symbol', e.target.value)}
-            aria-label="Pair"
+            aria-label="Symbol"
           >
-            <option value="">All pairs</option>
+            <option value="">All symbols</option>
             {symbols.map((s) => (
               <option key={s} value={s}>
                 {s}
@@ -680,12 +680,12 @@ export function TradesView() {
                       />
                     </th>
                     <SortHeader label="Date & time" k="date" />
-                    <SortHeader label="Pair / asset" k="symbol" />
+                    <SortHeader label="Symbol" k="symbol" />
                     <th className="px-3 py-3 text-left font-medium">Side</th>
                     <SortHeader label="Qty" k="qty" align="right" />
                     <th className="px-3 py-3 text-right font-medium">Entry</th>
                     <th className="px-3 py-3 text-right font-medium">Exit</th>
-                    <SortHeader label="PNL" k="pnl" align="right" />
+                    <SortHeader label="P&L" k="pnl" align="right" />
                     <th className="px-3 py-3 text-left font-medium">Tags</th>
                     <th className="px-4 py-3 text-right font-medium">Action</th>
                   </tr>

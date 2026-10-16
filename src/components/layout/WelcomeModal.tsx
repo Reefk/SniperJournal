@@ -118,7 +118,7 @@ export function WelcomeModal() {
             Explore with test data first
           </button>
           <Button variant="primary" type="submit">
-            Start journaling
+            Start journalling
           </Button>
         </div>
       </form>

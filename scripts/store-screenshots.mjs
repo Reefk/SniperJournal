@@ -113,14 +113,14 @@ async function main() {
   await shoot('05-reports');
   // the light theme, on last month's calendar: a whole month of trades
   await page.run(
-    `[...document.querySelectorAll('[aria-label="Color theme"] button')].find((b) => b.textContent.trim() === 'light').click(); true`,
+    `[...document.querySelectorAll('[aria-label="Colour theme"] button')].find((b) => b.textContent.trim() === 'light').click(); true`,
   );
   await open('/calendar');
   await page.run(`document.querySelector('[aria-label="Previous month"]').click(); true`);
   await sleep(1000);
   await shoot('06-calendar-light');
   await page.run(
-    `[...document.querySelectorAll('[aria-label="Color theme"] button')].find((b) => b.textContent.trim() === 'dark').click(); true`,
+    `[...document.querySelectorAll('[aria-label="Colour theme"] button')].find((b) => b.textContent.trim() === 'dark').click(); true`,
   );
   await open('/playbook');
   await shoot('07-playbook');

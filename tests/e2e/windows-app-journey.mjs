@@ -210,7 +210,7 @@ async function journey() {
     await b.run(`document.activeElement === $field('Your name')`),
   );
   await b.run(
-    `$type($field('Your name'), 'E2E'); $type($field('Starting balance'), '10000'); $t('Start journaling').click(); true`,
+    `$type($field('Your name'), 'E2E'); $type($field('Starting balance'), '10000'); $t('Start journalling').click(); true`,
   );
   await b.until(`!$text().includes('Set up your journal')`, 'welcome closed');
   check('the journal is written to its folder', await savedSoon((j) => j.onboarded === true));

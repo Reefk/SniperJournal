@@ -120,7 +120,7 @@ export function Sidebar() {
         <div
           className="grid grid-cols-2 rounded-lg border border-line bg-app p-0.5"
           role="group"
-          aria-label="Color theme"
+          aria-label="Colour theme"
         >
           {(['dark', 'light'] as const).map((mode) => {
             const Icon = mode === 'dark' ? Moon : Sun;
@@ -271,7 +271,7 @@ export function MobileNav() {
           <div
             className="grid w-44 grid-cols-2 rounded-lg border border-line bg-app p-0.5"
             role="group"
-            aria-label="Color theme"
+            aria-label="Colour theme"
           >
             {(['dark', 'light'] as const).map((mode) => {
               const Icon = mode === 'dark' ? Moon : Sun;
