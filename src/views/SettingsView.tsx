@@ -363,7 +363,7 @@ export function SettingsView() {
               onClick={async () => {
                 const ok = await confirm({
                   title: 'Remove test data?',
-                  message: `This deletes the ${sampleCount} generated trades, any chart images you attached to them, and the test setups. Your own trades are untouched.`,
+                  message: `This deletes the ${sampleCount} generated test trades, any chart images you attached to them, and the test playbook setups. Trades you entered yourself are kept.`,
                   confirmLabel: 'Remove test data',
                   tone: 'danger',
                 });

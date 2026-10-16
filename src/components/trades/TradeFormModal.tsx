@@ -363,7 +363,7 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
                 onChange={(e) => set('symbol', e.target.value.toUpperCase())}
                 placeholder="e.g. NVDA, EURUSD, BTC"
                 invalid={Boolean(errors.symbol)}
-                className="font-semibold uppercase"
+                className="font-semibold uppercase placeholder:normal-case"
               />
               <datalist id="sj-symbols">
                 {symbols.map((s) => (

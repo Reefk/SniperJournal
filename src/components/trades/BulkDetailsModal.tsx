@@ -148,8 +148,9 @@ export function BulkDetailsModal({ ids, onClose }: { ids: string[]; onClose: () 
         </Field>
 
         <p className="text-xs leading-relaxed text-faint">
-          Prices, quantities and times are different on every trade, so those are edited one at a time — click a row to
-          open it.
+          Prices, quantities and times are different on every trade, so those are edited one at a time:{' '}
+          <span className="md:hidden">tap a trade</span>
+          <span className="max-md:hidden">click a row</span> to open it.
         </p>
       </div>
     </Modal>

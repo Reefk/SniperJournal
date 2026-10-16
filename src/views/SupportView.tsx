@@ -123,7 +123,7 @@ function fileStatus(status: SaveStatus, copyMiss: CopyMiss | null): string {
         ? `The journal file could not be read when the app started, so it is being left exactly as it is rather than saved over. ${native ? 'The app' : 'This browser'} can't keep your changes either (${why}), so changes made now are not saved anywhere. Download a backup before you close the app, then close and reopen it to try again.`
         : `The journal file could not be read when the app started, so it is being left exactly as it is rather than saved over. Your changes are kept ${native ? 'temporarily' : 'in this browser'} for now. Close and reopen the app to try again. If this keeps happening, restore your latest backup in Settings.`;
     case 'conflict':
-      return 'Another tab, window or copy of the app saved the journal after this window opened it, so this window stopped saving rather than write over that work. Its own version was kept as a copy in your backups. Reload to carry on.';
+      return 'Another tab, window or copy of the app saved the journal after this window opened it, so this window stopped saving rather than writing over that work. Its own version was kept as a copy in your backups. Reload to carry on.';
     case 'browser':
       return native
         ? 'The app cannot write its file right now, so changes are being kept temporarily. They will be written as soon as it can.'
