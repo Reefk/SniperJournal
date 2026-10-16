@@ -256,13 +256,13 @@ platform**.
 | **TopstepX**                | The Trades or the Orders of your account, exported as CSV.                                                                                                                                                               |
 | **Rithmic R \| Trader Pro** | Orders History: choose the account and the day, then export the Completed Orders as CSV, one day at a time. The trade performance report works too.                                                                      |
 | **Quantower**               | The Trades history panel, exported as CSV.                                                                                                                                                                               |
-| **ATAS**                    | The journal in Statistics, saved for Excel: open it in Excel or Google Sheets and save it as CSV.                                                                                                                        |
+| **ATAS**                    | The journal in Statistics, exported to Excel: the .xlsx file imports as it is.                                                                                                                                           |
 | **Sierra Chart**            | The Trade Activity Log showing Fills, saved with File > Save Log As.                                                                                                                                                     |
 | **TradeStation**            | The Orders report, exported as CSV.                                                                                                                                                                                      |
 | **Deepcharts**              | The trade list, exported as CSV.                                                                                                                                                                                         |
 | **TradingView**             | Paper Trading or a connected broker: in Order History, tick every column under Column setup, then Download data > Order history. Or the Strategy Tester: List of trades > Download, then type the symbol in the preview. |
 | **FTMO**                    | The trading journal of your account in the Client Area, exported as CSV.                                                                                                                                                 |
-| **MetaTrader 4 and 5**      | History tab: right-click and save a report, open it in Excel or Google Sheets, and save it as CSV. A prop firm's dashboard often exports CSV directly.                                                                   |
+| **MetaTrader 4 and 5**      | History tab: right-click and save a report. MetaTrader 5's Excel report imports as it is; MetaTrader 4's web-page report opens in Excel, to be saved as CSV. A prop firm's dashboard often exports CSV directly.         |
 | **cTrader**                 | History, exported as CSV.                                                                                                                                                                                                |
 | **IG**                      | History > Transactions, downloaded as CSV.                                                                                                                                                                               |
 | **Interactive Brokers**     | An Activity Statement downloaded as CSV, or a Flex Query of trades in CSV.                                                                                                                                               |
@@ -282,9 +282,13 @@ platform**.
 | **Hyperliquid**             | Trade History, exported as CSV.                                                                                                                                                                                          |
 | **TradeZella**              | Your trades, exported as CSV.                                                                                                                                                                                            |
 
-The importer reads CSV files only. An export saved for Excel (`.xlsx`) or as a
-web page opens in Excel or Google Sheets, from where **Save as** or **Download**
-gives a CSV. Platforms change their exports from time to time; if a column is
+The importer reads **CSV files** (and the tab-separated `.tsv` and `.txt` kind)
+and **Excel workbooks** (`.xlsx`). In a workbook with several sheets, the one
+that looks most like a list of trades is read, and **Sheet** in the import
+window lets you choose another; dates and times kept as Excel dates come
+through as they are. An old Excel file (`.xls`) or an export saved as a web
+page opens in Excel or Google Sheets, from where **Save as** gives an `.xlsx`
+or a CSV. Platforms change their exports from time to time; if a column is
 read wrongly, set it under **Columns** in the preview and the choice is
 remembered for the next file like it.
 

@@ -15,6 +15,15 @@ export { ROLE_LABELS, type Role } from './import/columns';
 export type { DateOrder } from './import/values';
 export type { ImportLayout, RowKind } from './import/layout';
 export { PLATFORMS, type Platform, type PlatformGroup } from './import/platforms';
+export {
+  WorkbookError,
+  isOldExcel,
+  isZip,
+  likeliestSheet,
+  readWorkbook,
+  sheetToCsv,
+  type WorkbookSheet,
+} from './import/xlsx';
 
 export const CSV_COLUMNS = [
   'symbol',

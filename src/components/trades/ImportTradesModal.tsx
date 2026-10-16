@@ -7,12 +7,19 @@ import { useUI } from '@/store/UIProvider';
 import {
   PLATFORMS,
   ROLE_LABELS,
+  WorkbookError,
   csvTemplate,
   describeGaps,
   importTradesFromCsv,
+  isOldExcel,
+  isZip,
+  likeliestSheet,
+  readWorkbook,
+  sheetToCsv,
   type DateOrder,
   type PlatformGroup,
   type Role,
+  type WorkbookSheet,
 } from '@/lib/csv';
 import { formatPrice, formatShortDate, formatTime } from '@/lib/format';
 import { isClosed, netPnl } from '@/lib/trade-math';
@@ -46,6 +53,17 @@ interface Choices {
   defaultSymbol: string;
 }
 const AUTOMATIC: Choices = { mapping: {}, defaultSymbol: '' };
+/** what the file picker offers: CSV and its tab-separated kin (Sierra Chart saves .txt), and Excel workbooks */
+const ACCEPTED = [
+  '.csv',
+  '.tsv',
+  '.txt',
+  '.xlsx',
+  'text/csv',
+  'text/plain',
+  'text/tab-separated-values',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+].join(',');
 const tradesWord = (n: number) => `${n} ${n === 1 ? 'trade' : 'trades'}`;
 /** the platforms whose exports import as they come, grouped for the list in the import window */
 const PLATFORM_GROUPS = [...new Set(PLATFORMS.map((p) => p.group))].map((group: PlatformGroup) => ({
@@ -85,6 +103,10 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
   );
   const [text, setText] = useState('');
   const [fileName, setFileName] = useState('');
+  /** an Excel workbook's sheets, when the file is one, and which is being read */
+  const [sheets, setSheets] = useState<WorkbookSheet[] | null>(null);
+  const [sheetIndex, setSheetIndex] = useState(0);
+  const [fileError, setFileError] = useState('');
   const [dragging, setDragging] = useState(false);
   const [combinePartials, setCombinePartials] = useState(true);
   const [importLikely, setImportLikely] = useState(false);
@@ -123,15 +145,47 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
     if (saved) setChoices(saved);
   }, [layout, lookedUp]);
 
-  const readFile = async (file: File | undefined) => {
-    if (!file) return;
-    setFileName(file.name);
+  /** a new table to read: what was set for the last one no longer applies */
+  const startOver = (next: string) => {
     setChoices(AUTOMATIC);
     setLookedUp('');
     setRestored(false);
     setShowColumns(false);
     setImportLikely(false);
-    setText(await file.text());
+    setText(next);
+  };
+
+  const readFile = async (file: File | undefined) => {
+    if (!file) return;
+    setFileName(file.name);
+    setFileError('');
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    if (!isZip(bytes) && !isOldExcel(bytes)) {
+      setSheets(null);
+      startOver(new TextDecoder().decode(bytes));
+      return;
+    }
+    try {
+      const book = await readWorkbook(bytes);
+      const chosen = likeliestSheet(book);
+      setSheets(book);
+      setSheetIndex(chosen);
+      startOver(sheetToCsv(book[chosen]));
+    } catch (e) {
+      setSheets(null);
+      startOver('');
+      setFileError(
+        e instanceof WorkbookError
+          ? e.message
+          : 'This workbook could not be read. Open it in Excel, save the sheet as CSV, and import that.',
+      );
+    }
+  };
+
+  const chooseSheet = (index: number) => {
+    if (!sheets) return;
+    setSheetIndex(index);
+    startOver(sheetToCsv(sheets[index]));
   };
 
   const setRole = (index: number, role: Role | '') =>
@@ -184,8 +238,8 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
         <span className="mt-2 text-sm text-fg">
           {fileName || (
             <>
-              <span className="md:hidden">Tap to choose a .csv file</span>
-              <span className="max-md:hidden">Drop a .csv file here, or click to choose one</span>
+              <span className="md:hidden">Tap to choose a CSV or Excel file</span>
+              <span className="max-md:hidden">Drop a CSV or Excel file here, or click to choose one</span>
             </>
           )}
         </span>
@@ -193,13 +247,26 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
           Works with the exports of the {PLATFORMS.length} platforms listed below, most other brokers&apos; files, whole
           trades or individual fills, and the template above.
         </span>
-        <input
-          type="file"
-          accept=".csv,text/csv"
-          className="sr-only"
-          onChange={(e) => void readFile(e.target.files?.[0])}
-        />
+        <input type="file" accept={ACCEPTED} className="sr-only" onChange={(e) => void readFile(e.target.files?.[0])} />
       </label>
+
+      {sheets && sheets.length > 1 && (
+        <Field label="Sheet" hint={`${sheets.length} in this workbook`}>
+          <Select value={sheetIndex} onChange={(e) => chooseSheet(Number(e.target.value))}>
+            {sheets.map((sheet, i) => (
+              <option key={i} value={i}>
+                {sheet.name}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      )}
+
+      {(fileError || (sheets && !text.trim())) && (
+        <p className="flex items-start gap-1.5 text-xs text-loss">
+          <CircleAlert className="mt-px size-3.5 shrink-0" /> {fileError || 'This sheet is empty.'}
+        </p>
+      )}
 
       {result && (
         <>
@@ -514,6 +581,10 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
           Which columns are understood
         </summary>
         <div className="mt-2 space-y-2 leading-relaxed">
+          <p>
+            CSV files and Excel workbooks (.xlsx) are both read. In a workbook, the sheet that looks most like a list of
+            trades is used, and you can choose another. An old .xls file needs saving as .xlsx or CSV first.
+          </p>
           <p>
             Only a <span className="text-fg">symbol</span> is required, and for a file without one (TradingView&apos;s
             list of trades) you can type it in. Everything else is optional.

@@ -35,7 +35,7 @@ you have an edge.
 - **Trades.** Search and filter by pair, session, leverage, setup, date,
   direction and result. Edit trades in bulk, merge partial fills back into one
   position, or keep a trade but leave it out of the statistics.
-- **Broker import.** CSV import from most brokers and platforms, with a preview
+- **Broker import.** CSV and Excel (.xlsx) import from most brokers and platforms, with a preview
   before anything is added, from the Trades page or straight from Log trade
   (one trade or many). The exports of 30 platforms work as they come and are
   named in the preview: NinjaTrader, Tradovate, TopstepX, Rithmic, Quantower,

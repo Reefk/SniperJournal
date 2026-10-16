@@ -74,7 +74,7 @@ export const PLATFORMS: Platform[] = [
   {
     name: 'ATAS',
     group: 'Futures',
-    how: 'The journal in Statistics, saved for Excel: open it in Excel or Google Sheets and save it as CSV.',
+    how: 'The journal in Statistics, exported to Excel: the .xlsx file imports as it is.',
     exports: [{ file: 'journal', matches: (c) => c.has('openvolume', 'closevolume') }],
   },
   {
@@ -117,7 +117,7 @@ export const PLATFORMS: Platform[] = [
   {
     name: 'MetaTrader 4 and 5',
     group: 'Forex and CFDs',
-    how: 'History tab: right-click and save a report, open it in Excel or Google Sheets, and save it as CSV. A prop firm’s dashboard often exports CSV directly.',
+    how: 'History tab: right-click and save a report. MetaTrader 5’s Excel report imports as it is; MetaTrader 4’s web-page report opens in Excel, to be saved as CSV. A prop firm’s dashboard often exports CSV directly.',
     exports: [
       { file: 'account history', matches: (c) => c.has('ticket', 'item') },
       { file: 'positions', matches: (c) => c.has('position', 'sl', 'tp', 'swap') },

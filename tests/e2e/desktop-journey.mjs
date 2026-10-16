@@ -26,6 +26,7 @@ import {
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { PAGE, drive } from './cdp.mjs';
+import { excelSerial, makeXlsx } from '../xlsx-writer.mjs';
 
 const project = resolve(import.meta.dirname, '..', '..');
 const port = 3200 + Math.floor(Math.random() * 500);
@@ -204,6 +205,31 @@ writeFileSync(
     'MNQ 03-26,Buy,1,21025.50,3/9/2026 10:10:30 AM,e4,Exit,-,o4,Exit,$0.31,1,Sim101,Playback',
   ].join('\n'),
 );
+// the same executions saved for Excel, with real date cells, behind a summary sheet
+const workbookPath = join(work, 'ninjatrader-executions.xlsx');
+const at = (h, m, s) => ({ serial: excelSerial(2026, 3, 9, h, m, s), format: 22 });
+writeFileSync(
+  workbookPath,
+  makeXlsx([
+    {
+      name: 'Summary',
+      rows: [
+        ['Account', 'Balance'],
+        ['Sim101', 10000],
+      ],
+    },
+    {
+      name: 'Executions',
+      rows: [
+        ['Instrument', 'Action', 'Quantity', 'Price', 'Time', 'ID', 'E/X', 'Commission', 'Account'],
+        ['MNQ 03-26', 'Buy', 2, 21000.25, at(9, 31, 5), 'x1', 'Entry', 0.62, 'Sim101'],
+        ['MNQ 03-26', 'Sell', 2, 21010.75, at(9, 45, 10), 'x2', 'Exit', 0.62, 'Sim101'],
+        ['MNQ 03-26', 'Sell', 1, 21020, at(10, 2, 0), 'x3', 'Entry', 0.31, 'Sim101'],
+        ['MNQ 03-26', 'Buy', 1, 21025.5, at(10, 10, 30), 'x4', 'Exit', 0.31, 'Sim101'],
+      ],
+    },
+  ]),
+);
 const mapOdd = `$role('Ticker Name', 'symbol'); $role('Lots Traded', 'quantity'); $role('Buy Or Sell Flag', 'side'); $role('Fill', 'price'); $role('When', 'time'); true`;
 
 async function journey() {
@@ -307,6 +333,20 @@ async function journey() {
       'recognised preview',
       5000,
     ),
+  );
+  await b.setFile('[data-modal-root] input[type=file]', workbookPath);
+  check(
+    'an Excel workbook is read from the sheet of trades (2 trades), and the sheet can be changed',
+    await seen(
+      `/2\\s*ready to import/.test($modal().innerText) && $modal().innerText.includes('Recognised: NinjaTrader 8, executions') && $field('Sheet', $modal())?.selectedOptions[0]?.textContent === 'Executions'`,
+      'workbook preview',
+      5000,
+    ),
+  );
+  await b.run(`$type($field('Sheet', $modal()), '0'); true`);
+  check(
+    'the other sheet, a summary, has no trades to read',
+    await seen(`$modal().innerText.includes('No symbol column found')`, 'summary sheet', 5000),
   );
   check(
     'the import window lists which file to export from each platform',
