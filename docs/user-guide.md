@@ -113,6 +113,13 @@ Click **Load test data** on the dashboard or in Settings. It generates about
 one-click **Remove test data** button that deletes only those trades, along with
 any chart image you attached to one of them. Your own entries are never touched.
 
+### Dark or light
+
+**Settings → Profile and display** has the theme, and **Example text in empty
+fields**: **Clear**, the default, keeps examples like "0.00" as easy to read as
+any other text; **Faded** makes them paler, so an empty field never looks
+filled in.
+
 ---
 
 ## What each page does

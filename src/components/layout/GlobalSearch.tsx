@@ -88,7 +88,7 @@ export function GlobalSearch() {
             placeholder="Search symbols, tags, notes, setups"
             aria-label="Search trades"
             enterKeyHint="search"
-            className="h-10 w-full rounded-md border border-line bg-app pl-9 pr-3 text-sm text-fg placeholder:text-faint transition focus:border-accent/70 focus:outline-none focus:ring-2 focus:ring-accent/20 md:h-9 md:pr-16"
+            className="h-10 w-full rounded-md border border-line bg-app pl-9 pr-3 text-sm text-fg placeholder:text-placeholder transition focus:border-accent/70 focus:outline-none focus:ring-2 focus:ring-accent/20 md:h-9 md:pr-16"
           />
           <kbd className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded border border-line px-1.5 py-px text-[10px] text-faint max-md:hidden">
             Ctrl K

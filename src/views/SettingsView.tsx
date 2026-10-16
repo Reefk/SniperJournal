@@ -133,7 +133,7 @@ export function SettingsView() {
 
       <div className="grid max-w-5xl gap-4">
         <Section title="Profile and display">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <Field label="Your name">
               <Input
                 value={data.profile.name}
@@ -157,6 +157,15 @@ export function SettingsView() {
               >
                 <option value="dark">Dark</option>
                 <option value="light">Light</option>
+              </Select>
+            </Field>
+            <Field label="Example text in empty fields">
+              <Select
+                value={data.settings.fadedPlaceholders === true ? 'faded' : 'clear'}
+                onChange={(e) => actions.updateSettings({ fadedPlaceholders: e.target.value === 'faded' })}
+              >
+                <option value="clear">Clear, easy to read</option>
+                <option value="faded">Faded, never looks filled in</option>
               </Select>
             </Field>
           </div>

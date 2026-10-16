@@ -63,7 +63,7 @@ export function TagInput({
           }}
           onBlur={() => add(draft)}
           placeholder={value.length ? '' : 'Type a tag and press Enter'}
-          className="h-6 min-w-[140px] flex-1 bg-transparent text-sm text-fg outline-none placeholder:text-faint"
+          className="h-6 min-w-[140px] flex-1 bg-transparent text-sm text-fg outline-none placeholder:text-placeholder"
         />
       </div>
       {matches.length > 0 && (

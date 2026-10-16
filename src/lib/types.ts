@@ -89,6 +89,11 @@ export interface Settings {
    * account balance. Absent or false (the default): they do not.
    */
   countExcludedInBalance?: boolean;
+  /**
+   * Paler example text in empty fields, so "0.00" never looks filled in.
+   * Absent or false (the default): it keeps the 4.5:1 contrast of other text.
+   */
+  fadedPlaceholders?: boolean;
 }
 
 export interface Profile {

@@ -12,7 +12,7 @@ import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export const inputClass =
-  'h-10 md:h-9 w-full rounded-md border border-line bg-app px-3 text-sm text-fg placeholder:text-faint transition focus:border-accent/70 focus:outline-none focus:ring-2 focus:ring-accent/20 disabled:opacity-60';
+  'h-10 md:h-9 w-full rounded-md border border-line bg-app px-3 text-sm text-fg placeholder:text-placeholder transition focus:border-accent/70 focus:outline-none focus:ring-2 focus:ring-accent/20 disabled:opacity-60';
 
 /**
  * What a Field tells the control inside it, so a screen reader announces the

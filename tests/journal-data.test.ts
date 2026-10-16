@@ -75,6 +75,15 @@ describe('normalize: loading a journal', () => {
     expect(parseBackup(JSON.stringify(withSetting(true))).data?.settings.countExcludedInBalance).toBe(true);
   });
 
+  it('faded placeholders are off unless set, kept as set, and survive a backup', () => {
+    const withSetting = (value: unknown) => journal({ settings: { ...base, fadedPlaceholders: value as boolean } });
+    expect(normalize(journal()).settings.fadedPlaceholders).toBeUndefined();
+    expect(normalize(withSetting(true)).settings.fadedPlaceholders).toBe(true);
+    expect(normalize(withSetting(false)).settings.fadedPlaceholders).toBe(false);
+    expect(normalize(withSetting('yes')).settings.fadedPlaceholders).toBeUndefined();
+    expect(parseBackup(JSON.stringify(withSetting(true))).data?.settings.fadedPlaceholders).toBe(true);
+  });
+
   it('values of the wrong type are replaced instead of crashing a screen', () => {
     const j = normalize(
       journal({

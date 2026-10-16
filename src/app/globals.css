@@ -6,6 +6,8 @@
    keeps at least 4.5:1 contrast (WCAG AA) on app, surface and raised,
    and profit, loss and warn also on their own 10-15% tinted fills,
    the badges and toggles that put them behind their own text.
+   Placeholders too, unless "Faded" is chosen in Settings: then
+   they drop to about 2.5:1 on app, so they never look filled in.
    --------------------------------------------------------------- */
 :root {
   --app: #0b1120;
@@ -16,6 +18,7 @@
   --fg: #e6eaf2;
   --muted: #8b97ad;
   --faint: #7e8ba6;
+  --placeholder: #7e8ba6;
   --accent: #818cf8;
   --accent-strong: #6366f1;
   --profit: #34d399;
@@ -32,11 +35,20 @@
   --fg: #0f172a;
   --muted: #5f6f86;
   --faint: #616f83;
+  --placeholder: #616f83;
   --accent: #4f46e5;
   --accent-strong: #4f46e5;
   --profit: #056e4c;
   --loss: #ba0236;
   --warn: #9a5304;
+}
+
+:root.faded-placeholders {
+  --placeholder: #4f5b73;
+}
+
+:root.light.faded-placeholders {
+  --placeholder: #94a3b8;
 }
 
 @theme inline {
@@ -48,6 +60,7 @@
   --color-fg: var(--fg);
   --color-muted: var(--muted);
   --color-faint: var(--faint);
+  --color-placeholder: var(--placeholder);
   --color-accent: var(--accent);
   --color-accent-strong: var(--accent-strong);
   --color-profit: var(--profit);

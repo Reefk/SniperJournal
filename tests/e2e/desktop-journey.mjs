@@ -597,6 +597,23 @@ async function journey() {
   await b.until(`!!${balanceBox}`, 'balance setting');
   await b.run(`${balanceBox}.click(); true`);
   check('turned off again, the balance leaves it out', await seen(sidebarShows(10044), 'balance without AAPL', 5000));
+
+  // ---- 8d. faded placeholders (Settings → Profile and display) --------------
+  const hints = `$field('Example text in empty fields')`;
+  const hintColour = `getComputedStyle($field('Your name'), '::placeholder').color`;
+  const clearColour = await b.run(hintColour);
+  check('example text in empty fields starts clear', await b.run(`${hints}.value === 'clear'`));
+  await b.run(`$type(${hints}, 'faded'); true`);
+  check(
+    '"Faded" makes it paler',
+    await seen(`${hintColour} !== ${JSON.stringify(clearColour)}`, 'faded placeholders', 5000),
+  );
+  check('and is saved in the journal file', await savedSoon((j) => j.settings.fadedPlaceholders === true));
+  await b.run(`$type(${hints}, 'clear'); true`);
+  check(
+    '"Clear" brings it back',
+    await seen(`${hintColour} === ${JSON.stringify(clearColour)}`, 'clear placeholders', 5000),
+  );
   await b.run(`$nav('/trades'); true`);
   await b.until(`[...document.querySelectorAll('tbody tr')].some((r) => r.innerText.includes('AAPL'))`, 'trades table');
   await b.run(eye('AAPL', 'Excluded'));
@@ -606,7 +623,10 @@ async function journey() {
   check(
     'the last changes are in the file before the browser closes',
     await savedSoon(
-      (j) => j.settings.countExcludedInBalance !== true && j.trades.some((t) => t.symbol === 'AAPL' && !t.excluded),
+      (j) =>
+        j.settings.countExcludedInBalance !== true &&
+        j.settings.fadedPlaceholders !== true &&
+        j.trades.some((t) => t.symbol === 'AAPL' && !t.excluded),
     ),
   );
   await b.close();

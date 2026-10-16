@@ -94,6 +94,7 @@ export function cleanSettings(v: unknown, base: Settings): Settings {
     maxTradesPerDay: 'maxTradesPerDay' in s ? nullableNum(s.maxTradesPerDay) : base.maxTradesPerDay,
     // absent until it is first changed, which reads as off
     countExcludedInBalance: optBool(s.countExcludedInBalance),
+    fadedPlaceholders: optBool(s.fadedPlaceholders),
   };
 }
 

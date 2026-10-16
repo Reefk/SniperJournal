@@ -308,6 +308,10 @@ export function JournalProvider({ children }: { children: ReactNode }) {
     }
   }, [data.settings.theme]);
 
+  useEffect(() => {
+    document.documentElement.classList.toggle('faded-placeholders', data.settings.fadedPlaceholders === true);
+  }, [data.settings.fadedPlaceholders]);
+
   const mutate = useCallback((fn: (draft: JournalData) => JournalData) => {
     setData((prev) => ({ ...fn(prev), updatedAt: new Date().toISOString() }));
   }, []);
