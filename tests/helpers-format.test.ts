@@ -18,11 +18,14 @@ describe('toNumberOrNull: what the trade form accepts', () => {
     ['negative', '-80.25', -80.25],
     ['decimal comma', '4,25', 4.25],
     ['decimal comma, forex', '1,08640', 1.0864],
+    ['decimal comma before three digits, from a 0', '0,500', 0.5],
+    ['the same, negative', '-0,250', -0.25],
+    ['decimal comma after a dotted thousand', '1.234,50', 1234.5],
   ])('%s: %s', (_, raw, expected) => {
     expect(toNumberOrNull(raw)).toBeCloseTo(expected, 10);
   });
 
-  it.each(['', '   ', 'abc', 'NaN', 'Infinity', '1.2.3'])('rejects %j', (raw) => {
+  it.each(['', '   ', 'abc', 'NaN', 'Infinity', '1.2.3', '0,500.25', '0.500.000'])('rejects %j', (raw) => {
     expect(toNumberOrNull(raw)).toBeNull();
   });
 

@@ -81,13 +81,15 @@ export function parseDecimal(raw: string): number | null {
     const point = Math.max(lastComma, lastDot);
     const thousands = point === lastComma ? '.' : ',';
     const whole = s.slice(0, point);
-    if (!new RegExp(`^\\d{1,3}(\\${thousands}\\d{3})*$`).test(whole)) return null;
+    if (!new RegExp(`^(0|[1-9]\\d{0,2}(\\${thousands}\\d{3})*)$`).test(whole)) return null;
     s = `${whole.split(thousands).join('')}.${s.slice(point + 1)}`;
   } else if (lastComma !== -1) {
-    s = /^\d{1,3}(,\d{3})+$/.test(s) ? s.replace(/,/g, '') : s.split(',').length === 2 ? s.replace(',', '.') : '';
+    // 1,500 is fifteen hundred; 0,500 can only be a half, as no number's
+    // thousands start with a 0
+    s = /^[1-9]\d{0,2}(,\d{3})+$/.test(s) ? s.replace(/,/g, '') : s.split(',').length === 2 ? s.replace(',', '.') : '';
   } else if (lastDot !== -1 && s.indexOf('.') !== lastDot) {
     // several dots can only be thousands separators: 1.234.567
-    s = /^\d{1,3}(\.\d{3})+$/.test(s) ? s.replace(/\./g, '') : '';
+    s = /^[1-9]\d{0,2}(\.\d{3})+$/.test(s) ? s.replace(/\./g, '') : '';
   }
   if (!/^(\d+\.?\d*|\.\d+)(e[+-]?\d+)?$/i.test(s)) return null;
   const n = Number(sign + s);
