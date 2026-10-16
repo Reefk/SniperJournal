@@ -100,7 +100,8 @@ you are mid-edit.
 1. On first launch you are asked for your name, account name, currency and
    starting balance. The starting balance is what the equity curve and the
    drawdown percentages are measured against.
-2. Press **N**, or click **Log trade**, and enter your first trade.
+2. Press **N**, or click **Log trade**, and enter your first trade, by hand or
+   from your broker's CSV file.
 3. Statistics appear as soon as you have closed trades. The Insights page
    stays quiet until there are at least five, because fewer than that is noise
    rather than a pattern.
@@ -161,8 +162,23 @@ any chart image you attached to one of them. Your own entries are never touched.
 
 ### Importing from your broker
 
-Trades → **Import CSV**. You get a preview of exactly what was understood before
-anything is added, and nothing is imported until you confirm.
+Trades → **Import CSV**, or **Log trade** → **From a CSV file**: the same
+import, for one trade or a whole history. Log trade remembers which of the two
+you used last on this device, so if you log every trade from your broker's
+file, it opens on the file. You get a preview of exactly what was understood
+before anything is added, and nothing is imported until you confirm.
+
+**Importing the same trades again adds nothing**, so a daily export that
+overlaps yesterday's is safe:
+
+- where the file numbers its trades or fills (see paired exports below), those
+  numbers decide;
+- otherwise a trade with the same account, symbol, side, entry time (to the
+  minute) and size as one already in your journal is **left out**. The preview
+  lists it, with **Import it anyway** for the rare second trade that really is
+  identical;
+- a trade your journal still has as open, which the file now closes, is
+  imported closed, and the preview asks you to delete the open copy.
 
 **Only a `symbol` column is required.** Everything else is optional. A file
 without one, such as TradingView's list of trades, asks you to type the symbol
