@@ -184,7 +184,9 @@ overlaps yesterday's is safe:
 without one, such as TradingView's list of trades, asks you to type the symbol
 for every row. Rows that are missing a date, a quantity or an entry price still
 import; they are marked **needs details**, kept out of every statistic, and
-listed at the top of the Trades page so you can fill the gaps by hand.
+listed at the top of the Trades page so you can fill the gaps by hand. Where
+the file writes a time that can't be read (`30/02/2026`) or has no size above
+0, the preview names the rows.
 
 **One import takes a file of up to 10 MB**, about 60,000 trades or 100,000
 fills. For a bigger one, export a shorter period, or split the file, and import

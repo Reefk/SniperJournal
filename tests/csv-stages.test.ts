@@ -211,7 +211,23 @@ describe('stage 3: rows of whole trades, or of paired fills', () => {
       multiplier: null,
       manualPnl: null,
       externalId: undefined,
+      unreadOpen: '',
+      unreadClose: '',
     });
+  });
+
+  it('a time written but unreadable is kept, to be reported; one with no digits is no time at all', () => {
+    const r = readerOf(
+      'symbol,side,date,time,exit time,qty,entry\nAAPL,long,2026-03-02,25:61,2026-02-30 11:00,1,100\nMSFT,long,2026-03-02,10:00,N/A,1,100',
+    );
+    const [bad, fine] = r.sheet.table.data;
+    expect(parseTradeRow(bad, 2, r)).toMatchObject({
+      opened: null,
+      closed: null,
+      unreadOpen: '25:61',
+      unreadClose: '2026-02-30 11:00',
+    });
+    expect(parseTradeRow(fine, 3, r)).toMatchObject({ closed: null, unreadOpen: '', unreadClose: '' });
   });
 
   it('a direction that means nothing is noted, with its rows', () => {

@@ -1,10 +1,11 @@
 import type { Trade, TradeInput } from '../types';
 import { detectSession } from '../sessions';
-import { isIncomplete } from '../trade-math';
+import { isClosed, isIncomplete } from '../trade-math';
 import { mergeIssue, mergeTrades } from '../merge';
 import { uid } from '../utils';
 import type { Role } from './columns';
 import { fitReported, type Reader, type RowsRead } from './reader';
+import { rowsNote } from './report';
 import { parseMoney, parseSide, type Moment } from './values';
 
 /**
@@ -33,6 +34,9 @@ export interface TradeRow {
   sellFill: string;
   /** what the row is known by, so it is skipped when imported again */
   externalId: string | undefined;
+  /** an entry or exit time the row writes but that could not be read, left blank; '' when none */
+  unreadOpen: string;
+  unreadClose: string;
 }
 
 /** A row read: its direction, times, prices and multiplier. Null when it has no symbol. */
@@ -71,6 +75,15 @@ export function parseTradeRow(row: string[], line: number, r: Reader): TradeRow 
     entryPrice = entryPrice ?? (soldFirst ? sellPrice : buyPrice);
     exitPrice = exitPrice ?? (soldFirst ? buyPrice : sellPrice);
   }
+
+  // a time that is written but can't be read (31/02/2026) is left blank, and
+  // the preview says so; a cell with no digits ("-", "N/A") gives no time at all
+  const unread = (m: Moment | null, roles: Role[]) =>
+    m ? '' : (roles.map((role) => cell(row, role)).find((v) => /\d/.test(v)) ?? '');
+  const openingFill: Role[] = paired ? [side === 'SHORT' ? 'sold_at' : 'bought_at'] : [];
+  const closingFill: Role[] = paired ? [side === 'SHORT' ? 'bought_at' : 'sold_at'] : [];
+  const unreadOpen = unread(openedParts, ['opened_at', ...openingFill, 'time', 'opened_date', 'date']);
+  const unreadClose = unread(closedParts, ['closed_at', ...closingFill, 'closed_date']);
 
   const fees = r.feeOf(row);
   // The P&L before commissions. A net column has them added back, so they
@@ -117,6 +130,8 @@ export function parseTradeRow(row: string[], line: number, r: Reader): TradeRow 
     buyFill,
     sellFill,
     externalId,
+    unreadOpen,
+    unreadClose,
   };
 }
 
@@ -165,6 +180,14 @@ export function tradesFromRows(r: Reader): RowsRead {
   const priced = (row: string[]) => PRICED.some((role) => parseMoney(sheet.cell(row, role)) != null);
   const mostlyPriced = sheet.table.data.filter(priced).length * 2 >= sheet.table.data.length;
   const notTrades: string[] = [];
+  // rows imported with a gap the file didn't mean to leave: lines, and the first value
+  const unreadOpen = { rows: [] as number[], value: '' };
+  const unreadClose = { rows: [] as number[], value: '' };
+  const noSize: number[] = [];
+  const note = (u: { rows: number[]; value: string }, value: string, line: number) => {
+    if (!u.rows.length) u.value = value;
+    u.rows.push(line);
+  };
 
   sheet.table.data.forEach((row, index) => {
     const line = sheet.table.lines[index];
@@ -186,6 +209,10 @@ export function tradesFromRows(r: Reader): RowsRead {
     if (read.externalId) seenIds.add(read.externalId);
 
     const trade = assembleTrade(read, row, r);
+    if (read.unreadOpen) note(unreadOpen, read.unreadOpen, line);
+    // an open trade's exit time counts for nothing, so only a closed one's is worth saying
+    if (read.unreadClose && isClosed(trade)) note(unreadClose, read.unreadClose, line);
+    if (sheet.has('quantity') && !(trade.quantity > 0)) noSize.push(line);
     // the fill that opened the position is the buy on a long and the sell on a short
     const opener = trade.side === 'LONG' ? read.buyFill : read.sellFill;
     if (opener) openingFill.set(trade.id, opener);
@@ -194,6 +221,33 @@ export function tradesFromRows(r: Reader): RowsRead {
 
   const errors: string[] = [];
   const notices: string[] = [];
+  if (unreadOpen.rows.length)
+    errors.push(
+      rowsNote(
+        unreadOpen.rows,
+        `the entry time "${unreadOpen.value}" could not be read, so it was left blank and the trade marked needs details.`,
+        `the entry time could not be read (the first is "${unreadOpen.value}"), so it was left blank and the trades marked needs details.`,
+      ),
+    );
+  if (unreadClose.rows.length)
+    errors.push(
+      rowsNote(
+        unreadClose.rows,
+        `the exit time "${unreadClose.value}" could not be read, so it was left blank: until it is filled in, the trade counts on the day it was opened.`,
+        `the exit time could not be read (the first is "${unreadClose.value}"), so it was left blank: until it is filled in, the trades count on the day they were opened.`,
+      ),
+    );
+  if (!sheet.has('quantity') && trades.length) {
+    errors.push('There is no size column, so every trade was marked needs details. Fill in the sizes after importing.');
+  } else if (noSize.length) {
+    errors.push(
+      rowsNote(
+        noSize,
+        'no size above 0, so the trade was marked needs details.',
+        'no size above 0, so the trades were marked needs details.',
+      ),
+    );
+  }
   if (!sheet.has('side') && !sheet.paired && !sheet.signedQuantities && trades.length) {
     errors.push('There is no direction column, so every row was imported as LONG. Check any shorts.');
   }

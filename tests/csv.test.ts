@@ -101,10 +101,60 @@ describe('import: structure of the file', () => {
       'symbol,side,qty,entry,exit\n,Buy,1,100,101\nAAPL,Buy,,100,101\nMSFT,Buy,-3,100,101',
       ctx(),
     );
-    expect(r.errors).toEqual(['Row 2: no symbol, so the row was skipped.']);
+    expect(r.errors).toEqual([
+      'Row 2: no symbol, so the row was skipped.',
+      'Row 3 and 1 more: no size above 0, so the trades were marked needs details.',
+    ]);
     expect(r.trades.map((t) => t.symbol)).toEqual(['AAPL', 'MSFT']);
     expect(r.trades.every((t) => t.needsReview)).toBe(true);
     expect(r.incomplete).toBe(2);
+  });
+
+  // roadmap 2.4: until 2026-10-16 these rows came in blank, or marked needs
+  // details, without a word of why
+  it('a time written but unreadable, or no size, is reported by row; the trade is imported all the same', () => {
+    const r = importTradesFromCsv(
+      [
+        'symbol,side,opened_at,closed_at,qty,entry,exit',
+        'AAPL,long,2026-02-30 10:00,2026-03-02 11:00,1,100,101', // 30 February
+        'MSFT,long,2026-03-02 10:00,2026-03-02 25:10,1,100,101', // 25:10
+        'NVDA,long,2026-03-02 10:00,2026-03-02 11:00,0,100,101',
+        'TSLA,long,2026-03-02 10:00,2026-13-45,2,100,', // still open, so its exit time counts for nothing
+        'AMD,long,n/a,-,1,100,101', // no digits: no time given, nothing misread
+      ].join('\n'),
+      ctx(),
+    );
+    expect(r.trades.map((t) => t.symbol)).toEqual(['AAPL', 'MSFT', 'NVDA', 'TSLA', 'AMD']);
+    expect(r.errors).toEqual([
+      'Row 2: the entry time "2026-02-30 10:00" could not be read, so it was left blank and the trade marked needs details.',
+      'Row 3: the exit time "2026-03-02 25:10" could not be read, so it was left blank: until it is filled in, the trade counts on the day it was opened.',
+      'Row 4: no size above 0, so the trade was marked needs details.',
+    ]);
+    const msft = r.trades[1];
+    expect([msft.closedAt, isClosed(msft), msft.needsReview]).toEqual([undefined, true, undefined]);
+    expect(r.trades.filter((t) => t.needsReview).map((t) => t.symbol)).toEqual(['AAPL', 'NVDA', 'AMD']);
+
+    const many = importTradesFromCsv(
+      'symbol,side,opened_at,qty,entry\nA,long,31/02/2026,1,1\nB,long,32/01/2026,1,1',
+      ctx(),
+    );
+    expect(many.errors).toEqual([
+      'Row 2 and 1 more: the entry time could not be read (the first is "31/02/2026"), so it was left blank and the trades marked needs details.',
+    ]);
+    // a paired export: the fill that closed the position is the exit
+    const paired = importTradesFromCsv(
+      'symbol,qty,buyPrice,sellPrice,boughtTimestamp,soldTimestamp\nMNQH6,1,100,101,03/02/2026 09:31:05,03/02/2026 25:00:00',
+      ctx(),
+    );
+    expect(paired.errors).toEqual([
+      'Row 2: the exit time "03/02/2026 25:00:00" could not be read, so it was left blank: until it is filled in, the trade counts on the day it was opened.',
+    ]);
+  });
+
+  it('a file with no size column says every trade needs one, once', () => {
+    expect(importTradesFromCsv('symbol,side,entry,exit\nAAPL,long,100,101\nMSFT,short,50,49', ctx()).errors).toEqual([
+      'There is no size column, so every trade was marked needs details. Fill in the sizes after importing.',
+    ]);
   });
 
   it('suspicious-looking text is kept as plain text', () => {
@@ -211,7 +261,7 @@ describe('import: direction', () => {
   });
 
   it('a file with no direction column says that every row was taken as a long', () => {
-    const r = importTradesFromCsv('symbol,entry,exit\nAAPL,100,101', ctx());
+    const r = importTradesFromCsv('symbol,qty,entry,exit\nAAPL,1,100,101', ctx());
     expect(r.errors).toEqual(['There is no direction column, so every row was imported as LONG. Check any shorts.']);
   });
 });
