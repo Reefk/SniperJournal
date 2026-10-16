@@ -71,7 +71,7 @@ export function buildSignals(trades: Trade[], settings: Settings, now = new Date
     signals.push({
       id: 'trade-count',
       tone: todays.length > maxTrades ? 'bad' : 'warn',
-      title: `${todays.length} trades today`,
+      title: `${todays.length} ${todays.length === 1 ? 'trade' : 'trades'} today`,
       body: `Your limit is ${maxTrades} a day. Extra trades past the plan are usually the expensive ones.`,
     });
   }
@@ -254,13 +254,16 @@ export function buildInsights(trades: Trade[], setups: Setup[], settings: Settin
   const sides = groupTrades(closed, (t) => t.side);
   if (sides.length === 2 && sides.every((s) => s.trades >= MIN_GROUP)) {
     const [strong, weak] = sides;
+    // "longs" in a sentence, "Longs" at the start of one
+    const many = (side: string, start = false) =>
+      side === 'LONG' ? (start ? 'Longs' : 'longs') : start ? 'Shorts' : 'shorts';
     if (strong.winRate - weak.winRate >= 15) {
       out.push({
         id: 'side',
         tone: 'info',
         category: 'Edge',
-        title: `You read ${strong.key.toLowerCase()}s better than ${weak.key.toLowerCase()}s`,
-        body: `${strong.key}: ${strong.winRate.toFixed(0)}% across ${strong.trades} trades. ${weak.key}: ${weak.winRate.toFixed(0)}% across ${weak.trades}. A one-directional edge is still an edge.`,
+        title: `You read ${many(strong.key)} better than ${many(weak.key)}`,
+        body: `${many(strong.key, true)}: ${strong.winRate.toFixed(0)}% across ${strong.trades} trades. ${many(weak.key, true)}: ${weak.winRate.toFixed(0)}% across ${weak.trades}. A one-directional edge is still an edge.`,
         metric: `${(strong.winRate - weak.winRate).toFixed(0)} point gap`,
       });
     }
@@ -277,7 +280,7 @@ export function buildInsights(trades: Trade[], setups: Setup[], settings: Settin
         id: 'overtrading',
         tone: 'warn',
         category: 'Behaviour',
-        title: 'Your busy days are your worse days',
+        title: 'Your busy days are your worst days',
         body: `Days with 4 or more trades average less than your quieter days. Volume is not where your edge lives.`,
         metric: `${busy.length} busy days measured`,
       });
@@ -377,7 +380,7 @@ export function buildInsights(trades: Trade[], setups: Setup[], settings: Settin
         tone: 'good',
         category: 'Behaviour',
         title: 'Your own discipline ratings predict your results',
-        body: `Trades you rated 4-5 for discipline average better than the ones you rated 1-2. You can tell a good trade from a bad one in the moment, which means the fix is following your own read.`,
+        body: `Trades you rated 4–5 for discipline average better than the ones you rated 1–2. You can tell a good trade from a bad one in the moment, which means the fix is following your own read.`,
         metric: `${high.length} disciplined vs ${low.length} rushed`,
       });
     }

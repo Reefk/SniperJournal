@@ -61,7 +61,7 @@ export function InsightsView() {
           title={
             closedCount === 0
               ? 'Nothing to analyse yet'
-              : `${MIN_TRADES_FOR_INSIGHTS - closedCount} more closed trades needed`
+              : `${MIN_TRADES_FOR_INSIGHTS - closedCount} more closed ${MIN_TRADES_FOR_INSIGHTS - closedCount === 1 ? 'trade' : 'trades'} needed`
           }
           description={`This page reads your journal and reports what it finds: which session pays you, whether you revenge trade, whether you hold losers longer than winners. It stays quiet until there are at least ${MIN_TRADES_FOR_INSIGHTS} closed trades, because anything less is noise rather than a pattern.`}
           actions={

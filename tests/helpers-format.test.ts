@@ -171,6 +171,23 @@ describe('insights and signals', () => {
     expect(ids).toContain('losing-streak');
   });
 
+  it('names the count of trades today in words that fit it: one trade, three trades', () => {
+    const title = (trades: ReturnType<typeof today>[], max: number) =>
+      buildSignals(trades, { ...settings, maxTradesPerDay: max }, now).find((s) => s.id === 'trade-count')?.title;
+    expect(title([today(-1, 1)], 1)).toBe('1 trade today');
+    expect(title([today(-1, 1), today(-2, 2), today(-3, 3)], 3)).toBe('3 trades today');
+  });
+
+  it('writes longs and shorts as words, not as LONG and SHORT', () => {
+    const trades = [
+      ...[10, 12, 9, 11, 8].map((net) => pnl(net, { side: 'LONG' })),
+      ...[6, -5, -4, -6, -3].map((net) => pnl(net, { side: 'SHORT' })),
+    ];
+    const side = buildInsights(trades, [], settings).find((x) => x.id === 'side');
+    expect(side?.title).toBe('You read longs better than shorts');
+    expect(side?.body).toMatch(/^Longs: 100% across 5 trades\. Shorts: 20% across 5\. /);
+  });
+
   it('says nothing below five closed trades', () => {
     expect(buildInsights([pnl(10), pnl(-5), trade()], [], settings)).toEqual([]);
   });
