@@ -595,7 +595,7 @@ No Critical findings were made.
 - **Actual (observed):** Stored as 14:35 and 15:00 with no warning. The real close (13:00 UTC) was before the open.
 - **Note:** By design the journal stores wall-clock times without a zone, so this is a documentation and warning gap, not a calculation bug.
 - **Recommended fix:** When values carry a zone, warn in the preview, or convert them to the user's chosen time zone.
-- **Status:** Fixed and Verified on 2026-10-09. A time with a zone (`Z`, `+02:00`, `GMT`), or in a column whose header declares one ("Date(UTC)", "Opening Time (UTC+2)"), is converted to the device's local time, and the preview says so. Times without a zone are kept as written. Tests: `tests/import-formats.test.ts` (cTrader, TopstepX, Binance, and "a zone is converted to local time").
+- **Status:** Fixed and Verified on 2026-10-09. A time with a zone (`Z`, `+02:00`, `GMT`), or in a column whose header declares one ("Date(UTC)", "Opening Time (UTC+2)"), is converted to the device's local time, and the preview says so. Times without a zone are kept as written, and since 2026-10-16 the preview says that too ("Times in this file carry no time zone, so they were taken as written"). Tests: `tests/import-formats.test.ts` (cTrader, TopstepX, Binance, "a zone is converted to local time", and "the preview says when times carry no zone").
 
 ### SJ-32: A newer-version journal on disk is silently downgraded
 
@@ -856,6 +856,7 @@ _Android_ (`tests/storage-native.test.ts`, 15 tests with an in-memory Filesystem
 
 - The dashboard's recalculation (`computeStats` and `sniperScore`) is about 0.2 s per change.
 - An import of 50,000 whole-trade rows takes under a second; 50,000 fills about 1.1 s.
+- Since 2026-10-16 one import takes a file of up to 10 MB (`src/lib/import/size.ts`): about 60,000 trades with notes, or 100,000 fills, read in 1–2 s here. A bigger file is refused before it is read; a workbook part may unpack to 80 MB at most.
 
 `sniperScore` takes the stats it is given and does not work them out again. `buildInsights` can now be handed them too; the Insights page does, so the stats are worked out once there.
 
