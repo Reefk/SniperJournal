@@ -364,7 +364,10 @@ export function DashboardView() {
           <span className="text-fg">
             You have {accountTrades.filter((t) => !isClosed(t)).length} open{' '}
             {accountTrades.filter((t) => !isClosed(t)).length === 1 ? 'position' : 'positions'}.
-            <span className="text-muted"> They are excluded from statistics until you add an exit price.</span>
+            <span className="text-muted">
+              {accountTrades.filter((t) => !isClosed(t)).length === 1 ? ' It is' : ' They are'} excluded from statistics
+              until you add an exit price.
+            </span>
           </span>
           <Link href="/trades" className="ml-auto text-xs text-accent underline-offset-4 hover:underline">
             Open the trades table

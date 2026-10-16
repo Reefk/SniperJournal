@@ -270,7 +270,7 @@ export function TradesView() {
                 tradesToCsv(sorted, data.setups, data.accounts),
                 'text/csv',
               );
-              toast(`Exported ${sorted.length} trades`);
+              toast(`Exported ${sorted.length} ${sorted.length === 1 ? 'trade' : 'trades'}`);
             }}
           >
             <Download className="size-4" /> Export CSV

@@ -68,7 +68,7 @@ export default function GlobalError({ error, retry }: { error: Error & { digest?
               {rescue === null
                 ? 'Reading your journal…'
                 : rescue.journal
-                  ? `The backup holds ${rescue.journal.trades?.length ?? 0} trades.`
+                  ? `The backup holds ${rescue.journal.trades?.length ?? 0} ${rescue.journal.trades?.length === 1 ? 'trade' : 'trades'}.`
                   : 'No journal could be read, so there is nothing to download from here.'}
             </p>
             {rescue?.location && (

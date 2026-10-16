@@ -47,7 +47,7 @@ export function SettingsView() {
     }
     const ok = await confirm({
       title: 'Restore this backup?',
-      message: `The backup holds ${parsed.trades.length} trades. Restoring replaces everything currently in your journal, and deletes the chart images that the backup's trades don't use.`,
+      message: `The backup holds ${parsed.trades.length} ${parsed.trades.length === 1 ? 'trade' : 'trades'}. Restoring replaces everything currently in your journal, and deletes the chart images that the backup's trades don't use.`,
       confirmLabel: 'Replace my journal',
       tone: 'danger',
     });
@@ -385,7 +385,13 @@ export function SettingsView() {
             onClick={async () => {
               const ok = await confirm({
                 title: 'Erase everything?',
-                message: `This permanently deletes all ${data.trades.length} trades and their chart images, your setups, resources and accounts. Download a backup first if you are not certain; backups don't include chart images.`,
+                message: `This permanently deletes ${
+                  data.trades.length === 0
+                    ? ''
+                    : data.trades.length === 1
+                      ? 'your 1 trade and its chart image, '
+                      : `all ${data.trades.length} trades and their chart images, `
+                }your setups, resources and accounts. Download a backup first if you are not certain; backups don't include chart images.`,
                 confirmLabel: 'Erase my journal',
                 tone: 'danger',
               });

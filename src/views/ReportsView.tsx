@@ -97,7 +97,7 @@ export function ReportsView() {
     <>
       <PageHeader
         title="Reports"
-        description={`${activeLabel} · ${stats.total} closed trades`}
+        description={`${activeLabel} · ${stats.total} closed ${stats.total === 1 ? 'trade' : 'trades'}`}
         actions={
           <>
             <SegmentedControl value={range} onChange={setRange} options={RANGE_OPTIONS} />
@@ -108,7 +108,7 @@ export function ReportsView() {
                   tradesToCsv(inRange, data.setups, data.accounts),
                   'text/csv',
                 );
-                toast(`Exported ${inRange.length} trades`);
+                toast(`Exported ${inRange.length} ${inRange.length === 1 ? 'trade' : 'trades'}`);
               }}
             >
               <Download className="size-4" /> Export CSV

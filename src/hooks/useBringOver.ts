@@ -44,7 +44,7 @@ export function useBringOver() {
     if (data.onboarded) {
       const ok = await confirm({
         title: 'Bring over this journal?',
-        message: `The earlier version's journal holds ${parsed.trades.length} trades. Bringing it over replaces everything currently in your journal. The one it replaces is kept in your backups, without its chart images.`,
+        message: `The earlier version's journal holds ${parsed.trades.length} ${parsed.trades.length === 1 ? 'trade' : 'trades'}. Bringing it over replaces everything currently in your journal. The one it replaces is kept in your backups, without its chart images.`,
         confirmLabel: 'Replace my journal',
         tone: 'danger',
       });
@@ -64,6 +64,8 @@ export function useBringOver() {
       return;
     }
     actions.replaceAll(parsed);
-    toast(`Brought over ${parsed.trades.length} trades from the earlier version. Its folder was left as it was.`);
+    toast(
+      `Brought over ${parsed.trades.length} ${parsed.trades.length === 1 ? 'trade' : 'trades'} from the earlier version. Its folder was left as it was.`,
+    );
   };
 }
