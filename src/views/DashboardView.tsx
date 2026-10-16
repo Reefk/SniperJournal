@@ -39,6 +39,15 @@ import { SniperScoreChart } from '@/components/dashboard/SniperScoreChart';
 import { RecentTrades } from '@/components/dashboard/RecentTrades';
 import { ImportTradesModal } from '@/components/trades/ImportTradesModal';
 
+/** the range picked, in words: "No closed trades in the last 7 days" */
+const RANGE_WORDS: Record<RangeKey, string> = {
+  '7D': 'in the last 7 days',
+  '30D': 'in the last 30 days',
+  '90D': 'in the last 90 days',
+  YTD: 'this year',
+  ALL: 'yet',
+};
+
 export function DashboardView() {
   const { accountTrades, data, startingBalance, activeLabel, actions } = useJournal();
   const { openTradeForm } = useUI();
@@ -124,7 +133,7 @@ export function DashboardView() {
       {noClosedTrades ? (
         <EmptyState
           icon={CalendarRange}
-          title={`No closed trades in the last ${range === 'YTD' ? 'year to date' : range}`}
+          title={`No closed trades ${RANGE_WORDS[range]}`}
           description="Your statistics are calculated from closed trades only. Widen the range, or close out a position to see it counted."
           actions={<Button onClick={() => setRange('ALL')}>Show all time</Button>}
         />
