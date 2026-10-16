@@ -4,7 +4,7 @@ import { isIncomplete } from '../trade-math';
 import { decimalsOf } from '../merge';
 import { uid } from '../utils';
 import { fillsToPositions, summarise, type Fill, type Summary } from './fills';
-import { fitReported, type Reader, type RowsRead } from './reader';
+import { believable, fitReported, type Reader, type RowsRead } from './reader';
 import { rowsNote } from './report';
 import { parseAction, parseEffect, parseMoment, parseMoney, parseStatus } from './values';
 
@@ -104,16 +104,6 @@ export function parseFillRow(
   };
 }
 
-/** a multiplier worked out from data, if it is a believable one */
-export function believable(m: number): number | null {
-  if (!Number.isFinite(m) || m <= 0) return null;
-  if (m >= 0.95) {
-    const r = Math.round(m);
-    return Math.abs(m - r) / r < 0.01 ? r : null;
-  }
-  return [0.1, 0.25, 0.5].find((c) => Math.abs(m - c) / c < 0.01) ?? null;
-}
-
 /**
  * The trade one position makes. `read` holds every fill read, by file line;
  * `net` says the file's P&L column is after fees.
@@ -142,7 +132,7 @@ export function assemblePosition(s: Summary, read: ReadonlyMap<number, FillRow>,
   // value leaves the point value out (2 MNQ at 21000 is "42000")
   const fit =
     multiplier == null && s.reportedPnl != null && s.closed && !s.orphan
-      ? fitReported(s.reportedPnl, s.move, s.fees, net)
+      ? fitReported(s.reportedPnl, s.move, s.fees, net, r.expectedMultiplier(first.symbol, first.row) ?? 1)
       : null;
   if (fit?.multiplier != null) multiplier = fit.multiplier;
   if (multiplier == null) {

@@ -79,7 +79,9 @@ export interface Reader {
   tagsOf(row: string[]): string[];
   /** the row's multiplier; one of zero or less is left out, and noted */
   multiplierCell(row: string[], line: number): number | null;
-  /** a point value from what the symbol is, when nothing in the row gives one */
+  /** what one point of the instrument should be worth, from what the symbol is; nothing is noted */
+  expectedMultiplier(symbol: string, row: string[]): number | null;
+  /** a point value from what the symbol is, when nothing in the row gives one; noted for the preview */
   knownMultiplier(symbol: string, row: string[]): number | null;
 }
 
@@ -199,18 +201,19 @@ export function createReader(sheet: Sheet, target: ImportTarget): Reader {
     return m;
   };
 
-  const knownMultiplier = (symbol: string, row: string[]): number | null => {
+  const instrumentWorth = (symbol: string, row: string[]): { value: number; how: string } | null => {
     const assetClass = cell(row, 'asset_class');
     const future = futuresPointValue(symbol, assetClass);
-    if (future) {
-      findings.inferred.set(symbol, `${future.value} a point (${future.root} futures)`);
-      return future.value;
-    }
-    if (isOption(symbol, assetClass, cell(row, 'put_call'))) {
-      findings.inferred.set(symbol, `${OPTION_MULTIPLIER} (an option contract)`);
-      return OPTION_MULTIPLIER;
-    }
+    if (future) return { value: future.value, how: `${future.value} a point (${future.root} futures)` };
+    if (isOption(symbol, assetClass, cell(row, 'put_call')))
+      return { value: OPTION_MULTIPLIER, how: `${OPTION_MULTIPLIER} (an option contract)` };
     return null;
+  };
+  const expectedMultiplier = (symbol: string, row: string[]) => instrumentWorth(symbol, row)?.value ?? null;
+  const knownMultiplier = (symbol: string, row: string[]): number | null => {
+    const worth = instrumentWorth(symbol, row);
+    if (worth) findings.inferred.set(symbol, worth.how);
+    return worth?.value ?? null;
   };
 
   return {
@@ -227,34 +230,52 @@ export function createReader(sheet: Sheet, target: ImportTarget): Reader {
     accountIdFor,
     tagsOf,
     multiplierCell,
+    expectedMultiplier,
     knownMultiplier,
   };
+}
+
+/** a multiplier worked out from data, if it is a believable one: a whole number, or 0.1, 0.25 or 0.5 */
+export function believable(m: number): number | null {
+  if (!Number.isFinite(m) || m <= 0) return null;
+  if (m >= 0.95) {
+    const r = Math.round(m);
+    return Math.abs(m - r) / r < 0.01 ? r : null;
+  }
+  return [0.1, 0.25, 0.5].find((c) => Math.abs(m - c) / c < 0.01) ?? null;
 }
 
 /**
  * Whether a reported P&L fits the prices, and so what one point is worth.
  * An unlabelled P&L is read as gross; if it only fits once the fees are
  * added back, it was net after all.
+ *
+ * A believable point value that fits is taken. One that is not believable is
+ * taken only when it is far from what the instrument should be worth
+ * (`expected`: a future's point value, or 1), as a forex cross's can be.
+ * Close to it (0.95 against 1, 1.94 against MNQ's 2), the P&L holds
+ * something the prices don't, such as fees already taken off with no fee
+ * column, or another currency: then no point value is worked out, and the
+ * P&L is kept as written.
  */
 export function fitReported(
   reported: number,
   move: number | null,
   fees: number,
   net: boolean,
+  expected = 1,
 ): { multiplier: number | null; manualPnl: number | null } {
   const gross = net ? reported + fees : reported;
   if (move == null) return { multiplier: null, manualPnl: gross };
   if (Math.abs(move) <= 1e-9) return { multiplier: null, manualPnl: gross };
-  const snap = (d: number) => (Math.abs(d - Math.round(d)) < 0.005 ? Math.round(d) : Number(d.toFixed(4)));
-  let snapped = snap(gross / move);
-  let total = gross;
-  if (!net && fees && !Number.isInteger(snapped)) {
-    const asNet = snap((reported + fees) / move);
-    if (Number.isInteger(asNet) && asNet > 0) {
-      snapped = asNet;
-      total = reported + fees;
-    }
-  }
-  if (snapped > 0 && Math.abs(move * snapped - total) < 0.01) return { multiplier: snapped, manualPnl: null };
-  return { multiplier: null, manualPnl: total };
+  const fits = (total: number) => {
+    const m = believable(total / move);
+    return m != null && Math.abs(move * m - total) < 0.01 ? m : null;
+  };
+  const round = fits(gross) ?? (!net && fees ? fits(reported + fees) : null);
+  if (round != null) return { multiplier: round, manualPnl: null };
+  const ratio = Number((gross / move).toFixed(4));
+  const far = ratio < expected / 2 || ratio > expected * 2;
+  if (ratio > 0 && far && Math.abs(move * ratio - gross) < 0.01) return { multiplier: ratio, manualPnl: null };
+  return { multiplier: null, manualPnl: gross };
 }

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { detectLayout, missingSymbol, type LayoutChoices, type Sheet } from '@/lib/import/layout';
-import { createReader, fitReported, type Findings, type ImportTarget } from '@/lib/import/reader';
+import { believable, createReader, fitReported, type Findings, type ImportTarget } from '@/lib/import/reader';
 import { assembleTrade, combinePartials, parseTradeRow, tradesFromRows } from '@/lib/import/rows';
-import { believable, parseFillRow, tradesFromFills } from '@/lib/import/positions';
+import { parseFillRow, tradesFromFills } from '@/lib/import/positions';
 import { collectMessages, rowsNote } from '@/lib/import/report';
 import type { Table } from '@/lib/import/table';
 import type { Account, Setup, Trade } from '@/lib/types';
@@ -175,6 +175,17 @@ describe('stage 2: reading the values of a row', () => {
     // no prices to check it against, or none that fit: kept as written
     expect(fitReported(120, null, 0, false)).toEqual({ multiplier: null, manualPnl: 120 });
     expect(fitReported(-30, 2, 0, false)).toEqual({ multiplier: null, manualPnl: -30 });
+  });
+
+  it('a ratio that is not a point value, close to the one expected, is not taken as one: the P&L holds something else', () => {
+    // 0.5 BTC up 1000 is 500; a P&L of 475.60 has the fees taken off, and there is no fee column
+    expect(fitReported(475.6, 500, 0, true)).toEqual({ multiplier: null, manualPnl: 475.6 });
+    // 2 MNQ up 10.5 points is 21 points; 40.76 is after fees, against MNQ's 2 a point
+    expect(fitReported(40.76, 21, 0, false, 2)).toEqual({ multiplier: null, manualPnl: 40.76 });
+    // a P&L in pounds on dollar prices: 13.39 against 17
+    expect(fitReported(13.39, 17, 0, false)).toEqual({ multiplier: null, manualPnl: 13.39 });
+    // far from what is expected, an odd one is real: 0.3 of a unit a point
+    expect(fitReported(30, 100, 0, false)).toEqual({ multiplier: 0.3, manualPnl: null });
   });
 });
 

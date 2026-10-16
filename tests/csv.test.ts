@@ -221,6 +221,16 @@ describe('import: P&L columns and fees', () => {
     expect(t.manualPnl).toBe(-42.5);
     expect(isClosed(t)).toBe(true);
   });
+
+  it('a P&L with the fees already taken off and no fee column keeps it as written, at the point value expected', () => {
+    // 0.5 BTC up 1000 is 500 before fees; this used to give a point value of 0.9512
+    const btc = one('symbol,side,qty,entry,exit,net pnl\nBTCUSDT,Long,0.5,60000,61000,475.60');
+    expect([btc.multiplier, btc.manualPnl, netPnl(btc)]).toEqual([1, 475.6, 475.6]);
+    // 2 MNQ up 10.5 points is 42 before fees; this used to give 1.9410 a point
+    const r = importTradesFromCsv('symbol,side,qty,entry,exit,net pnl\nMNQH6,Long,2,21000.25,21010.75,40.76', ctx());
+    expect([r.trades[0].multiplier, r.trades[0].manualPnl]).toEqual([2, 40.76]);
+    expect(r.notices.join(' ')).toMatch(/MNQH6: one point taken as worth 2 a point \(MNQ futures\)/);
+  });
 });
 
 describe('import: duplicates and partial fills', () => {

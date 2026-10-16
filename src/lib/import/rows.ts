@@ -90,13 +90,14 @@ export function parseTradeRow(row: string[], line: number, r: Reader): TradeRow 
         ? (exitPrice - entryPrice) * quantity * direction
         : null;
     if (move == null || multiplier == null) {
-      const fit = fitReported((gross ?? net) as number, move, fees ?? 0, gross == null);
+      const expected = r.expectedMultiplier(symbol, row) ?? 1;
+      const fit = fitReported((gross ?? net) as number, move, fees ?? 0, gross == null, expected);
       multiplier = multiplier ?? fit.multiplier;
       manualPnl = fit.manualPnl;
     }
-  } else if (multiplier == null && entryPrice != null) {
-    multiplier = r.knownMultiplier(symbol, row);
   }
+  // nothing in the row gave one, the P&L included: what the instrument is may
+  if (multiplier == null && entryPrice != null) multiplier = r.knownMultiplier(symbol, row);
 
   const buyFill = cell(row, 'buy_fill_id');
   const sellFill = cell(row, 'sell_fill_id');
