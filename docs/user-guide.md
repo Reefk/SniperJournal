@@ -186,24 +186,35 @@ for every row. Rows that are missing a date, a quantity or an entry price still
 import; they are marked **needs details**, kept out of every statistic, and
 listed at the top of the Trades page so you can fill the gaps by hand.
 
-**Most broker and platform exports work as they are.** The importer finds the
-table even when the file opens with a title or account details, skips total
-lines, and recognises the many ways brokers name their columns (`Qty`,
-`Filled`, `Market pos.`, `Comm/Fee`, `Net P&L (USD)`, `Date/Time`, separate
-date and time columns, several fee columns that add up). It reads files that
-list:
+**The exports of 30 platforms work as they are** (see
+[Which file to export](#which-file-to-export) below), and the preview says
+**Recognised:** and the platform when it knows the file. Most other brokers'
+files work too: the importer finds the table even when the file opens with a
+title or account details, skips total lines and deposits, and recognises the
+many ways brokers name their columns (`Qty`, `Filled`, `Market pos.`,
+`Comm/Fee`, `Net P&L (USD)`, `Date/Time`, separate date and time columns,
+several fee columns that add up, NinjaTrader's column names in French). It
+reads files that list:
 
-- **whole trades**, with the entry and exit on one row (NinjaTrader, MetaTrader
-  positions, cTrader, TopstepX and most journals);
-- **individual fills**, one buy or sell per row (Interactive Brokers,
-  Thinkorswim, Webull, Robinhood, Binance, MetaTrader deals, Tradovate orders).
-  These are put back together by following your position in each symbol:
-  scaling in and out stays one trade at the average price, a fill that takes
-  you from long to short closes one trade and opens the next, cancelled orders
-  are left out, and a position still open at the end of the file is imported
-  as open;
+- **whole trades**, with the entry and exit on one row (NinjaTrader trades,
+  MetaTrader, cTrader, TopstepX, Rithmic's performance report, ATAS and most
+  journals). Where there is no direction column, a size below zero is a short;
+- **individual fills or orders**, one buy or sell per row (NinjaTrader
+  executions, Tradovate, Rithmic, Quantower, Sierra Chart, TradingView's order
+  history, Interactive Brokers, Thinkorswim, tastytrade, Schwab, Fidelity,
+  Webull, Robinhood, Binance, Coinbase and more). These are put back together by
+  following your position in each symbol: scaling in and out stays one trade at
+  the average price, a fill that takes you from long to short closes one trade
+  and opens the next, cancelled orders are left out, and a position still open
+  at the end of the file is imported as open;
 - **entry and exit rows paired by a trade number** (TradingView's strategy
   tester).
+
+**Numbers and dates are read the way the file writes them.** A file that uses
+decimal commas, as most of Europe does (`21000,25`, `0,62 $`), is read that
+way throughout, so `1,085` is one and a bit rather than a thousand. Dates that
+could go either way (`03/04/2026`) follow the rest of the file; written with
+dots (`03.04.2026`), or in a file of decimal commas, they are read day first.
 
 The preview says how it read the file. If something is wrong, change it there:
 whether **each row is** a whole trade or one fill, which way round **dates like
@@ -217,8 +228,9 @@ Failing all of those, futures are recognised from a full contract code such as
 count as 100 shares. The preview tells you whenever it worked one out, so you
 can check it.
 
-Times that carry a time zone (`Z`, `+02:00`, or a column marked `UTC`) are
-converted to this device's local time; times without one are kept as written.
+Times that carry a time zone (`Z`, `+02:00`, or a column marked `UTC`, such as
+`Date(UTC)` or `DateUtc`) are converted to this device's local time; times
+without one are kept as written.
 
 **Paired buy/sell exports** — the format Tradovate and similar futures platforms
 produce, with `buyPrice`, `sellPrice`, `boughtTimestamp` and `soldTimestamp` and
@@ -231,6 +243,50 @@ no direction column — are handled directly:
   prices and the P&L stay consistent if you edit either later.
 - `buyFillId` and `sellFillId` are remembered, so **re-importing the same export
   adds nothing twice**. Exporting your whole history every week is safe.
+
+### Which file to export
+
+The same list is in the import window, under **Which file to export from your
+platform**.
+
+| Platform                    | The export to choose                                                                                                                                                                                                     |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **NinjaTrader 8**           | In Trade Performance, display Executions or Trades and generate, then right-click the list and export it as CSV. Any language.                                                                                           |
+| **Tradovate**               | The Performance report, or the Orders list, downloaded as CSV.                                                                                                                                                           |
+| **TopstepX**                | The Trades or the Orders of your account, exported as CSV.                                                                                                                                                               |
+| **Rithmic R \| Trader Pro** | Orders History: choose the account and the day, then export the Completed Orders as CSV, one day at a time. The trade performance report works too.                                                                      |
+| **Quantower**               | The Trades history panel, exported as CSV.                                                                                                                                                                               |
+| **ATAS**                    | The journal in Statistics, saved for Excel: open it in Excel or Google Sheets and save it as CSV.                                                                                                                        |
+| **Sierra Chart**            | The Trade Activity Log showing Fills, saved with File > Save Log As.                                                                                                                                                     |
+| **TradeStation**            | The Orders report, exported as CSV.                                                                                                                                                                                      |
+| **Deepcharts**              | The trade list, exported as CSV.                                                                                                                                                                                         |
+| **TradingView**             | Paper Trading or a connected broker: in Order History, tick every column under Column setup, then Download data > Order history. Or the Strategy Tester: List of trades > Download, then type the symbol in the preview. |
+| **FTMO**                    | The trading journal of your account in the Client Area, exported as CSV.                                                                                                                                                 |
+| **MetaTrader 4 and 5**      | History tab: right-click and save a report, open it in Excel or Google Sheets, and save it as CSV. A prop firm's dashboard often exports CSV directly.                                                                   |
+| **cTrader**                 | History, exported as CSV.                                                                                                                                                                                                |
+| **IG**                      | History > Transactions, downloaded as CSV.                                                                                                                                                                               |
+| **Interactive Brokers**     | An Activity Statement downloaded as CSV, or a Flex Query of trades in CSV.                                                                                                                                               |
+| **Thinkorswim**             | Monitor > Account Statement for the dates you want, exported to a file.                                                                                                                                                  |
+| **Charles Schwab**          | The transaction history of the account, exported as CSV.                                                                                                                                                                 |
+| **Fidelity**                | Activity & Orders history, downloaded as CSV.                                                                                                                                                                            |
+| **E\*TRADE**                | Transactions, downloaded as CSV.                                                                                                                                                                                         |
+| **tastytrade**              | History > Transactions, downloaded as CSV.                                                                                                                                                                               |
+| **Webull**                  | The order history, exported as CSV.                                                                                                                                                                                      |
+| **Robinhood**               | Reports and statements: generate an account activity report.                                                                                                                                                             |
+| **TradeZero**               | The trades for a date range, exported as CSV.                                                                                                                                                                            |
+| **Trading 212**             | History, exported as CSV.                                                                                                                                                                                                |
+| **DEGIRO**                  | Transactions, exported as CSV.                                                                                                                                                                                           |
+| **Binance**                 | Orders > Trade History (spot or futures) > Export.                                                                                                                                                                       |
+| **Coinbase**                | Statements: the transaction history as CSV; on Advanced, the fills export.                                                                                                                                               |
+| **Kraken**                  | History > Export, choosing Trades.                                                                                                                                                                                       |
+| **Hyperliquid**             | Trade History, exported as CSV.                                                                                                                                                                                          |
+| **TradeZella**              | Your trades, exported as CSV.                                                                                                                                                                                            |
+
+The importer reads CSV files only. An export saved for Excel (`.xlsx`) or as a
+web page opens in Excel or Google Sheets, from where **Save as** or **Download**
+gives a CSV. Platforms change their exports from time to time; if a column is
+read wrongly, set it under **Columns** in the preview and the choice is
+remembered for the next file like it.
 
 ### Scaling out: partial fills become one trade
 
@@ -381,9 +437,11 @@ fills, a sell with nothing open reads as a short; if it actually closed a
 position from an earlier export, import the exports together, or fix the trade
 by hand.
 
-**The importer did not understand my broker's file.** Open **Columns** in the
-preview and say what each column is; the file is read again as you choose, and
-the choice is remembered for the next export like it.
+**The importer did not understand my broker's file.** If your platform is in
+[Which file to export](#which-file-to-export), check that the file is the
+export named there, saved as CSV. Otherwise open **Columns** in the preview and
+say what each column is; the file is read again as you choose, and the choice
+is remembered for the next export like it.
 
 ---
 

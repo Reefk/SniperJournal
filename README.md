@@ -37,7 +37,10 @@ you have an edge.
   position, or keep a trade but leave it out of the statistics.
 - **Broker import.** CSV import from most brokers and platforms, with a preview
   before anything is added, from the Trades page or straight from Log trade
-  (one trade or many). Files of whole trades and files of single fills
+  (one trade or many). The exports of 30 platforms work as they come and are
+  named in the preview: NinjaTrader, Tradovate, TopstepX, Rithmic, Quantower,
+  ATAS, Sierra Chart, TradingView, MetaTrader, Interactive Brokers, tastytrade,
+  Schwab, Binance and more (the list is in `src/lib/import/platforms.ts`). Files of whole trades and files of single fills
   both work: fills are put back together by following the position. Columns
   are recognised by the many names brokers use, and anything misread can be
   corrected in the preview. Re-importing never adds a trade twice: fill and
