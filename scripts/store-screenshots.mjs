@@ -10,7 +10,7 @@
 // Store's 1366 x 768 to 3840 x 2160 for desktop screenshots.
 
 import { spawn, spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { PAGE, drive } from '../tests/e2e/cdp.mjs';
@@ -25,14 +25,18 @@ const work = mkdtempSync(join(tmpdir(), 'sj-store-shots-'));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const debugPort = 9600 + Math.floor(Math.random() * 300);
+// the browser flags the app ships with (British English, whatever Windows is
+// set to), passed again because the variable replaces them, plus DevTools
+const shippedArgs =
+  JSON.parse(readFileSync(join(project, 'src-tauri', 'tauri.conf.json'), 'utf8')).app.windows[0]
+    .additionalBrowserArgs ?? '';
 const app = spawn(exe, [], {
   stdio: 'ignore',
   env: {
     ...process.env,
     SNIPER_JOURNAL_DIR: join(work, 'journal'),
     WEBVIEW2_USER_DATA_FOLDER: join(work, 'webview'),
-    // US English whatever Windows is set to: dates and the date fields' placeholders
-    WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${debugPort} --lang=en-US`,
+    WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `${shippedArgs} --remote-debugging-port=${debugPort}`.trim(),
   },
 });
 

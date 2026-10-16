@@ -38,11 +38,16 @@ const running = () =>
   );
 
 // ---- the app, with the throwaway folder and its own WebView2 profile ---------
+// The variable replaces the browser flags the app ships with (tauri.conf.json)
+// rather than adding to them, so they are passed again with the DevTools port.
+const shippedArgs =
+  JSON.parse(readFileSync(join(project, 'src-tauri', 'tauri.conf.json'), 'utf8')).app.windows[0]
+    .additionalBrowserArgs ?? '';
 const env = (debugPort) => ({
   ...process.env,
   SNIPER_JOURNAL_DIR: folder,
   WEBVIEW2_USER_DATA_FOLDER: join(work, 'webview'),
-  WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${debugPort}`,
+  WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `${shippedArgs} --remote-debugging-port=${debugPort}`.trim(),
 });
 let app;
 /** what the page logged: CSP refusals, errors */
@@ -191,6 +196,11 @@ async function journey() {
   check('the journal folder is made at the first start', existsSync(folder));
   await b.until(`$text().includes('Set up your journal')`, 'welcome screen');
   check('the welcome screen offers to bring over the earlier version', await b.run(`!!$t('Bring your journal over')`));
+  check(
+    "the window's own parts (date fields, menus) are in British English, whatever Windows is set to",
+    (await b.run(`navigator.language`)) === 'en-GB',
+    await b.run(`navigator.language`),
+  );
   check(
     "it does not warn that uninstalling deletes the journal: it doesn't",
     !(await b.run(`$text().includes('Uninstalling it deletes')`)),

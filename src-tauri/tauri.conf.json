@@ -22,7 +22,8 @@
         "minHeight": 560,
         "center": true,
         "backgroundColor": "#0b1120",
-        "dragDropEnabled": false
+        "dragDropEnabled": false,
+        "additionalBrowserArgs": "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --lang=en-GB"
       }
     ],
     "security": {
