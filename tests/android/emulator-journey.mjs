@@ -264,7 +264,9 @@ try {
   await launch();
   const state = await ev(`(async () => {
     [...document.querySelectorAll('a')].find((a) => a.getAttribute('href') === '/trades').click();
-    await new Promise((r) => setTimeout(r, 1500));
+    // a busy emulator can take seconds to draw the page: wait for the count, up to 15 s
+    for (let i = 0; i < 60 && !/(\\d+) trades in/.test(document.body.innerText); i++)
+      await new Promise((r) => setTimeout(r, 250));
     return { text: document.body.innerText.match(/(\\d+) trades in/)?.[1], crashed: /Application error|Something went wrong/.test(document.body.innerText) };
   })()`);
   check('a corrupted journal still opens (no crash screen)', !state.crashed);
@@ -357,11 +359,12 @@ try {
   // ---- the App and Share plugins ------------------------------------------------
   adb('logcat', '-c');
   await launch();
+  // waits rather than fixed pauses: a busy emulator can take seconds to draw a page
   await ev(goTrades);
-  await sleep(1500);
+  await seen(`location.pathname.startsWith('/trades') && /(\\d+) trades? in/.test(document.body.innerText)`, 'trades', 15000);
   const onTrades = await ev('location.pathname');
   adb('shell', 'input', 'keyevent', 'BACK');
-  await sleep(1500);
+  await seen(`!location.pathname.startsWith('/trades')`, 'back from trades', 15000);
   check(
     'the back button goes back inside the app (App plugin)',
     onTrades.startsWith('/trades') &&
@@ -369,7 +372,11 @@ try {
       !(await ev('location.pathname')).startsWith('/trades'),
   );
   await ev(goTrades);
-  await sleep(1500);
+  await seen(
+    `[...document.querySelectorAll('button')].some((b) => b.textContent.trim().startsWith('Export'))`,
+    'export button',
+    15000,
+  );
   await ev(
     `[...document.querySelectorAll('button')].find((b) => b.textContent.trim().startsWith('Export'))?.click(); true`,
   );
