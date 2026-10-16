@@ -283,8 +283,8 @@ async function journey() {
 
   // ---- 2. import -----------------------------------------------------------
   await b.run(`$nav('/trades'); true`);
-  await b.until(`!!$tStarts('Import CSV')`, 'trades page');
-  await b.run(`$tStarts('Import CSV').click(); true`);
+  await b.until(`!!$t('Import')`, 'trades page');
+  await b.run(`$t('Import').click(); true`);
   await b.until(`!!$modal()?.querySelector('input[type=file]')`, 'import dialog');
   await b.setFile('[data-modal-root] input[type=file]', csvPath);
   await b.until(`$modal().innerText.includes('ready to import')`, 'import preview');
@@ -301,7 +301,7 @@ async function journey() {
   );
 
   // ---- 2b. other layouts in the preview: fills, and columns set by hand -------
-  await b.run(`$tStarts('Import CSV').click(); true`);
+  await b.run(`$t('Import').click(); true`);
   await b.until(`!!$modal()?.querySelector('input[type=file]')`, 'import dialog');
   await b.setFile('[data-modal-root] input[type=file]', fillsPath);
   await b.until(`/1\\s*ready to import/.test($modal().innerText)`, 'fills preview');
@@ -502,12 +502,12 @@ async function journey() {
     a11y.buttons.length === 0,
     a11y.buttons.join(' | '),
   );
-  await b.run(`window.$opener = $tStarts('Import CSV'); $opener.focus(); $opener.click(); true`);
+  await b.run(`window.$opener = $t('Import'); $opener.focus(); $opener.click(); true`);
   await b.until(`!!$modal()`, 'dialog');
   check(
     'a dialog is named by its title',
     await b.run(
-      `document.getElementById($modal().getAttribute('aria-labelledby'))?.textContent.trim() === 'Import trades from CSV'`,
+      `document.getElementById($modal().getAttribute('aria-labelledby'))?.textContent.trim() === 'Import trades from a file'`,
     ),
   );
   check('focus moves into a dialog when it opens', await b.run(`$modal().contains(document.activeElement)`));
@@ -607,9 +607,9 @@ async function journey() {
 
   // ---- 10. columns set by hand are remembered for the next file like it -------
   await b.run(`$nav('/trades'); true`);
-  await b.until(`!!$tStarts('Import CSV')`, 'trades page');
+  await b.until(`!!$t('Import')`, 'trades page');
   const importOdd = async () => {
-    await b.run(`$tStarts('Import CSV').click(); true`);
+    await b.run(`$t('Import').click(); true`);
     await b.until(`!!$modal()?.querySelector('input[type=file]')`, 'import dialog');
     await b.setFile('[data-modal-root] input[type=file]', oddPath);
   };
@@ -1261,7 +1261,7 @@ async function journey() {
   };
   await openLog();
   check('Log a trade opens by hand the first time', await b.run(pressed('By hand')));
-  await b.run(`$t('From a CSV file', $modal()).click(); true`);
+  await b.run(`$t('From a file', $modal()).click(); true`);
   await b.until(`!!document.querySelector(${JSON.stringify(csvInput)})`, 'csv side');
   await b.setFile(csvInput, dayPath);
   await b.until(`/2\\s*ready to import/.test($modal().innerText)`, 'csv preview in the form');
@@ -1278,7 +1278,7 @@ async function journey() {
   await openLog();
   check(
     'the next time it opens on the file, as last used',
-    await b.run(`${pressed('From a CSV file')} && !!document.querySelector(${JSON.stringify(csvInput)})`),
+    await b.run(`${pressed('From a file')} && !!document.querySelector(${JSON.stringify(csvInput)})`),
   );
   await b.setFile(csvInput, dayPath);
   await b.until(`$modal().innerText.includes('already in your journal')`, 'likely duplicates');

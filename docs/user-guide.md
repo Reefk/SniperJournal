@@ -162,7 +162,7 @@ any chart image you attached to one of them. Your own entries are never touched.
 
 ### Importing from your broker
 
-Trades → **Import CSV**, or **Log trade** → **From a CSV file**: the same
+Trades → **Import**, or **Log trade** → **From a file**: the same
 import, for one trade or a whole history. Log trade remembers which of the two
 you used last on this device, so if you log every trade from your broker's
 file, it opens on the file. You get a preview of exactly what was understood

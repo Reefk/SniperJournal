@@ -255,8 +255,8 @@ async function journey() {
 
   // ---- 4. import ------------------------------------------------------------------
   await b.run(`$nav('/trades'); true`);
-  await b.until(`!!$tStarts('Import CSV')`, 'trades page');
-  await b.run(`$tStarts('Import CSV').click(); true`);
+  await b.until(`!!$t('Import')`, 'trades page');
+  await b.run(`$t('Import').click(); true`);
   await b.until(`!!$modal()?.querySelector('input[type=file]')`, 'import dialog');
   await b.setFile('[data-modal-root] input[type=file]', csvPath);
   await b.until(`$modal().innerText.includes('ready to import')`, 'import preview');

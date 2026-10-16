@@ -260,7 +260,7 @@ export function TradesView() {
       actions={
         <>
           <Button onClick={() => setImporting(true)}>
-            <Upload className="size-4" /> Import CSV
+            <Upload className="size-4" /> Import
           </Button>
           <Button
             disabled={!sorted.length}
@@ -290,14 +290,14 @@ export function TradesView() {
         <EmptyState
           icon={ArrowLeftRight}
           title="No trades logged yet"
-          description="Log each trade as you close it, or import a CSV from your broker. Every chart and statistic in Sniper Journal is built from these entries."
+          description="Log each trade as you close it, or import your broker's file. Every chart and statistic in Sniper Journal is built from these entries."
           actions={
             <>
               <Button variant="primary" onClick={() => openTradeForm()}>
                 <Plus className="size-4" /> Log your first trade
               </Button>
               <Button onClick={() => setImporting(true)}>
-                <Upload className="size-4" /> Import CSV
+                <Upload className="size-4" /> Import
               </Button>
               <Button variant="ghost" onClick={() => actions.loadSampleData()}>
                 <FlaskConical className="size-4" /> Load test data

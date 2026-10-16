@@ -452,7 +452,7 @@ No Critical findings were made.
   - `aria-labelledby` points at the title.
   - The dialog takes focus when it opens, unless a field inside already did.
   - Focus returns to the opener on close.
-- **Evidence:** E2E checks that the dialog's name is "Import trades from CSV", that focus is inside it after opening, and that focus is back on the Import CSV button after Escape.
+- **Evidence:** E2E checks that the dialog's name is "Import trades from a file" (it was "Import trades from CSV" at the time of the audit), that focus is inside it after opening, and that focus is back on the Import button after Escape.
 - **Status:** Fixed and Verified. Tab focus trapping followed on 2026-10-12 (SJ-33).
 
 ### SJ-19: "Open" count included incomplete closed trades

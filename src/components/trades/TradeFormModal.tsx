@@ -164,7 +164,7 @@ function previewTrade(f: FormState): Trade {
 }
 
 /**
- * A new trade is logged by hand or from a CSV file. The way last used is
+ * A new trade is logged by hand or from a broker's file. The way last used is
  * remembered on this device, so someone who always imports gets the file first.
  */
 type LogWay = 'hand' | 'csv';
@@ -186,7 +186,7 @@ function rememberWay(way: LogWay) {
 }
 const LOG_WAYS = [
   { value: 'hand', label: 'By hand' },
-  { value: 'csv', label: 'From a CSV file' },
+  { value: 'csv', label: 'From a file' },
 ] as const;
 
 export function TradeFormModal() {

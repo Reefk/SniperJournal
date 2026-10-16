@@ -35,7 +35,7 @@ export function ImportTradesModal({ open, onClose }: { open: boolean; onClose: (
       open={open}
       onClose={onClose}
       size="xl"
-      title="Import trades from CSV"
+      title="Import trades from a file"
       description="Drop in an export from your broker or trading platform: whole trades or individual fills. Anything missing can be filled in afterwards."
     >
       <ImportBody onClose={onClose} />
@@ -94,7 +94,7 @@ function rememberChoices(signature: string, choices: Choices) {
   }
 }
 
-/** the import itself, also the "From a CSV file" side of Log a trade */
+/** the import itself, also the "From a file" side of Log a trade */
 export function ImportBody({ onClose }: { onClose: () => void }) {
   const { data, actions } = useJournal();
   const { toast } = useUI();

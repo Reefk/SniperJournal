@@ -206,9 +206,10 @@ export function SupportView() {
           <Upload className="size-5 text-accent" />
           <h2 className="mt-3 text-sm font-semibold text-fg">Importing from your broker</h2>
           <p className="mt-1.5 text-sm leading-relaxed text-muted">
-            Open Trades, choose Import CSV and download the template to see the exact column names. Common broker
-            headings such as qty, ticker, commission and realized pnl are recognised automatically, and any rows that
-            cannot be read are listed before you commit the import.
+            Open Trades and choose Import. The exports of 30 platforms, CSV or Excel, import as they come, and the
+            import window says which file to export from each. For anything else, download the template to see the
+            column names: common broker headings such as qty, ticker, commission and realized pnl are recognised
+            automatically, and any rows that cannot be read are listed before you commit the import.
           </p>
         </div>
         {/* how to start the background server on Windows; a phone app just opens */}
