@@ -45,6 +45,8 @@ export interface Sheet {
   rowKind: RowKind;
   /** each row pairs a buy fill with a sell fill instead of naming a side (Tradovate) */
   paired: boolean;
+  /** no side column, and a size below zero somewhere: the sign of the size is the direction */
+  signedQuantities: boolean;
   /** day-month or month-day, for every date in the file */
   order: DateOrder | undefined;
   layout: ImportLayout;
@@ -61,12 +63,46 @@ export interface Sheet {
   cell(row: string[], role: Role): string;
 }
 
+// a number with a decimal comma (0,62 $ / 21000,25 / 0,500 / 1.234,56) or a decimal
+// point (0.62 / $21,000.25); three digits after the only separator (1,085) could be either
+const COMMA_DECIMAL = /^[^\d]{0,4}-?(0,\d+|\d+,(\d{1,2}|\d{4,})|\d{1,3}(\.\d{3})+,\d+)[^\d]{0,4}$/;
+const POINT_DECIMAL = /^[^\d]{0,4}-?(\d+\.(\d{1,2}|\d{4,})|\d{1,3}(,\d{3})+\.\d+)[^\d]{0,4}$/;
+const THREE_AFTER_COMMA = /^([^\d]{0,4}-?\d{1,3}),(\d{3}[^\d,.]{0,4})$/;
+
+/**
+ * Whether the file writes numbers with a decimal comma, as most of Europe
+ * does: some number shows it and none shows a decimal point. Then 1,085 is
+ * one and a bit, not a thousand and eighty-five, and its dates are day-first
+ * unless they show otherwise.
+ */
+export function usesDecimalComma(data: string[][]): boolean {
+  let comma = 0;
+  for (const row of data.slice(0, 200)) {
+    for (const cell of row) {
+      const v = cell.trim();
+      if (POINT_DECIMAL.test(v)) return false;
+      if (COMMA_DECIMAL.test(v)) comma++;
+    }
+  }
+  return comma > 0;
+}
+
 /** The file's layout, or null when it has no data rows. */
 export function detectLayout(text: string, choices: LayoutChoices): Sheet | null {
   const rows = parseCsv(text);
   if (rows.length < 2) return null;
-  const table = findTable(rows);
-  if (!table.data.length) return null;
+  const found = findTable(rows);
+  if (!found.data.length) return null;
+  // in a decimal-comma file, 1,085 is written 1.085 before anything reads it
+  const decimalComma = usesDecimalComma(found.data);
+  const table = decimalComma
+    ? {
+        ...found,
+        data: found.data.map((row) =>
+          row.map((c) => (THREE_AFTER_COMMA.test(c.trim()) ? c.trim().replace(THREE_AFTER_COMMA, '$1.$2') : c)),
+        ),
+      }
+    : found;
 
   const plan = planColumns(table.header, table.data.slice(0, 50), choices.mapping);
   const has = (role: Role) => plan.roles.has(role);
@@ -114,7 +150,7 @@ export function detectLayout(text: string, choices: LayoutChoices): Sheet | null
     'sold_at',
   ];
   const detected = dateOrderOf(table.data.flatMap((row) => dateRoles.map((r) => cell(row, r))));
-  const order = choices.dateOrder ?? detected.order;
+  const order = choices.dateOrder ?? detected.order ?? (detected.ambiguous && decimalComma ? 'dmy' : undefined);
 
   const layout: ImportLayout = {
     rowKind,
@@ -138,6 +174,7 @@ export function detectLayout(text: string, choices: LayoutChoices): Sheet | null
     plan,
     rowKind,
     paired,
+    signedQuantities,
     order,
     layout,
     recognised,

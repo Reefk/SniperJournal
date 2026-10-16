@@ -114,6 +114,18 @@ function headerScore(row: string[]): number {
 const SECTION_KINDS = new Set(['header', 'data', 'subtotal', 'total', 'notes', 'summary']);
 
 /**
+ * Interactive Brokers repeats an execution as per-lot detail lines, told apart
+ * by a DataDiscriminator (statements) or LevelOfDetail (Flex queries) column;
+ * only these kinds are trades.
+ */
+const TRADE_DETAIL = new Set(['order', 'trade', 'trades', 'execution']);
+const detailKind = (v: string) =>
+  v
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z]/g, '');
+
+/**
  * Interactive Brokers activity statements put every table in one file, each
  * line starting with its section and its kind: "Trades,Header,...",
  * "Trades,Data,Order,...". Returns the trades section as an ordinary table,
@@ -154,8 +166,8 @@ function statementSection(
       return at === -1 ? '' : (cells[at] ?? '');
     });
     // per-lot detail lines repeat an order that is already there
-    const kind = discriminator === -1 ? '' : aligned[discriminator].trim().toLowerCase();
-    if (kind && !['order', 'trade', 'trades', 'execution'].includes(kind)) {
+    const kind = discriminator === -1 ? '' : detailKind(aligned[discriminator]);
+    if (kind && !TRADE_DETAIL.has(kind)) {
       skipped++;
       return;
     }
@@ -211,6 +223,7 @@ export function findTable(rows: string[][]): Table {
 
   const header = rows[headerAt] ?? [];
   const headerKey = header.map((h) => h.trim().toLowerCase()).join('|');
+  const detail = header.findIndex((h) => ['levelofdetail', 'datadiscriminator'].includes(detailKind(h)));
   const data: string[][] = [];
   const lines: number[] = [];
   let skipped = 0;
@@ -233,6 +246,11 @@ export function findTable(rows: string[][]): Table {
       continue;
     }
     if (SUMMARY.test(filled[0]?.trim() ?? '')) {
+      skipped++;
+      continue;
+    }
+    const kind = detail === -1 ? '' : detailKind(row[detail] ?? '');
+    if (kind && !TRADE_DETAIL.has(kind)) {
       skipped++;
       continue;
     }

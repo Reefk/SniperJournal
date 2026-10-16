@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { importTradesFromCsv, type ImportOptions } from '@/lib/csv';
-import { parseMoment } from '@/lib/import/values';
+import { headerInfo } from '@/lib/import/columns';
+import { dateOrderOf, parseAction, parseMoment } from '@/lib/import/values';
 import { futuresPointValue } from '@/lib/import/instruments';
 import { grossPnl, isClosed, netPnl } from '@/lib/trade-math';
 import type { Account, Trade } from '@/lib/types';
@@ -436,6 +437,7 @@ describe('reading single values', () => {
     ['offset', '2026-03-02T15:05:12+02:00', '2026-03-02T13:05'],
     ['Unix seconds', '1772456700', '2026-03-02T13:05'],
     ['Unix milliseconds', '1772456700000', '2026-03-02T13:05'],
+    ['Hyperliquid, " - " before the time', '3/2/2026 - 13:05:12', '2026-03-02T13:05'],
   ])('%s: %s', (_, raw, expected) => {
     expect(parseMoment(raw)?.value).toBe(expected);
   });
@@ -455,5 +457,57 @@ describe('reading single values', () => {
     expect(futuresPointValue('CL')).toBeNull(); // Colgate-Palmolive
     expect(futuresPointValue('AAPL')).toBeNull();
     expect(futuresPointValue('ES', 'Futures')?.value).toBe(50);
+  });
+
+  it("an exchange after the contract code (Sierra Chart), and TradingView's continuous contracts", () => {
+    expect(futuresPointValue('MNQH26-CME')?.value).toBe(2);
+    expect(futuresPointValue('MNQH26_FUT_CME')?.value).toBe(2);
+    expect(futuresPointValue('MNQ1!')?.value).toBe(2);
+    expect(futuresPointValue('ES2!')?.value).toBe(50);
+    expect(futuresPointValue('BRK.B')).toBeNull();
+  });
+
+  it('dates written with dots are day-first when nothing in the file says otherwise', () => {
+    expect(dateOrderOf(['02.03.2026 09:31:05'])).toEqual({ order: 'dmy', ambiguous: true });
+    expect(dateOrderOf(['02/03/2026'])).toEqual({ ambiguous: true });
+    expect(dateOrderOf(['02.03.2026', '03.13.2026'])).toEqual({ order: 'mdy', ambiguous: false });
+  });
+
+  it('a direction as the side of the book (TopstepX), or said in a sentence (Fidelity, Trading 212)', () => {
+    expect(parseAction('Bid')).toEqual({ side: 'BUY' });
+    expect(parseAction('Ask')).toEqual({ side: 'SELL' });
+    expect(parseAction('BC')).toEqual({ side: 'BUY', effect: 'close' });
+    expect(parseAction('Advanced Trade Sell')).toEqual({ side: 'SELL' });
+    expect(parseAction('YOU BOUGHT APPLE INC (AAPL) (Cash)')).toEqual({ side: 'BUY' });
+    expect(parseAction('YOU SOLD CLOSING TRANSACTION CALL (SPY)')).toEqual({ side: 'SELL', effect: 'close' });
+    expect(parseAction('Stop sell')).toEqual({ side: 'SELL' });
+    expect(parseAction('DIVIDEND RECEIVED')).toBeNull();
+    expect(parseAction('Shares bought and sold')).toBeNull();
+  });
+
+  it('header names without their accents, and with a zone run into the name', () => {
+    expect(headerInfo("Prix d'entrée").key).toBe('prixdentree');
+    expect(headerInfo('Heure de sortie').key).toBe('heuredesortie');
+    expect(headerInfo('DateUtc')).toEqual({ key: 'dateutc', offset: 0 });
+    expect(headerInfo('Date')).toEqual({ key: 'date', offset: null });
+  });
+});
+
+describe('decimal commas', () => {
+  it('a file that writes decimal commas reads 1,085 as one and a bit; one that writes points, as a thousand', () => {
+    const comma = read(lines('symbol;side;qty;entry;exit', 'EURUSD;Buy;0,1;1,085;1,0875')).trades[0];
+    expect([comma.quantity, comma.entryPrice, comma.exitPrice]).toEqual([0.1, 1.085, 1.0875]);
+    const point = read(lines('symbol,side,qty,entry,exit', 'AAPL,Buy,"1,085",100.5,101')).trades[0];
+    expect(point.quantity).toBe(1085);
+  });
+
+  it('0,500 can only be a half', () => {
+    expect(read(lines('symbol;side;qty;entry;exit', 'EURUSD;Buy;0,500;1,085;1,090')).trades[0].quantity).toBe(0.5);
+  });
+
+  it('decimal commas make dates that could be either way day-first, and the choice is still offered', () => {
+    const r = read(lines('symbol;side;qty;opened_at;entry', 'AAPL;Buy;10;02/03/2026 10:00;187,40'));
+    expect(r.trades[0].openedAt).toBe('2026-03-02T10:00');
+    expect([r.layout?.ambiguousDates, r.layout?.dateOrder]).toEqual([true, 'dmy']);
   });
 });

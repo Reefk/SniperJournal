@@ -54,11 +54,15 @@ const sumQty = (parts: Part[]) => tidy(parts.reduce((a, p) => a + p.quantity, 0)
  * Chronological order. Most exports list oldest first, many newest first
  * (TradingView, Robinhood); with times on every fill they are sorted, and a
  * file that runs backwards keeps fills sharing a timestamp in their real order.
+ * When the fills alone can't show which way the file runs (a buy and a sell on
+ * one day, with no time), `newestFirst` says, from every dated row of the file.
  */
-function chronological(fills: Fill[]): Fill[] {
+function chronological(fills: Fill[], newestFirst: boolean): Fill[] {
   const timed = fills.filter((f) => f.time);
   let ordered = [...fills];
-  if (timed.length >= 2 && (timed[0].time as Moment).sortKey > (timed[timed.length - 1].time as Moment).sortKey) {
+  const first = timed[0]?.time?.sortKey;
+  const last = timed[timed.length - 1]?.time?.sortKey;
+  if (timed.length >= 2 && first !== last ? (first as string) > (last as string) : newestFirst) {
     ordered.reverse();
   }
   if (timed.length === fills.length) {
@@ -81,9 +85,9 @@ const part = (fill: Fill, quantity: number, withPnl: boolean): Part => ({
 });
 
 /** fills grouped by the trade number the file gives them */
-function byTradeNumber(fills: Fill[]): Position[] {
+function byTradeNumber(fills: Fill[], newestFirst: boolean): Position[] {
   const groups = new Map<string, Fill[]>();
-  for (const f of chronological(fills)) {
+  for (const f of chronological(fills, newestFirst)) {
     const id = `${f.key}|${f.tradeNo}`;
     groups.set(id, [...(groups.get(id) ?? []), f]);
   }
@@ -103,11 +107,11 @@ function byTradeNumber(fills: Fill[]): Position[] {
 }
 
 /** fills followed position by position, per account and symbol */
-function byPosition(fills: Fill[]): Position[] {
+function byPosition(fills: Fill[], newestFirst: boolean): Position[] {
   const done: Position[] = [];
   const open = new Map<string, { position: Position; signed: number }>();
 
-  for (const fill of chronological(fills)) {
+  for (const fill of chronological(fills, newestFirst)) {
     const signed = fill.side === 'BUY' ? fill.quantity : -fill.quantity;
     const state = open.get(fill.key);
 
@@ -184,9 +188,9 @@ function byPosition(fills: Fill[]): Position[] {
   return done;
 }
 
-export function fillsToPositions(fills: Fill[]): Position[] {
+export function fillsToPositions(fills: Fill[], newestFirst = false): Position[] {
   if (!fills.length) return [];
-  const positions = fills.every((f) => f.tradeNo) ? byTradeNumber(fills) : byPosition(fills);
+  const positions = fills.every((f) => f.tradeNo) ? byTradeNumber(fills, newestFirst) : byPosition(fills, newestFirst);
   const firstTime = (p: Position) => (p.entries[0] ?? p.exits[0]).fill.time?.sortKey ?? '';
   const firstLine = (p: Position) => (p.entries[0] ?? p.exits[0]).fill.line;
   return positions.sort((a, b) => firstTime(a).localeCompare(firstTime(b)) || firstLine(a) - firstLine(b));

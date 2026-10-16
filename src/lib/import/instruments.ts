@@ -84,8 +84,10 @@ const POINT_VALUES: Record<string, number> = {
 const MONTH_CODE = '[FGHJKMNQUVXZ]';
 const MONTH_NAMES = 'JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC';
 const CONTRACT = [
-  // ESH6, MNQZ25, 6EM6, /ESH26, /MESZ25:XCME
-  new RegExp(`^/?([A-Z0-9]{1,4}?)${MONTH_CODE}(\\d{1,2})(?::[A-Z]+)?$`),
+  // ESH6, MNQZ25, 6EM6, /ESH26, /MESZ25:XCME, and Sierra Chart's MNQH26-CME and MNQH26_FUT_CME
+  new RegExp(`^/?([A-Z0-9]{1,4}?)${MONTH_CODE}(\\d{1,2})(?::[A-Z]+|[-_.][A-Z][A-Z_]*)?$`),
+  // TradingView's continuous contracts: MNQ1!, ES2!
+  /^([A-Z0-9]{1,4})[12]!$/,
   // NinjaTrader: ES 03-26
   /^([A-Z0-9]{1,4})\s+\d{2}-\d{2}$/,
   // ES MAR26, ES Mar 26

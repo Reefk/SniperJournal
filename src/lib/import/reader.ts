@@ -83,6 +83,9 @@ export interface Reader {
   knownMultiplier(symbol: string, row: string[]): number | null;
 }
 
+/** TradingView names the exchange first: CME_MINI:MNQ1! is MNQ1!, NASDAQ:AAPL is AAPL */
+export const withoutExchange = (symbol: string) => symbol.replace(/^[A-Z][A-Z0-9_]*:(?=\S)/, '');
+
 export function createReader(sheet: Sheet, target: ImportTarget): Reader {
   const { table, plan, order, at, cell, fallbackSymbol } = sheet;
   const findings: Findings = {
@@ -152,9 +155,12 @@ export function createReader(sheet: Sheet, target: ImportTarget): Reader {
   };
 
   const symbolOf = (row: string[]) => {
-    const base = (textCell(row, 'symbol') || textCell(row, 'underlying')).toUpperCase() || fallbackSymbol;
+    const base = withoutExchange(
+      (textCell(row, 'symbol') || textCell(row, 'underlying')).toUpperCase() || fallbackSymbol,
+    );
     const putCall = parsePutCall(cell(row, 'put_call'));
-    if (!putCall || !base) return base;
+    // an OCC symbol (IBKR's Flex queries, tastytrade) already names the expiry, strike and call or put
+    if (!putCall || !base || isOption(base)) return base;
     return optionSymbol(base, cell(row, 'expiry'), cell(row, 'strike'), putCall === 'C' ? 'CALL' : 'PUT');
   };
 

@@ -3,6 +3,7 @@ import { detectSession } from '../sessions';
 import { isIncomplete } from '../trade-math';
 import { mergeIssue, mergeTrades } from '../merge';
 import { uid } from '../utils';
+import type { Role } from './columns';
 import { fitReported, type Reader, type RowsRead } from './reader';
 import { parseMoney, parseSide, type Moment } from './values';
 
@@ -44,6 +45,12 @@ export function parseTradeRow(row: string[], line: number, r: Reader): TradeRow 
   const rawSide = cell(row, 'side');
   let side = parseSide(rawSide);
   if (rawSide && !side) r.findings.unknownSides.set(rawSide, [...(r.findings.unknownSides.get(rawSide) ?? []), line]);
+  // ATAS, Deepcharts and IG sign the size instead of naming a side: below zero is a short
+  let quantity = parseMoney(cell(row, 'quantity'));
+  if (r.sheet.signedQuantities && quantity != null) {
+    side = quantity < 0 ? 'SHORT' : 'LONG';
+    quantity = Math.abs(quantity);
+  }
   let openedParts = r.moment(row, 'opened_at', 'opened_date') ?? r.moment(row, 'time', 'date');
   let closedParts = r.moment(row, 'closed_at', 'closed_date');
   let entryPrice = parseMoney(cell(row, 'entry_price')) ?? parseMoney(cell(row, 'price'));
@@ -65,7 +72,6 @@ export function parseTradeRow(row: string[], line: number, r: Reader): TradeRow 
     exitPrice = exitPrice ?? (soldFirst ? buyPrice : sellPrice);
   }
 
-  const quantity = parseMoney(cell(row, 'quantity'));
   const fees = r.feeOf(row);
   // The P&L before commissions. A net column has them added back, so they
   // are not charged a second time through the fees column.
@@ -152,8 +158,19 @@ export function tradesFromRows(r: Reader): RowsRead {
   const openingFill = new Map<string, string>();
   const seenIds = new Set(r.existingIds);
 
+  // a deposit or a balance line among the trades (MetaTrader, IG) has no price
+  // and no size; a file where most rows have none is one to fill in by hand
+  const PRICED: Role[] = ['entry_price', 'exit_price', 'price', 'buy_price', 'sell_price', 'quantity'];
+  const priced = (row: string[]) => PRICED.some((role) => parseMoney(sheet.cell(row, role)) != null);
+  const mostlyPriced = sheet.table.data.filter(priced).length * 2 >= sheet.table.data.length;
+  const notTrades: string[] = [];
+
   sheet.table.data.forEach((row, index) => {
     const line = sheet.table.lines[index];
+    if (mostlyPriced && !priced(row)) {
+      notTrades.push(sheet.cell(row, 'side') || r.symbolOf(row) || 'blank');
+      return;
+    }
     const read = parseTradeRow(row, line, r);
     if (!read) {
       findings.noSymbol.push(line);
@@ -175,10 +192,21 @@ export function tradesFromRows(r: Reader): RowsRead {
   });
 
   const errors: string[] = [];
-  if (!sheet.has('side') && !sheet.paired && trades.length) {
+  const notices: string[] = [];
+  if (!sheet.has('side') && !sheet.paired && !sheet.signedQuantities && trades.length) {
     errors.push('There is no direction column, so every row was imported as LONG. Check any shorts.');
   }
-  return { trades, errors, notices: [], openingFill };
+  if (notTrades.length) {
+    const n = notTrades.length;
+    const examples = [...new Set(notTrades)]
+      .slice(0, 3)
+      .map((v) => `"${v}"`)
+      .join(', ');
+    notices.push(
+      `${n} ${n === 1 ? 'row has' : 'rows have'} no price and no size (${examples}), so ${n === 1 ? 'it is not a trade and was' : 'they are not trades and were'} left out.`,
+    );
+  }
+  return { trades, errors, notices, openingFill };
 }
 
 /**

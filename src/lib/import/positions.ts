@@ -6,7 +6,7 @@ import { uid } from '../utils';
 import { fillsToPositions, summarise, type Fill, type Summary } from './fills';
 import { fitReported, type Reader, type RowsRead } from './reader';
 import { rowsNote } from './report';
-import { parseAction, parseEffect, parseMoney, parseStatus } from './values';
+import { parseAction, parseEffect, parseMoment, parseMoney, parseStatus } from './values';
 
 /**
  * Files with one row per fill: each row is read as a fill, the fills are put
@@ -35,7 +35,8 @@ export type FillSkip =
 /**
  * A row read as a fill, or why it isn't one. `seen` holds the ids of the
  * fills read so far; this one's is added. `net` says the file's P&L column
- * is after fees.
+ * is after fees; `cashSigned` that its prices carry the sign of the cash, a
+ * buy's below zero (tastytrade).
  */
 export function parseFillRow(
   row: string[],
@@ -43,6 +44,7 @@ export function parseFillRow(
   r: Reader,
   seen: Set<string>,
   net: boolean,
+  cashSigned = false,
 ): FillRow | FillSkip {
   const { has, cell } = r.sheet;
   if (has('status') && parseStatus(cell(row, 'status')) === 'unfilled') return { skip: 'unfilled' };
@@ -59,8 +61,22 @@ export function parseFillRow(
   action = { ...action, effect: effect ?? undefined };
   const quantity = rawQuantity == null ? null : Math.abs(rawQuantity);
   if (!quantity) return { skip: 'no quantity' };
-  const price = parseMoney(cell(row, 'price')) ?? parseMoney(cell(row, 'entry_price'));
+  let price = parseMoney(cell(row, 'price')) ?? parseMoney(cell(row, 'entry_price'));
   if (price == null) return { skip: 'no price' };
+  if (cashSigned) price = Math.abs(price);
+  // tastytrade's price of an option is per contract (4.25 a share is 425):
+  // the price times the size makes the amount without the multiplier
+  const multiplier = parseMoney(cell(row, 'multiplier'));
+  const amount = Math.abs(parseMoney(cell(row, 'notional')) ?? 0);
+  const near = (a: number, b: number) => Math.abs(a - b) <= b * 0.005;
+  if (
+    multiplier &&
+    multiplier > 1 &&
+    amount &&
+    near(price * quantity, amount) &&
+    !near(price * quantity * multiplier, amount)
+  )
+    price = price / multiplier;
   const id = cell(row, 'external_id') || undefined;
   if (id) {
     if (seen.has(id)) return { skip: 'duplicate' };
@@ -122,6 +138,13 @@ export function assemblePosition(s: Summary, read: ReadonlyMap<number, FillRow>,
         return fill ? r.multiplierCell(fill.row, l) : null;
       })
       .find((m) => m != null) ?? null;
+  // a reported P&L that fits the prices says it best: TradingView's position
+  // value leaves the point value out (2 MNQ at 21000 is "42000")
+  const fit =
+    multiplier == null && s.reportedPnl != null && s.closed && !s.orphan
+      ? fitReported(s.reportedPnl, s.move, s.fees, net)
+      : null;
+  if (fit?.multiplier != null) multiplier = fit.multiplier;
   if (multiplier == null) {
     const worth = [...new Set(rows.map(fillWorth))];
     if (worth.length === 1 && worth[0] != null) {
@@ -130,11 +153,7 @@ export function assemblePosition(s: Summary, read: ReadonlyMap<number, FillRow>,
     }
   }
   let manualPnl: number | null = null;
-  if (multiplier == null && s.reportedPnl != null && s.closed && !s.orphan) {
-    const fit = fitReported(s.reportedPnl, s.move, s.fees, net);
-    multiplier = fit.multiplier;
-    manualPnl = fit.manualPnl;
-  }
+  if (multiplier == null && fit) manualPnl = fit.manualPnl;
   if (multiplier == null) multiplier = r.knownMultiplier(first.symbol, first.row) ?? 1;
 
   // averages rounded to the precision of the prices, and the exact P&L
@@ -183,10 +202,40 @@ export function assemblePosition(s: Summary, read: ReadonlyMap<number, FillRow>,
   return trade;
 }
 
+/**
+ * Whether the prices carry the sign of the cash, as tastytrade writes them:
+ * every price below zero is a buy's, and some sell's is above it. A price
+ * that is really negative (oil in April 2020) is below zero on sells too.
+ */
+function cashSignedPrices(r: Reader): boolean {
+  const { cell } = r.sheet;
+  let buysBelow = 0;
+  let sellsAbove = 0;
+  for (const row of r.sheet.table.data) {
+    const price = parseMoney(cell(row, 'price')) ?? parseMoney(cell(row, 'entry_price'));
+    const side = parseAction(cell(row, 'side'))?.side;
+    if (price == null || !side || price === 0) continue;
+    if (side === 'BUY' && price < 0) buysBelow++;
+    else if (side === 'SELL' && price > 0) sellsAbove++;
+    else return false;
+  }
+  return buysBelow > 0 && sellsAbove > 0;
+}
+
+/** Whether the file lists its newest rows first, judged by every dated row in it, trades or not. */
+function runsNewestFirst(r: Reader): boolean {
+  const { cell, order, table } = r.sheet;
+  const dated = table.data
+    .map((row) => parseMoment(cell(row, 'time') || cell(row, 'date'), order)?.sortKey)
+    .filter((k): k is string => Boolean(k));
+  return dated.length >= 2 && dated[0] > dated[dated.length - 1];
+}
+
 /** Every row read as a fill, the fills put back together, and each position made a trade. */
 export function tradesFromFills(r: Reader): RowsRead {
   const { sheet, findings } = r;
   const net = !sheet.has('gross_pnl') && !sheet.has('pnl') && sheet.has('net_pnl');
+  const cashSigned = cashSignedPrices(r);
   const fills: Fill[] = [];
   const read = new Map<number, FillRow>();
   const seen = new Set<string>();
@@ -197,7 +246,7 @@ export function tradesFromFills(r: Reader): RowsRead {
 
   sheet.table.data.forEach((row, index) => {
     const line = sheet.table.lines[index];
-    const got = parseFillRow(row, line, r, seen, net);
+    const got = parseFillRow(row, line, r, seen, net, cashSigned);
     if ('fill' in got) {
       fills.push(got.fill);
       read.set(line, got);
@@ -229,7 +278,7 @@ export function tradesFromFills(r: Reader): RowsRead {
   let open = 0;
   let orphans = 0;
   let overlapping = 0;
-  for (const s of fillsToPositions(fills).flatMap(summarise)) {
+  for (const s of fillsToPositions(fills, runsNewestFirst(r)).flatMap(summarise)) {
     if (!read.has(s.firstLine)) continue;
     // already imported: every fill of it is in the journal
     if (s.ids.length && s.ids.every((id) => r.existingIds.has(id))) {

@@ -71,9 +71,11 @@ export interface Moment {
 
 const TIME = String.raw`(\d{1,2}):(\d{2})(?::(\d{2}))?(?:[.,]\d+)?\s*(AM|PM|am|pm)?`;
 const ZONE = String.raw`\s*((?:UTC|GMT)?\s*[+-]\d{2}:?\d{2}|Z|UTC|GMT)?`;
-const ISO_DATE = new RegExp(String.raw`^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(?:[ T,]+${TIME})?${ZONE}`, 'i');
+// between the date and the time: a space, a T, a comma, or Hyperliquid's " - "
+const SEP = String.raw`(?:[ T,]+|\s+-\s+)`;
+const ISO_DATE = new RegExp(String.raw`^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(?:${SEP}${TIME})?${ZONE}`, 'i');
 const NUMERIC_DATE = new RegExp(
-  String.raw`^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4}|\d{2})(?![\d])(?:[ T,]+${TIME})?${ZONE}`,
+  String.raw`^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4}|\d{2})(?![\d])(?:${SEP}${TIME})?${ZONE}`,
   'i',
 );
 const COMPACT_DATE = /^(\d{4})(\d{2})(\d{2})(?:[;,\sT-]*(\d{2}):?(\d{2}):?(\d{2})?)?$/;
@@ -225,22 +227,26 @@ export function asClock(raw: string): string {
  * One file is read with one date order. 03/04 on its own could be either, so
  * if any date in the file has a day above 12 in the first slot, every date in
  * it is day-first; above 12 in the second slot, month-first. Mixed or no
- * evidence leaves each date to the per-date rule.
+ * evidence leaves each date to the per-date rule, except that dates written
+ * with dots (02.03.2026) are day-first: the United States never writes them so.
  */
 export function dateOrderOf(values: string[]): { order?: DateOrder; ambiguous: boolean } {
   let dayFirst = false;
   let monthFirst = false;
   let numeric = false;
+  let dotted = true;
   for (const v of values) {
     const m = v.trim().match(NUMERIC_DATE);
     if (!m) continue;
     numeric = true;
+    if (!/^\d{1,2}\.\d{1,2}\./.test(v.trim())) dotted = false;
     if (Number(m[1]) > 12) dayFirst = true;
     if (Number(m[2]) > 12) monthFirst = true;
   }
   if (dayFirst && !monthFirst) return { order: 'dmy', ambiguous: false };
   if (monthFirst && !dayFirst) return { order: 'mdy', ambiguous: false };
-  return { ambiguous: numeric && !dayFirst && !monthFirst };
+  const ambiguous = numeric && !dayFirst && !monthFirst;
+  return ambiguous && dotted ? { order: 'dmy', ambiguous } : { ambiguous };
 }
 
 // ---- direction, open/close and order status --------------------------------
@@ -262,6 +268,9 @@ define({ side: 'BUY' }, [
   'l',
   '1',
   'purchase',
+  // TopstepX writes the side of the book: a buy takes the bid's side
+  'bid',
+  'advanced trade buy',
   'buy long',
   'long buy',
   'market buy',
@@ -279,6 +288,8 @@ define({ side: 'SELL' }, [
   'sht',
   '-1',
   'sale',
+  'ask',
+  'advanced trade sell',
   'market sell',
   'limit sell',
   'sell market',
@@ -324,6 +335,7 @@ define({ side: 'BUY', effect: 'close' }, [
   'short exit',
   'close short',
   'buy close',
+  'bc',
 ]);
 
 const normalWords = (raw: string) =>
@@ -342,10 +354,17 @@ export function parseAction(raw: string): Action | null {
   if (!s) return null;
   if (ACTIONS[s]) return ACTIONS[s];
   // "Buy Limit GTC", "SELL (stop)"
-  const first = s.split(' ')[0];
+  const words = s.split(' ');
+  const first = words[0];
   if (first === 'buy' || first === 'bought') return { side: 'BUY' };
   if (first === 'sell' || first === 'sold') return { side: 'SELL' };
-  return null;
+  // a sentence that says it once: Fidelity's "YOU BOUGHT APPLE INC (AAPL)",
+  // Trading 212's "Stop sell"
+  const buys = words.some((w) => w === 'buy' || w === 'bought');
+  const sells = words.some((w) => w === 'sell' || w === 'sold');
+  if (buys === sells) return null;
+  const effect = words.includes('opening') ? 'open' : words.includes('closing') ? 'close' : undefined;
+  return { side: buys ? 'BUY' : 'SELL', ...(effect && { effect }) };
 }
 
 /** The direction of a whole trade: what its opening fill did */

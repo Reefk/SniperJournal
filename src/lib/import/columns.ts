@@ -1,4 +1,4 @@
-import { parseAction, parseEffect, parsePutCall, zoneOffset } from './values';
+import { parseAction, parseEffect, parseMoment, parseMoney, parsePutCall, zoneOffset } from './values';
 
 /**
  * What each column of a broker's file means. Headers are matched on a
@@ -113,7 +113,7 @@ alias('symbol', 3, [
   'contractsymbol',
   'contractname',
 ]);
-alias('symbol', 2, ['instrument', 'instrumentname', 'contract', 'securitysymbol']);
+alias('symbol', 2, ['instrument', 'instrumentname', 'contract', 'securitysymbol', 'marketname']);
 alias('symbol', 1, ['market', 'asset', 'security', 'stock', 'product', 'item', 'coin']);
 alias('underlying', 2, ['underlying', 'underlyingsymbol', 'rootsymbol', 'root']);
 
@@ -127,10 +127,24 @@ alias('side', 3, [
   'openingdirection',
   'tradeside',
   'orderside',
+  // Rithmic's trade performance report, Bybit's closed P&L, NinjaTrader in French
+  'entrybuysell',
+  'closingdirection',
+  'posmarche',
 ]);
-alias('side', 2, ['action', 'transcode', 'transactioncode', 'buyorsell']);
+alias('side', 2, ['action', 'transcode', 'transactioncode', 'buyorsell', 'dir']);
 alias('side', 1, ['type', 'transactiontype', 'tradetype', 'position', 'positiontype', 'dealtype']);
-alias('effect', 3, ['poseffect', 'positioneffect', 'openclose', 'ex', 'entryexit', 'openorclose', 'openingclosing']);
+alias('effect', 3, [
+  'poseffect',
+  'positioneffect',
+  'openclose',
+  'ex',
+  'entryexit',
+  'openorclose',
+  'openingclosing',
+  'opencloseindicator',
+  'positiondisposition',
+]);
 alias('effect', 2, ['effect']);
 alias('effect', 1, ['code', 'codes']);
 alias('status', 3, ['status', 'orderstatus', 'fillstatus']);
@@ -148,6 +162,8 @@ alias('external_id', 3, [
   'transactionid',
   'confirmationno',
   'tradeidentifier',
+  'txid',
+  'fillexecutionserviceid',
 ]);
 alias('external_id', 2, [
   'id',
@@ -175,7 +191,12 @@ alias('opened_at', 3, [
   'timeopen',
   'entryat',
   'starttime',
+  'entrydt',
+  'heuredentree',
+  'opendateutc',
 ]);
+// an "Open" or "Close" column of dates (FTMO); one of prices is left alone (see planColumns)
+alias('opened_at', 1, ['open', 'opened']);
 alias('opened_date', 3, ['entrydate', 'opendate', 'dateopened', 'openingdate', 'startdate']);
 alias('closed_at', 3, [
   'closedat',
@@ -191,7 +212,10 @@ alias('closed_at', 3, [
   'timeclose',
   'exitat',
   'endtime',
+  'exitdt',
+  'heuredesortie',
 ]);
+alias('closed_at', 1, ['close', 'closed']);
 alias('closed_date', 3, ['exitdate', 'closedate', 'dateclosed', 'closingdate', 'enddate']);
 alias('time', 3, [
   'exectime',
@@ -204,10 +228,23 @@ alias('time', 3, [
   'executiondatetime',
   'filldatetime',
 ]);
-alias('time', 2, ['time', 'datetime', 'timestamp', 'transactiontime', 'tradedat', 'transacttime', 'datetimeutc']);
-alias('time', 1, ['updatetime', 'createdat', 'created', 'lastupdated']);
+alias('time', 2, [
+  'time',
+  'datetime',
+  'timestamp',
+  'transactiontime',
+  'tradedat',
+  'transacttime',
+  'datetimeutc',
+  'dateandtime',
+  'filledcanceled',
+  // IG: when the deal closed, next to OpenDateUtc (see planColumns)
+  'dateutc',
+]);
+alias('time', 1, ['updatetime', 'createdat', 'created', 'lastupdated', 'entered']);
 alias('date', 3, ['activitydate', 'executiondate', 'filldate', 'tradedate']);
-alias('date', 2, ['date', 'transactiondate']);
+// TradeZero's T/D is the trade date; Fidelity's Run Date the day of the trade
+alias('date', 2, ['date', 'transactiondate', 'td', 'rundate']);
 alias('date', 1, ['tradeday', 'tradingday']);
 
 // paired buy/sell fill exports (Tradovate's performance report and similar)
@@ -227,6 +264,8 @@ alias('entry_price', 3, [
   'averageentryprice',
   'openingprice',
   'entryavgprice',
+  'openlevel',
+  'prixdentree',
 ]);
 alias('entry_price', 2, ['entry']);
 alias('exit_price', 3, [
@@ -237,6 +276,8 @@ alias('exit_price', 3, [
   'averageexitprice',
   'closingprice',
   'exitavgprice',
+  'closelevel',
+  'prixdesortie',
 ]);
 alias('exit_price', 2, ['exit']);
 alias('price', 3, [
@@ -251,8 +292,11 @@ alias('price', 3, [
   'dealprice',
   'executedprice',
   'avgexecutionprice',
+  'executeprice',
+  'priceattransaction',
+  'spotpriceattransaction',
 ]);
-alias('price', 2, ['avgprice', 'averageprice', 'pricepershare']);
+alias('price', 2, ['avgprice', 'averageprice', 'pricepershare', 'priceshare', 'px']);
 alias('price', 1, ['price', 'netprice']);
 
 alias('quantity', 3, [
@@ -270,6 +314,8 @@ alias('quantity', 3, [
   'closingquantity',
   'positionsizeqty',
   'tradesize',
+  'quantitytransacted',
+  'openvolume',
 ]);
 alias('quantity', 2, [
   'quantity',
@@ -282,10 +328,22 @@ alias('quantity', 2, [
   'units',
   'amountshares',
   'lotsize',
+  'noofshares',
+  'vol',
+  'sz',
+  'qte',
 ]);
 alias('quantity', 1, ['totalqty', 'orderqty', 'orderquantity', 'quantityordered']);
-alias('notional', 3, ['proceeds', 'notional', 'tradevalue', 'grossamount', 'positionsizevalue', 'principal']);
-alias('notional', 2, ['amount', 'total', 'value', 'tradeamount']);
+alias('notional', 3, [
+  'proceeds',
+  'notional',
+  'tradevalue',
+  'grossamount',
+  'positionsizevalue',
+  'principal',
+  'grossproceeds',
+]);
+alias('notional', 2, ['amount', 'total', 'value', 'tradeamount', 'subtotal', 'cost', 'ntl']);
 alias('notional', 1, ['netamount', 'netproceeds']);
 
 alias('stop_loss', 3, ['stoploss', 'stoplossprice', 'initialstop', 'stoplevel']);
@@ -322,7 +380,15 @@ alias('fees', 3, [
   'regulatoryfee',
   'regulatoryfees',
   'secfee',
+  'sec',
   'taffee',
+  'taf',
+  'nscc',
+  'ecnremove',
+  'ecnadd',
+  'feescomm',
+  'feesandorspread',
+  'transactionandorthirdpartyfees',
   'brokerfee',
   'brokerage',
   'brokeragefee',
@@ -364,8 +430,11 @@ alias('pnl', 2, [
   'result',
   'gain',
   'realizedprofitloss',
+  'closedpl',
+  'fifopnlrealized',
+  'plamount',
 ]);
-alias('pnl', 1, ['realized']);
+alias('pnl', 1, ['realized', 'profitandloss']);
 alias('net_pnl', 3, [
   'netpnl',
   'netprofit',
@@ -379,11 +448,20 @@ alias('net_pnl', 3, [
 alias('gross_pnl', 3, ['grosspnl', 'grossprofit', 'grosspl', 'gross', 'grossprofitloss']);
 
 alias('session', 3, ['session', 'marketsession', 'tradingsession']);
-alias('setup', 3, ['setup', 'strategy', 'playbook', 'system', 'strategyname']);
+alias('setup', 3, ['setup', 'strategy', 'playbook', 'system', 'strategyname', 'strategie']);
 alias('tags', 3, ['tags', 'tag', 'labels', 'label']);
 alias('notes', 3, ['notes', 'note', 'comment', 'comments', 'memo', 'journal']);
 alias('notes', 1, ['description']);
-alias('account', 3, ['account', 'accountname', 'portfolio', 'accountnumber', 'accountid']);
+alias('account', 3, [
+  'account',
+  'accountname',
+  'portfolio',
+  'accountnumber',
+  'accountid',
+  'clientaccountid',
+  'tradeaccount',
+  'compte',
+]);
 alias('asset_class', 3, [
   'assetcategory',
   'assetclass',
@@ -392,6 +470,7 @@ alias('asset_class', 3, [
   'securitytype',
   'assettype',
   'producttype',
+  'symboltype',
 ]);
 alias('put_call', 3, ['putcall', 'callput', 'callorput', 'optiontype', 'right']);
 alias('strike', 3, ['strike', 'strikeprice']);
@@ -406,7 +485,12 @@ const CURRENCIES = new Set(
 
 /** the lookup key of a header, and the time zone it declares (minutes east of UTC), if any */
 export function headerInfo(raw: string): { key: string; offset: number | null } {
-  let s = raw.trim().toLowerCase();
+  // accents off, so NinjaTrader's French "Prix d'entrée" reads as "prix d'entree"
+  let s = raw
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
   let offset: number | null = null;
   const zone = s.match(/\b(utc|gmt)\s*([+-]\s*\d{1,2}(?::?\d{2})?)?/);
   if (zone) {
@@ -422,7 +506,10 @@ export function headerInfo(raw: string): { key: string; offset: number | null } 
   s = s.replace(/%/g, ' pct ').replace(/#/g, ' no ');
   const words = s.split(/[^a-z0-9]+/).filter(Boolean);
   while (words.length > 1 && CURRENCIES.has(words[words.length - 1])) words.pop();
-  return { key: words.join(''), offset };
+  const key = words.join('');
+  // a zone run into the name: IG's "DateUtc", "DateTimeUTC"
+  if (offset == null && /.(utc|gmt)$/.test(key)) offset = 0;
+  return { key, offset };
 }
 
 /** the role a header suggests on its own, before its values are looked at */
@@ -438,6 +525,9 @@ export interface ColumnPlan {
   /** per column: the zone its header declares */
   offsets: Array<number | null>;
 }
+
+/** text that can be a ticker or a contract: BTCUSDT, MNQH6, ES 03-26 */
+const TICKER = /^[a-z][a-z0-9.\-_/:! ]{0,24}$/i;
 
 const share = (values: string[], test: (v: string) => boolean) => {
   const filled = values.filter((v) => v.trim());
@@ -476,6 +566,14 @@ export function planColumns(
         else if (priority < 3) role = '';
       } else if (role === 'effect' && effects < 0.5 && priority < 3) role = '';
       else if (role === 'put_call' && options === 0) role = '';
+    } else if (role === 'quantity' && share(values(i), (x) => parseMoney(x) != null) < 0.5) {
+      // Bybit's "Contracts" names the contract; a symbol column of its own wins
+      return share(values(i), (x) => TICKER.test(x.trim())) >= 0.5
+        ? { role: 'symbol' as const, priority: 0 }
+        : { role: '' as const, priority: 0 };
+    } else if ((role === 'opened_at' || role === 'closed_at') && priority < 2) {
+      // FTMO's "Open" and "Close" are times; elsewhere they can be prices
+      if (share(values(i), (x) => parseMoment(x) != null) < 0.5) role = '';
     }
     return { role, priority };
   });
@@ -511,6 +609,29 @@ export function planColumns(
     if (ADDITIVE.has(role)) roles.set(role, [...(taken ?? []), i]);
     else if (!taken || priority > candidates[taken[0]].priority) roles.set(role, [i]);
   });
+
+  // what a time means can depend on the columns around it; a choice made in
+  // the preview is never moved
+  const has = (role: Role) => roles.has(role);
+  const move = (from: Role, to: Role) => {
+    const columns = roles.get(from) as number[];
+    if (columns.some((c) => candidates[c].priority >= 10)) return;
+    roles.delete(from);
+    roles.set(to, columns);
+    for (const c of columns) candidates[c] = { role: to, priority: candidates[c].priority };
+  };
+  // a list of orders (TradingView): the "Closing time" is when the order was filled
+  if (has('closed_at') && !has('time') && has('status') && has('price') && !has('entry_price') && !has('exit_price'))
+    move('closed_at', 'time');
+  // IG: next to OpenDateUtc, DateUtc is when the deal closed
+  else if (
+    (has('opened_at') || has('opened_date')) &&
+    has('exit_price') &&
+    !has('closed_at') &&
+    !has('closed_date') &&
+    has('time')
+  )
+    move('time', 'closed_at');
 
   return {
     roles,
