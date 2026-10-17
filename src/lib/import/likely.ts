@@ -35,8 +35,16 @@ const key = (t: Trade) =>
  *    out. With `finish`, the journal's trade is finished with the file's exit
  *    (`finished`). Without, the closed one is imported and counted in
  *    `closesOpen`, so the open copy can be deleted by hand.
+ *  - `justFinished` are the journal's trades this same file has closed. A trade
+ *    the file leaves open is never one of them: closed in half, the open rest
+ *    has the entry time and size of the half just closed.
  */
-export function splitLikelyDuplicates(trades: Trade[], existing: readonly Trade[] = [], finish = false): LikelySplit {
+export function splitLikelyDuplicates(
+  trades: Trade[],
+  existing: readonly Trade[] = [],
+  finish = false,
+  justFinished: ReadonlySet<string> = new Set(),
+): LikelySplit {
   const journal = new Map<string, Trade[]>();
   for (const t of existing) {
     if (!matchable(t)) continue;
@@ -49,7 +57,8 @@ export function splitLikelyDuplicates(trades: Trade[], existing: readonly Trade[
   const split: LikelySplit = { fresh: [], likely: [], closesOpen: 0, finished: [] };
   for (const t of trades) {
     const same = matchable(t) ? journal.get(key(t)) : undefined;
-    const at = same?.findIndex((j) => !(j.externalId && t.externalId)) ?? -1;
+    const at =
+      same?.findIndex((j) => !(j.externalId && t.externalId) && (isClosed(t) || !justFinished.has(j.id))) ?? -1;
     if (!same || at < 0) {
       split.fresh.push(t);
       continue;

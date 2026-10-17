@@ -218,7 +218,8 @@ export function importTradesFromCsv(text: string, ctx: ImportOptions): ImportRes
   // what the rows finished counts as finished here too, so nothing finishes twice
   const done = new Map((read.finished ?? []).map((t) => [t.id, t]));
   const existing = (ctx.existing ?? []).map((t) => done.get(t.id) ?? t);
-  const { fresh: trades, likely, closesOpen, finished } = splitLikelyDuplicates(all, existing, finishing);
+  const justFinished = new Set(done.keys());
+  const { fresh: trades, likely, closesOpen, finished } = splitLikelyDuplicates(all, existing, finishing, justFinished);
   if (closesOpen) {
     errors.push(
       `${closesOpen} ${closesOpen === 1 ? 'trade closes a position' : 'trades close positions'} your journal still has as open. Both are kept: delete the open ${closesOpen === 1 ? 'copy' : 'copies'} once you have checked.`,

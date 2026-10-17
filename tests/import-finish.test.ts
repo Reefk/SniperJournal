@@ -134,6 +134,25 @@ describe('closed in parts, or added to first', () => {
     expect(rest.finished.map((t) => [t.id, t.quantity, t.exitPrice])).toEqual([[r.trades[0].id, 2, 106]]);
   });
 
+  it('closed in half without the broker’s ids: the open rest still comes in, not taken for the half just closed', () => {
+    const half = ['2026-03-03 10:00,MNQZ6,sell,2,21010,0'];
+    const journal = openedOn(NO_IDS, ['2026-03-02 15:50,MNQZ6,buy,4,21000,0']);
+    const r = run(NO_IDS, half, journal);
+    expect(r.finished.map((t) => [t.id, t.quantity, t.exitPrice])).toEqual([[journal[0].id, 2, 21010]]);
+    expect(r.likelyDuplicates).toEqual([]);
+    expect(r.trades.map((t) => [t.quantity, t.exitPrice, t.openedAt, t.notes])).toEqual([
+      [2, null, '2026-03-02T15:50', 'Held for the open'],
+    ]);
+
+    const after = apply(journal, r);
+    expect(after.map((t) => [t.quantity, t.closedAt ?? null])).toEqual([
+      [2, '2026-03-03T10:00'],
+      [2, null],
+    ]);
+    const again = run(NO_IDS, half, after);
+    expect([again.trades.length, again.finished.length]).toEqual([0, 0]);
+  });
+
   it('added to before it is flat again: one trade, at the average prices', () => {
     const journal = openedOn(WITH_IDS, ['2026-03-02 15:50,AAPL,buy,2,100,0,F1']);
     const r = run(
