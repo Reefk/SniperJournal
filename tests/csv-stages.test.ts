@@ -95,6 +95,51 @@ describe('stage 1: the layout of the file', () => {
     expect(missingSymbol(typed)).toBeNull();
     expect(missingSymbol(sheetOf('underlying,qty\nAAPL,1'))).toBeNull();
   });
+
+  it('a table in blocks, each under a contract and the header again: one table, the contract its Symbol', () => {
+    const head = 'Entry Buy/Sell,Entry Price,Entry Time,Exit Price,Exit Time,Fill Size';
+    const sheet = sheetOf(
+      [
+        'ACC-1',
+        'ESZ6',
+        head,
+        'B,5000,2026-03-02 10:00,5001,2026-03-02 10:05,1',
+        'NQZ6',
+        head,
+        'S,20000,2026-03-02 11:00,19990,2026-03-02 11:05,1',
+      ].join('\n'),
+    );
+    expect(sheet.table.grouped).toBe(true);
+    expect(sheet.table.data.map((row) => sheet.cell(row, 'symbol'))).toEqual(['ESZ6', 'NQZ6']);
+    expect(missingSymbol(sheet)).toBeNull();
+  });
+
+  it('a title above the header is not a symbol, nor a block line when the rows name their own', () => {
+    const titled = sheetOf('TRADES\nEntry Price,Exit Price,Fill Size\n5000,5001,1');
+    expect(titled.table.grouped).toBeUndefined();
+    expect(missingSymbol(titled)).toMatch(/^No symbol column found/);
+    const named = sheetOf(
+      'ESZ6\nSymbol,Entry Price,Exit Price\nMNQZ6,1,2\nESZ6\nSymbol,Entry Price,Exit Price\nMESZ6,3,4',
+    );
+    expect(named.table.data.map((row) => named.cell(row, 'symbol'))).toEqual(['MNQZ6', 'MESZ6']);
+  });
+
+  it("thinkorswim: an execution's fees from the cash line of the same trade, at most 2 seconds apart", () => {
+    const statement = (cashTime: string) =>
+      [
+        'Cash Balance',
+        'DATE,TIME,TYPE,REF #,DESCRIPTION,Misc Fees,Commissions & Fees,AMOUNT,BALANCE',
+        `10/14/26,${cashTime},TRD,1,SOLD -50 TSLA @248.60,-0.36,-0.65,"12,430.00","14,214.64"`,
+        '',
+        'Account Trade History',
+        ',Exec Time,Spread,Side,Qty,Pos Effect,Symbol,Exp,Strike,Type,Price,Net Price,Order Type',
+        ',10/14/26 10:05:18,SINGLE,SELL,-50,TO OPEN,TSLA,,,STOCK,248.60,248.60,MKT',
+      ].join('\n');
+    const near = sheetOf(statement('10:05:20'));
+    expect([near.table.cashFees, near.cell(near.table.data[0], 'fees')]).toEqual([1, '1.01']);
+    const far = sheetOf(statement('10:05:21'));
+    expect([far.table.cashFees, far.has('fees')]).toEqual([undefined, false]);
+  });
 });
 
 describe('stage 2: reading the values of a row', () => {

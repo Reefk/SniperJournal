@@ -5,7 +5,7 @@ import { detectLayout, missingSymbol, type ImportLayout, type LayoutChoices } fr
 import { createReader, type ImportTarget } from './import/reader';
 import { combinePartials, tradesFromRows } from './import/rows';
 import { tradesFromFills } from './import/positions';
-import { collectMessages } from './import/report';
+import { NO_FEES, collectMessages } from './import/report';
 import { splitLikelyDuplicates } from './import/likely';
 import { recognisePlatform } from './import/platforms';
 import { formulaSafe } from './import/values';
@@ -179,7 +179,18 @@ function nothingImported(why: Partial<ImportResult>): ImportResult {
 export function importTradesFromCsv(text: string, ctx: ImportOptions): ImportResult {
   const sheet = detectLayout(text, ctx);
   if (!sheet) return nothingImported({ errors: ['The file has no data rows.'] });
-  const platform = recognisePlatform(sheet.table.header, sheet.table.statement);
+  const known = recognisePlatform(sheet.table.header, sheet.table.statement);
+  const platform = known && { name: known.name, file: known.file };
+  // a platform's export that holds no trades: say which one does
+  if (known?.instead) {
+    return nothingImported({
+      recognised: sheet.recognised,
+      ignored: sheet.ignored,
+      layout: sheet.layout,
+      platform,
+      errors: [known.instead],
+    });
+  }
   const noSymbol = missingSymbol(sheet);
   if (noSymbol) {
     return nothingImported({
@@ -196,6 +207,10 @@ export function importTradesFromCsv(text: string, ctx: ImportOptions): ImportRes
   const journal = finishing ? (ctx.existing ?? []) : undefined;
   const read = sheet.rowKind === 'fills' ? tradesFromFills(reader, journal) : tradesFromRows(reader, journal);
   const { errors, notices } = collectMessages(reader.findings, sheet.table, read);
+  // not a fee anywhere: unless the file's P&L is after fees, it is before them
+  const made = [...read.trades, ...(read.finished ?? [])];
+  const netOnly = sheet.has('net_pnl') && !sheet.has('pnl') && !sheet.has('gross_pnl');
+  if (made.length && !netOnly && made.every((t) => !t.fees)) notices.push(NO_FEES);
   const { trades: all, combined } =
     ctx.combinePartials === false || !read.openingFill
       ? { trades: read.trades, combined: 0 }

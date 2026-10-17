@@ -259,6 +259,19 @@ Failing all of those, futures are recognised from a full contract code such as
 count as 100 shares. The preview tells you whenever it worked one out, so you
 can check it.
 
+**Fees** come from every fee column in the file, added up. A commission
+written per contract, such as Rithmic's `Commission Fill Rate`, is multiplied
+by the size; Thinkorswim's fees, which its statement keeps in the Cash Balance
+section, are matched to each execution by time. Some exports carry no fees at
+all (Tradovate's, and TradingView's paper trading); the preview then says so,
+and those trades' P&L is before commissions until you add them (select the
+trades, then **Add details** → **Fees per trade**).
+
+A Rithmic trade performance report lists each contract above its own block of
+trades; each block's contract becomes the symbol of its trades. An export that
+holds no trades, such as TradingView's Account History, says which export to
+choose instead.
+
 Times that carry a time zone (`Z`, `+02:00`, or a column marked `UTC`, such as
 `Date(UTC)` or `DateUtc`) are converted to this device's local time; times
 without one are kept as written, and the preview says so. If your platform

@@ -3,3 +3,7 @@
 *.bat text eol=crlf
 *.ps1 text eol=crlf
 *.sh  text eol=lf
+
+# Broker exports as they come from Windows platforms: CRLF line endings,
+# kept on every checkout so the import tests read the same bytes everywhere.
+tests/fixtures/import-samples/*.csv text eol=crlf

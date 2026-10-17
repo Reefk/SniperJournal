@@ -86,7 +86,8 @@ export function parseTradeRow(row: string[], line: number, r: Reader): TradeRow 
   const unreadOpen = unread(openedParts, ['opened_at', ...openingFill, 'time', 'opened_date', 'date']);
   const unreadClose = unread(closedParts, ['closed_at', ...closingFill, 'closed_date']);
 
-  const fees = r.feeOf(row);
+  // a fee per contract is paid on the way in and again on the way out
+  const fees = r.feeOf(row, exitPrice != null ? 2 : 1);
   // The P&L before commissions. A net column has them added back, so they
   // are not charged a second time through the fees column.
   const gross = parseMoney(cell(row, 'gross_pnl')) ?? parseMoney(cell(row, 'pnl'));

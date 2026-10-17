@@ -23,8 +23,11 @@ export interface Platform {
   group: PlatformGroup;
   /** which export to choose, and where to find it */
   how: string;
-  /** the exports it makes that the importer knows, each with a test of its columns */
-  exports: Array<{ file: string; matches: (c: Columns) => boolean }>;
+  /**
+   * the exports it makes that the importer knows, each with a test of its
+   * columns; `instead` marks one that holds no trades, and says which to export
+   */
+  exports: Array<{ file: string; matches: (c: Columns) => boolean; instead?: string }>;
 }
 
 export const PLATFORMS: Platform[] = [
@@ -104,6 +107,12 @@ export const PLATFORMS: Platform[] = [
     exports: [
       { file: 'order history', matches: (c) => c.has('placingtime', 'closingtime') },
       { file: 'strategy tester list of trades', matches: (c) => c.has('tradeno', 'signal') },
+      {
+        file: 'account history',
+        matches: (c) => c.has('balancebefore', 'balanceafter'),
+        instead:
+          "This is TradingView's Account History: it lists changes to the balance, without the trades' entries. Export the Order History instead: in Paper Trading, open History, tick every column under Column setup, then Download data > Order history.",
+      },
     ],
   },
 
@@ -144,7 +153,14 @@ export const PLATFORMS: Platform[] = [
     how: 'An Activity Statement downloaded as CSV, or a Flex Query of trades in CSV.',
     exports: [
       { file: 'activity statement', matches: (c) => c.statement },
-      { file: 'Flex Query', matches: (c) => c.has('ibcommission') || c.has('clientaccountid', 'tradeprice') },
+      {
+        file: 'Flex Query',
+        // an Activity Flex query names IBCommission and TradePrice; a Trade Confirmation one, Commission and Price
+        matches: (c) =>
+          c.has('ibcommission') ||
+          c.has('clientaccountid', 'tradeprice') ||
+          c.has('clientaccountid', 'currencyprimary'),
+      },
     ],
   },
   {
@@ -250,12 +266,15 @@ export const PLATFORMS: Platform[] = [
 ];
 
 /** the platform and export a file's columns say it came from, or null for one not known */
-export function recognisePlatform(header: string[], statement = false): { name: string; file: string } | null {
+export function recognisePlatform(
+  header: string[],
+  statement = false,
+): { name: string; file: string; instead?: string } | null {
   const keys = new Set(header.map((h) => headerInfo(h).key));
   const columns: Columns = { has: (...names) => names.every((n) => keys.has(n)), statement };
   for (const platform of PLATFORMS) {
     const found = platform.exports.find((e) => e.matches(columns));
-    if (found) return { name: platform.name, file: found.file };
+    if (found) return { name: platform.name, file: found.file, ...(found.instead ? { instead: found.instead } : {}) };
   }
   return null;
 }

@@ -74,8 +74,12 @@ export interface Reader {
   textCell(row: string[], role: Role): string;
   /** a moment from a date-and-time column, or a date column plus a time-of-day column */
   moment(row: string[], atRole: Role, dateRole: Role): Moment | null;
-  /** every fee column added up; null when none has a value */
-  feeOf(row: string[]): number | null;
+  /**
+   * every fee column added up, and a fee per contract times the size, once
+   * for each of `sides` (a fill is one, a closed trade two); null when none
+   * has a value
+   */
+  feeOf(row: string[], sides?: number): number | null;
   /** the symbol, with an option's expiry, strike and call/put when they come in their own columns */
   symbolOf(row: string[]): string;
   setupIdFor(name: string): string | undefined;
@@ -148,7 +152,7 @@ export function createReader(sheet: Sheet, target: ImportTarget): Reader {
       if (unit) valueUnits.add(unit);
     }
   }
-  const feeOf = (row: string[]): number | null => {
+  const feeOf = (row: string[], sides = 1): number | null => {
     let total: number | null = null;
     for (const c of feeColumns) {
       const n = parseNumber(row[c] ?? '');
@@ -159,6 +163,10 @@ export function createReader(sheet: Sheet, target: ImportTarget): Reader {
       }
       total = (total ?? 0) + n.value * (feeSign.get(c) ?? 1);
     }
+    // a rate for each contract (Rithmic's Commission Fill Rate)
+    const rate = parseMoney(cell(row, 'fee_rate'));
+    const size = Math.abs(parseMoney(cell(row, 'quantity')) ?? 0);
+    if (rate && size) total = (total ?? 0) + Math.round(Math.abs(rate) * size * sides * 1e8) / 1e8;
     return total;
   };
 

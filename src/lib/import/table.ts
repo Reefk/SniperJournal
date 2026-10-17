@@ -1,3 +1,4 @@
+import { withCashFees } from './cash';
 import { aliasOf } from './columns';
 
 /**
@@ -188,17 +189,49 @@ export interface Table {
   skipped: number;
   /** the file is an Interactive Brokers statement */
   statement: boolean;
+  /** the Symbol column was added from the line above each block of rows (Rithmic's trade performance) */
+  grouped?: boolean;
+  /** how many rows were given their fees from the statement's cash section (thinkorswim) */
+  cashFees?: number;
 }
 
 const SUMMARY = /^(grand\s*)?(sub\s*)?totals?\b|^summary$|^net\s*total/i;
+
+/**
+ * What a contract on a line of its own looks like: MNQZ6, ESZ5, /MESZ26. A
+ * digit is required, so a title such as TRADES is never taken for one.
+ */
+const SYMBOL_LIKE = /^(?=.*[A-Z])(?=.*\d)[A-Z0-9/][A-Z0-9._:/!-]{0,23}$/;
+
+/**
+ * The symbol a line above a block of rows names, when it is a line of its
+ * own or a short one starting with it: Rithmic's trade performance report
+ * puts each symbol above its own block ("MNQZ6", or "MNQZ6,107.50,6.20").
+ */
+function blockLabel(row: string[] | undefined, width: number): string | null {
+  if (!row) return null;
+  const first = (row[0] ?? '').trim();
+  return row.filter((c) => c.trim()).length <= width / 2 && SYMBOL_LIKE.test(first) ? first : null;
+}
+
+const SYMBOL_ROLES = new Set(['symbol', 'underlying']);
 
 /**
  * The header is the row within the first 200 that names the most columns the
  * importer knows (see headerScore). Rows above it are a title or
  * account details; data stops at the next table in the file, and total rows
  * and repeated headers are left out along the way.
+ *
+ * A report can split its table into blocks, each with a line of its own and
+ * the header again above it (Rithmic's trade performance: one block per
+ * symbol). Those lines don't end the table; when the header has no symbol
+ * column and they name one, it becomes the Symbol column of the rows below.
  */
 export function findTable(rows: string[][]): Table {
+  return withCashFees(rows, rowsOfTable(rows));
+}
+
+function rowsOfTable(rows: string[][]): Table {
   const statement = statementSection(rows);
   if (statement) {
     return {
@@ -222,18 +255,27 @@ export function findTable(rows: string[][]): Table {
   });
 
   const header = rows[headerAt] ?? [];
-  const headerKey = header.map((h) => h.trim().toLowerCase()).join('|');
+  const keyOf = (row: string[]) => row.map((h) => h.trim().toLowerCase()).join('|');
+  const headerKey = keyOf(header);
   const detail = header.findIndex((h) => ['levelofdetail', 'datadiscriminator'].includes(detailKind(h)));
   const data: string[][] = [];
   const lines: number[] = [];
+  /** the symbol named above each data row's block, if any */
+  const labels: (string | null)[] = [];
+  let label = headerAt > 0 ? blockLabel(rows[headerAt - 1], header.length) : null;
   let skipped = 0;
 
   for (let i = headerAt + 1; i < rows.length; i++) {
     const row = rows[i];
     const filled = row.filter((c) => c.trim());
     // the header again (a page break in the report): skip it
-    if (row.map((h) => h.trim().toLowerCase()).join('|') === headerKey) {
+    if (keyOf(row) === headerKey) {
       skipped++;
+      continue;
+    }
+    // a short line with the header again below it: the title of the next block
+    if (rows[i + 1] && keyOf(rows[i + 1]) === headerKey && filled.length <= header.length / 2) {
+      label = blockLabel(row, header.length);
       continue;
     }
     // a lone title line, or another table's header, means this table has ended
@@ -256,6 +298,26 @@ export function findTable(rows: string[][]): Table {
     }
     data.push(row);
     lines.push(i + 1);
+    labels.push(label);
+  }
+
+  // the blocks' symbols, as a column of their own, unless the rows name theirs
+  const named = header.some((h) => SYMBOL_ROLES.has(aliasOf(h)?.role ?? ''));
+  if (!named && labels.some(Boolean)) {
+    const width = header.length;
+    return {
+      header: [...header, 'Symbol'],
+      data: data.map((row, i) => [
+        ...row.slice(0, width),
+        ...Array(Math.max(0, width - row.length)).fill(''),
+        labels[i] ?? '',
+      ]),
+      lines,
+      preamble: headerAt,
+      skipped,
+      statement: false,
+      grouped: true,
+    };
   }
   return { header, data, lines, preamble: headerAt, skipped, statement: false };
 }

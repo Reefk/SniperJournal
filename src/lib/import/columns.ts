@@ -34,6 +34,7 @@ export type Role =
   | 'stop_loss'
   | 'take_profit'
   | 'fees'
+  | 'fee_rate'
   | 'multiplier'
   | 'leverage'
   | 'pnl'
@@ -67,6 +68,7 @@ export const ROLE_LABELS: Array<[Role, string]> = [
   ['closed_at', 'Closed: date and time'],
   ['closed_date', 'Closed: date'],
   ['fees', 'Fees or commission (several add up)'],
+  ['fee_rate', 'Fee per contract, each side'],
   ['pnl', 'P&L before fees'],
   ['net_pnl', 'P&L after fees'],
   ['gross_pnl', 'Gross P&L'],
@@ -408,6 +410,15 @@ alias('fees', 3, [
   'charges',
   'otherfees',
   'miscfees',
+]);
+// a rate for each contract, not an amount (Rithmic's Completed Orders): the fee is the rate times the size
+alias('fee_rate', 3, [
+  'commissionfillrate',
+  'commissionpercontract',
+  'commissionperunit',
+  'feepercontract',
+  'feeperunit',
+  'commpercontract',
 ]);
 alias('multiplier', 3, ['multiplier', 'mult', 'pointvalue', 'bigpointvalue', 'contractmultiplier', 'valueperpoint']);
 alias('multiplier', 2, ['contractsize']);

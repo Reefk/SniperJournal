@@ -352,7 +352,25 @@ describe('import: duplicates and partial fills', () => {
     expect(again.errors).toEqual([]);
     expect(again.notices).toEqual([
       "Times in this file carry no time zone, so they were taken as written, in this device's local time.",
+      'There are no fees in this file, so the trades come in without them, and their P&L is before commissions. To add them, select the trades on the Trades page, then Add details > Fees per trade.',
     ]);
+  });
+
+  it('no fee in the file is said, unless its P&L is already after fees; one fee is enough to say nothing', () => {
+    const noFees = (csv: string) =>
+      importTradesFromCsv(csv, ctx()).notices.some((n) => n.startsWith('There are no fees in this file'));
+    expect(noFees('symbol,side,qty,entry,exit\nAAPL,long,1,100,101')).toBe(true);
+    expect(noFees('symbol,side,qty,entry,exit,fee\nAAPL,long,1,100,101,0\nMSFT,long,1,50,51,')).toBe(true);
+    expect(noFees('symbol,side,qty,entry,exit,fee\nAAPL,long,1,100,101,0\nMSFT,long,1,50,51,1.2')).toBe(false);
+    expect(noFees('symbol,side,qty,entry,exit,net p&l\nAAPL,long,1,100,101,0.8')).toBe(false);
+  });
+
+  it('a fee per contract is the rate times the size, on each side of a closed trade', () => {
+    const rows = importTradesFromCsv(
+      'symbol,side,qty,entry,exit,commission per contract\nES,long,2,5000,5001,0.62\nNQ,long,3,20000,,0.62',
+      ctx(),
+    );
+    expect(rows.trades.map((t) => t.fees)).toEqual([2.48, 1.86]);
   });
 
   it("a daily export overlapping yesterday's adds only the new day's trades", () => {

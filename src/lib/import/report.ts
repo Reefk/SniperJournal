@@ -7,6 +7,10 @@ import type { Table } from './table';
  * not be read); notices are worth knowing, with nothing wrong.
  */
 
+/** said when no trade read has a fee (Tradovate's exports have none): the P&L shown is before commissions */
+export const NO_FEES =
+  'There are no fees in this file, so the trades come in without them, and their P&L is before commissions. To add them, select the trades on the Trades page, then Add details > Fees per trade.';
+
 /** "Row 4" or "Row 4 and 6 more" */
 export const rowsLabel = (rows: number[]) =>
   rows.length === 1 ? `Row ${rows[0]}` : `Row ${rows[0]} and ${rows.length - 1} more`;
@@ -54,6 +58,11 @@ export function collectMessages(
   for (const [symbol, how] of findings.inferred) {
     notices.push(`${symbol}: one point taken as worth ${how}. Check it if that is not right.`);
   }
+  if (table.grouped) notices.push("Each block's symbol was taken from the line above its column names.");
+  if (table.cashFees)
+    notices.push(
+      `The fees of ${table.cashFees === 1 ? '1 execution were' : `${table.cashFees} executions were`} taken from the statement's Cash Balance section, matched by time.`,
+    );
   if (table.statement) notices.push('Read the Trades section of this Interactive Brokers statement.');
   else if (table.preamble)
     notices.push(`The column names are on line ${table.preamble + 1}; the lines above them were left out.`);
