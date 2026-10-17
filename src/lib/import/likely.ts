@@ -1,6 +1,6 @@
 import type { Trade } from '../types';
 import { isClosed } from '../trade-math';
-import { finishOpen } from './finish';
+import { finishOpen, type Unsaid } from './finish';
 
 /** an import's trades, split by whether the journal seems to have them already */
 export interface LikelySplit {
@@ -38,12 +38,15 @@ const key = (t: Trade) =>
  *  - `justFinished` are the journal's trades this same file has closed. A trade
  *    the file leaves open is never one of them: closed in half, the open rest
  *    has the entry time and size of the half just closed.
+ *  - `unsaid` is what each row left out (see finishOpen): a finished trade keeps
+ *    the journal's fees and point value where the file has none.
  */
 export function splitLikelyDuplicates(
   trades: Trade[],
   existing: readonly Trade[] = [],
   finish = false,
   justFinished: ReadonlySet<string> = new Set(),
+  unsaid: ReadonlyMap<string, Unsaid> = new Map(),
 ): LikelySplit {
   const journal = new Map<string, Trade[]>();
   for (const t of existing) {
@@ -66,7 +69,7 @@ export function splitLikelyDuplicates(
     const [match] = same.splice(at, 1);
     if (isClosed(t) && !isClosed(match)) {
       // the file has the whole trade, its entry fills included
-      if (finish) split.finished.push(finishOpen(match, t, t.fillCount ?? match.fillCount));
+      if (finish) split.finished.push(finishOpen(match, t, t.fillCount ?? match.fillCount, unsaid.get(t.id)));
       else {
         split.fresh.push(t);
         split.closesOpen++;

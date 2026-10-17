@@ -590,6 +590,26 @@ describe('stage 6: a position split over several rows put back together', () => 
     expect(out.trades[1].id).toBe('c');
   });
 
+  it('a merged trade leaves a fee or point value unsaid only when every row did', () => {
+    const trades = [part('a'), part('b', { exitPrice: 18020 }), part('c')];
+    const opener = new Map([
+      ['a', 'B1'],
+      ['b', 'B1'],
+    ]);
+    const unsaid = new Map([
+      ['a', { fees: true, multiplier: true }],
+      ['b', { fees: true, multiplier: false }],
+      ['c', { fees: true, multiplier: true }],
+    ]);
+    const out = combinePartials(trades, opener, unsaid);
+    expect(out.trades[0].id).toBe('a');
+    expect(Object.fromEntries(out.unsaid)).toEqual({
+      a: { fees: true, multiplier: false },
+      c: { fees: true, multiplier: true },
+    });
+    expect(unsaid.get('b')).toEqual({ fees: true, multiplier: false });
+  });
+
   it('rows that cannot be merged stay apart, and nothing changes without opening fills', () => {
     const open = [part('a'), part('b', { exitPrice: null, closedAt: undefined })];
     expect(
@@ -600,7 +620,7 @@ describe('stage 6: a position split over several rows put back together', () => 
           ['b', 'B1'],
         ]),
       ),
-    ).toEqual({ trades: open, combined: 0 });
+    ).toEqual({ trades: open, combined: 0, unsaid: new Map() });
     const trades = [part('a')];
     expect(combinePartials(trades, new Map()).trades).toBe(trades);
   });

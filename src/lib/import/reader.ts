@@ -1,6 +1,7 @@
 import type { Account, Setup, Trade } from '../types';
 import { uid } from '../utils';
 import type { Role } from './columns';
+import type { Unsaid } from './finish';
 import { OPTION_MULTIPLIER, futuresPointValue, isOption, optionSymbol } from './instruments';
 import type { Sheet } from './layout';
 import {
@@ -59,6 +60,8 @@ export interface RowsRead {
   openingFill?: Map<string, string>;
   /** trades the journal has open that the file closes, finished (same ids as in the journal) */
   finished?: Trade[];
+  /** trade id -> what its row left unsaid, should the trade finish one the journal has open */
+  unsaid?: Map<string, Unsaid>;
 }
 
 export interface Reader {

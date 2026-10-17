@@ -3,7 +3,8 @@ import { isIncomplete } from '../trade-math';
 
 /**
  * A trade the journal has open, and a file that closes it. The file's trade
- * says how the position went (size, prices, the close, fees, point value);
+ * says how the position went (size, prices, the close, and the fees and point
+ * value when it gives them);
  * what you wrote about the trade (notes, setup, tags, stop, target, chart,
  * review) stays as it is. Used by every kind of file: fills that continue it
  * (positions.ts), the same trade again with its exit (likely.ts, rows.ts).
@@ -22,8 +23,19 @@ const described = (open: Trade, file: Trade) => ({
   leverage: open.leverage ?? file.leverage,
 });
 
+/**
+ * What a row with the whole trade left unsaid: fees when the file has none at
+ * all (no fee column, no rate, no P&L after fees), the point value when
+ * neither the row nor the instrument gives one. The file's trade then has 0
+ * and 1 for them, which are not the trade's, so the journal's are kept.
+ */
+export interface Unsaid {
+  fees?: boolean;
+  multiplier?: boolean;
+}
+
 /** the journal's open trade, closed as the file says; `fillCount` is every fill in it now */
-export function finishOpen(open: Trade, closed: Trade, fillCount: number | undefined): Trade {
+export function finishOpen(open: Trade, closed: Trade, fillCount: number | undefined, unsaid: Unsaid = {}): Trade {
   const ids = idsOf(open, closed);
   const done: Trade = {
     ...open,
@@ -31,8 +43,8 @@ export function finishOpen(open: Trade, closed: Trade, fillCount: number | undef
     entryPrice: closed.entryPrice,
     exitPrice: closed.exitPrice,
     closedAt: closed.closedAt,
-    fees: closed.fees,
-    multiplier: closed.multiplier,
+    fees: unsaid.fees ? open.fees : closed.fees,
+    multiplier: unsaid.multiplier ? open.multiplier : closed.multiplier,
     manualPnl: closed.manualPnl,
     ...described(open, closed),
     externalId: ids.length ? ids.join('|') : undefined,

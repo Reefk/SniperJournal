@@ -211,15 +211,18 @@ export function importTradesFromCsv(text: string, ctx: ImportOptions): ImportRes
   const made = [...read.trades, ...(read.finished ?? [])];
   const netOnly = sheet.has('net_pnl') && !sheet.has('pnl') && !sheet.has('gross_pnl');
   if (made.length && !netOnly && made.every((t) => !t.fees)) notices.push(NO_FEES);
-  const { trades: all, combined } =
-    ctx.combinePartials === false || !read.openingFill
-      ? { trades: read.trades, combined: 0 }
-      : combinePartials(read.trades, read.openingFill);
+  const {
+    trades: all,
+    combined,
+    unsaid,
+  } = ctx.combinePartials === false || !read.openingFill
+    ? { trades: read.trades, combined: 0, unsaid: read.unsaid }
+    : combinePartials(read.trades, read.openingFill, read.unsaid);
   // what the rows finished counts as finished here too, so nothing finishes twice
   const done = new Map((read.finished ?? []).map((t) => [t.id, t]));
   const existing = (ctx.existing ?? []).map((t) => done.get(t.id) ?? t);
-  const justFinished = new Set(done.keys());
-  const { fresh: trades, likely, closesOpen, finished } = splitLikelyDuplicates(all, existing, finishing, justFinished);
+  const split = splitLikelyDuplicates(all, existing, finishing, new Set(done.keys()), unsaid);
+  const { fresh: trades, likely, closesOpen, finished } = split;
   if (closesOpen) {
     errors.push(
       `${closesOpen} ${closesOpen === 1 ? 'trade closes a position' : 'trades close positions'} your journal still has as open. Both are kept: delete the open ${closesOpen === 1 ? 'copy' : 'copies'} once you have checked.`,

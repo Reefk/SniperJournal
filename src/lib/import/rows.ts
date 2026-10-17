@@ -4,7 +4,7 @@ import { isClosed, isIncomplete } from '../trade-math';
 import { mergeIssue, mergeTrades } from '../merge';
 import { uid } from '../utils';
 import type { Role } from './columns';
-import { finishOpen } from './finish';
+import { finishOpen, type Unsaid } from './finish';
 import { fitReported, type Reader, type RowsRead } from './reader';
 import { rowsNote } from './report';
 import { parseMoney, parseSide, type Moment } from './values';
@@ -179,6 +179,11 @@ export function tradesFromRows(r: Reader, journal?: readonly Trade[]): RowsRead 
   const trades: Trade[] = [];
   const finished: Trade[] = [];
   const openingFill = new Map<string, string>();
+  const unsaid = new Map<string, Unsaid>();
+  // no fee anywhere in the file: no fee column, no rate, and no P&L the fees are already taken from
+  const netOnly = sheet.has('net_pnl') && !sheet.has('pnl') && !sheet.has('gross_pnl');
+  const feesUnsaid = !sheet.has('fees') && !sheet.has('fee_rate') && !netOnly;
+  const unsaidOf = (read: TradeRow): Unsaid => ({ fees: feesUnsaid, multiplier: read.multiplier == null });
   const seenIds = new Set(r.existingIds);
   /** the journal's open trades, by the broker's id, until a row finishes one */
   const openById = new Map(
@@ -218,7 +223,7 @@ export function tradesFromRows(r: Reader, journal?: readonly Trade[]): RowsRead 
       const now = open && assembleTrade(read, row, r);
       if (open && now && isClosed(now)) {
         openById.delete(read.externalId);
-        finished.push(finishOpen(open, now, now.fillCount ?? open.fillCount));
+        finished.push(finishOpen(open, now, now.fillCount ?? open.fillCount, unsaidOf(read)));
       } else findings.duplicates += 1;
       return;
     }
@@ -232,6 +237,7 @@ export function tradesFromRows(r: Reader, journal?: readonly Trade[]): RowsRead 
     // the fill that opened the position is the buy on a long and the sell on a short
     const opener = trade.side === 'LONG' ? read.buyFill : read.sellFill;
     if (opener) openingFill.set(trade.id, opener);
+    if (feesUnsaid || read.multiplier == null) unsaid.set(trade.id, unsaidOf(read));
     trades.push(trade);
   });
 
@@ -277,20 +283,22 @@ export function tradesFromRows(r: Reader, journal?: readonly Trade[]): RowsRead 
       `${n} ${n === 1 ? 'row has' : 'rows have'} no price and no size (${examples}), so ${n === 1 ? 'it is not a trade and was' : 'they are not trades and were'} left out.`,
     );
   }
-  return { trades, errors, notices, openingFill, finished };
+  return { trades, errors, notices, openingFill, finished, unsaid };
 }
 
 /**
  * Scaled-out positions put back together: rows that share the fill that
  * opened them (a broker writing one row per exit) become one trade, unless
  * they can't be merged (see mergeIssue). How many rows were folded in is
- * `combined`.
+ * `combined`. A merged trade leaves a value `unsaid` only when every row did.
  */
 export function combinePartials(
   trades: Trade[],
   openingFill: ReadonlyMap<string, string>,
-): { trades: Trade[]; combined: number } {
-  if (!openingFill.size) return { trades, combined: 0 };
+  unsaid: ReadonlyMap<string, Unsaid> = new Map(),
+): { trades: Trade[]; combined: number; unsaid: Map<string, Unsaid> } {
+  const left = new Map(unsaid);
+  if (!openingFill.size) return { trades, combined: 0, unsaid: left };
   const groups = new Map<string, Trade[]>();
   const loose: Trade[] = [];
 
@@ -308,11 +316,16 @@ export function combinePartials(
   const merged: Trade[] = [];
   for (const group of groups.values()) {
     if (group.length > 1 && mergeIssue(group) === null) {
-      merged.push(mergeTrades(group));
+      const one = mergeTrades(group);
+      const fees = group.every((t) => left.get(t.id)?.fees);
+      const multiplier = group.every((t) => left.get(t.id)?.multiplier);
+      for (const t of group) left.delete(t.id);
+      if (fees || multiplier) left.set(one.id, { fees, multiplier });
+      merged.push(one);
       combined += group.length;
     } else {
       merged.push(...group);
     }
   }
-  return { trades: [...merged, ...loose], combined };
+  return { trades: [...merged, ...loose], combined, unsaid: left };
 }

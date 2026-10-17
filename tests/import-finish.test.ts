@@ -109,6 +109,45 @@ describe('a position opened in one export and closed in the next', () => {
   });
 });
 
+describe('a row with the whole trade, closing one the journal has open', () => {
+  const ROWS = 'symbol,side,qty,entry price,exit price,entry time,exit time';
+  const opened = 'MES,LONG,2,5000,,2026-03-04 10:00,';
+  const closed = 'MES,LONG,2,5000,5010,2026-03-04 10:00,2026-03-04 11:00';
+  /** the journal's open trade, with the fees and point value typed in by hand */
+  const typedIn = (head: string, row: string) => openedOn(head, [row]).map((t) => ({ ...t, fees: 9.5, multiplier: 5 }));
+
+  it('fees and a point value the file doesn’t give stay as the journal has them', () => {
+    const journal = typedIn(ROWS, opened);
+    const r = run(ROWS, [closed], journal);
+    expect(r.finished.map((t) => [t.id, t.exitPrice, t.fees, t.multiplier])).toEqual([[journal[0].id, 5010, 9.5, 5]]);
+    expect(netPnl(r.finished[0])).toBe(90.5);
+  });
+
+  it('the same when the row finishes it by the broker’s id', () => {
+    const journal = typedIn(`${ROWS},id`, `${opened},T1`);
+    const r = run(`${ROWS},id`, [`${closed},T1`], journal);
+    expect(r.finished.map((t) => [t.id, t.exitPrice, t.fees, t.multiplier])).toEqual([[journal[0].id, 5010, 9.5, 5]]);
+  });
+
+  it('a file that gives them is taken at its word', () => {
+    const journal = typedIn(`${ROWS},fees,multiplier`, `${opened},,`);
+    const r = run(`${ROWS},fees,multiplier`, [`${closed},2.48,1.25`], journal);
+    expect(r.finished.map((t) => [t.fees, t.multiplier])).toEqual([[2.48, 1.25]]);
+  });
+
+  it('a P&L after fees has them taken already: the journal’s are not charged again', () => {
+    const journal = typedIn(`${ROWS},net pnl`, `${opened},`);
+    const r = run(`${ROWS},net pnl`, [`${closed},100`], journal);
+    expect(r.finished.map((t) => [t.fees, t.multiplier, netPnl(t)])).toEqual([[0, 5, 100]]);
+  });
+
+  it('a fee column left empty on the row says there was no fee', () => {
+    const journal = typedIn(`${ROWS},fees`, `${opened},`);
+    const r = run(`${ROWS},fees`, [`${closed},`], journal);
+    expect(r.finished.map((t) => [t.fees, t.multiplier])).toEqual([[0, 5]]);
+  });
+});
+
 describe('closed in parts, or added to first', () => {
   it('closed in part: finished for that part, the rest a trade of its own that the next export finishes', () => {
     const journal = openedOn(WITH_IDS, ['2026-03-02 15:50,AAPL,buy,3,100,0.3,F1']);
