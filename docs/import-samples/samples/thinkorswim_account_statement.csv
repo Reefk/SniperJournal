@@ -1,0 +1,40 @@
+﻿Account Statement for 12345678 (margin) since 10/14/26 through 10/14/26
+
+Cash Balance
+DATE,TIME,TYPE,REF #,DESCRIPTION,Misc Fees,Commissions & Fees,AMOUNT,BALANCE
+10/14/26,01:00:00,BAL,,Cash balance at the start of business day 14.10 CST,,,,"25,000.00"
+10/14/26,09:41:03,TRD,5012345678,BOT +100 AAPL @232.15,,,"-23,215.00","1,785.00"
+10/14/26,10:05:18,TRD,5012347121,SOLD -50 TSLA @248.60,-0.36,,"12,430.00","14,214.64"
+10/14/26,11:22:47,TRD,5012349907,SOLD -100 AAPL @233.40,-0.67,,"23,340.00","37,553.97"
+10/14/26,13:48:09,TRD,5012355302,BOT +50 TSLA @246.05,,,"-12,302.50","25,251.47"
+,,,,TOTAL,($1.03),$0.00,$252.50,"$25,251.47"
+
+Futures Statements
+Trade Date,Exec Date,Exec Time,Type,Ref #,Description,Misc Fees,Commissions & Fees,Amount,Balance
+
+Account Order History
+Notes,,Time Placed,Spread,Side,Qty,Pos Effect,Symbol,Exp,Strike,Type,PRICE,,TIF,Status
+,,10/14/26 13:47:55,SINGLE,BUY,+50,TO CLOSE,TSLA,,,STOCK,246.05,LMT,DAY,FILLED
+,,10/14/26 11:20:31,SINGLE,SELL,-100,TO CLOSE,AAPL,,,STOCK,233.40,LMT,DAY,FILLED
+,,10/14/26 10:05:18,SINGLE,SELL,-50,TO OPEN,TSLA,,,STOCK,~,MKT,DAY,FILLED
+,,10/14/26 09:41:03,SINGLE,SELL,-100,TO CLOSE,AAPL,,,STOCK,230.50,STP,GTC,CANCELED
+,,10/14/26 09:41:03,SINGLE,BUY,+100,TO OPEN,AAPL,,,STOCK,~,MKT,DAY,FILLED
+
+Account Trade History
+,Exec Time,Spread,Side,Qty,Pos Effect,Symbol,Exp,Strike,Type,Price,Net Price,Order Type
+,10/14/26 13:48:09,SINGLE,BUY,+50,TO CLOSE,TSLA,,,STOCK,246.05,246.05,LMT
+,10/14/26 11:22:47,SINGLE,SELL,-100,TO CLOSE,AAPL,,,STOCK,233.40,233.40,LMT
+,10/14/26 10:05:18,SINGLE,SELL,-50,TO OPEN,TSLA,,,STOCK,248.60,248.60,MKT
+,10/14/26 09:41:03,SINGLE,BUY,+100,TO OPEN,AAPL,,,STOCK,232.15,232.15,MKT
+
+Profits and Losses
+Symbol,Description,P/L Open,P/L %,P/L Day,P/L YTD,P/L Diff,Margin Req,Mark Value
+AAPL,APPLE INC COM,$0.00,0.00%,$125.00,$125.00,$0.00,$0.00,$0.00
+TSLA,TESLA INC COM,$0.00,0.00%,$127.50,$127.50,$0.00,$0.00,$0.00
+,OVERALL TOTALS,$0.00,0.00%,$252.50,$252.50,$0.00,$0.00,$0.00
+
+Account Summary
+Net Liquidating Value,"$25,251.47"
+Stock Buying Power,"$50,502.94"
+Option Buying Power,"$25,251.47"
+Equity Commissions & Fees YTD,$1.03

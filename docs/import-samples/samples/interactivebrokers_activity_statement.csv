@@ -1,0 +1,15 @@
+Statement,Header,Field Name,Field Value
+Statement,Data,BrokerName,Interactive Brokers LLC
+Statement,Data,Title,Activity Statement
+Statement,Data,Period,"October 14, 2026"
+Account Information,Header,Field Name,Field Value
+Account Information,Data,Account,U1234567
+Account Information,Data,Base Currency,USD
+Trades,Header,DataDiscriminator,Asset Category,Currency,Symbol,Date/Time,Quantity,T. Price,C. Price,Proceeds,Comm/Fee,Basis,Realized P/L,MTM P/L,Code
+Trades,Data,Order,Stocks,USD,AAPL,"2026-10-14, 09:41:03",100,232.15,234.1,-23215,-1,23216,0,195,O
+Trades,Data,Order,Stocks,USD,AAPL,"2026-10-14, 11:22:47",-100,233.4,234.1,23340,-1,-23216,123,-70,C
+Trades,SubTotal,,Stocks,USD,AAPL,,0,,,125,-2,0,123,125,
+Trades,Data,Order,Stocks,USD,TSLA,"2026-10-14, 10:05:18",-50,248.6,245.2,12430,-1,-12429,0,170,O
+Trades,Data,Order,Stocks,USD,TSLA,"2026-10-14, 13:48:09",50,246.05,245.2,-12302.5,-1,12429,125.5,-42.5,C
+Trades,SubTotal,,Stocks,USD,TSLA,,0,,,127.5,-2,0,125.5,127.5,
+Trades,Total,,Stocks,USD,,,,,,252.5,-4,0,248.5,252.5,

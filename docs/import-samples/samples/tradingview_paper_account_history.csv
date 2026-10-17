@@ -1,0 +1,5 @@
+Time,Balance Before,Balance After,Realized P&L (value),Action
+2026-10-14 10:52:40,100071.50,100095.00,23.50,"Close short position for symbol CME_MINI:MNQ1! at price 21468.25 for 1 units. Position AVG Price was 21480.000000, currency: USD, rate: 1.000000, point value: 2.000000"
+2026-10-14 10:44:02,100037.50,100071.50,34.00,"Close short position for symbol CME_MINI:MNQ1! at price 21471.5 for 2 units. Position AVG Price was 21480.000000, currency: USD, rate: 1.000000, point value: 2.000000"
+2026-10-14 10:07:30,100050.00,100037.50,-12.50,"Close short position for symbol CME_MINI:MES1! at price 6088 for 1 units. Position AVG Price was 6085.500000, currency: USD, rate: 1.000000, point value: 5.000000"
+2026-10-14 09:41:48,100000.00,100050.00,50.00,"Close long position for symbol CME_MINI:MNQ1! at price 21462.75 for 2 units. Position AVG Price was 21450.250000, currency: USD, rate: 1.000000, point value: 2.000000"
