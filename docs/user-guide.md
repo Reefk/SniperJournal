@@ -185,7 +185,25 @@ overlaps yesterday's is safe:
   lists it, with **Import it anyway** for the rare second trade that really is
   identical;
 - a trade your journal still has as open, which the file now closes, is
-  imported closed, and the preview asks you to delete the open copy.
+  **finished** rather than added again (see below).
+
+**A position that runs across two exports is finished by the second.** When
+an export ends with a position still open, it comes in as an open trade. The
+export that closes it then finishes that trade: the exit, the close time and
+the fees come from the file, and your notes, setup, tags, stop and chart stay.
+This works whether the new file starts with the closing fills or repeats the
+opening one too. A file that closes only part of the position finishes the
+trade for that part; the rest stays open as a trade of its own, with the same
+notes, until the next export closes it. Importing that export again changes
+nothing.
+
+The preview lists the trades it finishes, with **Leave them open** if you would
+rather keep them as they are; the file's closing fills then come in as trades
+of their own. To be sure it is the same position, an open trade is only
+finished when it is the only one in that account and symbol, opened before the
+file's first fill there, and that fill is on the other side (a sell for a
+long). A file that begins by buying more of a long you left open starts a new
+trade instead.
 
 **Only a `symbol` column is required.** Everything else is optional. A file
 without one, such as TradingView's list of trades, asks you to type the symbol

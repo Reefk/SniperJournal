@@ -90,7 +90,8 @@ interface Actions {
   /** fold partial fills of one position back into a single trade */
   mergeTrades: (ids: string[]) => string | null;
   setExcluded: (ids: string[], excluded: boolean) => void;
-  importTrades: (trades: Trade[], newSetups: Setup[]) => void;
+  /** adds `trades`, and puts each of `finished` in place of the journal trade with its id */
+  importTrades: (trades: Trade[], newSetups: Setup[], finished?: Trade[]) => void;
   addAccount: (name: string, startingBalance: number) => void;
   updateAccount: (id: string, patch: Partial<Account>) => void;
   deleteAccount: (id: string) => void;
@@ -379,8 +380,14 @@ export function JournalProvider({ children }: { children: ReactNode }) {
         }));
         return null;
       },
-      importTrades: (trades, newSetups) => {
-        mutate((d) => ({ ...d, trades: [...d.trades, ...trades], setups: [...d.setups, ...newSetups] }));
+      importTrades: (trades, newSetups, finished = []) => {
+        // a finished trade replaces the open one it was made from
+        const byId = new Map(finished.map((t) => [t.id, t]));
+        mutate((d) => ({
+          ...d,
+          trades: [...d.trades.map((t) => byId.get(t.id) ?? t), ...trades],
+          setups: [...d.setups, ...newSetups],
+        }));
       },
       addAccount: (name, startingBalance) => {
         const account: Account = { id: uid(), name, startingBalance, createdAt: new Date().toISOString() };

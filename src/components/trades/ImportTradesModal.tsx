@@ -1,7 +1,17 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { CircleAlert, CircleCheck, CopyCheck, FileSpreadsheet, Info, Merge, TriangleAlert, Upload } from 'lucide-react';
+import {
+  CheckCheck,
+  CircleAlert,
+  CircleCheck,
+  CopyCheck,
+  FileSpreadsheet,
+  Info,
+  Merge,
+  TriangleAlert,
+  Upload,
+} from 'lucide-react';
 import { useJournal } from '@/store/JournalProvider';
 import { useUI } from '@/store/UIProvider';
 import {
@@ -67,6 +77,14 @@ const ACCEPTED = [
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
 ].join(',');
 const tradesWord = (n: number) => `${n} ${n === 1 ? 'trade' : 'trades'}`;
+const openWord = (n: number) => `${n} open ${n === 1 ? 'trade' : 'trades'}`;
+/** what the Import button does, in words: "Import 3 trades and finish 1 open trade" */
+const importLabel = (added: number, finished: number) =>
+  !finished
+    ? `Import ${added ? tradesWord(added) : 'trades'}`
+    : added
+      ? `Import ${tradesWord(added)} and finish ${openWord(finished)}`
+      : `Finish ${openWord(finished)}`;
 /** the platforms whose exports import as they come, grouped for the list in the import window */
 const PLATFORM_GROUPS = [...new Set(PLATFORMS.map((p) => p.group))].map((group: PlatformGroup) => ({
   group,
@@ -112,6 +130,8 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
   const [dragging, setDragging] = useState(false);
   const [combinePartials, setCombinePartials] = useState(true);
   const [importLikely, setImportLikely] = useState(false);
+  /** whether trades the journal has open, which the file closes, are finished */
+  const [finishOpen, setFinishOpen] = useState(true);
   const [choices, setChoices] = useState<Choices>(AUTOMATIC);
   /** the layout whose remembered choices have been looked up */
   const [lookedUp, setLookedUp] = useState('');
@@ -119,23 +139,30 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
   const [showColumns, setShowColumns] = useState(false);
   const currency = data.settings.currency;
 
-  const result = useMemo(
-    () =>
-      text
-        ? importTradesFromCsv(text, {
-            accountId,
-            accounts: data.accounts,
-            setups: data.setups,
-            existing: data.trades,
-            combinePartials,
-            mapping: choices.mapping,
-            rowKind: choices.rowKind,
-            dateOrder: choices.dateOrder,
-            defaultSymbol: choices.defaultSymbol,
-          })
-        : null,
-    [text, accountId, data.accounts, data.setups, data.trades, combinePartials, choices],
+  const options = useMemo(
+    () => ({
+      accountId,
+      accounts: data.accounts,
+      setups: data.setups,
+      existing: data.trades,
+      combinePartials,
+      mapping: choices.mapping,
+      rowKind: choices.rowKind,
+      dateOrder: choices.dateOrder,
+      defaultSymbol: choices.defaultSymbol,
+    }),
+    [accountId, data.accounts, data.setups, data.trades, combinePartials, choices],
   );
+  // read as it finishes open trades, which is also how the preview knows which
+  // they are; read again without, only when asked to leave them open
+  const finishing = useMemo(() => (text ? importTradesFromCsv(text, options) : null), [text, options]);
+  const finishable = finishing?.finished ?? [];
+  const leaving = useMemo(
+    () =>
+      text && !finishOpen && finishable.length ? importTradesFromCsv(text, { ...options, finishOpen: false }) : null,
+    [text, options, finishOpen, finishable.length],
+  );
+  const result = leaving ?? finishing;
   const layout = result?.layout ?? null;
 
   // a layout seen before reads the way it was set up last time
@@ -154,6 +181,7 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
     setRestored(false);
     setShowColumns(false);
     setImportLikely(false);
+    setFinishOpen(true);
     setText(next);
   };
 
@@ -209,12 +237,14 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
   const used = layout?.columns.filter((c) => c.role).length ?? 0;
 
   // what the Import button adds: likely duplicates only when asked for, and
-  // only the new setups those trades use
+  // only the new setups those trades use; and the open trades it finishes
   const likely = result?.likelyDuplicates ?? [];
   const toImport = result ? (importLikely ? [...result.trades, ...likely] : result.trades) : [];
-  const incomplete = toImport.filter((t) => t.needsReview).length;
-  const newSetups = result?.newSetups.filter((s) => toImport.some((t) => t.setupId === s.id)) ?? [];
+  const finished = result?.finished ?? [];
+  const incomplete = [...toImport, ...finished].filter((t) => t.needsReview).length;
+  const newSetups = result?.newSetups.filter((s) => [...toImport, ...finished].some((t) => t.setupId === s.id)) ?? [];
   const preview = toImport.slice(0, 6);
+  const journalById = useMemo(() => new Map(data.trades.map((t) => [t.id, t])), [data.trades]);
 
   return (
     <div className="space-y-4">
@@ -296,6 +326,13 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
               <CircleCheck className="size-4 text-profit" />
               <span className="num font-semibold">{toImport.length}</span> ready to import
             </span>
+            {finished.length > 0 && (
+              <span className="flex items-center gap-2 text-fg">
+                <CheckCheck className="size-4 text-profit" />
+                <span className="num font-semibold">{finished.length}</span> open{' '}
+                {finished.length === 1 ? 'trade' : 'trades'} finished
+              </span>
+            )}
             {result.duplicates > 0 && (
               <span className="flex items-center gap-2 text-muted">
                 <Info className="size-4 text-accent" />
@@ -351,6 +388,60 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
                 {likely.length === 1
                   ? 'Import it anyway: it is a different trade'
                   : 'Import them anyway: they are different trades'}
+              </label>
+            </div>
+          )}
+
+          {finishable.length > 0 && (
+            <div className="rounded-lg border border-accent/25 bg-accent/5 px-4 py-3 text-sm">
+              <p className="flex items-start gap-2 text-fg">
+                <CheckCheck className="mt-0.5 size-4 shrink-0 text-accent" />
+                <span>
+                  This file closes{' '}
+                  {finishable.length === 1 ? (
+                    'a trade'
+                  ) : (
+                    <>
+                      <span className="num font-semibold">{finishable.length}</span> trades
+                    </>
+                  )}{' '}
+                  your journal has open.{' '}
+                  {finishOpen
+                    ? `${finishable.length === 1 ? 'It is' : 'They are'} finished with the file's exit: your notes, setup and tags stay.`
+                    : `${finishable.length === 1 ? 'It stays' : 'They stay'} open, and the file's closing fills come in as trades of their own.`}
+                </span>
+              </p>
+              <ul className="mt-2 space-y-0.5 pl-6 text-xs text-muted">
+                {finishable.slice(0, 4).map((t) => {
+                  const was = journalById.get(t.id);
+                  const part = was != null && was.quantity > t.quantity + 1e-9;
+                  return (
+                    <li key={t.id} className="num">
+                      {t.symbol} {t.side === 'LONG' ? 'long' : 'short'} · opened {formatShortDate(t.openedAt)}{' '}
+                      {formatTime(t.openedAt)} · {part ? `${t.quantity} of ${was.quantity}` : t.quantity}
+                      {t.closedAt ? ` · closed ${formatShortDate(t.closedAt)} ${formatTime(t.closedAt)}` : ''}
+                      {t.exitPrice != null ? ` at ${formatPrice(t.exitPrice)}` : ''}
+                      {!t.needsReview && (
+                        <>
+                          {' · '}
+                          <PnlValue value={netPnl(t)} currency={currency} />
+                        </>
+                      )}
+                      {part && ', the rest stays open'}
+                    </li>
+                  );
+                })}
+                {finishable.length > 4 && <li>…and {finishable.length - 4} more</li>}
+              </ul>
+              <label className="mt-2 flex cursor-pointer items-center gap-2 pl-6 text-xs text-muted">
+                <input
+                  type="checkbox"
+                  className="size-4"
+                  checked={!finishOpen}
+                  onChange={(e) => setFinishOpen(!e.target.checked)}
+                />
+                {finishable.length === 1 ? 'Leave it open' : 'Leave them open'}, and import the closing fills as trades
+                of their own
               </label>
             </div>
           )}
@@ -634,6 +725,11 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
             symbol, side, entry time and size as one already in your journal is left out, and the preview lists it in
             case it really is a second trade.
           </p>
+          <p>
+            A position that an earlier export left open is finished by the export that closes it: the trade in your
+            journal gets the exit, and your notes, setup and tags stay. The preview lists those trades, with a way to
+            leave them open.
+          </p>
         </div>
       </details>
 
@@ -643,21 +739,21 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
         </Button>
         <Button
           variant="primary"
-          disabled={!toImport.length}
+          disabled={!toImport.length && !finished.length}
           onClick={() => {
-            if (!toImport.length) return;
+            if (!toImport.length && !finished.length) return;
             if (layout) rememberChoices(layout.signature, choices);
-            actions.importTrades(toImport, newSetups);
-            toast(
-              incomplete > 0
-                ? `Imported ${tradesWord(toImport.length)} — ${incomplete} need details`
-                : `Imported ${tradesWord(toImport.length)}`,
-              incomplete > 0 ? 'info' : 'success',
-            );
+            actions.importTrades(toImport, newSetups, finished);
+            const done = !finished.length
+              ? `Imported ${tradesWord(toImport.length)}`
+              : toImport.length
+                ? `Imported ${tradesWord(toImport.length)}, finished ${openWord(finished.length)}`
+                : `Finished ${openWord(finished.length)}`;
+            toast(incomplete > 0 ? `${done} — ${incomplete} need details` : done, incomplete > 0 ? 'info' : 'success');
             onClose();
           }}
         >
-          Import {toImport.length ? tradesWord(toImport.length) : 'trades'}
+          {importLabel(toImport.length, finished.length)}
         </Button>
       </div>
     </div>

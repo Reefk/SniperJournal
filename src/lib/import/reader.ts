@@ -57,6 +57,8 @@ export interface RowsRead {
   notices: string[];
   /** trade id -> the broker's id of the fill that opened it, where a row names it */
   openingFill?: Map<string, string>;
+  /** trades the journal has open that the file closes, finished (same ids as in the journal) */
+  finished?: Trade[];
 }
 
 export interface Reader {

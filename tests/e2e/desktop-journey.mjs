@@ -1356,6 +1356,70 @@ async function journey() {
   await b.run(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); true`);
   await b.until(`!$modal()`, 'closed');
 
+  // ---- 18. a position across two exports: the second finishes the trade ------
+  const openPath = join(work, 'fills-monday.csv');
+  const closePath = join(work, 'fills-tuesday.csv');
+  writeFileSync(openPath, ['time,symbol,side,qty,price,fee', '2026-03-10 15:50,CRSX,Buy,3,40,0.3'].join('\n'));
+  writeFileSync(closePath, ['time,symbol,side,qty,price,fee', '2026-03-11 09:40,CRSX,Sell,3,42,0.3'].join('\n'));
+  const crsx = (j) => j.trades.filter((t) => t.symbol === 'CRSX');
+  const openImport = async (path) => {
+    await b.run(`$t('Import').click(); true`);
+    await b.until(`!!$modal()?.querySelector('input[type=file]')`, 'import dialog');
+    await b.setFile('[data-modal-root] input[type=file]', path);
+  };
+  await b.run(`$nav('/trades'); true`);
+  await b.until(`!!$t('Import')`, 'trades page');
+  await openImport(openPath);
+  await b.until(`/1\\s*ready to import/.test($modal().innerText)`, 'open position preview');
+  await b.run(`$t('Import 1 trade', $modal()).click(); true`);
+  await b.until(`!$modal()`, 'imported');
+  check(
+    'an export that ends with a position open imports an open trade',
+    await savedSoon((j) => crsx(j).length === 1 && crsx(j)[0].exitPrice == null),
+  );
+  const openId = crsx(journalOnDisk())[0].id;
+  await openImport(closePath);
+  await b.until(`$modal().innerText.includes('your journal has open')`, 'finishing preview');
+  check(
+    'the export that closes it says it finishes that trade, and adds nothing',
+    await b.run(
+      `/0\\s*ready to import/.test($modal().innerText) && /1\\s*open trade finished/.test($modal().innerText) && $modal().innerText.includes('This file closes a trade your journal has open') && !!$t('Finish 1 open trade', $modal())`,
+    ),
+  );
+  const leaveOpen = `[...$modal().querySelectorAll('label')].find((l) => l.textContent.startsWith('Leave it open')).querySelector('input')`;
+  await b.run(`${leaveOpen}.click(); true`);
+  check(
+    '"Leave it open" imports the closing fill as a trade of its own instead',
+    await seen(
+      `/1\\s*ready to import/.test($modal().innerText) && !!$t('Import 1 trade', $modal())`,
+      'left open',
+      5000,
+    ),
+  );
+  await b.run(`${leaveOpen}.click(); true`);
+  await b.until(`!!$t('Finish 1 open trade', $modal())`, 'finishing again');
+  await b.run(`$t('Finish 1 open trade', $modal()).click(); true`);
+  await b.until(`!$modal()`, 'finished');
+  check(
+    'the same trade is finished: one CRSX trade, closed at 42, with both fills’ fees',
+    await savedSoon((j) => {
+      const [t, ...more] = crsx(j);
+      return (
+        !more.length && t?.id === openId && t.exitPrice === 42 && t.closedAt === '2026-03-11T09:40' && t.fees === 0.6
+      );
+    }),
+  );
+  await openImport(closePath);
+  await b.until(`$modal().innerText.includes('already in your journal')`, 'again');
+  check(
+    'importing that export again changes nothing',
+    await b.run(
+      `/0\\s*ready to import/.test($modal().innerText) && !$modal().innerText.includes('your journal has open') && $tStarts('Import trades', $modal()).disabled`,
+    ),
+  );
+  await b.run(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); true`);
+  await b.until(`!$modal()`, 'closed');
+
   await b.close();
   await stopServer();
 }

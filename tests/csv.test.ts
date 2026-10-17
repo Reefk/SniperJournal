@@ -375,17 +375,57 @@ describe('import: duplicates and partial fills', () => {
     expect(r.likelyDuplicates).toHaveLength(1);
   });
 
-  it('a trade the journal has open, which the file closes, is imported and flagged', () => {
-    const open = trade({ symbol: 'AAPL', exitPrice: null, closedAt: undefined });
-    const r = importTradesFromCsv(
-      'symbol,side,opened_at,closed_at,qty,entry,exit\nAAPL,long,2026-03-02 10:00,2026-03-02 11:00,1,100,104',
-      ctx({ existing: [open] }),
-    );
-    expect(r.trades).toHaveLength(1);
+  it('a trade the journal has open, which the file closes, is finished: what you wrote about it stays', () => {
+    const open = trade({
+      symbol: 'AAPL',
+      exitPrice: null,
+      closedAt: undefined,
+      notes: 'Waited for the retest',
+      setupId: 's1',
+      tags: ['planned'],
+      stopLoss: 98,
+    });
+    const csv =
+      'symbol,side,opened_at,closed_at,qty,entry,exit,fee\nAAPL,long,2026-03-02 10:00,2026-03-02 11:00,1,100,104,2';
+    const r = importTradesFromCsv(csv, ctx({ existing: [open] }));
+    expect(r.trades).toHaveLength(0);
     expect(r.likelyDuplicates).toHaveLength(0);
-    expect(r.errors).toEqual([
+    expect(r.errors).toEqual([]);
+    expect(r.finished).toHaveLength(1);
+    expect(r.finished[0]).toMatchObject({
+      id: open.id,
+      createdAt: open.createdAt,
+      exitPrice: 104,
+      closedAt: '2026-03-02T11:00',
+      fees: 2,
+      notes: 'Waited for the retest',
+      setupId: 's1',
+      tags: ['planned'],
+      stopLoss: 98,
+    });
+
+    // asked not to: both are kept, as before
+    const kept = importTradesFromCsv(csv, ctx({ existing: [open], finishOpen: false }));
+    expect([kept.trades.length, kept.finished.length]).toEqual([1, 0]);
+    expect(kept.errors).toEqual([
       '1 trade closes a position your journal still has as open. Both are kept: delete the open copy once you have checked.',
     ]);
+  });
+
+  it('a row with the id of a trade the journal has open, now closed, finishes it; still open, it is a duplicate', () => {
+    const head = 'symbol,side,opened_at,closed_at,qty,entry,exit,id';
+    const first = importTradesFromCsv(`${head}\nAAPL,long,2026-03-02 10:00,,5,100,,P7`, ctx());
+    const open = first.trades[0];
+    const later = importTradesFromCsv(
+      `${head}\nAAPL,long,2026-03-02 10:00,2026-03-03 15:00,5,100,103,P7`,
+      ctx({ existing: [open] }),
+    );
+    expect(later.trades).toHaveLength(0);
+    expect(later.finished.map((t) => [t.id, t.exitPrice, t.closedAt, t.externalId])).toEqual([
+      [open.id, 103, '2026-03-03T15:00', 'P7'],
+    ]);
+    const unchanged = importTradesFromCsv(`${head}\nAAPL,long,2026-03-02 10:00,,5,100,,P7`, ctx({ existing: [open] }));
+    expect([unchanged.trades.length, unchanged.finished.length, unchanged.duplicates]).toEqual([0, 0, 1]);
   });
 
   it('a repeated id inside one file is imported once', () => {

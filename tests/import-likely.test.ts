@@ -75,6 +75,16 @@ describe('likely duplicates', () => {
     expect(split.closesOpen).toBe(1);
   });
 
+  it('the same when finishing: the journal’s open trade is finished with the file’s exit instead', () => {
+    const open = { ...inJournal, exitPrice: null, closedAt: undefined, notes: 'mine' };
+    const closed = trade({ ...inJournal, id: 'n', exitPrice: 104, closedAt: '2026-03-02T12:00' });
+    const split = splitLikelyDuplicates([closed], [open], true);
+    expect([split.fresh.length, split.likely.length, split.closesOpen]).toEqual([0, 0, 0]);
+    expect(split.finished.map((t) => [t.id, t.exitPrice, t.closedAt, t.notes])).toEqual([
+      [inJournal.id, 104, '2026-03-02T12:00', 'mine'],
+    ]);
+  });
+
   it('closed in the journal and open in the file, or open in both: a likely duplicate', () => {
     const openRow = trade({ ...inJournal, id: 'n', exitPrice: null, closedAt: undefined });
     expect(splitLikelyDuplicates([openRow], [inJournal]).likely).toHaveLength(1);

@@ -1,5 +1,6 @@
 import type { Trade } from '../types';
 import { isClosed } from '../trade-math';
+import { finishOpen } from './finish';
 
 /** an import's trades, split by whether the journal seems to have them already */
 export interface LikelySplit {
@@ -7,8 +8,10 @@ export interface LikelySplit {
   fresh: Trade[];
   /** looks like a trade already in the journal: left out unless asked for */
   likely: Trade[];
-  /** imported closed, while the journal has the same trade still open */
+  /** imported closed, while the journal has the same trade still open (when not finishing) */
   closesOpen: number;
+  /** the journal's open trades the file has closed, finished (when finishing) */
+  finished: Trade[];
 }
 
 const matchable = (t: Trade) => Boolean(t.symbol && t.openedAt && t.quantity > 0) && !t.isSample;
@@ -29,10 +32,11 @@ const key = (t: Trade) =>
  *    by their fields: different ids are different trades.
  *  - Test data, and trades still missing their entry time or size, match nothing.
  *  - A trade the journal still has as open, which the file closes, is not left
- *    out: the closed one is imported and counted in `closesOpen`, so the open
- *    copy can be deleted by hand.
+ *    out. With `finish`, the journal's trade is finished with the file's exit
+ *    (`finished`). Without, the closed one is imported and counted in
+ *    `closesOpen`, so the open copy can be deleted by hand.
  */
-export function splitLikelyDuplicates(trades: Trade[], existing: readonly Trade[] = []): LikelySplit {
+export function splitLikelyDuplicates(trades: Trade[], existing: readonly Trade[] = [], finish = false): LikelySplit {
   const journal = new Map<string, Trade[]>();
   for (const t of existing) {
     if (!matchable(t)) continue;
@@ -42,7 +46,7 @@ export function splitLikelyDuplicates(trades: Trade[], existing: readonly Trade[
     else journal.set(k, [t]);
   }
 
-  const split: LikelySplit = { fresh: [], likely: [], closesOpen: 0 };
+  const split: LikelySplit = { fresh: [], likely: [], closesOpen: 0, finished: [] };
   for (const t of trades) {
     const same = matchable(t) ? journal.get(key(t)) : undefined;
     const at = same?.findIndex((j) => !(j.externalId && t.externalId)) ?? -1;
@@ -52,8 +56,12 @@ export function splitLikelyDuplicates(trades: Trade[], existing: readonly Trade[
     }
     const [match] = same.splice(at, 1);
     if (isClosed(t) && !isClosed(match)) {
-      split.fresh.push(t);
-      split.closesOpen++;
+      // the file has the whole trade, its entry fills included
+      if (finish) split.finished.push(finishOpen(match, t, t.fillCount ?? match.fillCount));
+      else {
+        split.fresh.push(t);
+        split.closesOpen++;
+      }
     } else split.likely.push(t);
   }
   return split;

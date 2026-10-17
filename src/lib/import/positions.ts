@@ -1,12 +1,13 @@
 import type { Trade, TradeInput } from '../types';
 import { detectSession } from '../sessions';
-import { isIncomplete } from '../trade-math';
+import { isClosed, isIncomplete } from '../trade-math';
 import { decimalsOf } from '../merge';
 import { uid } from '../utils';
-import { fillsToPositions, summarise, type Fill, type Summary } from './fills';
+import { fillsToPositions, summarise, type Carry, type Fill, type Summary } from './fills';
+import { finishOpen, openRest } from './finish';
 import { believable, fitReported, type Reader, type RowsRead } from './reader';
 import { rowsNote } from './report';
-import { parseAction, parseEffect, parseMoment, parseMoney, parseStatus } from './values';
+import { parseAction, parseEffect, parseMoment, parseMoney, parseStatus, type Moment } from './values';
 
 /**
  * Files with one row per fill: each row is read as a fill, the fills are put
@@ -106,9 +107,16 @@ export function parseFillRow(
 
 /**
  * The trade one position makes. `read` holds every fill read, by file line;
- * `net` says the file's P&L column is after fees.
+ * `net` says the file's P&L column is after fees; `from` is the journal trade
+ * carried in as its entry, if one was.
  */
-export function assemblePosition(s: Summary, read: ReadonlyMap<number, FillRow>, r: Reader, net: boolean): Trade {
+export function assemblePosition(
+  s: Summary,
+  read: ReadonlyMap<number, FillRow>,
+  r: Reader,
+  net: boolean,
+  from?: Trade,
+): Trade {
   const { at, cell, plan } = r.sheet;
   const first = read.get(s.firstLine) as FillRow;
   const rows = s.lines.map((l) => read.get(l)?.row).filter((row): row is string[] => Boolean(row));
@@ -144,7 +152,8 @@ export function assemblePosition(s: Summary, read: ReadonlyMap<number, FillRow>,
   }
   let manualPnl: number | null = null;
   if (multiplier == null && fit) manualPnl = fit.manualPnl;
-  if (multiplier == null) multiplier = r.knownMultiplier(first.symbol, first.row) ?? 1;
+  // nothing in the file says: the journal trade it continues does
+  if (multiplier == null) multiplier = from?.multiplier ?? r.knownMultiplier(first.symbol, first.row) ?? 1;
 
   // averages rounded to the precision of the prices, and the exact P&L
   // kept as written when the rounded averages cannot reproduce it
@@ -221,8 +230,63 @@ function runsNewestFirst(r: Reader): boolean {
   return dated.length >= 2 && dated[0] > dated[dated.length - 1];
 }
 
-/** Every row read as a fill, the fills put back together, and each position made a trade. */
-export function tradesFromFills(r: Reader): RowsRead {
+/** a journal time ('2026-03-04T13:05') as the file's are read */
+const journalMoment = (at: string): Moment => ({
+  value: at.slice(0, 16),
+  sortKey: `${at.slice(0, 16)}:00`,
+  zoned: false,
+  timed: at.length >= 16,
+});
+
+/**
+ * The journal's trades a file's fills may continue, per account and symbol:
+ * those with a size, an entry price and an entry time (and, if closed, a close
+ * time). Which one a file continues, if any, its first fill in the symbol
+ * decides (fills.ts).
+ */
+function carriesFrom(journal: readonly Trade[]): Map<string, Carry[]> {
+  const carries = new Map<string, Carry[]>();
+  for (const t of journal) {
+    if (t.isSample || !(t.quantity > 0) || !(t.entryPrice > 0) || !t.openedAt) continue;
+    const closed = isClosed(t);
+    if (closed && !t.closedAt) continue;
+    const key = `${t.accountId}|${t.symbol.toUpperCase()}`;
+    const carry: Carry = {
+      fill: {
+        line: 0,
+        key,
+        side: t.side === 'LONG' ? 'BUY' : 'SELL',
+        quantity: t.quantity,
+        price: t.entryPrice,
+        time: journalMoment(t.openedAt),
+        fees: t.fees || 0,
+        pnl: null,
+        carried: t.id,
+      },
+      closedAt: closed ? journalMoment(t.closedAt as string) : null,
+    };
+    carries.set(key, [...(carries.get(key) ?? []), carry]);
+  }
+  return carries;
+}
+
+/** a closed journal trade carried in, closed by the file the same way: the file has it again */
+const sameClose = (s: Summary, t: Trade) =>
+  s.closed &&
+  Math.abs(s.quantity - t.quantity) < 1e-9 &&
+  s.closedAt != null &&
+  s.closedAt.value === (t.closedAt ?? '').slice(0, 16);
+
+/**
+ * Every row read as a fill, the fills put back together, and each position
+ * made a trade.
+ *
+ * With `journal`, the file continues it: fills it already has (by the
+ * broker's ids) are left out, and a position the file begins in the middle of
+ * starts from the journal's trade for it, which the file's fills then finish
+ * (`finished`). Without it, every file starts from nothing, as it once did.
+ */
+export function tradesFromFills(r: Reader, journal?: readonly Trade[]): RowsRead {
   const { sheet, findings } = r;
   const net = !sheet.has('gross_pnl') && !sheet.has('pnl') && sheet.has('net_pnl');
   const cashSigned = cashSignedPrices(r);
@@ -233,11 +297,17 @@ export function tradesFromFills(r: Reader): RowsRead {
   let unfilled = 0;
   const noQuantity: number[] = [];
   const noPrice: number[] = [];
+  /** the broker's ids of fills left out because the journal has them */
+  const known = new Set<string>();
 
   sheet.table.data.forEach((row, index) => {
     const line = sheet.table.lines[index];
     const got = parseFillRow(row, line, r, seen, net, cashSigned);
     if ('fill' in got) {
+      if (journal && got.fill.id && r.existingIds.has(got.fill.id)) {
+        known.add(got.fill.id);
+        return;
+      }
       fills.push(got.fill);
       read.set(line, got);
       return;
@@ -264,12 +334,41 @@ export function tradesFromFills(r: Reader): RowsRead {
     }
   });
 
+  // the positions, from the journal's where the file continues one; a closed
+  // trade carried in that the file doesn't close the same way isn't the file's
+  // to continue, so it is ruled out and the fills followed again
+  const newestFirst = runsNewestFirst(r);
+  const byId = new Map((journal ?? []).map((t) => [t.id, t]));
+  const carries = journal ? carriesFrom(journal) : undefined;
+  const ruledOut = new Set<string>();
+  let summaries: Summary[];
+  for (;;) {
+    const usable =
+      carries &&
+      new Map([...carries].map(([key, list]) => [key, list.filter((c) => !ruledOut.has(c.fill.carried as string))]));
+    summaries = fillsToPositions(fills, newestFirst, usable).flatMap(summarise);
+    const wrong = summaries.filter((s) => {
+      const from = s.carried ? byId.get(s.carried) : undefined;
+      return from && isClosed(from) && !sameClose(s, from);
+    });
+    if (!wrong.length) break;
+    for (const s of wrong) ruledOut.add(s.carried as string);
+  }
+
   const trades: Trade[] = [];
+  const finished: Trade[] = [];
+  /** journal trades the file has again, by id */
+  const again = new Set<string>();
   let open = 0;
   let orphans = 0;
   let overlapping = 0;
-  for (const s of fillsToPositions(fills, runsNewestFirst(r)).flatMap(summarise)) {
+  for (const s of summaries) {
     if (!read.has(s.firstLine)) continue;
+    const from = s.carried ? byId.get(s.carried) : undefined;
+    if (from && isClosed(from)) {
+      again.add(from.id);
+      continue;
+    }
     // already imported: every fill of it is in the journal
     if (s.ids.length && s.ids.every((id) => r.existingIds.has(id))) {
       findings.duplicates++;
@@ -278,13 +377,26 @@ export function tradesFromFills(r: Reader): RowsRead {
     if (s.ids.some((id) => r.existingIds.has(id))) overlapping++;
     if (s.orphan) orphans++;
     if (!s.closed) open++;
-    trades.push(assemblePosition(s, read, r, net));
+    const trade = assemblePosition(s, read, r, net, from);
+    if (!from) trades.push(trade);
+    else if (s.closed) finished.push(finishOpen(from, trade, (from.fillCount ?? 1) + s.fillCount));
+    else trades.push(openRest(from, trade));
+  }
+  if (journal) {
+    // a journal trade whose fills the file has again, unless the file finished it
+    const done = new Set(finished.map((t) => t.id));
+    for (const t of journal) {
+      if (!done.has(t.id) && t.externalId?.split('|').some((id) => known.has(id))) again.add(t.id);
+    }
+    findings.duplicates += again.size;
   }
 
   const errors: string[] = [];
   const notices: string[] = [];
+  const fillCount = fills.length + known.size;
+  const made = trades.length + finished.length;
   notices.push(
-    `Each row is one fill: ${fills.length} ${fills.length === 1 ? 'fill was' : 'fills were'} put back together into ${trades.length} ${trades.length === 1 ? 'trade' : 'trades'}, following the position in each symbol.`,
+    `Each row is one fill: ${fillCount} ${fillCount === 1 ? 'fill was' : 'fills were'} put back together into ${made} ${made === 1 ? 'trade' : 'trades'}, following the position in each symbol.`,
   );
   if (unfilled)
     notices.push(
@@ -319,5 +431,5 @@ export function tradesFromFills(r: Reader): RowsRead {
       `${overlapping} ${overlapping === 1 ? 'trade shares' : 'trades share'} fills with trades already in your journal (a position that runs across two exports). Check for doubles.`,
     );
   }
-  return { trades, errors, notices };
+  return { trades, errors, notices, finished };
 }

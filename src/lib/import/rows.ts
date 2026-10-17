@@ -4,6 +4,7 @@ import { isClosed, isIncomplete } from '../trade-math';
 import { mergeIssue, mergeTrades } from '../merge';
 import { uid } from '../utils';
 import type { Role } from './columns';
+import { finishOpen } from './finish';
 import { fitReported, type Reader, type RowsRead } from './reader';
 import { rowsNote } from './report';
 import { parseMoney, parseSide, type Moment } from './values';
@@ -167,12 +168,21 @@ export function assembleTrade(read: TradeRow, row: string[], r: Reader): Trade {
   return trade;
 }
 
-/** Every row made a trade, except those without a symbol and those already imported. */
-export function tradesFromRows(r: Reader): RowsRead {
+/**
+ * Every row made a trade, except those without a symbol and those already
+ * imported. With `journal`, a row with the broker's id of a trade the journal
+ * has open, now closed, finishes that trade (`finished`).
+ */
+export function tradesFromRows(r: Reader, journal?: readonly Trade[]): RowsRead {
   const { sheet, findings } = r;
   const trades: Trade[] = [];
+  const finished: Trade[] = [];
   const openingFill = new Map<string, string>();
   const seenIds = new Set(r.existingIds);
+  /** the journal's open trades, by the broker's id, until a row finishes one */
+  const openById = new Map(
+    (journal ?? []).filter((t) => t.externalId && !isClosed(t) && !t.isSample).map((t) => [t.externalId, t]),
+  );
 
   // a deposit or a balance line among the trades (MetaTrader, IG) has no price
   // and no size; a file where most rows have none is one to fill in by hand
@@ -201,9 +211,14 @@ export function tradesFromRows(r: Reader): RowsRead {
       return;
     }
 
-    // ---- skip anything already imported --------------------------------
+    // ---- skip anything already imported, or finish it -------------------
     if (read.externalId && seenIds.has(read.externalId)) {
-      findings.duplicates += 1;
+      const open = openById.get(read.externalId);
+      const now = open && assembleTrade(read, row, r);
+      if (open && now && isClosed(now)) {
+        openById.delete(read.externalId);
+        finished.push(finishOpen(open, now, now.fillCount ?? open.fillCount));
+      } else findings.duplicates += 1;
       return;
     }
     if (read.externalId) seenIds.add(read.externalId);
@@ -261,7 +276,7 @@ export function tradesFromRows(r: Reader): RowsRead {
       `${n} ${n === 1 ? 'row has' : 'rows have'} no price and no size (${examples}), so ${n === 1 ? 'it is not a trade and was' : 'they are not trades and were'} left out.`,
     );
   }
-  return { trades, errors, notices, openingFill };
+  return { trades, errors, notices, openingFill, finished };
 }
 
 /**

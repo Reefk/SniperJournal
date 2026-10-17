@@ -7,6 +7,10 @@ import type { Moment } from './values';
  * one trade. Scaling in and out stays one trade; a fill that goes through
  * zero (long 2, sell 5) closes the trade and opens the opposite one with the
  * rest. Files that number their trades (TradingView) are grouped by number.
+ *
+ * A file can begin in the middle of a position an earlier export opened. A
+ * trade the journal has for it is then carried in as that position's entry
+ * (see `Carry`), so the file's closing fills finish it.
  */
 
 export interface Fill {
@@ -27,6 +31,16 @@ export interface Fill {
   /** the file says this fill opened or closed a position */
   effect?: 'open' | 'close';
   tradeNo?: string;
+  /** not a row of the file: the entry of the journal trade with this id, carried in */
+  carried?: string;
+}
+
+/** a trade in the journal that a file's fills may continue */
+export interface Carry {
+  /** its entry as a fill: side, size, price, time and fees, with `carried` set to its id */
+  fill: Fill;
+  /** when the journal has it closed; null while it is open */
+  closedAt: Moment | null;
 }
 
 export interface Part {
@@ -106,14 +120,61 @@ function byTradeNumber(fills: Fill[], newestFirst: boolean): Position[] {
   });
 }
 
+/** a before b: to the minute, or to the day when either has no time of day */
+const earlier = (a: Moment, b: Moment) =>
+  a.timed && b.timed ? a.value < b.value : a.value.slice(0, 10) < b.value.slice(0, 10);
+
+/**
+ * The journal trade that a symbol's first fill in the file continues: one on
+ * the other side (the fill reduces it), opened before the fill and still open
+ * at it. A trade the journal already has closed comes first, as that is a
+ * file imported again; two that fit either way are too uncertain to choose.
+ * A first fill on the same side starts a position of its own, so a trade
+ * left open by mistake is never mixed into a new one.
+ */
+function carryFor(carries: readonly Carry[] | undefined, fill: Fill): Fill | null {
+  const at = fill.time;
+  if (!carries || !at) return null;
+  const fits = carries.filter(
+    (c) =>
+      c.fill.side !== fill.side &&
+      c.fill.time != null &&
+      earlier(c.fill.time, at) &&
+      (!c.closedAt || !earlier(c.closedAt, at)),
+  );
+  const closed = fits.filter((c) => c.closedAt);
+  const pick = closed.length ? closed : fits;
+  return pick.length === 1 ? pick[0].fill : null;
+}
+
 /** fills followed position by position, per account and symbol */
-function byPosition(fills: Fill[], newestFirst: boolean): Position[] {
+function byPosition(fills: Fill[], newestFirst: boolean, carries?: ReadonlyMap<string, readonly Carry[]>): Position[] {
   const done: Position[] = [];
   const open = new Map<string, { position: Position; signed: number }>();
+  const started = new Set<string>();
 
   for (const fill of chronological(fills, newestFirst)) {
     const signed = fill.side === 'BUY' ? fill.quantity : -fill.quantity;
-    const state = open.get(fill.key);
+    let state = open.get(fill.key);
+
+    // the file begins in the middle of a position the journal has
+    if (carries && !started.has(fill.key)) {
+      const carried = carryFor(carries.get(fill.key), fill);
+      if (carried) {
+        state = {
+          position: {
+            key: fill.key,
+            side: carried.side === 'BUY' ? 'LONG' : 'SHORT',
+            entries: [part(carried, carried.quantity, false)],
+            exits: [],
+            orphan: false,
+          },
+          signed: carried.side === 'BUY' ? carried.quantity : -carried.quantity,
+        };
+        open.set(fill.key, state);
+      }
+    }
+    started.add(fill.key);
 
     // nothing open: this fill opens a position, unless the file says it closes one
     if (!state || Math.abs(state.signed) < EPS) {
@@ -188,9 +249,19 @@ function byPosition(fills: Fill[], newestFirst: boolean): Position[] {
   return done;
 }
 
-export function fillsToPositions(fills: Fill[], newestFirst = false): Position[] {
+/**
+ * `carries` holds, per account and symbol, the journal's trades that the
+ * file's fills may continue. Files that number their trades never need them.
+ */
+export function fillsToPositions(
+  fills: Fill[],
+  newestFirst = false,
+  carries?: ReadonlyMap<string, readonly Carry[]>,
+): Position[] {
   if (!fills.length) return [];
-  const positions = fills.every((f) => f.tradeNo) ? byTradeNumber(fills, newestFirst) : byPosition(fills, newestFirst);
+  const positions = fills.every((f) => f.tradeNo)
+    ? byTradeNumber(fills, newestFirst)
+    : byPosition(fills, newestFirst, carries);
   const firstTime = (p: Position) => (p.entries[0] ?? p.exits[0]).fill.time?.sortKey ?? '';
   const firstLine = (p: Position) => (p.entries[0] ?? p.exits[0]).fill.line;
   return positions.sort((a, b) => firstTime(a).localeCompare(firstTime(b)) || firstLine(a) - firstLine(b));
@@ -214,6 +285,9 @@ export interface Summary {
   fillCount: number;
   closed: boolean;
   orphan: boolean;
+  /** the journal trade carried in as its entry, by id */
+  carried?: string;
+  /** the first of its fills in the file */
   firstLine: number;
   /** file lines of every fill in it */
   lines: number[];
@@ -239,8 +313,12 @@ export function summarise(p: Position): Summary[] {
   const entryPrice = average(p.entries);
   const exitPrice = average(p.exits);
   const reported = p.exits.some((x) => x.pnl != null) ? p.exits.reduce((a, x) => a + (x.pnl ?? 0), 0) : null;
-  const ids = [...new Set([...p.entries, ...p.exits].map((x) => x.fill.id).filter((id): id is string => Boolean(id)))];
-  const fills = new Set([...p.entries, ...p.exits].map((x) => x.fill)).size;
+  // the file's own fills: a carried-in entry is the journal's, not a row
+  const own = (parts: Part[]) => parts.filter((x) => !x.fill.carried);
+  const inFile = own([...p.entries, ...p.exits]);
+  const carried = p.entries.find((x) => x.fill.carried)?.fill.carried;
+  const ids = [...new Set(inFile.map((x) => x.fill.id).filter((id): id is string => Boolean(id)))];
+  const fills = new Set(inFile.map((x) => x.fill)).size;
   const entryFees = p.entries.reduce((a, x) => a + x.fees, 0);
   const exitFees = p.exits.reduce((a, x) => a + x.fees, 0);
   const times = (parts: Part[]) => parts.map((x) => x.fill.time).filter((t): t is Moment => t != null);
@@ -257,8 +335,9 @@ export function summarise(p: Position): Summary[] {
     ids,
     fillCount: fills,
     orphan: p.orphan,
-    firstLine: (p.entries[0] ?? p.exits[0]).fill.line,
-    lines: [...new Set([...p.entries, ...p.exits].map((x) => x.fill.line))],
+    ...(carried ? { carried } : {}),
+    firstLine: inFile[0].fill.line,
+    lines: [...new Set(inFile.map((x) => x.fill.line))],
     entryPrices: p.entries.map((x) => x.fill.price),
     exitPrices: p.exits.map((x) => x.fill.price),
   };
@@ -333,8 +412,8 @@ export function summarise(p: Position): Summary[] {
       move: null,
       closed: false,
       ids: [...new Set(p.entries.map((x) => x.fill.id).filter((id): id is string => Boolean(id)))],
-      fillCount: p.entries.length,
-      lines: p.entries.map((x) => x.fill.line),
+      fillCount: own(p.entries).length,
+      lines: own(p.entries).map((x) => x.fill.line),
     },
   ];
 }

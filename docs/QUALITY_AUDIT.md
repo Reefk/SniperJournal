@@ -545,7 +545,7 @@ No Critical findings were made.
 - **Evidence:** A reproduction run during the audit (a throwaway test, removed afterwards).
 - **Impact:** Doubled P&L and statistics if someone imports a monthly export twice. The preview count is the only clue.
 - **Recommended fix:** Fingerprint symbol, side, opened/closed time, quantity and prices. Show "possible duplicates" in the preview, skipped by default with an option to import them anyway. Identical trades can be legitimate, so don't drop them silently.
-- **Status:** Fixed 2026-10-16 (`src/lib/import/likely.ts`): the same account, symbol, side, entry time (to the minute) and size as a trade in the journal is left out, listed in the preview with **Import them anyway**. Trades that both carry broker ids are still told apart by the ids; test data matches nothing.
+- **Status:** Fixed 2026-10-16 (`src/lib/import/likely.ts`): the same account, symbol, side, entry time (to the minute) and size as a trade in the journal is left out, listed in the preview with **Import them anyway**. Trades that both carry broker ids are still told apart by the ids; test data matches nothing. Since 2026-10-17 a file that closes a trade the journal has open finishes that trade instead of adding a closed copy (`src/lib/import/finish.ts`): fills continue the journal's open position when the file begins in the middle of it, fills the journal already has are left out by their ids, and importing the same file again still adds nothing (`tests/import-finish.test.ts`). The preview lists the finished trades with **Leave them open**.
 
 ### SJ-28: Separate Date and Time columns lose the time
 
