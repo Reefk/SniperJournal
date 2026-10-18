@@ -1,3 +1,5 @@
+import type { JOURNAL_VERSION } from './journal-version';
+
 export type Side = 'LONG' | 'SHORT';
 export type ThemeMode = 'dark' | 'light';
 
@@ -101,7 +103,7 @@ export interface Profile {
 }
 
 export interface JournalData {
-  version: 1;
+  version: typeof JOURNAL_VERSION;
   updatedAt: string;
   onboarded: boolean;
   profile: Profile;

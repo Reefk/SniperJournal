@@ -138,6 +138,23 @@ describe('reading the journal', () => {
 });
 
 describe('writing the journal', () => {
+  it('a journal a newer version saved meanwhile (OneDrive, from another PC) is never written over', async () => {
+    app.files.set('journal.json', JSON.stringify(journal(1), null, 2));
+    const s = await freshStorage();
+    // the class this storage throws, loaded alongside it
+    const { JournalConflict } = await import('@/lib/storage/types');
+    await s.readJournal();
+    const newer = JSON.stringify({ ...journal(2), version: 2, goals: [] }, null, 2);
+    app.files.set('journal.json', newer);
+    const refused = await s.writeJournal(journal(3)).catch((err: unknown) => err);
+    expect(refused).toBeInstanceOf(JournalConflict);
+    expect(app.files.get('journal.json')).toBe(newer);
+    // one of this version's, changed meanwhile, is saved over as before
+    app.files.set('journal.json', JSON.stringify(journal(2), null, 2));
+    await s.writeJournal(journal(3));
+    expect(onDisk()).toEqual(journal(3));
+  });
+
   it('writes it readable, as the PC version did', async () => {
     const s = await freshStorage();
     await s.writeJournal(journal(1));

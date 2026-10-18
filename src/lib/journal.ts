@@ -1,4 +1,5 @@
 import { cleanAccounts, cleanResources, cleanSettings, cleanSetups, cleanTrades } from '@/store/sanitize';
+import { JOURNAL_VERSION } from './journal-version';
 import type { Account, JournalData, Profile } from './types';
 import { uid } from './utils';
 
@@ -7,7 +8,7 @@ export function createDefaultData(): JournalData {
   const now = new Date().toISOString();
   const account: Account = { id: uid(), name: 'Main Portfolio', startingBalance: 0, createdAt: now };
   return {
-    version: 1,
+    version: JOURNAL_VERSION,
     updatedAt: now,
     onboarded: false,
     profile: { name: '' },
@@ -37,7 +38,7 @@ export function normalize(raw: unknown): JournalData {
       : accounts[0].id;
   const profile = input.profile && typeof input.profile === 'object' ? (input.profile as Partial<Profile>) : {};
   return {
-    version: 1,
+    version: JOURNAL_VERSION,
     updatedAt: typeof input.updatedAt === 'string' ? input.updatedAt : base.updatedAt,
     onboarded: Boolean(input.onboarded),
     profile: { ...base.profile, ...profile, name: typeof profile.name === 'string' ? profile.name : base.profile.name },

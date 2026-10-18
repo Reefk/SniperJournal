@@ -1,7 +1,8 @@
 import { convertFileSrc, invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
+import { newerJournal, versionInFile } from '@/lib/journal-version';
 import type { JournalData } from '@/lib/types';
-import { KEEP_COPIES, copyStamp, type CopyReason, type JournalStorage } from './types';
+import { JournalConflict, KEEP_COPIES, copyStamp, type CopyReason, type JournalStorage } from './types';
 import { IMAGE_NAME, findUnused, removeUnused, type SweepFiles, type UnusedImage } from './sweep';
 import { UNSUPPORTED_IMAGE, imageExtension } from './image-types';
 
@@ -78,6 +79,16 @@ let journalExists = false;
 let backedUpDay = '';
 
 async function writeNow(journal: JournalData): Promise<string> {
+  // a journal a newer version of the app saved while this one was open (a
+  // Documents folder OneDrive keeps in step with another PC) is never written
+  // over: this one would lose what that one added. Refused as a conflict, so
+  // this window stops saving and keeps its own changes as a copy.
+  if (journalExists) {
+    const current = await readText(FILE);
+    if (current !== null && newerJournal({ version: versionInFile(current) }) != null) {
+      throw new JournalConflict('A newer version of Sniper Journal saved the journal.');
+    }
+  }
   const today = new Date().toISOString().slice(0, 10);
   if (journalExists && backedUpDay !== today && (await rollBackup(today))) backedUpDay = today;
   await writeText(FILE, JSON.stringify(journal, null, 2));

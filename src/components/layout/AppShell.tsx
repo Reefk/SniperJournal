@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, type ReactNode } from 'react';
-import { FlaskConical } from 'lucide-react';
-import { useJournal } from '@/store/JournalProvider';
+import { FlaskConical, TriangleAlert } from 'lucide-react';
+import { useJournal, useSaveState } from '@/store/JournalProvider';
 import { useUI } from '@/store/UIProvider';
 import { LogoMark } from '@/components/ui/Logo';
 import { Button } from '@/components/ui/Button';
@@ -19,8 +19,38 @@ function isTypingTarget(target: EventTarget | null): boolean {
   return el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName);
 }
 
+/**
+ * The journal was saved by a newer version of the app than this one (see
+ * newerJournal): nothing was opened and nothing is saved, so updating is the
+ * way on. Its own component, so only it reads the save state.
+ */
+function NewerJournal() {
+  const { filePath } = useSaveState();
+  return (
+    <main className="grid h-dvh place-items-center bg-app px-4 md:h-screen">
+      <div role="alert" className="max-w-xl rounded-xl border border-line bg-surface p-6">
+        <TriangleAlert aria-hidden className="size-6 text-warn" />
+        <h1 className="mt-3 text-lg font-semibold text-fg">This journal needs a newer Sniper Journal</h1>
+        <p className="mt-2 text-sm leading-relaxed text-muted">
+          It was last saved by a newer version of the app, which keeps things this one doesn&apos;t know about. Opening
+          it here could lose them, so it was left as it is: nothing in it has been changed.
+        </p>
+        <p className="mt-2 text-sm font-medium text-fg">Update Sniper Journal, then open it again.</p>
+        {filePath && (
+          <p className="mt-5 text-xs text-muted">
+            Your journal is kept here:
+            <span className="num mt-1 block break-all rounded-md border border-line bg-app px-3 py-2 text-fg">
+              {filePath}
+            </span>
+          </p>
+        )}
+      </div>
+    </main>
+  );
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
-  const { ready, sampleCount, actions } = useJournal();
+  const { ready, newer, sampleCount, actions } = useJournal();
   const { openTradeForm, confirm, toast } = useUI();
   useAndroidBack();
 
@@ -38,6 +68,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [openTradeForm]);
 
+  if (newer != null) return <NewerJournal />;
   if (!ready) {
     return (
       <div className="grid h-dvh place-items-center bg-app md:h-screen">

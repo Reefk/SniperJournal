@@ -1,3 +1,4 @@
+import { newerJournal } from './journal-version';
 import type { JournalData } from './types';
 import { dateKey, downloadFile } from './utils';
 
@@ -11,7 +12,7 @@ export function parseBackup(text: string): { data?: JournalData; error?: string 
     const parsed = JSON.parse(text) as Partial<JournalData>;
     if (!parsed || typeof parsed !== 'object') return { error: 'That file is not a Sniper Journal backup.' };
     // restoring it here would quietly drop whatever the newer version added
-    if (typeof parsed.version === 'number' && parsed.version > 1) {
+    if (newerJournal(parsed) != null) {
       return { error: 'This backup was made by a newer version of Sniper Journal. Update the app, then restore it.' };
     }
     if (!Array.isArray(parsed.trades) || !Array.isArray(parsed.accounts)) {

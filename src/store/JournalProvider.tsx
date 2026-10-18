@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { SystemBars, SystemBarsStyle } from '@capacitor/core';
 import type { Account, JournalData, Resource, Setup, Trade, TradeInput, Settings, Profile } from '@/lib/types';
 import { createDefaultData, normalize } from '@/lib/journal';
+import { newerJournal } from '@/lib/journal-version';
 import { generateSampleData } from '@/lib/sample';
 import { isIncomplete } from '@/lib/trade-math';
 import { mergeIssue, mergeTrades as combineTrades } from '@/lib/merge';
@@ -122,6 +123,11 @@ interface Derived {
 interface JournalContextValue extends Derived {
   data: JournalData;
   ready: boolean;
+  /**
+   * The version of the journal found, when a newer app saved it than this one
+   * can open: then nothing is opened and nothing is saved, and `ready` stays false.
+   */
+  newer: number | null;
   actions: Actions;
 }
 
@@ -156,6 +162,7 @@ const SaveStateContext = createContext<SaveState | null>(null);
 export function JournalProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<JournalData>(createDefaultData);
   const [ready, setReady] = useState(false);
+  const [newer, setNewer] = useState<number | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
   const [filePath, setFilePath] = useState<string | null>(null);
   const [conflict, setConflict] = useState<Conflict | null>(null);
@@ -234,6 +241,18 @@ export function JournalProvider({ children }: { children: ReactNode }) {
         diskReadable.current ? fileVersion() : null,
         decodeMirror(readMirror()),
       );
+
+      // a journal a newer version of the app saved, in the file or in the
+      // browser's copy about to be opened, is neither opened nor written over:
+      // this version would quietly drop what that one added
+      const tooNew = newerJournal(fromDisk) ?? newerJournal(winner);
+      if (tooNew != null) {
+        if (!cancelled) {
+          setFilePath(storage.location());
+          setNewer(tooNew);
+        }
+        return;
+      }
 
       // changes from a window that lost to another window's save, closed
       // before they could be kept: kept as a copy now, not opened over the
@@ -523,8 +542,8 @@ export function JournalProvider({ children }: { children: ReactNode }) {
   }, [data]);
 
   const value = useMemo<JournalContextValue>(
-    () => ({ data, ready, actions, ...derived }),
-    [data, ready, actions, derived],
+    () => ({ data, ready, newer, actions, ...derived }),
+    [data, ready, newer, actions, derived],
   );
 
   const saveState = useMemo<SaveState>(

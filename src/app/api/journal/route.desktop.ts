@@ -3,6 +3,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { refuseForeign } from '../local-only';
+import { JOURNAL_VERSION } from '@/lib/journal-version';
 import { COPY_REASONS, KEEP_COPIES, copyStamp, type CopyReason } from '@/lib/storage/types';
 
 export const runtime = 'nodejs';
@@ -125,7 +126,7 @@ function oneAtATime<T>(task: () => Promise<T>): Promise<T> {
 
 function isJournal(data: unknown): boolean {
   const d = data as { version?: number; trades?: unknown; accounts?: unknown } | null;
-  return Boolean(d && d.version === 1 && Array.isArray(d.trades) && Array.isArray(d.accounts));
+  return Boolean(d && d.version === JOURNAL_VERSION && Array.isArray(d.trades) && Array.isArray(d.accounts));
 }
 
 /**

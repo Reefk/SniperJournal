@@ -1434,6 +1434,27 @@ async function journey() {
   );
   await b.run(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); true`);
   await b.until(`!$modal()`, 'closed');
+  await b.close();
+
+  // ---- 19. a journal a newer version saved is neither opened nor written over ----
+  await stopServer();
+  const newerFile = join(work, 'data', 'journal.json');
+  const newer = JSON.stringify({ ...journalOnDisk(), version: 2, goals: [{ id: 'g1', target: 5000 }] }, null, 2);
+  writeFileSync(newerFile, newer);
+  await startServer();
+  b = await openBrowser(); // no browser copy to open instead
+  await b.send('Page.navigate', { url: base });
+  await b.until(`document.body.innerText.includes('This journal needs a newer Sniper Journal')`, 'newer journal');
+  check(
+    'a journal a newer version saved opens nothing, and says to update the app',
+    await b.run(
+      `!document.querySelector('aside') && document.body.innerText.includes('Update Sniper Journal, then open it again.')`,
+    ),
+  );
+  // nothing on this screen can change the journal, so this catches a write
+  // made as it opens; that edits never save is tests/journal-newer.test.ts
+  await sleep(1000);
+  check('nothing was written over it as the app opened', readFileSync(newerFile, 'utf8') === newer);
 
   await b.close();
   await stopServer();

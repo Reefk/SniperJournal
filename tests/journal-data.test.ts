@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { parseBackup } from '@/lib/backup';
 import { netPnl } from '@/lib/trade-math';
 import { normalize } from '@/lib/journal';
+import { JOURNAL_VERSION, newerJournal, versionInFile } from '@/lib/journal-version';
 import { cleanResources, cleanSettings, cleanSetups, cleanTrades, safeLink } from '@/store/sanitize';
 import type { JournalData } from '@/lib/types';
 import { trade } from './helpers';
@@ -207,6 +208,43 @@ describe('restoring a backup file', () => {
     const { data, error } = parseBackup(JSON.stringify({ ...journal(), version: 2 }));
     expect(data).toBeUndefined();
     expect(error).toMatch(/newer version/i);
+  });
+
+  it('tells a journal a newer version saved from one this version wrote, or an older one', () => {
+    expect(JOURNAL_VERSION).toBe(1);
+    expect([normalize(null).version, normalize(journal()).version]).toEqual([JOURNAL_VERSION, JOURNAL_VERSION]);
+    expect(newerJournal({ ...journal(), version: JOURNAL_VERSION + 1 })).toBe(JOURNAL_VERSION + 1);
+    // a version written as text is its number
+    expect(newerJournal({ version: '2' })).toBe(2);
+    // this version's own, one from before versions were kept, and anything that isn't a journal
+    for (const raw of [
+      journal(),
+      { ...journal(), version: undefined },
+      { version: '1' },
+      { version: 'x' },
+      null,
+      'text',
+      [],
+      2,
+    ]) {
+      expect(newerJournal(raw)).toBeNull();
+    }
+  });
+
+  it('reads a journal file’s version from its start, and the whole file only when it isn’t there', () => {
+    const big = { ...journal(), trades: Array.from({ length: 2000 }, (_, i) => trade({ id: `t${i}` })) };
+    expect(versionInFile(JSON.stringify({ ...big, version: 2 }, null, 2))).toBe(2);
+    expect(versionInFile(JSON.stringify(big))).toBe(1);
+    // written somewhere other than first, after more than the start that is looked at
+    expect(versionInFile(JSON.stringify({ trades: big.trades, accounts: [], version: 3 }))).toBe(3);
+    expect(versionInFile('{"version":"2","trades":[]}')).toBe('2');
+    // a "version" inside something else, before the journal's own
+    expect(versionInFile('{"meta":{"version":1},"version":2,"trades":[]}')).toBe(2);
+    expect([versionInFile('{"trades":[]}'), versionInFile('not json'), versionInFile('')]).toEqual([
+      undefined,
+      undefined,
+      undefined,
+    ]);
   });
 
   it('a large backup restores intact', () => {
