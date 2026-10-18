@@ -303,7 +303,7 @@ describe('importing again, without the broker’s ids', () => {
     expect(r.duplicates).toBe(1);
   });
 
-  it('a trade left open by mistake is not finished by a later fill, after the file has closed another', () => {
+  it('an older trade still open is finished by a later fill too, after the file has closed another', () => {
     const closedBefore = trade({
       symbol: 'MNQZ6',
       side: 'LONG',
@@ -329,10 +329,77 @@ describe('importing again, without the broker’s ids', () => {
       ['2026-03-03 10:00,MNQZ6,sell,2,21010,0', '2026-03-10 10:00,MNQZ6,sell,2,21100,0'],
       [closedBefore, forgotten],
     );
-    expect(r.finished).toEqual([]);
+    // however old, an open trade is the journal's position until a file closes it
+    expect(r.finished.map((t) => [t.id, t.quantity, t.exitPrice, t.closedAt])).toEqual([
+      [forgotten.id, 2, 21100, '2026-03-10T10:00'],
+    ]);
     expect(r.duplicates).toBe(1);
-    expect(r.trades.map((t) => [t.side, t.quantity, t.openedAt, t.closedAt ?? null])).toEqual([
-      ['SHORT', 2, '2026-03-10T10:00', null],
+    expect(r.trades).toEqual([]);
+  });
+});
+
+describe('several open trades in a symbol: the oldest is closed first', () => {
+  const long = (openedAt: string, extra: Partial<Trade> = {}) =>
+    trade({
+      symbol: 'MES',
+      side: 'LONG',
+      openedAt,
+      closedAt: undefined,
+      exitPrice: null,
+      quantity: 1,
+      entryPrice: 5000,
+      multiplier: 5,
+      ...extra,
+    });
+  const older = long('2026-03-02T10:00');
+  const newer = long('2026-03-03T10:00');
+
+  it('a sell of one closes the older, and the newer stays open', () => {
+    const r = run(NO_IDS, ['2026-03-05 10:00,MES,sell,1,5010,0.5'], [newer, older]);
+    expect(r.finished.map((t) => [t.id, t.quantity, t.exitPrice])).toEqual([[older.id, 1, 5010]]);
+    expect([r.trades, r.errors]).toEqual([[], []]);
+  });
+
+  it('one fill larger than the oldest goes on into the next, each with its share of the fees', () => {
+    const r = run(NO_IDS, ['2026-03-05 10:00,MES,sell,2,5010,1'], [newer, older]);
+    expect(r.finished.map((t) => [t.id, t.quantity, t.exitPrice, t.fees])).toEqual([
+      [older.id, 1, 5010, 0.5],
+      [newer.id, 1, 5010, 0.5],
+    ]);
+    expect(r.trades).toEqual([]);
+
+    // imported again, nothing changes
+    const again = run(NO_IDS, ['2026-03-05 10:00,MES,sell,2,5010,1'], apply([newer, older], r));
+    expect([again.trades.length, again.finished.length, again.duplicates]).toEqual([0, 0, 2]);
+  });
+
+  it('imported again, two closed in the other order: each fill is matched to the one it closed', () => {
+    const closed = (openedAt: string, closedAt: string) => long(openedAt, { quantity: 5, closedAt, exitPrice: 5010 });
+    const first = closed('2026-03-05T09:00', '2026-03-05T10:05');
+    const second = closed('2026-03-05T09:30', '2026-03-05T10:00');
+    const r = run(
+      NO_IDS,
+      ['2026-03-05 10:00,MES,sell,5,5010,0', '2026-03-05 10:05,MES,sell,5,5010,0'],
+      [first, second],
+    );
+    expect([r.trades.length, r.finished.length, r.duplicates]).toEqual([0, 0, 2]);
+  });
+
+  it('a fill past all of them opens the other way with the rest', () => {
+    const r = run(NO_IDS, ['2026-03-05 10:00,MES,sell,3,5010,0'], [newer, older]);
+    expect(r.finished.map((t) => t.id)).toEqual([older.id, newer.id]);
+    expect(r.trades.map((t) => [t.side, t.quantity, t.entryPrice, t.closedAt ?? null])).toEqual([
+      ['SHORT', 1, 5010, null],
+    ]);
+  });
+
+  it('the P&L a file reports on a fill that closes two is not given to one of them', () => {
+    const a = long('2026-03-02T10:00', { symbol: 'XYZ', entryPrice: 100, multiplier: 2 });
+    const b = long('2026-03-03T10:00', { symbol: 'XYZ', entryPrice: 104, multiplier: 2 });
+    const r = run(`${NO_IDS},pnl`, ['2026-03-05 10:00,XYZ,sell,2,110,0,32'], [a, b]);
+    expect(r.finished.map((t) => [t.id, t.multiplier, netPnl(t)])).toEqual([
+      [a.id, 2, 20],
+      [b.id, 2, 12],
     ]);
   });
 });
@@ -368,37 +435,10 @@ describe('what is never continued', () => {
     expect(r.trades.map((t) => [t.side, t.quantity, t.entryPrice, t.exitPrice])).toEqual([['SHORT', 1, 110, 105]]);
   });
 
-  it('two open trades in the symbol, or one opened after the fill: too uncertain, so nothing is carried', () => {
-    const sell = ['2026-03-05 10:00,AAPL,sell,1,110,0'];
-    const two = run(NO_IDS, sell, [stale(), stale({ openedAt: '2026-03-03T10:00' })]);
-    expect(two.finished).toEqual([]);
-    // and said, as the sell comes in as a new position
-    expect(two.trades.map((t) => [t.side, t.closedAt ?? null])).toEqual([['SHORT', null]]);
-    expect(two.errors).toEqual([
-      'AAPL: a fill could close more than one trade your journal has open, so none was finished and the fill started a new position. Check it: finish the right trade by hand, then delete the new one.',
-    ]);
-    const later = run(NO_IDS, sell, [stale({ openedAt: '2026-03-05T11:00' })]);
+  it('one opened after the fill: the sell opens a short of its own', () => {
+    const later = run(NO_IDS, ['2026-03-05 10:00,AAPL,sell,1,110,0'], [stale({ openedAt: '2026-03-05T11:00' })]);
     expect(later.finished).toEqual([]);
     expect(later.trades.map((t) => t.side)).toEqual(['SHORT']);
-    expect(later.errors).toEqual([]);
-  });
-
-  it('the same for a fill the file says closes a position, and said once per symbol', () => {
-    const head = `${NO_IDS},effect`;
-    const mes = (openedAt: string) => stale({ symbol: 'MES', openedAt, entryPrice: 5000, quantity: 1, multiplier: 5 });
-    const r = run(
-      head,
-      [
-        '2026-03-05 10:00,MES,sell,2,5010,0,close',
-        '2026-03-05 10:00,AAPL,sell,1,110,0,',
-        '2026-03-05 11:00,AAPL,buy,1,108,0,',
-      ],
-      [mes('2026-03-02T10:00'), mes('2026-03-03T10:00'), stale(), stale({ openedAt: '2026-03-03T10:00' })],
-    );
-    expect(r.finished).toEqual([]);
-    expect(r.errors).toContain(
-      'MES, AAPL: a fill could close more than one trade your journal has open, so none was finished and the fill started a new position. Check them: finish the right trade by hand, then delete the new one.',
-    );
   });
 
   it('test data, another account, or a trade with no entry price', () => {

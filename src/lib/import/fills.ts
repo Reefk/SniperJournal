@@ -58,8 +58,6 @@ export interface Position {
   exits: Part[];
   /** closes a position this file never opened, so its entry is unknown */
   orphan: boolean;
-  /** its first fill could continue more than one trade the journal has open, so it continues none */
-  unsure?: boolean;
 }
 
 const EPS = 1e-9;
@@ -127,52 +125,45 @@ const earlier = (a: Moment, b: Moment) =>
   a.timed && b.timed ? a.value < b.value : a.value.slice(0, 10) < b.value.slice(0, 10);
 
 /**
- * The journal trade that a symbol's first fill in the file continues: one on
- * the other side (the fill reduces it), opened before the fill and still open
- * at it. A trade the journal already has closed comes first, as that is a
- * file imported again; two that fit either way are too uncertain to choose.
- * A first fill on the same side starts a position of its own, so a trade
- * left open by mistake is never mixed into a new one; so does one the file
- * says opens a position. `used` are the journal's trades carried in already.
- *
- * Once the file has closed one of them, the next fill can only go on into the
- * rest of the same position (`after`, the entry of the one closed): the same
- * side, opened at the same time, as an earlier import's open rest is. Any
- * other open trade is not finished by a later fill.
- *
- * `entry` is the chosen trade's entry, or null; `unsure` says the fill could
- * continue more than one open trade, so it continues none. Several closed
- * ones that fit (a file imported again) choose none either, and are not said.
+ * The journal trade that a symbol's fill in the file continues: one on the
+ * other side (the fill reduces it), opened before the fill and still open at
+ * it, however long ago. A trade the journal already has closed comes first,
+ * as that is a file imported again (tradesFromFills checks that the file
+ * closes it the same way, and follows the fills again without it if not):
+ * the one closed at the fill's minute, if there is one. Of several, the
+ * oldest goes first, as a broker closes a position's oldest trades first. A first fill on the same side starts a position of its own,
+ * so a trade left open by mistake is never mixed into a new one; so does one
+ * the file says opens a position. `used` are the journal's trades carried in
+ * already.
  */
-function carryFor(
-  carries: readonly Carry[] | undefined,
-  fill: Fill,
-  used: ReadonlySet<string>,
-  after?: Fill,
-): { entry: Fill | null; unsure: boolean } {
+function carryFor(carries: readonly Carry[] | undefined, fill: Fill, used: ReadonlySet<string>): Fill | null {
   const at = fill.time;
-  if (!carries || !at || fill.effect === 'open') return { entry: null, unsure: false };
+  if (!carries || !at || fill.effect === 'open') return null;
   const fits = carries.filter(
     (c) =>
       !used.has(c.fill.carried as string) &&
-      (!after || (c.fill.side === after.side && c.fill.time?.value === after.time?.value)) &&
       c.fill.side !== fill.side &&
       c.fill.time != null &&
       earlier(c.fill.time, at) &&
       (!c.closedAt || !earlier(c.closedAt, at)),
   );
   const closed = fits.filter((c) => c.closedAt);
-  const pick = closed.length ? closed : fits;
-  return { entry: pick.length === 1 ? pick[0].fill : null, unsure: !closed.length && fits.length > 1 };
+  // of the closed, the one this fill closed, if one was closed at its minute
+  const closedHere = closed.filter((c) => c.closedAt?.value === at.value);
+  const pick = closedHere.length ? closedHere : closed.length ? closed : fits;
+  const opened = (c: Carry) => (c.fill.time as Moment).sortKey;
+  return (
+    pick.reduce<Carry | null>((oldest, c) => (!oldest || opened(c) < opened(oldest) ? c : oldest), null)?.fill ?? null
+  );
 }
 
 /**
  * Fills followed position by position, per account and symbol. With
  * `carries`, the file continues the journal's trades from its first fill in a
- * symbol, and again each time it has closed one of them, into the rest of the
- * same position: a later export that repeats a partial close goes on into the
- * open rest. Once it has a position of its own there (or closes one from
- * before it), it continues none.
+ * symbol, and again each time it has closed one of them: a fill larger than
+ * the oldest goes on into the next, and a later export that repeats a partial
+ * close goes on into the open rest. Once it has a position of its own there
+ * (or closes one from before it), it continues none.
  */
 function byPosition(fills: Fill[], newestFirst: boolean, carries?: ReadonlyMap<string, readonly Carry[]>): Position[] {
   const done: Position[] = [];
@@ -181,8 +172,6 @@ function byPosition(fills: Fill[], newestFirst: boolean, carries?: ReadonlyMap<s
   const used = new Set<string>();
   /** accounts and symbols where the file continues no more of the journal's trades */
   const ended = new Set<string>();
-  /** per account and symbol, the entry of the journal's trade the file closed last */
-  const closedEntry = new Map<string, Fill>();
 
   for (const fill of chronological(fills, newestFirst)) {
     const sign = fill.side === 'BUY' ? 1 : -1;
@@ -193,14 +182,11 @@ function byPosition(fills: Fill[], newestFirst: boolean, carries?: ReadonlyMap<s
 
     while (left > EPS) {
       let state = open.get(fill.key);
-      let unsure = false;
 
       // the file begins in the middle of a position the journal has, or has
       // closed one of the journal's and goes on into the next
       if (!state && carries && !ended.has(fill.key)) {
-        const carry = carryFor(carries.get(fill.key), fill, used, closedEntry.get(fill.key));
-        const carried = carry.entry;
-        unsure = carry.unsure;
+        const carried = carryFor(carries.get(fill.key), fill, used);
         if (carried) {
           used.add(carried.carried as string);
           state = {
@@ -228,7 +214,6 @@ function byPosition(fills: Fill[], newestFirst: boolean, carries?: ReadonlyMap<s
             entries: [],
             exits: [part(fill, left, !closing.length)],
             orphan: true,
-            ...(unsure ? { unsure } : {}),
           });
         } else {
           open.set(fill.key, {
@@ -238,7 +223,6 @@ function byPosition(fills: Fill[], newestFirst: boolean, carries?: ReadonlyMap<s
               entries: [part(fill, left, false)],
               exits: [],
               orphan: false,
-              ...(unsure ? { unsure } : {}),
             },
             signed: sign * left,
           });
@@ -264,8 +248,6 @@ function byPosition(fills: Fill[], newestFirst: boolean, carries?: ReadonlyMap<s
       if (Math.abs(state.signed) < EPS) {
         done.push(state.position);
         open.delete(fill.key);
-        const entry = state.position.entries[0].fill;
-        if (entry.carried) closedEntry.set(fill.key, entry);
       }
     }
     // a fill that closed two positions: its reported P&L can't be split between
@@ -318,8 +300,6 @@ export interface Summary {
   orphan: boolean;
   /** the journal trade carried in as its entry, by id */
   carried?: string;
-  /** see Position */
-  unsure?: boolean;
   /** the first of its fills in the file */
   firstLine: number;
   /** file lines of every fill in it */
@@ -369,7 +349,6 @@ export function summarise(p: Position): Summary[] {
     fillCount: fills,
     orphan: p.orphan,
     ...(carried ? { carried } : {}),
-    ...(p.unsure ? { unsure: true } : {}),
     firstLine: inFile[0].fill.line,
     lines: [...new Set(inFile.map((x) => x.fill.line))],
     entryPrices: p.entries.map((x) => x.fill.price),
