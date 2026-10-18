@@ -133,9 +133,11 @@ export function createReader(sheet: Sheet, target: ImportTarget): Reader {
 
   // fees: every fee column adds up. Some brokers write costs as negatives
   // (IBKR, MetaTrader), others as positives; each column is read its own way.
+  // The one taken from a statement's cash section (cash.ts) has charges above zero.
   const feeColumns = plan.roles.get('fees') ?? [];
   const feeSign = new Map(
     feeColumns.map((c) => {
+      if (table.cashFees) return [c, 1] as const;
       let negative = 0;
       let positive = 0;
       for (const row of table.data) {

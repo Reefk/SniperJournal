@@ -250,6 +250,99 @@ describe('one row per fill', () => {
     expect(statement('09:31:12', '10:12:41').errors).toEqual([]);
   });
 
+  it('Thinkorswim statement: money back on a fee line (a rebate) takes from the fees, it is not charged', () => {
+    const statement = (misc: string, commission: string) =>
+      read(
+        lines(
+          'Cash Balance',
+          'DATE,TIME,TYPE,REF #,DESCRIPTION,Misc Fees,Commissions & Fees,AMOUNT,BALANCE',
+          '3/2/26,09:31:12,TRD,="1001",BOT +100 AAPL @187.40,0.30,-1.00,"-18,740.70","81,259.30"',
+          `3/2/26,10:12:40,TRD,="1002",SOLD -100 AAPL @189.10,${misc},${commission},"18,908.30","100,167.60"`,
+          'Account Trade History',
+          ',Exec Time,Spread,Side,Qty,Pos Effect,Symbol,Exp,Strike,Type,Price,Net Price,Order Type',
+          ',3/2/26 09:31:12,STOCK,BUY,+100,TO OPEN,AAPL,,,STOCK,187.40,187.40,LMT',
+          ',3/2/26 10:12:40,STOCK,SELL,-100,TO CLOSE,AAPL,,,STOCK,189.10,189.10,LMT',
+        ),
+      );
+    // charges below zero: 1.00 less 0.30 back on the buy, 0.02 and 0.65 on the sell
+    expect(statement('-0.02', '-0.65').trades.map((t) => money(t.fees))).toEqual([1.37]);
+    // a statement that writes its charges above zero: the one below is money back
+    const flipped = read(
+      lines(
+        'Cash Balance',
+        'DATE,TIME,TYPE,REF #,DESCRIPTION,Misc Fees,Commissions & Fees,AMOUNT,BALANCE',
+        '3/2/26,09:31:12,TRD,="1001",BOT +100 AAPL @187.40,-0.30,1.00,"-18,740.70","81,259.30"',
+        '3/2/26,10:12:40,TRD,="1002",SOLD -100 AAPL @189.10,0.02,0.65,"18,908.30","100,167.60"',
+        'Account Trade History',
+        ',Exec Time,Spread,Side,Qty,Pos Effect,Symbol,Exp,Strike,Type,Price,Net Price,Order Type',
+        ',3/2/26 09:31:12,STOCK,BUY,+100,TO OPEN,AAPL,,,STOCK,187.40,187.40,LMT',
+        ',3/2/26 10:12:40,STOCK,SELL,-100,TO CLOSE,AAPL,,,STOCK,189.10,189.10,LMT',
+      ),
+    );
+    expect(flipped.trades.map((t) => money(t.fees))).toEqual([1.37]);
+    // more lines give back than charge, but less money: a charge is still below zero
+    expect(statement('0.10', '').trades.map((t) => money(t.fees))).toEqual([0.6]);
+  });
+
+  it('Thinkorswim statement: a spread’s fees shared by the sizes of its legs, whichever leg comes first', () => {
+    const r = read(
+      lines(
+        'Cash Balance',
+        'DATE,TIME,TYPE,REF #,DESCRIPTION,Misc Fees,Commissions & Fees,AMOUNT,BALANCE',
+        '3/3/26,10:00:00,TRD,="3001",BOT +1 BUTTERFLY SPY 100 20 MAR 26 575/580/585 CALL @0.80,,-4.00,-84.00,"99,916.00"',
+        '3/3/26,10:05:00,TRD,="3002",BOT +1 VERTICAL QQQ 100 20 MAR 26 500/505 CALL @1.10,,-1.30,-111.30,"99,804.70"',
+        'Account Trade History',
+        ',Exec Time,Spread,Side,Qty,Pos Effect,Symbol,Exp,Strike,Type,Price,Net Price,Order Type',
+        ',3/3/26 10:05:00,VERTICAL,SELL,-1,TO OPEN,QQQ,20 MAR 26,505,CALL,1.40,1.10,LMT',
+        ',,,BUY,+1,TO OPEN,QQQ,20 MAR 26,500,CALL,2.50,DEBIT,',
+        ',3/3/26 10:00:00,BUTTERFLY,SELL,-2,TO OPEN,SPY,20 MAR 26,580,CALL,3.00,.80,LMT',
+        ',,,BUY,+1,TO OPEN,SPY,20 MAR 26,575,CALL,4.60,DEBIT,',
+        ',,,BUY,+1,TO OPEN,SPY,20 MAR 26,585,CALL,2.00,DEBIT,',
+      ),
+    );
+    expect(r.errors).toEqual([]);
+    expect(
+      r.trades
+        .map((t) => [t.symbol, t.quantity, t.openedAt, money(t.fees)])
+        .sort((a, b) => String(a[0]).localeCompare(String(b[0]))),
+    ).toEqual([
+      ['QQQ 20 MAR 26 500 CALL', 1, '2026-03-03T10:05', 0.65],
+      ['QQQ 20 MAR 26 505 CALL', 1, '2026-03-03T10:05', 0.65],
+      ['SPY 20 MAR 26 575 CALL', 1, '2026-03-03T10:00', 1],
+      ['SPY 20 MAR 26 580 CALL', 2, '2026-03-03T10:00', 2],
+      ['SPY 20 MAR 26 585 CALL', 1, '2026-03-03T10:00', 1],
+    ]);
+  });
+
+  it('Thinkorswim statement: a spread’s legs take its time, and its fee line is shared between them', () => {
+    const r = read(
+      lines(
+        'Cash Balance',
+        'DATE,TIME,TYPE,REF #,DESCRIPTION,Misc Fees,Commissions & Fees,AMOUNT,BALANCE',
+        '3/3/26,10:00:00,TRD,="2001",BOT +2 VERTICAL SPY 100 20 MAR 26 580/585 CALL @1.20,-0.08,-2.60,-242.68,"99,757.32"',
+        '3/3/26,11:30:00,TRD,="2002",SOLD -2 VERTICAL SPY 100 20 MAR 26 580/585 CALL @1.50,-0.12,-2.60,297.28,"100,054.60"',
+        'Account Trade History',
+        ',Exec Time,Spread,Side,Qty,Pos Effect,Symbol,Exp,Strike,Type,Price,Net Price,Order Type',
+        ',3/3/26 11:30:00,VERTICAL,SELL,-2,TO CLOSE,SPY,20 MAR 26,580,CALL,4.25,1.50,LMT',
+        ',,,BUY,+2,TO CLOSE,SPY,20 MAR 26,585,CALL,2.75,CREDIT,',
+        ',3/3/26 10:00:00,VERTICAL,BUY,+2,TO OPEN,SPY,20 MAR 26,580,CALL,3.50,1.20,LMT',
+        ',,,SELL,-2,TO OPEN,SPY,20 MAR 26,585,CALL,2.30,DEBIT,',
+      ),
+    );
+    expect(r.errors).toEqual([]);
+    expect(
+      r.trades
+        .map((t) => [t.symbol, t.side, t.openedAt, t.closedAt, money(t.fees), t.needsReview ?? false])
+        .sort((a, b) => String(a[0]).localeCompare(String(b[0]))),
+    ).toEqual([
+      ['SPY 20 MAR 26 580 CALL', 'LONG', '2026-03-03T10:00', '2026-03-03T11:30', 2.7, false],
+      ['SPY 20 MAR 26 585 CALL', 'SHORT', '2026-03-03T10:00', '2026-03-03T11:30', 2.7, false],
+    ]);
+    expect(r.notices).toContain(
+      "The fees of 4 executions were taken from the statement's Cash Balance section, matched by time.",
+    );
+  });
+
   it('Webull orders: cancelled orders left out, filled quantity and average price used, not the limit', () => {
     const r = read(
       lines(
