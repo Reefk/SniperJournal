@@ -1,13 +1,19 @@
-// Draws every icon the app ships from the one logo defined in `mark()` below:
-// a sniper's scope with a rising trend arrowed through the middle.
+// Draws every icon the app ships from the one logo, assets/logo.png: a
+// sniper's scope over rising candles, a trend arrowed out of it, on a dark
+// rounded tile.
 //
 //   node scripts/make-icons.mjs
+//
+// assets/logo.png and assets/banner.png were cut from the "Sniper Journal
+// Banner" design (2026-10-18). To change the logo, replace those two files
+// and re-run; if the tile's background changes, re-measure TILE_BG and
+// MARK_SPAN below.
 //
 // Writes the Android launcher icons and launch screen, the PWA icons in
 // public/, the browser tab icon, the Windows shortcut's .ico, the Windows
 // app's icon in src-tauri/icons, and the artwork the Play Store listing asks for. Nothing reads these at build time, so the
-// results are committed; re-run after editing the logo. The in-app mark is
-// src/components/ui/Logo.tsx — keep the two in step.
+// results are committed. The in-app mark (src/components/ui/Logo.tsx) shows
+// public/icon-192.png, so it follows by itself.
 
 import sharp from 'sharp';
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -17,167 +23,146 @@ const RES = 'android/app/src/main/res';
 
 /* ---------------------------------------------------------------- the logo */
 
-const C = {
-  navy: '#1b2747',
-  navyMid: '#0f1830',
-  navyDeep: '#070c18',
-  indigo: '#6366f1',
-  emerald: '#34d399',
-  emeraldDeep: '#0ea06f',
-  white: '#f4f7ff',
-  wash: '#ccd6f6',
-};
+/** Every drawing is made this many pixels across, then scaled to each size. */
+const S = 1024;
+
+/** The logo on its tile, S across; transparent outside the tile's rounded edge. */
+const LOGO = await sharp('assets/logo.png').resize(S, S).png().toBuffer();
 
 /**
- * The scope and the arrow, in a 1024-unit square. The widest feature — the
- * scope's four ticks — spans 820 of those units, i.e. 80% of the square.
+ * How much of the tile the scope's ticks span, end to end (measured on the
+ * logo). Every `span` below means this distance, so a span is how much of
+ * its canvas the scope takes.
  */
-const MARK_SPAN = 820 / 1024;
-function mark() {
-  return `
-  <g stroke="url(#ring)" stroke-width="46" stroke-linecap="round" fill="none">
-    <circle cx="512" cy="512" r="296"/>
-    <path d="M512 92V176M512 932V848M92 512H176M932 512H848"/>
-  </g>
-  <g stroke="url(#trend)" stroke-width="50" stroke-linecap="round" stroke-linejoin="round" fill="none" filter="url(#lift)">
-    <path d="M356 668 668 356"/>
-    <path d="M560 356H668V464"/>
-  </g>`;
+const MARK_SPAN = 0.822;
+
+/**
+ * The tile's background is a flat slope of colour, darkest at the bottom
+ * right; these are its top-left, top-right and bottom-left corners, measured
+ * on the logo. Drawings that leave the tile's edge out carry it on with this.
+ */
+const TILE_BG = { tl: [0x1d, 0x1b, 0x3a], tr: [0x1a, 0x18, 0x35], bl: [0x15, 0x14, 0x2b] };
+
+/** Where the tile sits when the scope spans `span` of the canvas. */
+function place(span) {
+  const size = Math.round((S * span) / MARK_SPAN);
+  return { size, offset: Math.round((S - size) / 2) };
 }
 
-/** Gradients and the arrow's glow, shared by every drawing below. */
-function defs() {
-  return `
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="${C.navy}"/>
-      <stop offset="55%" stop-color="${C.navyMid}"/>
-      <stop offset="100%" stop-color="${C.navyDeep}"/>
-    </linearGradient>
-    <radialGradient id="glow" cx="0.28" cy="0.2" r="0.85">
-      <stop offset="0%" stop-color="${C.indigo}" stop-opacity="0.55"/>
-      <stop offset="60%" stop-color="${C.indigo}" stop-opacity="0.12"/>
-      <stop offset="100%" stop-color="${C.indigo}" stop-opacity="0"/>
-    </radialGradient>
-    <linearGradient id="ring" x1="0" y1="0" x2="0.5" y2="1">
-      <stop offset="0%" stop-color="${C.white}"/>
-      <stop offset="100%" stop-color="${C.wash}"/>
-    </linearGradient>
-    <linearGradient id="trend" x1="0" y1="1" x2="1" y2="0">
-      <stop offset="0%" stop-color="${C.emeraldDeep}"/>
-      <stop offset="100%" stop-color="${C.emerald}"/>
-    </linearGradient>
-    <filter id="lift" x="-30%" y="-30%" width="160%" height="160%">
-      <feDropShadow dx="0" dy="0" stdDeviation="26" flood-color="${C.emerald}" flood-opacity="0.45"/>
-    </filter>
-  </defs>`;
+/** The tile's background slope, carried on over the whole canvas. */
+function background(span) {
+  const { size, offset } = place(span);
+  const { tl, tr, bl } = TILE_BG;
+  const raw = Buffer.alloc(S * S * 4);
+  for (let y = 0; y < S; y++) {
+    for (let x = 0; x < S; x++) {
+      const u = (x - offset) / size;
+      const v = (y - offset) / size;
+      const i = (y * S + x) * 4;
+      for (let c = 0; c < 3; c++) raw[i + c] = Math.round(tl[c] + (tr[c] - tl[c]) * u + (bl[c] - tl[c]) * v);
+      raw[i + 3] = 255;
+    }
+  }
+  return raw;
 }
 
 /**
- * The logo on its background.
- *   shape: 'squircle' for a standalone icon, 'circle' for Android's round
- *          launcher icon, 'square' for one a launcher's mask will crop.
- *   span:  how much of the square the mark may use. A mask only leaves the
- *          middle, so those icons pass a smaller span.
+ * The logo without its tile's edge: the middle of the tile, faded out in a
+ * circle just past the ticks' glow, over the same background carried on to
+ * the canvas's edges. `onNothing` leaves out that background — the adaptive
+ * icon's foreground, whose background is a layer of its own.
  */
-function icon({ shape = 'squircle', span = MARK_SPAN } = {}) {
-  const base =
-    shape === 'circle'
-      ? (fill) => `<circle cx="512" cy="512" r="512" fill="${fill}"/>`
-      : (fill) => `<rect width="1024" height="1024" rx="${shape === 'squircle' ? 232 : 0}" fill="${fill}"/>`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  ${defs()}
-  ${base('url(#bg)')}
-  ${base('url(#glow)')}
-  ${scaled(span)}
+async function borderless(span, { onNothing = false } = {}) {
+  const { size, offset } = place(span);
+  // the glow ends 0.425 of the tile from the middle, the tile's edge at 0.5
+  const fade = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}">
+  <radialGradient id="f"><stop offset="0.86" stop-color="#fff"/><stop offset="0.96" stop-color="#fff" stop-opacity="0"/></radialGradient>
+  <rect width="${size}" height="${size}" fill="url(#f)"/>
 </svg>`;
+  const middle = await sharp(LOGO)
+    .resize(size, size, { kernel: 'lanczos3' })
+    .composite([{ input: Buffer.from(fade), blend: 'dest-in' }])
+    .png()
+    .toBuffer();
+  const base = onNothing
+    ? sharp({ create: { width: S, height: S, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
+    : sharp(background(span), { raw: { width: S, height: S, channels: 4 } });
+  return base
+    .composite([{ input: middle, left: offset, top: offset }])
+    .png()
+    .toBuffer();
 }
 
-/** The adaptive icon's foreground: the mark alone, on nothing. */
-function foreground() {
-  // of the adaptive icon's 108dp, only the middle 72dp is always on screen
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  ${defs()}
-  ${scaled(72 / 108)}
-</svg>`;
-}
-
-/** The adaptive icon's background layer, which the launcher's mask crops. */
-function background() {
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  ${defs()}
-  <rect width="1024" height="1024" fill="url(#bg)"/>
-  <rect width="1024" height="1024" fill="url(#glow)"/>
-</svg>`;
+/** A drawing cut to a circle: Android's round launcher icon. */
+async function circle(drawing) {
+  const mask = `<svg xmlns="http://www.w3.org/2000/svg" width="${S}" height="${S}"><circle cx="${S / 2}" cy="${S / 2}" r="${S / 2}" fill="#fff"/></svg>`;
+  return sharp(drawing)
+    .composite([{ input: Buffer.from(mask), blend: 'dest-in' }])
+    .png()
+    .toBuffer();
 }
 
 /**
- * The mark on nothing, for the launch screen. res/drawable/splash.xml centres
- * this over the app's background colour, so it never has to stretch to the
- * shape of the screen and there is one of these per density, not per screen.
+ * The adaptive icon as a flat silhouette, for phones set to themed icons:
+ * Android throws away the colours and tints the shape with the wallpaper's.
+ * The shape is the strokes: they stand about 200 above the tile's
+ * background in their brightest channel, while their glow and the scope's
+ * thin inner circle stay under 155.
  */
-function logoOnly() {
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  ${defs()}
-  ${scaled(MARK_SPAN)}
-</svg>`;
+async function monochrome(span) {
+  const bg = background(span);
+  const { data } = await sharp(await borderless(span))
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const out = Buffer.alloc(S * S * 4, 255);
+  for (let i = 0; i < S * S * 4; i += 4) {
+    const lift = Math.max(data[i] - bg[i], data[i + 1] - bg[i + 1], data[i + 2] - bg[i + 2]);
+    out[i + 3] = Math.round(255 * Math.min(1, Math.max(0, (lift - 155) / 30)));
+  }
+  return sharp(out, { raw: { width: S, height: S, channels: 4 } })
+    .png()
+    .toBuffer();
 }
 
 /**
- * The 1024x500 banner at the top of the Play Store listing. Play crops it on
- * some surfaces, so the logo and the words stay near the middle.
+ * The logo, `size` across, centred on a transparent w x h canvas: the
+ * Windows Start menu's tiles, which keep space around a logo. Drawn with the
+ * logo at full size; render() scales it down.
  */
-function featureGraphic() {
+async function tile(w, h, size) {
+  const k = S / size;
+  const width = Math.round(w * k);
+  const height = Math.round(h * k);
+  return sharp({ create: { width, height, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
+    .composite([{ input: LOGO, left: Math.round((width - S) / 2), top: Math.round((height - S) / 2) }])
+    .png()
+    .toBuffer();
+}
+
+/**
+ * The 1024x500 banner at the top of the Play Store listing: the 16:9 banner,
+ * cut to its middle. Play crops it on some surfaces, and the logo is in the
+ * middle of it.
+ */
+async function featureGraphic() {
   const w = 1024;
   const h = 500;
-  const logo = 232;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">
-  ${defs()}
-  <rect width="${w}" height="${h}" fill="${C.navyDeep}"/>
-  <rect width="${w}" height="${h}" fill="url(#glow)" opacity="0.75"/>
-  <g transform="translate(130 ${(h - logo) / 2}) scale(${(logo / 1024).toFixed(5)})">${mark()}</g>
-  <text x="408" y="236" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif"
-        font-size="62" font-weight="700" fill="${C.white}" letter-spacing="-1">Sniper Journal</text>
-  <text x="410" y="296" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif"
-        font-size="27" font-weight="400" fill="#8b97ad">Your trading journal and performance</text>
-  <text x="410" y="334" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif"
-        font-size="27" font-weight="400" fill="#8b97ad">analytics, kept on your own phone.</text>
-</svg>`;
-}
-
-/**
- * The squircle icon, `size` across, centred on a transparent w x h canvas:
- * the Windows Start menu's tiles, which keep space around a logo.
- */
-function tile(w, h, size) {
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">
-  ${defs()}
-  <g transform="translate(${(w - size) / 2} ${(h - size) / 2}) scale(${(size / 1024).toFixed(5)})">
-    <rect width="1024" height="1024" rx="232" fill="url(#bg)"/>
-    <rect width="1024" height="1024" rx="232" fill="url(#glow)"/>
-    ${scaled(MARK_SPAN)}
-  </g>
-</svg>`;
-}
-
-/** The mark, centred, taking `span` of the square's width. */
-function scaled(span) {
-  const scale = (span / MARK_SPAN).toFixed(4);
-  return `<g transform="translate(512 512) scale(${scale}) translate(-512 -512)">${mark()}</g>`;
+  const resized = await sharp('assets/banner.png').resize({ width: w }).png().toBuffer();
+  const { height } = await sharp(resized).metadata();
+  return sharp(resized)
+    .extract({ left: 0, top: Math.round((height - h) / 2), width: w, height: h })
+    .png()
+    .toBuffer();
 }
 
 /* ------------------------------------------------------------ the writing */
 
-const render = (svg, w, h = w) =>
-  sharp(Buffer.from(svg), { density: 384 }).resize(w, h, { fit: 'fill' }).png().toBuffer();
+const render = (drawing, w, h = w) => sharp(drawing).resize(w, h, { fit: 'fill', kernel: 'lanczos3' }).png().toBuffer();
 
 /** The same, with no alpha channel at all — what the Play Store listing wants. */
-const renderOpaque = (svg, w, h = w) =>
-  sharp(Buffer.from(svg), { density: 384 })
-    .resize(w, h, { fit: 'fill' })
-    .flatten({ background: C.navyDeep })
-    .png()
-    .toBuffer();
+const renderOpaque = (drawing, w, h = w) =>
+  sharp(drawing).resize(w, h, { fit: 'fill', kernel: 'lanczos3' }).flatten({ background: '#121126' }).png().toBuffer();
 
 function write(path, buffer) {
   mkdirSync(dirname(path), { recursive: true });
@@ -186,8 +171,8 @@ function write(path, buffer) {
 }
 
 /** A .ico holding one PNG per size — what Windows shortcuts want. */
-async function ico(svg, sizes) {
-  const images = await Promise.all(sizes.map((s) => render(svg, s)));
+async function ico(drawing, sizes) {
+  const images = await Promise.all(sizes.map((s) => render(drawing, s)));
   const header = Buffer.alloc(6);
   header.writeUInt16LE(1, 2); // an icon, not a cursor
   header.writeUInt16LE(sizes.length, 4);
@@ -206,37 +191,54 @@ async function ico(svg, sizes) {
   return Buffer.concat([header, ...entries, ...images]);
 }
 
+// the logo with its tile's rounded corners, for a standalone icon
+const squircle = LOGO;
+// full squares, for an icon something else rounds or masks
+const square = await borderless(MARK_SPAN);
+const round = await circle(square);
+// of the adaptive icon's 108dp, only the middle 72dp is always on screen;
+// the scope takes as much of that as it does of the tile
+const ADAPTIVE = (72 / 108) * MARK_SPAN;
+
 // mdpi is 1x; every other bucket is a multiple of it
 const DPI = { mdpi: 1, hdpi: 1.5, xhdpi: 2, xxhdpi: 3, xxxhdpi: 4 };
 const SPLASH_LOGO_DP = 160;
 
 console.log('Android launcher icons');
+const foreground = await borderless(ADAPTIVE, { onNothing: true });
+const adaptiveBackground = await sharp(background(ADAPTIVE), { raw: { width: S, height: S, channels: 4 } })
+  .png()
+  .toBuffer();
+const silhouette = await monochrome(ADAPTIVE);
 for (const [bucket, factor] of Object.entries(DPI)) {
   const dir = `${RES}/mipmap-${bucket}`;
-  write(join(dir, 'ic_launcher.png'), await render(icon({ shape: 'squircle' }), 48 * factor));
-  write(join(dir, 'ic_launcher_round.png'), await render(icon({ shape: 'circle' }), 48 * factor));
-  write(join(dir, 'ic_launcher_foreground.png'), await render(foreground(), 108 * factor));
-  write(join(dir, 'ic_launcher_background.png'), await render(background(), 108 * factor));
+  write(join(dir, 'ic_launcher.png'), await render(squircle, 48 * factor));
+  write(join(dir, 'ic_launcher_round.png'), await render(round, 48 * factor));
+  write(join(dir, 'ic_launcher_foreground.png'), await render(foreground, 108 * factor));
+  write(join(dir, 'ic_launcher_background.png'), await render(adaptiveBackground, 108 * factor));
+  write(join(dir, 'ic_launcher_monochrome.png'), await render(silhouette, 108 * factor));
 }
 
 console.log('Android launch screen');
+// res/drawable/splash.xml centres this over the app's background colour, so
+// it never has to stretch to the shape of the screen
 for (const [bucket, factor] of Object.entries(DPI)) {
-  write(`${RES}/drawable-${bucket}/splash_logo.png`, await render(logoOnly(), SPLASH_LOGO_DP * factor));
+  write(`${RES}/drawable-${bucket}/splash_logo.png`, await render(squircle, SPLASH_LOGO_DP * factor));
 }
 
 console.log('PWA, browser tab and Windows shortcut');
-write('public/icon-192.png', await render(icon({ shape: 'squircle' }), 192));
-write('public/icon-512.png', await render(icon({ shape: 'squircle' }), 512));
-// a maskable icon may be cropped to a circle, so keep the mark well inside
-write('public/icon-maskable-512.png', await render(icon({ shape: 'square', span: 0.6 }), 512));
-write('public/apple-touch-icon.png', await render(icon({ shape: 'square' }), 180));
-write('src/app/icon.png', await render(icon({ shape: 'squircle' }), 64));
-write('assets/sniper-journal.ico', await ico(icon({ shape: 'squircle' }), [16, 32, 48, 64, 128, 256]));
+write('public/icon-192.png', await render(squircle, 192));
+write('public/icon-512.png', await render(squircle, 512));
+// a maskable icon may be cropped to a circle, so keep the scope well inside
+write('public/icon-maskable-512.png', await render(await borderless(0.6), 512));
+write('public/apple-touch-icon.png', await render(square, 180));
+write('src/app/icon.png', await render(squircle, 64));
+write('assets/sniper-journal.ico', await ico(squircle, [16, 32, 48, 64, 128, 256]));
 
 console.log('Windows app');
 // the program's own icon (title bar, taskbar, Alt+Tab), built into the .exe
-write('src-tauri/icons/icon.ico', await ico(icon({ shape: 'squircle' }), [16, 24, 32, 48, 64, 128, 256]));
-write('src-tauri/icons/icon.png', await render(icon({ shape: 'squircle' }), 512));
+write('src-tauri/icons/icon.ico', await ico(squircle, [16, 24, 32, 48, 64, 128, 256]));
+write('src-tauri/icons/icon.png', await render(squircle, 512));
 
 console.log('Windows app package (MSIX): Start menu, taskbar and Store logos');
 // Windows picks the file for the screen's scaling (scale-200 at 200%) and,
@@ -244,15 +246,17 @@ console.log('Windows app package (MSIX): Start menu, taskbar and Store logos');
 // needs (targetsize-24); "unplated" is the same, drawn without a tile behind
 const MSIX = 'src-tauri/msix/Assets';
 const SCALES = [100, 200, 400];
+const square150 = await tile(150, 150, 100);
+const wide310 = await tile(310, 150, 100);
 for (const s of SCALES) {
   const f = s / 100;
-  write(`${MSIX}/Square44x44Logo.scale-${s}.png`, await render(icon({ shape: 'squircle' }), 44 * f));
-  write(`${MSIX}/StoreLogo.scale-${s}.png`, await render(icon({ shape: 'squircle' }), 50 * f));
-  write(`${MSIX}/Square150x150Logo.scale-${s}.png`, await render(tile(150, 150, 100), 150 * f));
-  write(`${MSIX}/Wide310x150Logo.scale-${s}.png`, await render(tile(310, 150, 100), 310 * f, 150 * f));
+  write(`${MSIX}/Square44x44Logo.scale-${s}.png`, await render(squircle, 44 * f));
+  write(`${MSIX}/StoreLogo.scale-${s}.png`, await render(squircle, 50 * f));
+  write(`${MSIX}/Square150x150Logo.scale-${s}.png`, await render(square150, 150 * f));
+  write(`${MSIX}/Wide310x150Logo.scale-${s}.png`, await render(wide310, 310 * f, 150 * f));
 }
 for (const size of [16, 24, 32, 48, 256]) {
-  const png = await render(icon({ shape: 'squircle' }), size);
+  const png = await render(squircle, size);
   write(`${MSIX}/Square44x44Logo.targetsize-${size}.png`, png);
   write(`${MSIX}/Square44x44Logo.targetsize-${size}_altform-unplated.png`, png);
 }
@@ -260,13 +264,11 @@ for (const size of [16, 24, 32, 48, 256]) {
 console.log('Play Store listing');
 // Play wants a full-bleed 512 square — it rounds the corners itself, and a
 // transparent corner would show as a notch
-write('assets/play-store/icon-512.png', await renderOpaque(icon({ shape: 'square', span: 0.62 }), 512));
-write('assets/play-store/feature-graphic-1024x500.png', await renderOpaque(featureGraphic(), 1024, 500));
+const storeIcon = await borderless(0.62);
+write('assets/play-store/icon-512.png', await renderOpaque(storeIcon, 512));
+write('assets/play-store/feature-graphic-1024x500.png', await renderOpaque(await featureGraphic(), 1024, 500));
 
 console.log('Microsoft Store listing');
 // the 1:1 App tile icon, opaque like the Play icon: a full square the Store
 // shapes itself. Poster and box art are for games and Xbox, so there are none
-write('assets/microsoft-store/app-tile-icon-300.png', await renderOpaque(icon({ shape: 'square', span: 0.62 }), 300));
-
-console.log('the master drawing');
-write('assets/icon.svg', Buffer.from(icon({ shape: 'squircle' })));
+write('assets/microsoft-store/app-tile-icon-300.png', await renderOpaque(storeIcon, 300));

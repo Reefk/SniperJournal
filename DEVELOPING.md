@@ -137,7 +137,7 @@ data/               your journal and its backups, created at runtime
 | Futures point values the importer knows            | `POINT_VALUES` in `src/lib/import/instruments.ts`                                   |
 | How partial fills are combined into one trade      | `src/lib/merge.ts`                                                                  |
 | Chart image upload, scaling and storage            | `src/lib/screenshots.ts`, `src/app/api/screenshot/`                                 |
-| The app icon                                       | `assets/icon.svg`, then rebuild `sniper-journal.ico` and `src/app/icon.png` from it |
+| The app icon and the store artwork                 | `assets/logo.png` and `assets/banner.png`, then `npm run icons` redraws all of them |
 | The trade entry form                               | `src/components/trades/TradeFormModal.tsx`                                          |
 | Trading session hours                              | `src/lib/sessions.ts`                                                               |
 | The generated test data                            | `src/lib/sample.ts`                                                                 |
