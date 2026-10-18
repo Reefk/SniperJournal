@@ -247,7 +247,12 @@ export async function readWorkbook(bytes: Uint8Array, limit = UNPACKED_LIMIT): P
 export const sheetToCsv = (sheet: WorkbookSheet) =>
   sheet.rows.map((row) => row.map((cell) => (cell ? `"${cell.replace(/"/g, '""')}"` : '')).join(',')).join('\n');
 
-/** which sheet looks most like a list of trades: the most columns the importer knows, then the most rows */
+/**
+ * Which sheet looks most like a list of trades: the most columns the importer
+ * knows by name (a column guessed from its words counts for nothing, so a
+ * summary sheet of "Realised P&L" and "Broker Charges" does not win), then
+ * the most rows.
+ */
 export function likeliestSheet(sheets: WorkbookSheet[]): number {
   let best = 0;
   let bestScore = -1;
@@ -255,7 +260,9 @@ export function likeliestSheet(sheets: WorkbookSheet[]): number {
     const rows = sheet.rows.filter((r) => r.some((c) => c.trim()));
     if (rows.length < 2) return;
     const table = findTable(rows);
-    const score = planColumns(table.header, table.data.slice(0, 50)).roles.size * 1e6 + table.data.length;
+    const { columns } = planColumns(table.header, table.data.slice(0, 50));
+    const known = new Set(columns.filter((c) => c.role && !c.guessed).map((c) => c.role));
+    const score = known.size * 1e6 + table.data.length;
     if (score > bestScore) {
       best = i;
       bestScore = score;

@@ -1,11 +1,23 @@
-import { parseAction, parseEffect, parseMoment, parseMoney, parsePutCall, zoneOffset } from './values';
+import {
+  isTimeOfDay,
+  parseAction,
+  parseEffect,
+  parseMoment,
+  parseMoney,
+  parseNumber,
+  parsePutCall,
+  zoneOffset,
+} from './values';
+import { CURRENCIES, roleFromWords } from './words';
 
 /**
  * What each column of a broker's file means. Headers are matched on a
  * normalised key: lower case, letters and digits only, with currency tags
  * ("Price USD", "Net P&L (USD)") and time-zone tags ("Time (UTC+2)") taken
  * off and remembered. Every name has a priority, so when a file has both
- * "Price" (the limit) and "Avg Fill Price", the fill price wins.
+ * "Price" (the limit) and "Avg Fill Price", the fill price wins. A name not
+ * listed here is read by its words (words.ts), as a guess its values must
+ * bear out.
  */
 export type Role =
   | 'symbol'
@@ -488,14 +500,8 @@ alias('strike', 3, ['strike', 'strikeprice']);
 alias('expiry', 3, ['exp', 'expiry', 'expiration', 'expirationdate', 'expdate', 'maturity']);
 alias('duration', 2, ['duration', 'tradeduration', 'holdtime']);
 
-const CURRENCIES = new Set(
-  'usd eur gbp jpy chf aud cad nzd ils nis hkd sgd cnh cny inr krw sek nok dkk pln zar mxn brl try usdt usdc busd'.split(
-    ' ',
-  ),
-);
-
-/** the lookup key of a header, and the time zone it declares (minutes east of UTC), if any */
-export function headerInfo(raw: string): { key: string; offset: number | null } {
+/** the words of a header, and the time zone it declares (minutes east of UTC), if any */
+export function headerParts(raw: string): { words: string[]; offset: number | null } {
   // accents off, so NinjaTrader's French "Prix d'entrée" reads as "prix d'entree"
   let s = raw
     .normalize('NFD')
@@ -517,10 +523,15 @@ export function headerInfo(raw: string): { key: string; offset: number | null } 
   s = s.replace(/%/g, ' pct ').replace(/#/g, ' no ');
   const words = s.split(/[^a-z0-9]+/).filter(Boolean);
   while (words.length > 1 && CURRENCIES.has(words[words.length - 1])) words.pop();
+  return { words, offset };
+}
+
+/** the lookup key of a header, and the time zone it declares (minutes east of UTC), if any */
+export function headerInfo(raw: string): { key: string; offset: number | null } {
+  const { words, offset } = headerParts(raw);
   const key = words.join('');
   // a zone run into the name: IG's "DateUtc", "DateTimeUTC"
-  if (offset == null && /.(utc|gmt)$/.test(key)) offset = 0;
-  return { key, offset };
+  return { key, offset: offset == null && /.(utc|gmt)$/.test(key) ? 0 : offset };
 }
 
 /** the role a header suggests on its own, before its values are looked at */
@@ -532,7 +543,8 @@ export function aliasOf(raw: string): { role: Role; priority: number } | null {
 export interface ColumnPlan {
   /** role -> the column used for it (several for additive roles) */
   roles: Map<Role, number[]>;
-  columns: Array<{ index: number; header: string; role: Role | ''; suggested: Role | '' }>;
+  /** `guessed`: the role was read from the words of a name not listed (words.ts), to be checked */
+  columns: Array<{ index: number; header: string; role: Role | ''; suggested: Role | ''; guessed: boolean }>;
   /** per column: the zone its header declares */
   offsets: Array<number | null>;
 }
@@ -544,6 +556,72 @@ const share = (values: string[], test: (v: string) => boolean) => {
   const filled = values.filter((v) => v.trim());
   return filled.length ? filled.filter(test).length / filled.length : 0;
 };
+
+const isNumber = (v: string) => parseMoney(v) != null;
+// money in a currency if in anything: "1.5R" and "12 pips" are not money
+const isMoney = (v: string) => {
+  const n = parseNumber(v);
+  return n != null && (!n.unit || CURRENCIES.has(n.unit.toLowerCase()));
+};
+const isMoment = (v: string) => parseMoment(v) != null;
+/** capitals with a letter, and after a space only a date: ES 03-26, 6EM6 or /MESZ25:XCME, never "Apple Inc" */
+const GUESSED_TICKER = /^(?=[^ ]*[A-Z])\/?[A-Z0-9][A-Z0-9.\-_/:!]{0,24}( \d[\d\-/]*)?$/;
+/**
+ * What the values of a column guessed from its name must be, nearly all of
+ * them (GUESS_HOLDS): a "Start Price" of text is not a price. Notes, setups,
+ * tags and accounts can hold anything.
+ */
+const HOLDS: Partial<Record<Role, (v: string) => boolean>> = {
+  symbol: (v) => GUESSED_TICKER.test(v.trim()),
+  side: (v) => parseAction(v) != null,
+  quantity: isNumber,
+  price: isMoney,
+  entry_price: isMoney,
+  exit_price: isMoney,
+  stop_loss: isMoney,
+  take_profit: isMoney,
+  fees: isMoney,
+  pnl: isMoney,
+  net_pnl: isMoney,
+  gross_pnl: isMoney,
+  // a time of day alone joins a Date column only as the fill's time (rows.ts)
+  time: (v) => isMoment(v) || isTimeOfDay(v),
+  opened_at: isMoment,
+  closed_at: isMoment,
+  date: isMoment,
+  opened_date: isMoment,
+  closed_date: isMoment,
+};
+const GUESS_HOLDS = 0.8;
+
+/**
+ * Listed roles that keep a guess out of a role of its own: a guessed P&L next
+ * to a listed one changes which is before fees, and a guessed entry price is
+ * read before a listed price (rows.ts).
+ */
+const SHADOWED_BY: Partial<Record<Role, Role[]>> = {
+  pnl: ['net_pnl', 'gross_pnl'],
+  net_pnl: ['pnl', 'gross_pnl'],
+  gross_pnl: ['pnl', 'net_pnl'],
+  entry_price: ['price'],
+};
+
+interface Candidate {
+  role: Role | '';
+  priority: number;
+  /** read from the words of the name, not a name listed */
+  guessed?: boolean;
+}
+
+/** a column whose name is not listed: what its words say, if its values bear that out */
+function guess(header: string, values: string[]): Candidate {
+  const role = roleFromWords(headerParts(header).words);
+  const holds = role ? HOLDS[role] : undefined;
+  // an empty column is not worth a guess, nor a notice
+  const empty = values.every((v) => !v.trim());
+  if (!role || empty || (holds && share(values, holds) < GUESS_HOLDS)) return { role: '', priority: 0 };
+  return { role, priority: 0, guessed: true };
+}
 
 /**
  * Decides what each column is. Ambiguous names are checked against what the
@@ -559,9 +637,9 @@ export function planColumns(
 ): ColumnPlan {
   const values = (i: number) => sample.map((row) => row[i] ?? '');
   const infos = headers.map(headerInfo);
-  const candidates: Array<{ role: Role | ''; priority: number }> = infos.map((info, i) => {
+  const candidates: Candidate[] = infos.map((info, i) => {
     const hit = ALIASES[info.key];
-    if (!hit) return { role: '', priority: 0 };
+    if (!hit) return guess(headers[i], values(i));
     let role: Role | '' = hit[0];
     const priority = hit[1];
     if (role === 'side' || role === 'effect' || role === 'put_call') {
@@ -598,28 +676,45 @@ export function planColumns(
       seen.set(info.key, i);
       return;
     }
+    // a guess is paired only with a guess: one whose values did not fit stays unread
+    if (Boolean(candidates[first].guessed) !== Boolean(candidates[i].guessed)) return;
     const role = candidates[first].role;
     if (role === 'price' || role === 'entry_price') {
-      candidates[first] = { role: 'entry_price', priority: 3 };
-      candidates[i] = { role: 'exit_price', priority: 3 };
+      candidates[first] = { ...candidates[first], role: 'entry_price', priority: 3 };
+      candidates[i] = { ...candidates[i], role: 'exit_price', priority: 3 };
     } else if (role === 'time' || role === 'opened_at') {
-      candidates[first] = { role: 'opened_at', priority: 3 };
-      candidates[i] = { role: 'closed_at', priority: 3 };
+      // guessed times of day stay fill times: nothing joins an opening or closing time to a Date column
+      if (candidates[first].guessed && [first, i].some((c) => share(values(c), isMoment) < GUESS_HOLDS)) return;
+      candidates[first] = { ...candidates[first], role: 'opened_at', priority: 3 };
+      candidates[i] = { ...candidates[i], role: 'closed_at', priority: 3 };
     }
   });
 
+  // a listed column switched off or to another role in the preview hands its
+  // role to no guess
+  const cleared = new Set<Role>();
   for (const [index, role] of Object.entries(overrides)) {
     const i = Number(index);
-    if (i >= 0 && i < headers.length) candidates[i] = { role, priority: 10 };
+    if (i < 0 || i >= headers.length) continue;
+    const before = candidates[i];
+    if (before.role && !before.guessed && role !== before.role) cleared.add(before.role);
+    candidates[i] = { role, priority: 10 };
   }
 
+  // listed names take their roles first; a column guessed from its words only
+  // takes a role none of them took, so it never adds to a listed fee column
   const roles = new Map<Role, number[]>();
-  candidates.forEach(({ role, priority }, i) => {
-    if (!role) return;
-    const taken = roles.get(role);
-    if (ADDITIVE.has(role)) roles.set(role, [...(taken ?? []), i]);
-    else if (!taken || priority > candidates[taken[0]].priority) roles.set(role, [i]);
-  });
+  for (const guesses of [false, true]) {
+    const listed = new Set(roles.keys());
+    const kept = (role: Role) =>
+      listed.has(role) || cleared.has(role) || Boolean(SHADOWED_BY[role]?.some((r) => listed.has(r)));
+    candidates.forEach(({ role, priority, guessed = false }, i) => {
+      if (!role || guessed !== guesses || (guesses && kept(role))) return;
+      const taken = roles.get(role);
+      if (ADDITIVE.has(role)) roles.set(role, [...(taken ?? []), i]);
+      else if (!taken || priority > candidates[taken[0]].priority) roles.set(role, [i]);
+    });
+  }
 
   // what a time means can depend on the columns around it; a choice made in
   // the preview is never moved
@@ -629,7 +724,7 @@ export function planColumns(
     if (columns.some((c) => candidates[c].priority >= 10)) return;
     roles.delete(from);
     roles.set(to, columns);
-    for (const c of columns) candidates[c] = { role: to, priority: candidates[c].priority };
+    for (const c of columns) candidates[c] = { ...candidates[c], role: to };
   };
   // a list of orders (TradingView): the "Closing time" is when the order was filled
   if (has('closed_at') && !has('time') && has('status') && has('price') && !has('entry_price') && !has('exit_price'))
@@ -649,7 +744,13 @@ export function planColumns(
     columns: headers.map((header, index) => {
       const role = candidates[index].role;
       const used = role && roles.get(role)?.includes(index) ? role : '';
-      return { index, header: header.trim(), role: used, suggested: role };
+      return {
+        index,
+        header: header.trim(),
+        role: used,
+        suggested: role,
+        guessed: Boolean(used && candidates[index].guessed),
+      };
     }),
     offsets: infos.map((info) => info.offset),
   };

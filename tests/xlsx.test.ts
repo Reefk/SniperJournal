@@ -104,6 +104,27 @@ describe('reading a workbook', () => {
     expect(likeliestSheet(sheets)).toBe(1);
   });
 
+  it('a column guessed from the words of its name does not count towards a sheet', () => {
+    const sheets = [
+      {
+        name: 'Stats',
+        rows: [
+          ['Realised P&L', 'Broker Charges', 'Trade Notes', 'Execution Timestamp'],
+          ['170', '1.3', 'best day', '2026-03-02 10:12'],
+          ['-20', '1.3', 'worst day', '2026-03-03 10:12'],
+        ],
+      },
+      {
+        name: 'Fills',
+        rows: [
+          ['Symbol', 'Qty'],
+          ['AAPL', '100'],
+        ],
+      },
+    ];
+    expect(likeliestSheet(sheets)).toBe(1);
+  });
+
   it('an old .xls, and a file that is not a workbook, are refused with what to do', async () => {
     const xls = new Uint8Array([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]);
     expect([isOldExcel(xls), isZip(xls)]).toEqual([true, false]);

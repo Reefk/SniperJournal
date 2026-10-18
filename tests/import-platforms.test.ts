@@ -36,6 +36,16 @@ describe('platform exports import with no help', () => {
     p.errors?.forEach((pattern, i) => expect(r.errors[i]).toMatch(pattern));
   });
 
+  // a word in import/words.ts that starts reading a column of a known export
+  // changes what that export imports: that is decided with a listed name instead
+  it('no column of these files is read by the words of its name', () => {
+    const guessed = PLATFORM_EXPORTS.flatMap((p) => {
+      const r = importTradesFromCsv(p.csv, { accountId: 'acc1', accounts, setups: [], defaultSymbol: p.defaultSymbol });
+      return (r.layout?.columns ?? []).filter((c) => c.guessed).map((c) => `${p.platform}, ${p.file}: ${c.header}`);
+    });
+    expect(guessed).toEqual([]);
+  });
+
   it('what each file leaves out is said', () => {
     const notices = (platform: string, file: string) => {
       const p = PLATFORM_EXPORTS.find((x) => x.platform === platform && x.file === file);

@@ -235,6 +235,7 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
     setChoices((c) => ({ ...c, mapping: { ...c.mapping, [index]: role } }));
   const noSymbolColumn = Boolean(layout && !layout.columns.some((c) => c.role === 'symbol' || c.role === 'underlying'));
   const used = layout?.columns.filter((c) => c.role).length ?? 0;
+  const guessed = layout?.columns.filter((c) => c.guessed).length ?? 0;
 
   // what the Import button adds: likely duplicates only when asked for, and
   // only the new setups those trades use; and the open trades it finishes
@@ -501,6 +502,7 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
             >
               <summary className="cursor-pointer select-none px-4 py-2.5 text-sm text-muted hover:text-fg">
                 Columns: {used} of {layout.columns.length} used
+                {guessed > 0 ? `, ${guessed} guessed from ${guessed === 1 ? 'its name' : 'their names'}` : ''}
                 {restored ? ', as you set them for this layout last time' : ''}
               </summary>
               <div className="max-h-72 space-y-2 overflow-y-auto border-t border-line px-4 py-3">
@@ -513,6 +515,7 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
                     <div className="min-w-0">
                       <div className="truncate text-sm text-fg">{column.header || `Column ${column.index + 1}`}</div>
                       <div className="num truncate text-[11px] text-faint">{column.sample || '—'}</div>
+                      {column.guessed && <div className="text-[11px] text-warn">guessed from its name</div>}
                     </div>
                     <Select
                       aria-label={`What "${column.header || `column ${column.index + 1}`}" is`}
@@ -706,8 +709,11 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
             <span className="num">Filled</span>, <span className="num">Market pos.</span>,{' '}
             <span className="num">Comm/Fee</span>, <span className="num">Net P&amp;L (USD)</span>,{' '}
             <span className="num">Date/Time</span>, separate date and time columns — and several fee columns add up; a
-            commission per contract is multiplied by the size. Title lines above the table and total lines below it are
-            skipped. Anything read wrongly can be changed under Columns. Separate several tags with a | character.
+            commission per contract is multiplied by the size. A name it doesn&apos;t know as a whole is read by its
+            words when it knows every one of them, so <span className="num">Start Price</span> is the entry price and{' '}
+            <span className="num">Lots Traded</span> the quantity; the preview says which columns it read that way.
+            Title lines above the table and total lines below it are skipped. Anything read wrongly can be changed under
+            Columns. Separate several tags with a | character.
           </p>
           <p>
             What one point is worth comes from a multiplier column, the amount against the price, or the file&apos;s

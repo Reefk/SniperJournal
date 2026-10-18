@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { detectLayout, missingSymbol, type LayoutChoices, type Sheet } from '@/lib/import/layout';
+import { detectLayout, missingSymbol, type LayoutChoices, type RowKind, type Sheet } from '@/lib/import/layout';
 import { believable, createReader, fitReported, type Findings, type ImportTarget } from '@/lib/import/reader';
 import { assembleTrade, combinePartials, parseTradeRow, tradesFromRows } from '@/lib/import/rows';
 import { parseFillRow, tradesFromFills } from '@/lib/import/positions';
+import type { Role } from '@/lib/import/columns';
 import { collectMessages, rowsNote } from '@/lib/import/report';
 import type { Table } from '@/lib/import/table';
 import type { Account, Setup, Trade } from '@/lib/types';
@@ -80,6 +81,118 @@ describe('stage 1: the layout of the file', () => {
     expect(sheet.layout.signature).toBe('symbol|qty|broker note');
   });
 
+  it('a name read by its words is marked as guessed, and only takes a role no listed name took', () => {
+    const sheet = sheetOf(
+      'Symbol,Side,Qty,Exec Px,Price,Broker Charges,Commission,Trade Notes\nAAPL,buy,1,100,100.5,0.5,1,hello',
+    );
+    expect(sheet.layout.columns.map((c) => [c.header, c.role, c.guessed])).toEqual([
+      ['Symbol', 'symbol', false],
+      ['Side', 'side', false],
+      ['Qty', 'quantity', false],
+      // "Price" is a listed name, and "Commission" one, so the guesses give way
+      ['Exec Px', '', false],
+      ['Price', 'price', false],
+      // nor is a guessed fee added to a listed one
+      ['Broker Charges', '', false],
+      ['Commission', 'fees', false],
+      ['Trade Notes', 'notes', true],
+    ]);
+    expect(sheet.ignored).toEqual(['Exec Px', 'Broker Charges']);
+  });
+
+  it("a name read by its words needs nearly all of the column's values to fit", () => {
+    const guessed = (csv: string) => sheetOf(csv).layout.columns.map((c) => c.role);
+    // 4 of 5 values are prices, 3 of 5 are not enough
+    expect(guessed('Symbol,Start Price\nA,1\nA,2\nA,3\nA,4\nA,n/a')).toEqual(['symbol', 'entry_price']);
+    expect(guessed('Symbol,Start Price\nA,1\nA,2\nA,3\nA,n/a\nA,n/a')).toEqual(['symbol', '']);
+    expect(guessed('Ticker Name,Qty\n1234.5,1')).toEqual(['', 'quantity']);
+    expect(guessed('Symbol,Trade Direction\nAAPL,Market')).toEqual(['symbol', '']);
+    expect(guessed('Symbol,End Day\nAAPL,yesterday')).toEqual(['symbol', '']);
+    // a time of day is a fill's time, which joins the Date; an entry or exit
+    // time needs its date, as nothing joins it to that column
+    expect(guessed('Symbol,Date,Execution Timestamp\nAAPL,2026-03-02,09:31:05')).toEqual(['symbol', 'date', 'time']);
+    expect(guessed('Symbol,Date,Final Time\nAAPL,2026-03-02,10:12')).toEqual(['symbol', 'date', '']);
+    expect(guessed('Symbol,Final Time\nAAPL,2026-03-02 10:12')).toEqual(['symbol', 'closed_at']);
+    // an empty column is no guess, even of notes
+    expect(guessed('Symbol,Trade Notes,Qty\nAAPL,,1\nAAPL,,2')).toEqual(['symbol', '', 'quantity']);
+  });
+
+  it('guessed fee columns add up, and a guessed total is not one of them', () => {
+    const sheet = sheetOf('Symbol,Broker Charges,Platform Levy,Total Charges\nAAPL,1,0.5,1.5');
+    expect(sheet.layout.columns.map((c) => [c.role, c.guessed])).toEqual([
+      ['symbol', false],
+      ['fees', true],
+      ['fees', true],
+      ['', false],
+    ]);
+    expect(sheet.plan.roles.get('fees')).toEqual([1, 2]);
+  });
+
+  it('a guess stays out of what a listed column already says, and of what was switched off in the preview', () => {
+    const roles = (csv: string, choices: LayoutChoices = {}) => sheetOf(csv, choices).layout.columns.map((c) => c.role);
+    // next to a listed net P&L, a guessed one would change which is before fees
+    expect(roles('Symbol,Net P&L,Realized Gain\nAAPL,9,10')).toEqual(['symbol', 'net_pnl', '']);
+    // a guessed entry price would be read before the listed price
+    expect(roles('Symbol,Price,Start Price\nAAPL,100,101')).toEqual(['symbol', 'price', '']);
+    // Price switched off: nothing else becomes the price unless chosen
+    expect(roles('Symbol,Price,Exec Px\nAAPL,100,101', { mapping: { 1: '' } })).toEqual(['symbol', '', '']);
+    // nor when it was made something else: the fees stay unread, not guessed
+    expect(roles('Symbol,Commission,Broker Charges\nAAPL,1,0.5', { mapping: { 1: 'notes' } })).toEqual([
+      'symbol',
+      'notes',
+      '',
+    ]);
+    // a second Start Price of notes is not the exit price
+    expect(roles('Symbol,Start Price,Start Price\nAAPL,100,see chart')).toEqual(['symbol', 'entry_price', '']);
+  });
+
+  it('guessed money carries no unit but a currency, and a guessed symbol looks like a ticker', () => {
+    const roles = (csv: string) => sheetOf(csv).layout.columns.map((c) => c.role);
+    expect(roles('Symbol,Realised P&L\nAAPL,1.5R')).toEqual(['symbol', '']);
+    expect(roles('Symbol,Realised P&L\nAAPL,12 pips')).toEqual(['symbol', '']);
+    expect(roles('Symbol,Realised P&L\nAAPL,170 USD')).toEqual(['symbol', 'pnl']);
+    // a size can be in anything
+    expect(roles('Symbol,Lots Traded\nBTC,0.5 BTC')).toEqual(['symbol', 'quantity']);
+    expect(roles('Ticker Name,Qty\nApple Inc,1')).toEqual(['', 'quantity']);
+    expect(roles('Ticker Name,Qty\n1234.5,1')).toEqual(['', 'quantity']);
+    expect(roles('Ticker Name,Qty\nES 03-26,1\n/MESZ25:XCME,1\nBRK.B,1\nEUR/USD,1')).toEqual(['symbol', 'quantity']);
+  });
+
+  it('a guessed name written twice is the opening and the closing, like a listed one', () => {
+    const roles = (csv: string) => sheetOf(csv).layout.columns.map((c) => [c.role, c.guessed]);
+    expect(roles('Symbol,Exec Px,Exec Px\nAAPL,100,101')).toEqual([
+      ['symbol', false],
+      ['entry_price', true],
+      ['exit_price', true],
+    ]);
+    expect(roles('Symbol,Deal Time,Deal Time\nAAPL,2026-03-02 09:31,2026-03-02 10:12')).toEqual([
+      ['symbol', false],
+      ['opened_at', true],
+      ['closed_at', true],
+    ]);
+    // times of day alone stay the fill's time, which joins the Date
+    expect(roles('Symbol,Date,Deal Time,Deal Time\nAAPL,2026-03-02,09:31,10:12')).toEqual([
+      ['symbol', false],
+      ['date', false],
+      ['time', true],
+      ['', false],
+    ]);
+    expect(roles('Symbol,Price,Price\nAAPL,100,101')).toEqual([
+      ['symbol', false],
+      ['entry_price', false],
+      ['exit_price', false],
+    ]);
+  });
+
+  it('a choice made in the preview wins over a guess, and is not a guess', () => {
+    const csv = 'Symbol,Start Price\nAAPL,100';
+    expect(sheetOf(csv, { mapping: { 1: '' } }).layout.columns[1]).toMatchObject({ role: '', guessed: false });
+    expect(sheetOf(csv, { mapping: { 1: 'exit_price' } }).layout.columns[1]).toMatchObject({
+      role: 'exit_price',
+      guessed: false,
+    });
+  });
+
   it('reads a cell by role, trimmed, and nothing for a role no column has', () => {
     const sheet = sheetOf('symbol,qty\n  AAPL ,1');
     expect(sheet.cell(sheet.table.data[0], 'symbol')).toBe('AAPL');
@@ -87,10 +200,10 @@ describe('stage 1: the layout of the file', () => {
   });
 
   it('without a symbol column nothing can be read, unless a symbol is typed for every row', () => {
-    expect(missingSymbol(sheetOf('ticker_name,qty\nAAPL,1'))).toMatch(
-      /^No symbol column found\. The columns in this file are: ticker_name, qty\./,
+    expect(missingSymbol(sheetOf('company_name,qty\nAAPL,1'))).toMatch(
+      /^No symbol column found\. The columns in this file are: company_name, qty\./,
     );
-    const typed = sheetOf('ticker_name,qty\nAAPL,1', { defaultSymbol: ' nq ' });
+    const typed = sheetOf('company_name,qty\nAAPL,1', { defaultSymbol: ' nq ' });
     expect(typed.fallbackSymbol).toBe('NQ');
     expect(missingSymbol(typed)).toBeNull();
     expect(missingSymbol(sheetOf('underlying,qty\nAAPL,1'))).toBeNull();
@@ -558,6 +671,44 @@ describe('stage 5: the messages', () => {
     expect(
       collectMessages(findings(), table({ statement: true, preamble: 3 }), { errors: [], notices: [] }).notices,
     ).toEqual(['Read the Trades section of this Interactive Brokers statement.']);
+  });
+
+  it('columns read from the words of their names come first of the notices, named with what they were read as', () => {
+    const column = (index: number, header: string, role: Role | '', guessed: boolean) => ({
+      index,
+      header,
+      role,
+      suggested: role,
+      guessed,
+    });
+    const notices = (columns: ReturnType<typeof column>[], kindFromGuesses = false, rowKind: RowKind = 'trades') =>
+      collectMessages(
+        findings(),
+        table({ preamble: 3 }),
+        { errors: [], notices: ['from the rows'] },
+        { columns: columns.map((c) => ({ ...c, sample: '' })), rowKind, kindFromGuesses },
+      ).notices;
+    expect(notices([column(0, 'Symbol', 'symbol', false), column(1, 'Start Price', 'entry_price', true)])).toEqual([
+      '"Start Price" was read as Entry price, from the words in its name. Check it under Columns if that is not right.',
+      'from the rows',
+      'The column names are on line 4; the lines above them were left out.',
+    ]);
+    expect(
+      notices([column(0, 'Start Price', 'entry_price', true), column(1, 'Lots Traded', 'quantity', true)])[0],
+    ).toBe(
+      'Read from the words in their names: "Start Price" as Entry price, "Lots Traded" as Quantity. Check them under Columns if that is not right.',
+    );
+    expect(notices([column(0, 'Symbol', 'symbol', false)])).toEqual([
+      'from the rows',
+      'The column names are on line 4; the lines above them were left out.',
+    ]);
+    // and when they decided how the rows are read, that is said too
+    expect(notices([column(0, 'Exec Px', 'price', true)], true, 'fills')[0]).toBe(
+      '"Exec Px" was read as Fill price, from the words in its name. Because of it, each row was read as one fill; if each row is a whole trade, choose that under "Each row is". Check it under Columns if that is not right.',
+    );
+    expect(notices([column(0, 'End Price', 'exit_price', true)], true, 'trades')[0]).toMatch(
+      /Because of it, each row was read as a whole trade; if each row is one fill, choose that under "Each row is"\./,
+    );
   });
 
   it('times with no time zone are said to be taken as local; with some zoned, both are said in one notice', () => {

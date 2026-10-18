@@ -13,6 +13,8 @@ export type RowKind = 'trades' | 'paired' | 'fills';
 
 export interface ImportLayout {
   rowKind: RowKind;
+  /** the row kind is not what the columns with listed names alone make it: guessed ones decided it */
+  kindFromGuesses: boolean;
   /** the columns allow reading each row as one fill */
   canBeFills: boolean;
   /** 1-based line of the header in the file (blank lines not counted) */
@@ -116,27 +118,35 @@ export function detectLayout(text: string, choices: LayoutChoices): Sheet | null
   const ignored = plan.columns.filter((c) => !c.role && c.header).map((c) => c.header);
 
   // ---- which rows are which ------------------------------------------------
-  const paired = has('buy_price') && has('sell_price');
-  const timed = has('time') || has('date') || has('opened_at') || has('opened_date');
-  const signedQuantities =
-    has('quantity') && !has('side') && table.data.some((r) => (parseMoney(cell(r, 'quantity')) ?? 0) < 0);
-  const canBeFills =
-    !paired && (has('price') || has('entry_price')) && (has('side') || signedQuantities) && has('quantity') && timed;
-  const looksLikeFills =
-    canBeFills &&
-    !has('exit_price') &&
-    !has('closed_at') &&
-    !has('closed_date') &&
-    (has('price') || has('trade_no') || has('effect') || has('status') || signedQuantities);
-  const rowKind: RowKind = paired
-    ? 'paired'
-    : choices.rowKind === 'fills' && canBeFills
-      ? 'fills'
-      : choices.rowKind === 'trades'
-        ? 'trades'
-        : looksLikeFills
-          ? 'fills'
-          : 'trades';
+  const kindOf = (has: (role: Role) => boolean) => {
+    const paired = has('buy_price') && has('sell_price');
+    const timed = has('time') || has('date') || has('opened_at') || has('opened_date');
+    const signedQuantities =
+      has('quantity') && !has('side') && table.data.some((r) => (parseMoney(cell(r, 'quantity')) ?? 0) < 0);
+    const canBeFills =
+      !paired && (has('price') || has('entry_price')) && (has('side') || signedQuantities) && has('quantity') && timed;
+    const looksLikeFills =
+      canBeFills &&
+      !has('exit_price') &&
+      !has('closed_at') &&
+      !has('closed_date') &&
+      (has('price') || has('trade_no') || has('effect') || has('status') || signedQuantities);
+    const rowKind: RowKind = paired
+      ? 'paired'
+      : choices.rowKind === 'fills' && canBeFills
+        ? 'fills'
+        : choices.rowKind === 'trades'
+          ? 'trades'
+          : looksLikeFills
+            ? 'fills'
+            : 'trades';
+    return { paired, signedQuantities, canBeFills, rowKind };
+  };
+  const { paired, signedQuantities, canBeFills, rowKind } = kindOf(has);
+  // columns guessed from their names that decide the kind of rows are said
+  // (report.ts): one guessed wrong would have every row read wrong
+  const listed = (role: Role) => plan.columns.some((c) => c.role === role && !c.guessed);
+  const kindFromGuesses = !choices.rowKind && kindOf(listed).rowKind !== rowKind;
 
   // ---- one date order for the whole file, from every date in it -------------
   const dateRoles: Role[] = [
@@ -154,6 +164,7 @@ export function detectLayout(text: string, choices: LayoutChoices): Sheet | null
 
   const layout: ImportLayout = {
     rowKind,
+    kindFromGuesses,
     canBeFills,
     headerLine: table.preamble + 1,
     columns: plan.columns.map((c) => ({

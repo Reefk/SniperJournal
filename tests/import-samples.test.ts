@@ -89,6 +89,13 @@ describe('sample exports of eight platforms', () => {
     if (totals.fees) expect(r.notices.some((n) => NO_FEES.test(n))).toBe(false);
   });
 
+  it('no column of these files is read by the words of its name', () => {
+    const guessed = SAMPLES.flatMap(([file]) =>
+      (read(file).layout?.columns ?? []).filter((c) => c.guessed).map((c) => `${file}: ${c.header}`),
+    );
+    expect(guessed).toEqual([]);
+  });
+
   it('every futures file has the same day: T1, T2, and T3 as one trade or two', () => {
     const shape = (file: string) =>
       read(file).trades.map((t) => [t.side, t.quantity, t.entryPrice, t.exitPrice, t.multiplier]);

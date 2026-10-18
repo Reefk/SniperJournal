@@ -73,9 +73,9 @@ describe('import: structure of the file', () => {
   });
 
   it('without a symbol column nothing is imported, and the columns found are listed', () => {
-    const r = importTradesFromCsv('ticker_name,qty\nAAPL,1', ctx());
+    const r = importTradesFromCsv('company_name,qty\nAAPL,1', ctx());
     expect(r.trades).toHaveLength(0);
-    expect(r.errors[0]).toContain('ticker_name, qty');
+    expect(r.errors[0]).toContain('company_name, qty');
   });
 
   it('reordered and aliased columns map to the same fields; unknown ones are listed as ignored', () => {

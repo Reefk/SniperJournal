@@ -132,6 +132,7 @@ data/               your journal and its backups, created at runtime
 | The Sniper Score axes and how they are scored      | `sniperScore()` in `src/lib/stats.ts`                                               |
 | The wording and rules of the insights              | `src/lib/insights.ts`                                                               |
 | Which CSV column names are recognised              | the `alias(...)` lists in `src/lib/import/columns.ts`                               |
+| How a name not in those lists is read by its words | the `words(...)` lists and `RULES` in `src/lib/import/words.ts`                     |
 | How a file of single fills becomes trades          | `src/lib/import/fills.ts`                                                           |
 | Futures point values the importer knows            | `POINT_VALUES` in `src/lib/import/instruments.ts`                                   |
 | How partial fills are combined into one trade      | `src/lib/merge.ts`                                                                  |

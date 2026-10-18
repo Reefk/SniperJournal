@@ -206,7 +206,7 @@ export function importTradesFromCsv(text: string, ctx: ImportOptions): ImportRes
   const finishing = ctx.finishOpen !== false;
   const journal = finishing ? (ctx.existing ?? []) : undefined;
   const read = sheet.rowKind === 'fills' ? tradesFromFills(reader, journal) : tradesFromRows(reader, journal);
-  const { errors, notices } = collectMessages(reader.findings, sheet.table, read);
+  const { errors, notices } = collectMessages(reader.findings, sheet.table, read, sheet.layout);
   // not a fee anywhere: unless the file's P&L is after fees, it is before them
   // (a statement whose fee lines matched no execution has fees, said already)
   const made = [...read.trades, ...(read.finished ?? [])];

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { importTradesFromCsv, type ImportOptions } from '@/lib/csv';
-import { headerInfo } from '@/lib/import/columns';
+import { headerInfo, headerParts } from '@/lib/import/columns';
+import { roleFromWords } from '@/lib/import/words';
 import { dateOrderOf, parseAction, parseMoment } from '@/lib/import/values';
 import { futuresPointValue } from '@/lib/import/instruments';
 import { grossPnl, isClosed, netPnl } from '@/lib/trade-math';
@@ -426,7 +427,7 @@ describe('one row per fill', () => {
 describe('when the importer cannot tell', () => {
   it('column names it does not know are mapped by hand in the preview', () => {
     const csv = lines(
-      'Ticker Name,Lots Traded,Buy Or Sell Flag,Fill,When',
+      'Instrument Ref,Clip,Way,Fill,When',
       'AAPL,100,B,187.40,2026-03-02 09:31',
       'AAPL,100,S,189.10,2026-03-02 10:12',
     );
@@ -435,6 +436,25 @@ describe('when the importer cannot tell', () => {
     expect(r.layout?.rowKind).toBe('fills');
     expect(money(grossPnl(r.trades[0]))).toBe(170);
     expect(r.layout?.columns.map((c) => c.role)).toEqual(['symbol', 'quantity', 'side', 'price', 'time']);
+  });
+
+  it('names read by their words and names mapped by hand work together', () => {
+    const csv = lines(
+      'Ticker Name,Lots Traded,Buy Or Sell Flag,Fill,When',
+      'AAPL,100,B,187.40,2026-03-02 09:31',
+      'AAPL,100,S,189.10,2026-03-02 10:12',
+    );
+    const guessed = read(csv).layout?.columns.map((c) => [c.role, c.guessed]);
+    expect(guessed).toEqual([
+      ['symbol', true],
+      ['quantity', true],
+      ['side', true],
+      ['', false],
+      ['', false],
+    ]);
+    const r = read(csv, { mapping: { 3: 'price', 4: 'time' } });
+    expect(r.layout?.rowKind).toBe('fills');
+    expect(money(grossPnl(r.trades[0]))).toBe(170);
   });
 
   it('each row can be read as a whole trade instead of a fill, and a column can be switched off', () => {
@@ -453,6 +473,150 @@ describe('when the importer cannot tell', () => {
     expect(read(csv).layout?.ambiguousDates).toBe(true);
     expect(read(csv).trades[0].openedAt).toBe('2026-03-04T10:00');
     expect(read(csv, { dateOrder: 'dmy' }).trades[0].openedAt).toBe('2026-04-03T10:00');
+  });
+});
+
+describe('column names read by their words', () => {
+  const roleOf = (name: string) => roleFromWords(headerParts(name).words);
+
+  it.each([
+    ['Start Price', 'entry_price'],
+    ['StartPrice', 'entry_price'],
+    ['start_price', 'entry_price'],
+    ['Price at Entry', 'entry_price'],
+    ['Avg. Entry Px', 'entry_price'],
+    ['End Price', 'exit_price'],
+    ['Final Level', 'exit_price'],
+    ['Exec Px', 'price'],
+    ['Lots Traded', 'quantity'],
+    ['No. of Contracts', 'quantity'],
+    ['Ticker Name', 'symbol'],
+    ['Trade Direction', 'side'],
+    ['Buy Or Sell Flag', 'side'],
+    ['Long/Short', 'side'],
+    ['Execution Timestamp', 'time'],
+    ['Start Datetime', 'opened_at'],
+    ['End Day', 'closed_date'],
+    ['Broker Charges', 'fees'],
+    ['Platform Levy', 'fees'],
+    ['Realised P&L', 'pnl'],
+    ['PnLUSD', 'pnl'],
+    ['Net Trade P&L', 'net_pnl'],
+    ['SL Price', 'stop_loss'],
+    ['TP Level', 'take_profit'],
+    ['Trade Notes', 'notes'],
+    ['Setup Name', 'setup'],
+    ['Acct No', 'account'],
+  ])('%s is read as %s', (name, role) => {
+    expect(roleOf(name)).toBe(role);
+  });
+
+  it.each([
+    // prices that are not the fill
+    'Limit Price',
+    'Mark Price',
+    'Last Price',
+    'Stop Price',
+    'Order Price',
+    'Buy Price',
+    'Level',
+    // P&L that is not a closed trade's
+    'Cumulative P&L',
+    'Unrealized P&L',
+    'Open P&L',
+    'P&L %',
+    'Profit (ticks)',
+    'Target P&L',
+    // sizes and sides that are not what was traded
+    'Exit Side',
+    'Position Side',
+    'Open Qty',
+    'Qty To Fill',
+    'Close Volume',
+    // fees that are not an amount in the price's currency, or not a trade's
+    'Fee Rate',
+    'Fee Coin',
+    'Withholding Tax',
+    'Total Charges',
+    // a kind of instrument as often as a symbol (FUT, STK)
+    'Product Code',
+    'Market Code',
+    'Security Name',
+    // a total can be a running one, and a result is often in R
+    'Total P&L',
+    'Total Shares',
+    'Trade Result',
+    // times that are not the fill's
+    'Placing Time',
+    'Time in Trade',
+    // and others
+    'Open Interest',
+    'Opening Balance',
+    'Remarks',
+    'Volatility',
+    'Slippage',
+  ])('%s is not read', (name) => {
+    expect(roleOf(name)).toBeNull();
+  });
+
+  it('a run of letters too long to be a name is not taken apart', () => {
+    expect(roleOf('price'.repeat(8))).toBe('price');
+    expect(roleOf('price'.repeat(9))).toBeNull();
+    const started = performance.now();
+    expect(roleOf('entry'.repeat(200_000))).toBeNull();
+    expect(performance.now() - started).toBeLessThan(500);
+  });
+
+  it('a file of trades in names the lists do not have imports as it comes, and the preview says which were guessed', () => {
+    const r = read(
+      lines(
+        'Ticker Name,Trade Direction,Start Time,End Time,Lots Traded,Start Price,End Price,Broker Charges,Realised P&L',
+        'AAPL,Long,2026-03-02 09:31,2026-03-02 10:12,100,187.40,189.10,1.30,170.00',
+      ),
+    );
+    const t = r.trades[0];
+    expect([t.symbol, t.side, t.quantity, t.entryPrice, t.exitPrice, t.openedAt, t.closedAt, t.fees]).toEqual([
+      'AAPL',
+      'LONG',
+      100,
+      187.4,
+      189.1,
+      '2026-03-02T09:31',
+      '2026-03-02T10:12',
+      1.3,
+    ]);
+    expect([money(grossPnl(t)), money(netPnl(t)), t.needsReview]).toEqual([170, 168.7, undefined]);
+    // Start Time and End Time are names the lists have
+    expect(r.layout?.columns.filter((c) => !c.guessed).map((c) => c.header)).toEqual(['Start Time', 'End Time']);
+    expect(r.notices[0]).toBe(
+      'Read from the words in their names: "Ticker Name" as Symbol, "Trade Direction" as Direction (buy / sell, long / short), "Lots Traded" as Quantity, "Start Price" as Entry price, "End Price" as Exit price, "Broker Charges" as Fees or commission (several add up), "Realised P&L" as P&L before fees. Check them under Columns if that is not right.',
+    );
+  });
+
+  it('a file of fills in names the lists do not have becomes trades the same way', () => {
+    const r = read(
+      lines(
+        'Execution Timestamp,Stock Ticker,Action,Shares Traded,Exec Px',
+        '2026-03-02 09:31:05,AAPL,Buy,100,187.40',
+        '2026-03-02 10:12:44,AAPL,Sell,100,189.10',
+      ),
+    );
+    expect(r.layout?.rowKind).toBe('fills');
+    expect(r.trades).toHaveLength(1);
+    expect([r.trades[0].openedAt, r.trades[0].closedAt, money(grossPnl(r.trades[0]))]).toEqual([
+      '2026-03-02T09:31',
+      '2026-03-02T10:12',
+      170,
+    ]);
+    // the listed Action alone would not make these fills: the guesses did, and the preview says so
+    expect(r.layout?.kindFromGuesses).toBe(true);
+    expect(r.notices[0]).toMatch(/Because of them, each row was read as one fill;/);
+    expect(
+      read(lines('Symbol,Side,Qty,Price,Time,Trade Notes', 'AAPL,Buy,1,100,2026-03-02 09:31,x')).layout,
+    ).toMatchObject({
+      rowKind: 'fills',
+      kindFromGuesses: false,
+    });
   });
 });
 

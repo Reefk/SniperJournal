@@ -187,10 +187,16 @@ writeFileSync(
 const oddPath = join(work, 'odd.csv');
 writeFileSync(
   oddPath,
+  ['Instrument Ref,Clip,Way,Fill,When', 'AMD,10,B,150,2026-03-06 11:00', 'AMD,10,S,155,2026-03-06 11:30'].join('\n'),
+);
+// column names in no list, read by their words: 2 fills, 1 trade
+const wordsPath = join(work, 'words.csv');
+writeFileSync(
+  wordsPath,
   [
-    'Ticker Name,Lots Traded,Buy Or Sell Flag,Fill,When',
-    'AMD,10,B,150,2026-03-06 11:00',
-    'AMD,10,S,155,2026-03-06 11:30',
+    'Execution Timestamp,Ticker Name,Buy Or Sell Flag,Lots Traded,Exec Px',
+    '2026-03-06 12:00,AMD,B,10,150',
+    '2026-03-06 12:30,AMD,S,10,156',
   ].join('\n'),
 );
 // a platform's own export, read as it comes: NinjaTrader 8 executions, 4 fills, 2 trades
@@ -233,7 +239,7 @@ writeFileSync(
 // 11 MB: past the 10 MB one import takes
 const bigPath = join(work, 'too-large.csv');
 writeFileSync(bigPath, `symbol,qty\n${'AAPL,1\n'.repeat((11 * 1024 * 1024 - 11) / 7)}`);
-const mapOdd = `$role('Ticker Name', 'symbol'); $role('Lots Traded', 'quantity'); $role('Buy Or Sell Flag', 'side'); $role('Fill', 'price'); $role('When', 'time'); true`;
+const mapOdd = `$role('Instrument Ref', 'symbol'); $role('Clip', 'quantity'); $role('Way', 'side'); $role('Fill', 'price'); $role('When', 'time'); true`;
 
 async function journey() {
   await startServer();
@@ -327,6 +333,15 @@ async function journey() {
   check(
     'columns set by hand read the file (2 fills, 1 trade)',
     await seen(`/1\\s*ready to import/.test($modal().innerText)`, 'mapped preview', 5000),
+  );
+  await b.setFile('[data-modal-root] input[type=file]', wordsPath);
+  check(
+    'names in no list are read by their words, and the preview says so (2 fills, 1 trade)',
+    await seen(
+      `/1\\s*ready to import/.test($modal().innerText) && $modal().innerText.includes('Read from the words in their names: "Execution Timestamp" as Date and time') && $modal().innerText.includes('5 guessed from their names')`,
+      'guessed preview',
+      5000,
+    ),
   );
   await b.setFile('[data-modal-root] input[type=file]', ninjaPath);
   check(
