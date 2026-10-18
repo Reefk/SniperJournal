@@ -1,0 +1,13 @@
+# GitHub Pages builds this folder (Settings → Pages: branch main, folder
+# /docs) for one page only: the privacy policy the store listings link to,
+# https://reefk.github.io/SniperJournal/privacy-policy
+#
+# Everything else in docs/ is left out of the site. A file added here later
+# is published too, unless it is added to this list.
+title: Sniper Journal
+exclude:
+  - QUALITY_AUDIT.md
+  - user-guide.md
+  - play-store-listing.md
+  - microsoft-store-listing.md
+  - import-samples

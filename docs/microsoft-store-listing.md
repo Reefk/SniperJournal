@@ -149,9 +149,9 @@ them in this order, each with its caption (200 characters max):
 | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | Category                  | **Personal finance** → Banking + investments (secondary category: Productivity)                                               |
 | Personal information      | **No**, it does not access, collect or transmit personal information. Give the privacy policy URL anyway (see below)          |
-| Privacy policy URL        | the public address where `docs/privacy-policy.md` is hosted (the same one as for Google Play)                                 |
+| Privacy policy URL        | https://reefk.github.io/SniperJournal/privacy-policy (the same one as for Google Play)                                        |
 | Website                   | optional                                                                                                                      |
-| Support contact info      | _your address_ (or a support web page); the Store shows it publicly                                                           |
+| Support contact info      | rifreef88@gmail.com (the privacy policy's too); the Store shows it publicly                                                   |
 | Product declarations      | Untick **Windows can include this product's data in automatic backups to OneDrive** (see below). Leave the others as they are |
 | Accessibility declaration | **Don't tick.** It is only for apps tested with Narrator, high contrast and the other accessibility tools                     |
 | Generative AI declaration | **Don't tick.** The insights are fixed rules worked out from your trades; no AI model is involved                             |

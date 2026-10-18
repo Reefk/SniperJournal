@@ -1,10 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- allowBackup is off on purpose: the journal is meant to stay on this
-         phone, and the welcome screen promises as much ("uninstalling it
-         deletes your trades"). Leaving it on would quietly copy the journal to
-         the user's Google account. Backups are the app's own export instead. -->
+    <!-- allowBackup is off on purpose: the journal is not copied to the
+         user's Google account, and the welcome screen promises as much
+         ("uninstalling it deletes your trades"). Backups are the app's own
+         export instead. Since Android 12 this no longer stops the copy from
+         an old phone to a new one when the user sets the new one up; that is
+         kept on purpose (decided 2026-10-18), so a journal moves with its
+         owner, and the privacy policy says so. -->
     <application
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"

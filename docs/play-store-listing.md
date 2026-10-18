@@ -93,8 +93,8 @@ First release: log trades with charts and self-ratings, see your win rate, profi
 | ------------------ | ---------------------------------------------------------------------------------------------------------- |
 | App category       | **Finance** (or Productivity)                                                                              |
 | Tags               | Trading, Finance, Productivity                                                                             |
-| Contact email      | _your address_ — Play shows it publicly                                                                    |
-| Privacy policy URL | the public address where `docs/privacy-policy.md` is hosted                                                |
+| Contact email      | rifreef88@gmail.com (the privacy policy's too) — Play shows it publicly                                    |
+| Privacy policy URL | https://reefk.github.io/SniperJournal/privacy-policy (GitHub Pages, from `docs/privacy-policy.md`)         |
 | Ads                | No ads                                                                                                     |
 | Target audience    | 18 and over                                                                                                |
 | Data safety        | No data collected; no data shared. Users delete their data by uninstalling the app or clearing its storage |

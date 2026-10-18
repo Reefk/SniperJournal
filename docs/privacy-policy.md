@@ -1,6 +1,11 @@
+---
+title: Privacy Policy — Sniper Journal
+permalink: /privacy-policy
+---
+
 # Privacy Policy — Sniper Journal
 
-_Last updated: 16 October 2026_
+_Last updated: 18 October 2026_
 
 Sniper Journal is a trading journal that runs entirely on your own device. This
 policy covers the Android app and the Windows app.
@@ -15,14 +20,16 @@ app never sends them anywhere.
 ## Where your data lives
 
 Everything you enter — trades, notes, playbook entries, chart screenshots,
-account names and balances — stays on the device you entered it on. It is not
-synced, uploaded or backed up to any server, including ours.
+account names and balances — stays on your own device. It is not synced,
+uploaded or backed up to any server, including ours.
 
 **On Android**, it is written to the app's own private storage. No other app
 can read it. Android's automatic cloud backup is switched off for this app, so
-your journal is not copied to your Google account either. Uninstalling
-Sniper Journal deletes all of it. Use **More → Back up your journal** to export
-a copy you keep yourself.
+your journal is not copied to your Google account either. When you set up a
+new phone and choose to copy your apps and data from the old one, Android can
+move the journal along with them, directly from one phone to the other.
+Uninstalling Sniper Journal deletes all of it. Use **More → Back up your
+journal** to export a copy you keep yourself.
 
 **On Windows**, it is written to a folder called **Sniper Journal** in your
 Documents folder: the journal itself (`journal.json`), a daily copy of it in
@@ -60,15 +67,4 @@ and the date above will be updated.
 
 ## Contact
 
-Questions about this policy: **<your contact email>**
-
-<!--
-Before either store listing goes live:
-  - replace the contact email above
-  - host this page at a public, permanent URL (GitHub Pages works) and paste
-    that URL into Play Console → App content → Privacy policy, and into
-    Partner Center → Properties → Privacy policy URL
-  - the Data safety form should then answer: no data collected, no data
-    shared, no data encrypted in transit (nothing is sent), users can delete
-    their data by uninstalling or clearing app storage
--->
+Questions about this policy: **[rifreef88@gmail.com](mailto:rifreef88@gmail.com)**
