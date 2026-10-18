@@ -285,6 +285,18 @@ describe('what is never continued', () => {
     expect(r.trades.map((t) => [t.quantity, t.entryPrice, t.exitPrice])).toEqual([[1, 110, 111]]);
   });
 
+  it('a first fill the file says opens a position: a trade of its own, even on the other side', () => {
+    const head = `${NO_IDS},effect`;
+    const r = run(
+      head,
+      ['2026-03-05 10:00,AAPL,sell,1,110,0,open', '2026-03-05 10:30,AAPL,buy,1,105,0,close'],
+      [stale()],
+    );
+    expect(r.finished).toEqual([]);
+    expect(r.errors).toEqual([]);
+    expect(r.trades.map((t) => [t.side, t.quantity, t.entryPrice, t.exitPrice])).toEqual([['SHORT', 1, 110, 105]]);
+  });
+
   it('two open trades in the symbol, or one opened after the fill: too uncertain, so nothing is carried', () => {
     const sell = ['2026-03-05 10:00,AAPL,sell,1,110,0'];
     const two = run(NO_IDS, sell, [stale(), stale({ openedAt: '2026-03-03T10:00' })]);

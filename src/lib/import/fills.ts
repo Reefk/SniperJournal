@@ -130,11 +130,12 @@ const earlier = (a: Moment, b: Moment) =>
  * at it. A trade the journal already has closed comes first, as that is a
  * file imported again; two that fit either way are too uncertain to choose.
  * A first fill on the same side starts a position of its own, so a trade
- * left open by mistake is never mixed into a new one.
+ * left open by mistake is never mixed into a new one; so does one the file
+ * says opens a position.
  */
 function carryFor(carries: readonly Carry[] | undefined, fill: Fill): Fill | null {
   const at = fill.time;
-  if (!carries || !at) return null;
+  if (!carries || !at || fill.effect === 'open') return null;
   const fits = carries.filter(
     (c) =>
       c.fill.side !== fill.side &&
