@@ -24,19 +24,23 @@ const described = (open: Trade, file: Trade) => ({
 });
 
 /**
- * What a row with the whole trade left unsaid: fees when the file has none at
- * all (no fee column, no rate, no P&L after fees), the point value when
- * neither the row nor the instrument gives one. The file's trade then has 0
- * and 1 for them, which are not the trade's, so the journal's are kept.
+ * What a file's trade left unsaid, whether a row has the whole trade or its
+ * fills make it: fees when the file has none at all (no fee column, no rate,
+ * no P&L after fees), the point value when neither the file nor the
+ * instrument gives one. The file's trade then has 0 and 1 for them, which are
+ * not the trade's, so the journal's are kept.
  */
 export interface Unsaid {
   fees?: boolean;
   multiplier?: boolean;
+  /** its exact P&L was worked out at that point value of 1, so it is worth the journal's point value */
+  pnlAtOne?: boolean;
 }
 
 /** the journal's open trade, closed as the file says; `fillCount` is every fill in it now */
 export function finishOpen(open: Trade, closed: Trade, fillCount: number | undefined, unsaid: Unsaid = {}): Trade {
   const ids = idsOf(open, closed);
+  const multiplier = unsaid.multiplier ? open.multiplier : closed.multiplier;
   const done: Trade = {
     ...open,
     quantity: closed.quantity,
@@ -44,8 +48,8 @@ export function finishOpen(open: Trade, closed: Trade, fillCount: number | undef
     exitPrice: closed.exitPrice,
     closedAt: closed.closedAt,
     fees: unsaid.fees ? open.fees : closed.fees,
-    multiplier: unsaid.multiplier ? open.multiplier : closed.multiplier,
-    manualPnl: closed.manualPnl,
+    multiplier,
+    manualPnl: unsaid.pnlAtOne && closed.manualPnl != null ? closed.manualPnl * (multiplier || 1) : closed.manualPnl,
     ...described(open, closed),
     externalId: ids.length ? ids.join('|') : undefined,
     fillCount,

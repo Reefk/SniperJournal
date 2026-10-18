@@ -60,7 +60,7 @@ export interface RowsRead {
   openingFill?: Map<string, string>;
   /** trades the journal has open that the file closes, finished (same ids as in the journal) */
   finished?: Trade[];
-  /** trade id -> what its row left unsaid, should the trade finish one the journal has open */
+  /** trade id -> what its row or fills left unsaid, should the trade finish one the journal has open */
   unsaid?: Map<string, Unsaid>;
 }
 

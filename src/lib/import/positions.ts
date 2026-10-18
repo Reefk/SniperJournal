@@ -4,7 +4,7 @@ import { isClosed, isIncomplete } from '../trade-math';
 import { decimalsOf } from '../merge';
 import { uid } from '../utils';
 import { fillsToPositions, summarise, type Carry, type Fill, type Summary } from './fills';
-import { finishOpen, openRest } from './finish';
+import { finishOpen, openRest, type Unsaid } from './finish';
 import { believable, fitReported, type Reader, type RowsRead } from './reader';
 import { rowsNote } from './report';
 import { parseAction, parseEffect, parseMoment, parseMoney, parseStatus, type Moment } from './values';
@@ -108,7 +108,8 @@ export function parseFillRow(
 /**
  * The trade one position makes. `read` holds every fill read, by file line;
  * `net` says the file's P&L column is after fees; `from` is the journal trade
- * carried in as its entry, if one was.
+ * carried in as its entry, if one was. `unsaid` says when neither the file,
+ * that trade nor the instrument gave a point value, so it is 1 (see Unsaid).
  */
 export function assemblePosition(
   s: Summary,
@@ -116,7 +117,7 @@ export function assemblePosition(
   r: Reader,
   net: boolean,
   from?: Trade,
-): Trade {
+): { trade: Trade; unsaid: Unsaid } {
   const { at, cell, plan } = r.sheet;
   const first = read.get(s.firstLine) as FillRow;
   const rows = s.lines.map((l) => read.get(l)?.row).filter((row): row is string[] => Boolean(row));
@@ -152,8 +153,10 @@ export function assemblePosition(
   }
   let manualPnl: number | null = null;
   if (multiplier == null && fit) manualPnl = fit.manualPnl;
-  // nothing in the file says: the journal trade it continues does
-  if (multiplier == null) multiplier = from?.multiplier ?? r.knownMultiplier(first.symbol, first.row) ?? 1;
+  // nothing in the file says: the journal trade it continues does, or what the instrument is
+  multiplier ??= from?.multiplier ?? r.knownMultiplier(first.symbol, first.row);
+  const unsaid: Unsaid = { multiplier: multiplier == null };
+  multiplier ??= 1;
 
   // averages rounded to the precision of the prices, and the exact P&L
   // kept as written when the rounded averages cannot reproduce it
@@ -165,7 +168,10 @@ export function assemblePosition(
     if (s.reportedPnl != null) manualPnl = net ? s.reportedPnl + s.fees : s.reportedPnl;
   } else if (manualPnl == null && s.closed && s.move != null && entryPrice != null && exitPrice != null) {
     const exact = s.move * multiplier;
-    if (Math.abs((exitPrice - entryPrice) * s.quantity * direction * multiplier - exact) >= 0.005) manualPnl = exact;
+    if (Math.abs((exitPrice - entryPrice) * s.quantity * direction * multiplier - exact) >= 0.005) {
+      manualPnl = exact;
+      unsaid.pnlAtOne = unsaid.multiplier;
+    }
   }
 
   const openedAt = s.openedAt?.value ?? '';
@@ -198,7 +204,7 @@ export function assemblePosition(
   };
   const trade: Trade = { ...input, id: uid(), createdAt: r.now, updatedAt: r.now };
   trade.needsReview = isIncomplete(trade) || undefined;
-  return trade;
+  return { trade, unsaid };
 }
 
 /**
@@ -285,10 +291,15 @@ const sameClose = (s: Summary, t: Trade) =>
  * broker's ids) are left out, and a position the file begins in the middle of
  * starts from the journal's trade for it, which the file's fills then finish
  * (`finished`). Without it, every file starts from nothing, as it once did.
+ * A trade made from the file's fills alone may still finish one the journal
+ * has open (likely.ts): `unsaid` says what the file left out for it.
  */
 export function tradesFromFills(r: Reader, journal?: readonly Trade[]): RowsRead {
   const { sheet, findings } = r;
   const net = !sheet.has('gross_pnl') && !sheet.has('pnl') && sheet.has('net_pnl');
+  // no fee anywhere in the file: no fee column, no rate, and no P&L the fees are already taken from
+  const feesUnsaid = !sheet.has('fees') && !sheet.has('fee_rate') && !net;
+  const unsaid = new Map<string, Unsaid>();
   const cashSigned = cashSignedPrices(r);
   const fills: Fill[] = [];
   const read = new Map<number, FillRow>();
@@ -377,9 +388,13 @@ export function tradesFromFills(r: Reader, journal?: readonly Trade[]): RowsRead
     if (s.ids.some((id) => r.existingIds.has(id))) overlapping++;
     if (s.orphan) orphans++;
     if (!s.closed) open++;
-    const trade = assemblePosition(s, read, r, net, from);
-    if (!from) trades.push(trade);
-    else if (s.closed) finished.push(finishOpen(from, trade, (from.fillCount ?? 1) + s.fillCount));
+    const position = assemblePosition(s, read, r, net, from);
+    const { trade } = position;
+    if (!from) {
+      trades.push(trade);
+      const left: Unsaid = { ...position.unsaid, fees: feesUnsaid };
+      if (left.fees || left.multiplier) unsaid.set(trade.id, left);
+    } else if (s.closed) finished.push(finishOpen(from, trade, (from.fillCount ?? 1) + s.fillCount));
     else trades.push(openRest(from, trade));
   }
   if (journal) {
@@ -431,5 +446,5 @@ export function tradesFromFills(r: Reader, journal?: readonly Trade[]): RowsRead
       `${overlapping} ${overlapping === 1 ? 'trade shares' : 'trades share'} fills with trades already in your journal (a position that runs across two exports). Check for doubles.`,
     );
   }
-  return { trades, errors, notices, finished };
+  return { trades, errors, notices, finished, unsaid };
 }

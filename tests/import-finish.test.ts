@@ -148,6 +148,68 @@ describe('a row with the whole trade, closing one the journal has open', () => {
   });
 });
 
+describe('fills that repeat the opening fill, closing one the journal has open', () => {
+  const FILLS = 'time,symbol,side,qty,price';
+  const buy = (qty: number) => `2026-03-04 10:00,MES,buy,${qty},5000`;
+  const sell = (qty: number) => `2026-03-04 11:00,MES,sell,${qty},5010`;
+  /** the journal's open trade, with the fees and point value typed in by hand */
+  const typedIn = (qty: number, fees: number) =>
+    openedOn(FILLS, [buy(qty)]).map((t) => ({ ...t, fees, multiplier: 5 }));
+
+  it('fees and a point value the file doesn’t give stay as the journal has them', () => {
+    const journal = typedIn(2, 9.5);
+    const r = run(FILLS, [buy(2), sell(2)], journal);
+    expect(r.trades).toEqual([]);
+    expect(r.finished.map((t) => [t.id, t.exitPrice, t.fees, t.multiplier])).toEqual([[journal[0].id, 5010, 9.5, 5]]);
+    // 10 points × 2 contracts × $5, less $9.50 of fees
+    expect(netPnl(r.finished[0])).toBe(90.5);
+  });
+
+  it('closed in part: the part closed and the open rest each keep their share of them', () => {
+    const journal = typedIn(4, 10);
+    const r = run(FILLS, [buy(4), sell(2)], journal);
+    expect(r.finished.map((t) => [t.id, t.quantity, t.fees, t.multiplier])).toEqual([[journal[0].id, 2, 5, 5]]);
+    expect(r.trades.map((t) => [t.quantity, t.exitPrice, t.fees, t.multiplier])).toEqual([[2, null, 5, 5]]);
+  });
+
+  it('a file that gives them is taken at its word', () => {
+    const journal = typedIn(2, 9.5);
+    const r = run(`${FILLS},fee,multiplier`, [`${buy(2)},1,1.25`, `${sell(2)},1,1.25`], journal);
+    expect(r.finished.map((t) => [t.fees, t.multiplier])).toEqual([[2, 1.25]]);
+  });
+
+  it('a file that gives only one of them: that one from the file, the other from the journal', () => {
+    const journal = typedIn(2, 9.5);
+    const pointValue = run(`${FILLS},multiplier`, [`${buy(2)},1.25`, `${sell(2)},1.25`], journal);
+    expect(pointValue.finished.map((t) => [t.fees, t.multiplier])).toEqual([[9.5, 1.25]]);
+    const perContract = run(`${FILLS},fee per contract`, [`${buy(2)},0.62`, `${sell(2)},0.62`], journal);
+    expect(perContract.finished.map((t) => [t.fees, t.multiplier])).toEqual([[2.48, 5]]);
+  });
+
+  it('a P&L after fees has them taken already: the journal’s are not charged again', () => {
+    const journal = typedIn(2, 9.5);
+    const r = run(`${FILLS},net pnl`, [`${buy(2)},`, `${sell(2)},100`], journal);
+    expect(r.finished.map((t) => [t.fees, t.multiplier, netPnl(t)])).toEqual([[0, 5, 100]]);
+  });
+
+  it('the same for a short closed by a buy', () => {
+    const short = '2026-03-04 10:00,MES,sell,2,5010';
+    const journal = openedOn(FILLS, [short]).map((t) => ({ ...t, fees: 9.5, multiplier: 5 }));
+    const r = run(FILLS, [short, '2026-03-04 11:00,MES,buy,2,5000'], journal);
+    expect(r.finished.map((t) => [t.id, t.side, t.fees, t.multiplier, netPnl(t)])).toEqual([
+      [journal[0].id, 'SHORT', 9.5, 5, 90.5],
+    ]);
+  });
+
+  it('an average entry the prices can’t show exactly: the exact P&L at the journal’s point value', () => {
+    const buys = ['2026-03-04 10:00,MES,buy,1,5000', '2026-03-04 10:00,MES,buy,1,5000.25'];
+    const journal = openedOn(FILLS, buys).map((t) => ({ ...t, fees: 9.5, multiplier: 5 }));
+    const r = run(FILLS, [...buys, sell(2)], journal);
+    // from 5000.125 (shown as 5000.13) to 5010: 19.75 points in all × $5, less $9.50 of fees
+    expect(r.finished.map((t) => [t.entryPrice, t.multiplier, netPnl(t)])).toEqual([[5000.13, 5, 89.25]]);
+  });
+});
+
 describe('closed in parts, or added to first', () => {
   it('closed in part: finished for that part, the rest a trade of its own that the next export finishes', () => {
     const journal = openedOn(WITH_IDS, ['2026-03-02 15:50,AAPL,buy,3,100,0.3,F1']);
