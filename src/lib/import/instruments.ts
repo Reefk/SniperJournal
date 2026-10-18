@@ -121,6 +121,16 @@ export function isOption(symbol: string, assetClass = '', putCall = ''): boolean
   return OCC.test(s) || TOS_OPTION.test(s) || /option/i.test(assetClass) || /^(c|p|call|put)$/i.test(putCall.trim());
 }
 
+/**
+ * Whether an asset-class column says the row is a stock or a fund traded like
+ * one (IBKR's statement says Stocks, its Flex queries STK, tastytrade Equity),
+ * so one share is worth its price. An option on one says so in its own way
+ * ("Equity and Index Options", "Equity Option"), and is told apart first.
+ */
+export function isStock(assetClass = ''): boolean {
+  return /^(stocks?|stk|equit(y|ies)|etfs?|shares?)$/i.test(assetClass.trim());
+}
+
 /** shares per equity option contract */
 export const OPTION_MULTIPLIER = 100;
 

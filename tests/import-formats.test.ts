@@ -3,7 +3,7 @@ import { importTradesFromCsv, type ImportOptions } from '@/lib/csv';
 import { headerInfo, headerParts } from '@/lib/import/columns';
 import { roleFromWords } from '@/lib/import/words';
 import { dateOrderOf, parseAction, parseMoment } from '@/lib/import/values';
-import { futuresPointValue } from '@/lib/import/instruments';
+import { futuresPointValue, isStock } from '@/lib/import/instruments';
 import { grossPnl, isClosed, netPnl } from '@/lib/trade-math';
 import type { Account, Trade } from '@/lib/types';
 
@@ -184,6 +184,89 @@ describe('one row per fill', () => {
     const spy = bySymbol(r.trades, 'SPY 20MAR26 580 C');
     expect([spy.multiplier, money(grossPnl(spy)), money(netPnl(spy))]).toEqual([100, 150, 147.38]);
     expect(r.notices.join(' ')).toMatch(/Interactive Brokers/);
+  });
+
+  it('Interactive Brokers statement: a stock is worth its price, whatever IBKR’s P/L against older shares says', () => {
+    const r = read(
+      lines(
+        'Statement,Header,Field Name,Field Value',
+        'Statement,Data,BrokerName,Interactive Brokers LLC',
+        'Trades,Header,DataDiscriminator,Asset Category,Currency,Symbol,Date/Time,Quantity,T. Price,C. Price,Proceeds,Comm/Fee,Basis,Realized P/L,MTM P/L,Code',
+        // 9 bought here and 15 sold: 6 of them were bought before this
+        // statement, and IBKR's realised P/L on both sales is against its own
+        // cost basis, not against these prices
+        'Trades,Data,Order,Stocks,USD,ACME,"2026-01-09, 10:00:00",4,100,104,-400,-0.35,400,0,16,O',
+        'Trades,Data,Order,Stocks,USD,ACME,"2026-01-12, 10:00:00",5,101,104,-505,-0.35,505,0,15,O',
+        'Trades,Data,Order,Stocks,USD,ACME,"2026-01-15, 10:00:00",-7,103,104,721,-0.35,-680.65,40,-7,C',
+        'Trades,Data,Order,Stocks,USD,ACME,"2026-01-19, 10:00:00",-8,104,104,832,-0.35,-771.65,60,0,C',
+        'Trades,Total,,,,,,,,,,,,,,',
+      ),
+    );
+    const [here, before] = [...r.trades].sort((a, b) => b.quantity - a.quantity);
+    // from its own prices: 7 × 103 + 2 × 104 − 4 × 100 − 5 × 101 = 24, less its share of the fees
+    expect([here.quantity, here.multiplier, money(grossPnl(here))]).toEqual([9, 1, 24]);
+    expect(money(netPnl(here))).toBe(22.86);
+    // the 6 bought before: no entry, no share of a P/L that was for 8
+    expect([before.quantity, before.multiplier, before.manualPnl, before.needsReview]).toEqual([6, 1, null, true]);
+    expect(r.notices.join(' ')).not.toMatch(/one point taken as worth/);
+  });
+
+  it('an asset class saying stock: the share is worth its price, and an option or a future is told apart first', () => {
+    for (const yes of ['Stocks', 'STK', 'Equity', 'ETF', ' stocks ', 'Shares']) expect(isStock(yes)).toBe(true);
+    for (const no of ['Equity and Index Options', 'Equity Option', 'Futures', 'Stock Options', 'Crypto', 'CFD', ''])
+      expect(isStock(no)).toBe(false);
+  });
+
+  it('a reported P&L that implies another point value than the instrument’s own is set aside, and said', () => {
+    const r = read(
+      lines(
+        'symbol,asset class,side,qty,entry,exit,entry time,exit time,pnl',
+        // a stock: 3 × the move, as a P&L against older shares might be
+        'ACME,Equity,long,10,100,102,2026-03-02 10:00,2026-03-02 11:00,60',
+        // ES is 50 a point; this P&L would make it 5
+        'ESH6,Futures,long,1,5000,5010,2026-03-02 12:00,2026-03-02 13:00,50',
+        // an option is 100 shares; this P&L would make it 1
+        'SPY   260320C00500000,Equity Option,long,1,1,2,2026-03-02 14:00,2026-03-02 15:00,1',
+      ),
+    );
+    expect(r.trades.map((t) => [t.symbol.trim(), t.multiplier, money(grossPnl(t))])).toEqual([
+      ['ACME', 1, 20],
+      ['ESH6', 50, 500],
+      ['SPY   260320C00500000', 100, 100],
+    ]);
+    expect(r.notices).toContain(
+      "ACME, ESH6, SPY   260320C00500000: the P&L in the file doesn't follow from the prices at their point value, so it was worked out from the prices (a broker's P&L can be measured against an earlier entry than the file's). Check it if that is not right.",
+    );
+    expect(r.notices.join(' ')).not.toMatch(/ACME: one point taken/);
+    // the same from a file with one row per fill, with no amount to tell the point value by
+    const fills = read(
+      lines(
+        'time,symbol,asset class,side,qty,price,pnl',
+        '2026-03-02 10:00,ACME,Stocks,buy,10,100,',
+        '2026-03-02 11:00,ACME,Stocks,sell,10,102,60',
+      ),
+    );
+    expect(fills.trades.map((t) => [t.multiplier, money(grossPnl(t))])).toEqual([[1, 20]]);
+    expect(
+      fills.notices.some((n) =>
+        n.startsWith("ACME: the P&L in the file doesn't follow from the prices at its point value"),
+      ),
+    ).toBe(true);
+  });
+
+  it('one sale that closes shares bought in the file and shares from before it: neither part keeps its P&L', () => {
+    // no asset class: the stock rule plays no part
+    const r = read(
+      lines(
+        'time,symbol,side,qty,price,pnl,open/close',
+        '2026-03-02 10:00,ACME,buy,3,100,,open',
+        // the P/L of 5 shares, 2 of them bought before this file
+        '2026-03-02 11:00,ACME,sell,5,102,50,close',
+      ),
+    );
+    const [here, before] = [...r.trades].sort((a, b) => b.quantity - a.quantity);
+    expect([here.quantity, here.multiplier, here.manualPnl, money(grossPnl(here))]).toEqual([3, 1, null, 6]);
+    expect([before.quantity, before.manualPnl, before.needsReview]).toEqual([2, null, true]);
   });
 
   it('Thinkorswim statement: finds Account Trade History among other tables; option from CALL, expiry and strike', () => {

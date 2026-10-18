@@ -149,12 +149,19 @@ export function assemblePosition(
   /** the file names the point value: a multiplier column, or the amount against the price */
   let given = multiplier != null;
   // a reported P&L that fits the prices says it best: TradingView's position
-  // value leaves the point value out (2 MNQ at 21000 is "42000")
+  // value leaves the point value out (2 MNQ at 21000 is "42000"). Never over
+  // the point value the instrument is known to have: a broker's realised P&L
+  // can be against shares bought before the file (IBKR's statement), and a
+  // stock's point value is 1 however far off that P&L is.
+  const expected = r.expectedMultiplier(first.symbol, first.row);
   const fit =
     multiplier == null && s.reportedPnl != null && s.closed && !s.orphan
-      ? fitReported(s.reportedPnl, s.move, s.fees, net, r.expectedMultiplier(first.symbol, first.row) ?? 1)
+      ? fitReported(s.reportedPnl, s.move, s.fees, net, expected ?? 1)
       : null;
-  if (fit?.multiplier != null) multiplier = fit.multiplier;
+  if (fit?.multiplier != null) {
+    if (expected == null || fit.multiplier === expected) multiplier = fit.multiplier;
+    else r.findings.pnlSetAside.add(first.symbol);
+  }
   if (multiplier == null) {
     const worth = [...new Set(rows.map(fillWorth))];
     if (worth.length === 1 && worth[0] != null) {

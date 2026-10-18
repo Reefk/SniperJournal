@@ -208,11 +208,13 @@ function byPosition(fills: Fill[], newestFirst: boolean, carries?: ReadonlyMap<s
       if (!state) {
         ended.add(fill.key);
         if (fill.effect === 'close') {
+          const exit = part(fill, left, !closing.length);
+          closing.push(exit);
           done.push({
             key: fill.key,
             side: fill.side === 'SELL' ? 'LONG' : 'SHORT',
             entries: [],
-            exits: [part(fill, left, !closing.length)],
+            exits: [exit],
             orphan: true,
           });
         } else {
@@ -250,8 +252,9 @@ function byPosition(fills: Fill[], newestFirst: boolean, carries?: ReadonlyMap<s
         open.delete(fill.key);
       }
     }
-    // a fill that closed two positions: its reported P&L can't be split between
-    // them, so neither part keeps it (the parts are already in their positions)
+    // a fill that closed two positions (one of them, perhaps, opened before
+    // this file): its reported P&L can't be split between them, so neither
+    // part keeps it (the parts are already in their positions)
     if (closing.length > 1) {
       for (const exit of closing) exit.pnl = null;
     }

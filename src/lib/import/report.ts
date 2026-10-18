@@ -107,6 +107,14 @@ export function collectMessages(
   for (const [symbol, how] of findings.inferred) {
     notices.push(`${symbol}: one point taken as worth ${how}. Check it if that is not right.`);
   }
+  if (findings.pnlSetAside.size) {
+    const symbols = [...findings.pnlSetAside];
+    const named =
+      symbols.length > 3 ? `${symbols.slice(0, 3).join(', ')} and ${symbols.length - 3} more` : symbols.join(', ');
+    notices.push(
+      `${named}: the P&L in the file doesn't follow from the prices at ${symbols.length === 1 ? 'its' : 'their'} point value, so it was worked out from the prices (a broker's P&L can be measured against an earlier entry than the file's). Check it if that is not right.`,
+    );
+  }
   if (table.grouped) notices.push("Each block's symbol was taken from the line above its column names.");
   if (table.cashFees)
     notices.push(

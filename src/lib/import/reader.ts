@@ -2,7 +2,7 @@ import type { Account, Setup, Trade } from '../types';
 import { uid } from '../utils';
 import type { Role } from './columns';
 import type { Unsaid } from './finish';
-import { OPTION_MULTIPLIER, futuresPointValue, isOption, optionSymbol } from './instruments';
+import { OPTION_MULTIPLIER, futuresPointValue, isOption, isStock, optionSymbol } from './instruments';
 import type { Sheet } from './layout';
 import {
   asClock,
@@ -48,6 +48,8 @@ export interface Findings {
   rateNoSize: number[];
   /** file lines whose P&L after fees is more than the one before them, so no fee was worked out */
   netAboveGross: number[];
+  /** symbols whose reported P&L was set aside: it implied another point value than the instrument's own */
+  pnlSetAside: Set<string>;
   /** times read with a time zone, and converted to this device's */
   zoned: number;
   /** times of day read with no time zone, and kept as written */
@@ -96,7 +98,10 @@ export interface Reader {
   tagsOf(row: string[]): string[];
   /** the row's multiplier; one of zero or less is left out, and noted */
   multiplierCell(row: string[], line: number): number | null;
-  /** what one point of the instrument should be worth, from what the symbol is; nothing is noted */
+  /**
+   * what one point of the instrument should be worth, from what the symbol or
+   * the asset class says it is (a future, an option, a stock); nothing is noted
+   */
   expectedMultiplier(symbol: string, row: string[]): number | null;
   /** a point value from what the symbol is, when nothing in the row gives one; noted for the preview */
   knownMultiplier(symbol: string, row: string[]): number | null;
@@ -116,6 +121,7 @@ export function createReader(sheet: Sheet, target: ImportTarget): Reader {
     feesWritten: false,
     rateNoSize: [],
     netAboveGross: [],
+    pnlSetAside: new Set(),
     zoned: 0,
     unzoned: 0,
     duplicates: 0,
@@ -232,18 +238,20 @@ export function createReader(sheet: Sheet, target: ImportTarget): Reader {
     return m;
   };
 
-  const instrumentWorth = (symbol: string, row: string[]): { value: number; how: string } | null => {
+  /** what one point of the instrument is worth, and how that is said; a stock's 1 goes without saying */
+  const instrumentWorth = (symbol: string, row: string[]): { value: number; how: string | null } | null => {
     const assetClass = cell(row, 'asset_class');
     const future = futuresPointValue(symbol, assetClass);
     if (future) return { value: future.value, how: `${future.value} a point (${future.root} futures)` };
     if (isOption(symbol, assetClass, cell(row, 'put_call')))
       return { value: OPTION_MULTIPLIER, how: `${OPTION_MULTIPLIER} (an option contract)` };
+    if (isStock(assetClass)) return { value: 1, how: null };
     return null;
   };
   const expectedMultiplier = (symbol: string, row: string[]) => instrumentWorth(symbol, row)?.value ?? null;
   const knownMultiplier = (symbol: string, row: string[]): number | null => {
     const worth = instrumentWorth(symbol, row);
-    if (worth) findings.inferred.set(symbol, worth.how);
+    if (worth?.how) findings.inferred.set(symbol, worth.how);
     return worth?.value ?? null;
   };
 

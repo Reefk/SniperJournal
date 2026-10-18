@@ -620,6 +620,7 @@ describe('stage 5: the messages', () => {
     feesWritten: false,
     rateNoSize: [],
     netAboveGross: [],
+    pnlSetAside: new Set(),
     zoned: 0,
     unzoned: 0,
     duplicates: 0,

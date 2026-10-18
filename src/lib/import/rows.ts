@@ -118,9 +118,13 @@ export function parseTradeRow(row: string[], line: number, r: Reader): TradeRow 
   let manualPnl: number | null = null;
   if (gross != null || net != null) {
     if (move == null || multiplier == null) {
-      const expected = r.expectedMultiplier(symbol, row) ?? 1;
-      const fit = fitReported((gross ?? net) as number, move, fees ?? 0, gross == null, expected);
-      multiplier = multiplier ?? fit.multiplier;
+      const expected = r.expectedMultiplier(symbol, row);
+      const fit = fitReported((gross ?? net) as number, move, fees ?? 0, gross == null, expected ?? 1);
+      // never over the point value the instrument is known to have (see assemblePosition)
+      if (multiplier == null && fit.multiplier != null) {
+        if (expected == null || fit.multiplier === expected) multiplier = fit.multiplier;
+        else r.findings.pnlSetAside.add(symbol);
+      }
       manualPnl = fit.manualPnl;
     }
   }
