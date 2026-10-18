@@ -63,6 +63,16 @@ export function collectMessages(
     notices.push(
       `The fees of ${table.cashFees === 1 ? '1 execution were' : `${table.cashFees} executions were`} taken from the statement's Cash Balance section, matched by time.`,
     );
+  if (table.cashFeesUnmatched) {
+    const { lines, fees } = table.cashFeesUnmatched;
+    // less than a cent is shown as it is, not as 0.00
+    const amount = fees >= 0.01 ? fees.toFixed(2) : String(fees);
+    errors.push(
+      lines === 1
+        ? `1 fee line in the statement could not be matched to an execution in its Account Trade History (same symbol, side and size, within 2 seconds), so its fees (${amount}) were left out.`
+        : `${lines} fee lines in the statement could not be matched to an execution in its Account Trade History (same symbol, side and size, within 2 seconds), so their fees (${amount} in all) were left out.`,
+    );
+  }
   if (table.statement) notices.push('Read the Trades section of this Interactive Brokers statement.');
   else if (table.preamble)
     notices.push(`The column names are on line ${table.preamble + 1}; the lines above them were left out.`);

@@ -208,9 +208,10 @@ export function importTradesFromCsv(text: string, ctx: ImportOptions): ImportRes
   const read = sheet.rowKind === 'fills' ? tradesFromFills(reader, journal) : tradesFromRows(reader, journal);
   const { errors, notices } = collectMessages(reader.findings, sheet.table, read);
   // not a fee anywhere: unless the file's P&L is after fees, it is before them
+  // (a statement whose fee lines matched no execution has fees, said already)
   const made = [...read.trades, ...(read.finished ?? [])];
   const netOnly = sheet.has('net_pnl') && !sheet.has('pnl') && !sheet.has('gross_pnl');
-  if (made.length && !netOnly && made.every((t) => !t.fees)) notices.push(NO_FEES);
+  if (made.length && !netOnly && !sheet.table.cashFeesUnmatched && made.every((t) => !t.fees)) notices.push(NO_FEES);
   const {
     trades: all,
     combined,

@@ -218,6 +218,37 @@ describe('one row per fill', () => {
     expect(r.notices.join(' ')).toMatch(/SPY 20 MAR 26 580 CALL: one point taken as worth 100 \(an option contract\)/);
   });
 
+  it('Thinkorswim statement: a cash line with fees that matches no execution is said, not lost', () => {
+    const statement = (buyAt: string, sellAt: string) =>
+      read(
+        lines(
+          'Cash Balance',
+          'DATE,TIME,TYPE,REF #,DESCRIPTION,Misc Fees,Commissions & Fees,AMOUNT,BALANCE',
+          `3/2/26,${buyAt},TRD,="1001",BOT +100 AAPL @187.40,-0.01,,"-18,740.01","81,259.99"`,
+          `3/2/26,${sellAt},TRD,="1002",SOLD -100 AAPL @189.10,-0.02,-0.65,"18,909.33","100,169.32"`,
+          'Account Trade History',
+          ',Exec Time,Spread,Side,Qty,Pos Effect,Symbol,Exp,Strike,Type,Price,Net Price,Order Type',
+          ',3/2/26 09:31:12,STOCK,BUY,+100,TO OPEN,AAPL,,,STOCK,187.40,187.40,LMT',
+          ',3/2/26 10:12:40,STOCK,SELL,-100,TO CLOSE,AAPL,,,STOCK,189.10,189.10,LMT',
+        ),
+      );
+    // the sell's cash line is minutes away from its execution: its fees match nothing
+    const one = statement('09:31:12', '10:20:00');
+    expect(one.trades.map((t) => t.fees)).toEqual([0.01]);
+    expect(one.errors).toContain(
+      '1 fee line in the statement could not be matched to an execution in its Account Trade History (same symbol, side and size, within 2 seconds), so its fees (0.67) were left out.',
+    );
+    // none match: the file has fees, so it isn't said to have none
+    const none = statement('09:45:00', '10:20:00');
+    expect(none.trades.map((t) => t.fees)).toEqual([0]);
+    expect(none.errors).toContain(
+      '2 fee lines in the statement could not be matched to an execution in its Account Trade History (same symbol, side and size, within 2 seconds), so their fees (0.68 in all) were left out.',
+    );
+    expect(none.notices.join(' ')).not.toMatch(/There are no fees in this file/);
+    // every line matched: nothing to say
+    expect(statement('09:31:12', '10:12:41').errors).toEqual([]);
+  });
+
   it('Webull orders: cancelled orders left out, filled quantity and average price used, not the limit', () => {
     const r = read(
       lines(

@@ -193,6 +193,8 @@ export interface Table {
   grouped?: boolean;
   /** how many rows were given their fees from the statement's cash section (thinkorswim) */
   cashFees?: number;
+  /** the cash section's fee lines that match no row: how many, and their fees, left out */
+  cashFeesUnmatched?: { lines: number; fees: number };
 }
 
 const SUMMARY = /^(grand\s*)?(sub\s*)?totals?\b|^summary$|^net\s*total/i;

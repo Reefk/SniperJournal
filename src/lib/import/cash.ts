@@ -71,6 +71,8 @@ function cashTrades(rows: string[][]): CashTrade[] {
  * The table with a Fees column from the file's cash sections, when its rows
  * are executions with no fees of their own (thinkorswim's Account Trade
  * History) and some cash line matches one; otherwise the table as it was.
+ * Cash lines with fees that match no execution are counted in
+ * `cashFeesUnmatched`, so the preview says their fees were left out.
  */
 export function withCashFees(rows: string[][], table: Table): Table {
   if (table.statement) return table;
@@ -102,10 +104,16 @@ export function withCashFees(rows: string[][], table: Table): Table {
     matched++;
     return String(best.fees);
   });
-  if (!matched) return table;
+  // fees the statement charged that no execution here takes: said, not lost
+  const left = cash.filter((c) => !c.used);
+  const unmatched = left.length
+    ? { cashFeesUnmatched: { lines: left.length, fees: Math.round(left.reduce((a, c) => a + c.fees, 0) * 1e8) / 1e8 } }
+    : {};
+  if (!matched) return { ...table, ...unmatched };
   const width = table.header.length;
   return {
     ...table,
+    ...unmatched,
     header: [...table.header, 'Fees'],
     data: table.data.map((row, i) => [
       ...row.slice(0, width),
