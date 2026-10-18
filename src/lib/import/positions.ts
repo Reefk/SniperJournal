@@ -242,7 +242,7 @@ const journalMoment = (at: string): Moment => ({
  * The journal's trades a file's fills may continue, per account and symbol:
  * those with a size, an entry price and an entry time (and, if closed, a close
  * time). Which one a file continues, if any, its first fill in the symbol
- * decides (fills.ts).
+ * decides, and the next fill after it has closed one (fills.ts).
  */
 function carriesFrom(journal: readonly Trade[]): Map<string, Carry[]> {
   const carries = new Map<string, Carry[]>();

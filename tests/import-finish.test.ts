@@ -266,6 +266,77 @@ describe('importing again', () => {
   });
 });
 
+describe('importing again, without the broker’s ids', () => {
+  it('a later export that repeats the partial close and then closes the rest finishes the rest, with no short', () => {
+    const half = '2026-03-03 10:00,MNQZ6,sell,2,21010,0';
+    const journal = openedOn(NO_IDS, ['2026-03-02 15:50,MNQZ6,buy,4,21000,0']);
+    const after = apply(journal, run(NO_IDS, [half], journal));
+    const rest = after[1];
+    expect([rest.quantity, rest.closedAt ?? null]).toEqual([2, null]);
+    const r = run(NO_IDS, [half, '2026-03-04 10:00,MNQZ6,sell,2,21020,0'], after);
+    expect(r.trades).toEqual([]);
+    expect(r.finished.map((t) => [t.id, t.quantity, t.exitPrice, t.closedAt])).toEqual([
+      [rest.id, 2, 21020, '2026-03-04T10:00'],
+    ]);
+    expect(r.duplicates).toBe(1);
+  });
+
+  const halfClosed = () => {
+    const journal = openedOn(NO_IDS, ['2026-03-02 15:50,MNQZ6,buy,4,21000,0']);
+    return apply(journal, run(NO_IDS, ['2026-03-03 10:00,MNQZ6,sell,2,21010,0'], journal));
+  };
+
+  it('a sell past the open rest finishes it, and what is left over opens a short', () => {
+    const after = halfClosed();
+    const r = run(NO_IDS, ['2026-03-03 10:00,MNQZ6,sell,2,21010,0', '2026-03-04 10:00,MNQZ6,sell,3,21020,1.5'], after);
+    expect(r.finished.map((t) => [t.id, t.quantity, t.exitPrice, t.fees])).toEqual([[after[1].id, 2, 21020, 1]]);
+    expect(r.trades.map((t) => [t.side, t.quantity, t.entryPrice, t.closedAt ?? null, t.fees])).toEqual([
+      ['SHORT', 1, 21020, null, 0.5],
+    ]);
+  });
+
+  it('one sell for both the part closed before and the open rest: the rest is finished with its share', () => {
+    const after = halfClosed();
+    const r = run(NO_IDS, ['2026-03-03 10:00,MNQZ6,sell,4,21010,2'], after);
+    expect(r.trades).toEqual([]);
+    expect(r.finished.map((t) => [t.id, t.quantity, t.exitPrice, t.fees])).toEqual([[after[1].id, 2, 21010, 1]]);
+    expect(r.duplicates).toBe(1);
+  });
+
+  it('a trade left open by mistake is not finished by a later fill, after the file has closed another', () => {
+    const closedBefore = trade({
+      symbol: 'MNQZ6',
+      side: 'LONG',
+      quantity: 2,
+      entryPrice: 21000,
+      exitPrice: 21010,
+      multiplier: 2,
+      fees: 0,
+      openedAt: '2026-03-02T15:50',
+      closedAt: '2026-03-03T10:00',
+    });
+    const forgotten = trade({
+      symbol: 'MNQZ6',
+      side: 'LONG',
+      quantity: 2,
+      entryPrice: 20900,
+      exitPrice: null,
+      closedAt: undefined,
+      openedAt: '2026-03-01T09:30',
+    });
+    const r = run(
+      NO_IDS,
+      ['2026-03-03 10:00,MNQZ6,sell,2,21010,0', '2026-03-10 10:00,MNQZ6,sell,2,21100,0'],
+      [closedBefore, forgotten],
+    );
+    expect(r.finished).toEqual([]);
+    expect(r.duplicates).toBe(1);
+    expect(r.trades.map((t) => [t.side, t.quantity, t.openedAt, t.closedAt ?? null])).toEqual([
+      ['SHORT', 2, '2026-03-10T10:00', null],
+    ]);
+  });
+});
+
 describe('what is never continued', () => {
   const stale = (extra: Partial<Trade> = {}) =>
     trade({

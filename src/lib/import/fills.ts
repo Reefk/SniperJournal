@@ -131,13 +131,25 @@ const earlier = (a: Moment, b: Moment) =>
  * file imported again; two that fit either way are too uncertain to choose.
  * A first fill on the same side starts a position of its own, so a trade
  * left open by mistake is never mixed into a new one; so does one the file
- * says opens a position.
+ * says opens a position. `used` are the journal's trades carried in already.
+ *
+ * Once the file has closed one of them, the next fill can only go on into the
+ * rest of the same position (`after`, the entry of the one closed): the same
+ * side, opened at the same time, as an earlier import's open rest is. Any
+ * other open trade is not finished by a later fill.
  */
-function carryFor(carries: readonly Carry[] | undefined, fill: Fill): Fill | null {
+function carryFor(
+  carries: readonly Carry[] | undefined,
+  fill: Fill,
+  used: ReadonlySet<string>,
+  after?: Fill,
+): Fill | null {
   const at = fill.time;
   if (!carries || !at || fill.effect === 'open') return null;
   const fits = carries.filter(
     (c) =>
+      !used.has(c.fill.carried as string) &&
+      (!after || (c.fill.side === after.side && c.fill.time?.value === after.time?.value)) &&
       c.fill.side !== fill.side &&
       c.fill.time != null &&
       earlier(c.fill.time, at) &&
@@ -148,100 +160,107 @@ function carryFor(carries: readonly Carry[] | undefined, fill: Fill): Fill | nul
   return pick.length === 1 ? pick[0].fill : null;
 }
 
-/** fills followed position by position, per account and symbol */
+/**
+ * Fills followed position by position, per account and symbol. With
+ * `carries`, the file continues the journal's trades from its first fill in a
+ * symbol, and again each time it has closed one of them, into the rest of the
+ * same position: a later export that repeats a partial close goes on into the
+ * open rest. Once it has a position of its own there (or closes one from
+ * before it), it continues none.
+ */
 function byPosition(fills: Fill[], newestFirst: boolean, carries?: ReadonlyMap<string, readonly Carry[]>): Position[] {
   const done: Position[] = [];
   const open = new Map<string, { position: Position; signed: number }>();
-  const started = new Set<string>();
+  /** the journal's trades carried in so far, by id */
+  const used = new Set<string>();
+  /** accounts and symbols where the file continues no more of the journal's trades */
+  const ended = new Set<string>();
+  /** per account and symbol, the entry of the journal's trade the file closed last */
+  const closedEntry = new Map<string, Fill>();
 
   for (const fill of chronological(fills, newestFirst)) {
-    const signed = fill.side === 'BUY' ? fill.quantity : -fill.quantity;
-    let state = open.get(fill.key);
+    const sign = fill.side === 'BUY' ? 1 : -1;
+    // what is left of the fill to place: it can close one position and go on into the next
+    let left = fill.quantity;
+    /** the parts of the fill that closed a position */
+    const closing: Part[] = [];
 
-    // the file begins in the middle of a position the journal has
-    if (carries && !started.has(fill.key)) {
-      const carried = carryFor(carries.get(fill.key), fill);
-      if (carried) {
-        state = {
-          position: {
+    while (left > EPS) {
+      let state = open.get(fill.key);
+
+      // the file begins in the middle of a position the journal has, or has
+      // closed one of the journal's and goes on into the next
+      if (!state && carries && !ended.has(fill.key)) {
+        const carried = carryFor(carries.get(fill.key), fill, used, closedEntry.get(fill.key));
+        if (carried) {
+          used.add(carried.carried as string);
+          state = {
+            position: {
+              key: fill.key,
+              side: carried.side === 'BUY' ? 'LONG' : 'SHORT',
+              entries: [part(carried, carried.quantity, false)],
+              exits: [],
+              orphan: false,
+            },
+            signed: carried.side === 'BUY' ? carried.quantity : -carried.quantity,
+          };
+          open.set(fill.key, state);
+        }
+      }
+
+      // nothing open: what is left opens a position, unless the file says this
+      // fill only closes (one opened before this file)
+      if (!state) {
+        ended.add(fill.key);
+        if (fill.effect === 'close') {
+          done.push({
             key: fill.key,
-            side: carried.side === 'BUY' ? 'LONG' : 'SHORT',
-            entries: [part(carried, carried.quantity, false)],
-            exits: [],
-            orphan: false,
-          },
-          signed: carried.side === 'BUY' ? carried.quantity : -carried.quantity,
-        };
-        open.set(fill.key, state);
+            side: fill.side === 'SELL' ? 'LONG' : 'SHORT',
+            entries: [],
+            exits: [part(fill, left, !closing.length)],
+            orphan: true,
+          });
+        } else {
+          open.set(fill.key, {
+            position: {
+              key: fill.key,
+              side: sign > 0 ? 'LONG' : 'SHORT',
+              entries: [part(fill, left, false)],
+              exits: [],
+              orphan: false,
+            },
+            signed: sign * left,
+          });
+        }
+        break;
+      }
+
+      // adding to the position
+      if (Math.sign(state.signed) === sign) {
+        state.position.entries.push(part(fill, left, false));
+        state.signed = tidy(state.signed + sign * left);
+        break;
+      }
+
+      // reducing it: up to flat closes this position, and anything past flat
+      // goes round again, into the next of the journal's or the other way
+      const quantity = Math.min(left, Math.abs(state.signed));
+      const exit = part(fill, quantity, !closing.length);
+      closing.push(exit);
+      state.position.exits.push(exit);
+      state.signed = tidy(state.signed + sign * quantity);
+      left = tidy(left - quantity);
+      if (Math.abs(state.signed) < EPS) {
+        done.push(state.position);
+        open.delete(fill.key);
+        const entry = state.position.entries[0].fill;
+        if (entry.carried) closedEntry.set(fill.key, entry);
       }
     }
-    started.add(fill.key);
-
-    // nothing open: this fill opens a position, unless the file says it closes one
-    if (!state || Math.abs(state.signed) < EPS) {
-      if (fill.effect === 'close') {
-        done.push({
-          key: fill.key,
-          side: fill.side === 'SELL' ? 'LONG' : 'SHORT',
-          entries: [],
-          exits: [part(fill, fill.quantity, true)],
-          orphan: true,
-        });
-        continue;
-      }
-      open.set(fill.key, {
-        position: {
-          key: fill.key,
-          side: signed > 0 ? 'LONG' : 'SHORT',
-          entries: [part(fill, fill.quantity, false)],
-          exits: [],
-          orphan: false,
-        },
-        signed,
-      });
-      continue;
-    }
-
-    // adding to the position
-    if (Math.sign(signed) === Math.sign(state.signed)) {
-      state.position.entries.push(part(fill, fill.quantity, false));
-      state.signed = tidy(state.signed + signed);
-      continue;
-    }
-
-    // reducing it: up to flat closes this position
-    const closing = Math.min(fill.quantity, Math.abs(state.signed));
-    state.position.exits.push(part(fill, closing, true));
-    state.signed = tidy(state.signed + Math.sign(signed) * closing);
-    if (Math.abs(state.signed) < EPS) {
-      done.push(state.position);
-      open.delete(fill.key);
-    }
-
-    // anything past flat opens the other way (or, if the file says this fill
-    // only closes, closed a position from before this file)
-    const rest = tidy(fill.quantity - closing);
-    if (rest > EPS) {
-      if (fill.effect === 'close') {
-        done.push({
-          key: fill.key,
-          side: signed < 0 ? 'LONG' : 'SHORT',
-          entries: [],
-          exits: [part(fill, rest, false)],
-          orphan: true,
-        });
-      } else {
-        open.set(fill.key, {
-          position: {
-            key: fill.key,
-            side: signed > 0 ? 'LONG' : 'SHORT',
-            entries: [part(fill, rest, false)],
-            exits: [],
-            orphan: false,
-          },
-          signed: Math.sign(signed) * rest,
-        });
-      }
+    // a fill that closed two positions: its reported P&L can't be split between
+    // them, so neither part keeps it (the parts are already in their positions)
+    if (closing.length > 1) {
+      for (const exit of closing) exit.pnl = null;
     }
   }
 
