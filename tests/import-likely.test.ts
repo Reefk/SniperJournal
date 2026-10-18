@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { splitLikelyDuplicates } from '@/lib/import/likely';
+import { importTradesFromCsv, type ImportResult } from '@/lib/csv';
+import type { Account, Setup, Trade } from '@/lib/types';
 import { trade } from './helpers';
 
 /** the stage on its own: trades that look like ones already in the journal */
@@ -94,5 +96,156 @@ describe('likely duplicates', () => {
   it('with nothing in the journal, everything is new', () => {
     const split = splitLikelyDuplicates([trade(), trade()]);
     expect([split.fresh.length, split.likely.length, split.closesOpen]).toEqual([2, 0, 0]);
+  });
+});
+
+/** the whole import: a file that closes only part of a trade the journal has open */
+describe('a part of an open trade, closed by a file without its ids', () => {
+  const accounts: Account[] = [{ id: 'acc1', name: 'Main Portfolio', startingBalance: 0, createdAt: '' }];
+  const run = (rows: string[], existing: Trade[], extra = {}) =>
+    importTradesFromCsv(rows.join('\n'), { accountId: 'acc1', accounts, setups: [] as Setup[], existing, ...extra });
+  const apply = (journal: Trade[], r: ImportResult) => {
+    const finished = new Map(r.finished.map((t) => [t.id, t]));
+    return [...journal.map((t) => finished.get(t.id) ?? t), ...r.trades];
+  };
+  const ROWS = 'symbol,side,qty,entry price,exit price,entry time,exit time';
+  /** typed in by hand: long 4 MES, with fees and a note */
+  const open = trade({
+    symbol: 'MES',
+    quantity: 4,
+    entryPrice: 5000,
+    exitPrice: null,
+    closedAt: undefined,
+    openedAt: '2026-03-04T10:00',
+    fees: 4,
+    multiplier: 5,
+    notes: 'Held for the open',
+  });
+
+  it('a row closing 2 of the 4: that part is finished, the other 2 stay open, nothing counted twice', () => {
+    const r = run([ROWS, 'MES,LONG,2,5000,5010,2026-03-04 10:00,2026-03-04 11:00'], [open]);
+    expect(r.finished.map((t) => [t.id, t.quantity, t.exitPrice, t.closedAt, t.fees, t.notes])).toEqual([
+      [open.id, 2, 5010, '2026-03-04T11:00', 2, 'Held for the open'],
+    ]);
+    expect(r.trades.map((t) => [t.quantity, t.exitPrice, t.openedAt, t.fees, t.multiplier, t.notes])).toEqual([
+      [2, null, '2026-03-04T10:00', 2, 5, 'Held for the open'],
+    ]);
+    expect(r.trades[0].id).not.toBe(open.id);
+    expect([r.likelyDuplicates.length, r.errors]).toEqual([0, []]);
+
+    // the next export has that row again and the one closing the rest
+    const after = apply([open], r);
+    const next = run(
+      [
+        ROWS,
+        'MES,LONG,2,5000,5010,2026-03-04 10:00,2026-03-04 11:00',
+        'MES,LONG,2,5000,5020,2026-03-04 10:00,2026-03-04 12:00',
+      ],
+      after,
+    );
+    expect(next.trades).toEqual([]);
+    expect(next.likelyDuplicates).toHaveLength(1);
+    expect(next.finished.map((t) => [t.id, t.quantity, t.exitPrice])).toEqual([[r.trades[0].id, 2, 5020]]);
+  });
+
+  it('two rows closing it in parts, in one file: each part finished, nothing left open', () => {
+    const r = run(
+      [
+        ROWS,
+        'MES,LONG,1,5000,5010,2026-03-04 10:00,2026-03-04 11:00',
+        'MES,LONG,3,5000,5020,2026-03-04 10:00,2026-03-04 12:00',
+      ],
+      [open],
+    );
+    expect(r.finished.map((t) => [t.id, t.quantity, t.exitPrice])).toEqual([[open.id, 1, 5010]]);
+    expect(r.trades.map((t) => [t.quantity, t.exitPrice, t.notes])).toEqual([[3, 5020, 'Held for the open']]);
+  });
+
+  it('a fills file that repeats the buy of 4 and sells 2: finished in part, the rest the file’s own', () => {
+    const NO_IDS = 'time,symbol,side,qty,price,fee';
+    const r = run([NO_IDS, '2026-03-04 10:00,MES,buy,4,5000,2', '2026-03-04 11:00,MES,sell,2,5010,1'], [open]);
+    expect(r.finished.map((t) => [t.id, t.quantity, t.exitPrice, t.fees])).toEqual([[open.id, 2, 5010, 2]]);
+    expect(r.trades.map((t) => [t.quantity, t.exitPrice, t.fees, t.notes])).toEqual([
+      [2, null, 1, 'Held for the open'],
+    ]);
+    expect(r.likelyDuplicates).toEqual([]);
+  });
+
+  it('asked not to finish trades: both kept, and said', () => {
+    const r = run([ROWS, 'MES,LONG,2,5000,5010,2026-03-04 10:00,2026-03-04 11:00'], [open], { finishOpen: false });
+    expect([r.finished.length, r.trades.length]).toEqual([0, 1]);
+    expect(r.errors).toEqual([
+      '1 trade closes part of a position your journal still has as open. Both are kept: make the open trade smaller once you have checked.',
+    ]);
+  });
+
+  it('said in the preview, as the open trade changes size', () => {
+    const r = run([ROWS, 'MES,LONG,2,5000,5010,2026-03-04 10:00,2026-03-04 11:00'], [open]);
+    expect(r.notices).toContain(
+      '1 trade closes part of a position your journal had open: that part was finished, and the rest stays open as a trade of its own.',
+    );
+  });
+
+  it('two open trades with the same entry, each closed in part: both rests stay, nothing lost', () => {
+    const a = { ...open, quantity: 5 };
+    const b = { ...open, id: 'b', quantity: 5 };
+    const r = run(
+      [
+        ROWS,
+        'MES,LONG,2,5000,5010,2026-03-04 10:00,2026-03-04 11:00',
+        'MES,LONG,2,5000,5012,2026-03-04 10:00,2026-03-04 11:30',
+      ],
+      [a, b],
+    );
+    expect(r.finished.map((t) => [t.id, t.quantity, t.exitPrice])).toEqual([
+      [a.id, 2, 5010],
+      [b.id, 2, 5012],
+    ]);
+    expect(r.trades.map((t) => [t.quantity, t.exitPrice])).toEqual([
+      [3, null],
+      [3, null],
+    ]);
+  });
+
+  it('imported again with the rest listed before the part closed: each row is matched to its own', () => {
+    const first = run([ROWS, 'MES,LONG,2,5000,5010,2026-03-04 10:00,2026-03-04 11:00'], [open]);
+    const after = apply([open], first).reverse();
+    const next = run(
+      [
+        ROWS,
+        'MES,LONG,2,5000,5010,2026-03-04 10:00,2026-03-04 11:00',
+        'MES,LONG,2,5000,5020,2026-03-04 10:00,2026-03-04 12:00',
+      ],
+      after,
+    );
+    expect(next.likelyDuplicates.map((t) => t.exitPrice)).toEqual([5010]);
+    expect(next.finished.map((t) => [t.id, t.exitPrice])).toEqual([[first.trades[0].id, 5020]]);
+  });
+
+  it('the file’s own row for the rest keeps the journal’s fees and point value when the file has none', () => {
+    const xyz = { ...open, symbol: 'XYZ' };
+    const r = run(
+      [ROWS, 'XYZ,LONG,2,5000,5010,2026-03-04 10:00,2026-03-04 11:00', 'XYZ,LONG,2,5000,,2026-03-04 10:00,'],
+      [xyz],
+    );
+    expect(r.finished.map((t) => [t.id, t.quantity, t.fees, t.multiplier])).toEqual([[xyz.id, 2, 2, 5]]);
+    expect(r.trades.map((t) => [t.quantity, t.exitPrice, t.fees, t.multiplier, t.notes])).toEqual([
+      [2, null, 2, 5, 'Held for the open'],
+    ]);
+  });
+
+  it('a larger size, another minute, or both with broker ids: not part of it', () => {
+    for (const row of [
+      'MES,LONG,5,5000,5010,2026-03-04 10:00,2026-03-04 11:00',
+      'MES,LONG,2,5000,5010,2026-03-04 10:01,2026-03-04 11:00',
+    ]) {
+      const r = run([ROWS, row], [open]);
+      expect([r.finished.length, r.trades.length]).toEqual([0, 1]);
+    }
+    const r = run(
+      [`${ROWS},id`, 'MES,LONG,2,5000,5010,2026-03-04 10:00,2026-03-04 11:00,B'],
+      [{ ...open, externalId: 'A' }],
+    );
+    expect([r.finished.length, r.trades.length]).toEqual([0, 1]);
   });
 });

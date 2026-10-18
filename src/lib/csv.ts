@@ -223,10 +223,21 @@ export function importTradesFromCsv(text: string, ctx: ImportOptions): ImportRes
   const done = new Map((read.finished ?? []).map((t) => [t.id, t]));
   const existing = (ctx.existing ?? []).map((t) => done.get(t.id) ?? t);
   const split = splitLikelyDuplicates(all, existing, finishing, new Set(done.keys()), unsaid);
-  const { fresh: trades, likely, closesOpen, finished } = split;
+  const { fresh: trades, likely, closesOpen, closesPart, finished } = split;
   if (closesOpen) {
     errors.push(
       `${closesOpen} ${closesOpen === 1 ? 'trade closes a position' : 'trades close positions'} your journal still has as open. Both are kept: delete the open ${closesOpen === 1 ? 'copy' : 'copies'} once you have checked.`,
+    );
+  }
+  if (closesPart && finishing) {
+    notices.push(
+      closesPart === 1
+        ? '1 trade closes part of a position your journal had open: that part was finished, and the rest stays open as a trade of its own.'
+        : `${closesPart} trades close part of positions your journal had open: those parts were finished, and the rest of each stays open as a trade of its own.`,
+    );
+  } else if (closesPart) {
+    errors.push(
+      `${closesPart} ${closesPart === 1 ? 'trade closes part of a position' : 'trades close part of positions'} your journal still has as open. Both are kept: make the open ${closesPart === 1 ? 'trade' : 'trades'} smaller once you have checked.`,
     );
   }
 
