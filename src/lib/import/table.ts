@@ -263,19 +263,25 @@ function rowsOfTable(rows: string[][]): Table {
   /** the symbol named above each data row's block, if any */
   const labels: (string | null)[] = [];
   let label = headerAt > 0 ? blockLabel(rows[headerAt - 1], header.length) : null;
+  /** the line just read is the title of the block below it */
+  let titled = false;
   let skipped = 0;
 
   for (let i = headerAt + 1; i < rows.length; i++) {
     const row = rows[i];
     const filled = row.filter((c) => c.trim());
-    // the header again (a page break in the report): skip it
+    // the header again (a page break in the report): skip it. Without a title
+    // line above it, the rows below are not known to be the last block's symbol
     if (keyOf(row) === headerKey) {
+      if (!titled) label = null;
+      titled = false;
       skipped++;
       continue;
     }
     // a short line with the header again below it: the title of the next block
     if (rows[i + 1] && keyOf(rows[i + 1]) === headerKey && filled.length <= header.length / 2) {
       label = blockLabel(row, header.length);
+      titled = true;
       continue;
     }
     // a lone title line, or another table's header, means this table has ended

@@ -114,6 +114,24 @@ describe('stage 1: the layout of the file', () => {
     expect(missingSymbol(sheet)).toBeNull();
   });
 
+  it('a block with no line of its own above the header again takes no symbol from the block before', () => {
+    const head = 'Entry Buy/Sell,Entry Price,Entry Time,Exit Price,Exit Time,Fill Size';
+    const csv = [
+      'ACC-1',
+      'ESZ6',
+      head,
+      'B,5000,2026-03-02 10:00,5001,2026-03-02 10:05,1',
+      head,
+      'S,20000,2026-03-02 11:00,19990,2026-03-02 11:05,1',
+    ].join('\n');
+    const sheet = sheetOf(csv);
+    expect(sheet.table.data.map((row) => sheet.cell(row, 'symbol'))).toEqual(['ESZ6', '']);
+    // so the row is skipped and said to have no symbol, not imported as ESZ6
+    const r = readerOf(csv);
+    expect(tradesFromRows(r).trades.map((t) => t.symbol)).toEqual(['ESZ6']);
+    expect(r.findings.noSymbol).toEqual([6]);
+  });
+
   it('a title above the header is not a symbol, nor a block line when the rows name their own', () => {
     const titled = sheetOf('TRADES\nEntry Price,Exit Price,Fill Size\n5000,5001,1');
     expect(titled.table.grouped).toBeUndefined();
