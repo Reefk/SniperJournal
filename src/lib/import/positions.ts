@@ -362,6 +362,8 @@ export function tradesFromFills(r: Reader, journal?: readonly Trade[]): RowsRead
   let open = 0;
   let orphans = 0;
   let overlapping = 0;
+  /** symbols whose first fill could close more than one of the journal's open trades */
+  const unsure = new Set<string>();
   for (const s of summaries) {
     if (!read.has(s.firstLine)) continue;
     const from = s.carried ? byId.get(s.carried) : undefined;
@@ -375,6 +377,7 @@ export function tradesFromFills(r: Reader, journal?: readonly Trade[]): RowsRead
       continue;
     }
     if (s.ids.some((id) => r.existingIds.has(id))) overlapping++;
+    if (s.unsure) unsure.add((read.get(s.firstLine) as FillRow).symbol);
     if (s.orphan) orphans++;
     if (!s.closed) open++;
     const trade = assemblePosition(s, read, r, net, from);
@@ -424,6 +427,11 @@ export function tradesFromFills(r: Reader, journal?: readonly Trade[]): RowsRead
   if (orphans) {
     errors.push(
       `${orphans} ${orphans === 1 ? 'trade closes a position' : 'trades close positions'} opened before this file starts, so the entry is unknown and ${orphans === 1 ? 'it is' : 'they are'} marked needs details.`,
+    );
+  }
+  if (unsure.size) {
+    errors.push(
+      `${[...unsure].join(', ')}: a fill could close more than one trade your journal has open, so none was finished and the fill started a new position. Check ${unsure.size === 1 ? 'it' : 'them'}: finish the right trade by hand, then delete the new one.`,
     );
   }
   if (overlapping) {

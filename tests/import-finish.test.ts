@@ -372,9 +372,33 @@ describe('what is never continued', () => {
     const sell = ['2026-03-05 10:00,AAPL,sell,1,110,0'];
     const two = run(NO_IDS, sell, [stale(), stale({ openedAt: '2026-03-03T10:00' })]);
     expect(two.finished).toEqual([]);
+    // and said, as the sell comes in as a new position
+    expect(two.trades.map((t) => [t.side, t.closedAt ?? null])).toEqual([['SHORT', null]]);
+    expect(two.errors).toEqual([
+      'AAPL: a fill could close more than one trade your journal has open, so none was finished and the fill started a new position. Check it: finish the right trade by hand, then delete the new one.',
+    ]);
     const later = run(NO_IDS, sell, [stale({ openedAt: '2026-03-05T11:00' })]);
     expect(later.finished).toEqual([]);
     expect(later.trades.map((t) => t.side)).toEqual(['SHORT']);
+    expect(later.errors).toEqual([]);
+  });
+
+  it('the same for a fill the file says closes a position, and said once per symbol', () => {
+    const head = `${NO_IDS},effect`;
+    const mes = (openedAt: string) => stale({ symbol: 'MES', openedAt, entryPrice: 5000, quantity: 1, multiplier: 5 });
+    const r = run(
+      head,
+      [
+        '2026-03-05 10:00,MES,sell,2,5010,0,close',
+        '2026-03-05 10:00,AAPL,sell,1,110,0,',
+        '2026-03-05 11:00,AAPL,buy,1,108,0,',
+      ],
+      [mes('2026-03-02T10:00'), mes('2026-03-03T10:00'), stale(), stale({ openedAt: '2026-03-03T10:00' })],
+    );
+    expect(r.finished).toEqual([]);
+    expect(r.errors).toContain(
+      'MES, AAPL: a fill could close more than one trade your journal has open, so none was finished and the fill started a new position. Check them: finish the right trade by hand, then delete the new one.',
+    );
   });
 
   it('test data, another account, or a trade with no entry price', () => {

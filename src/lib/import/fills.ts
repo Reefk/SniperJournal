@@ -58,6 +58,8 @@ export interface Position {
   exits: Part[];
   /** closes a position this file never opened, so its entry is unknown */
   orphan: boolean;
+  /** its first fill could continue more than one trade the journal has open, so it continues none */
+  unsure?: boolean;
 }
 
 const EPS = 1e-9;
@@ -137,15 +139,19 @@ const earlier = (a: Moment, b: Moment) =>
  * rest of the same position (`after`, the entry of the one closed): the same
  * side, opened at the same time, as an earlier import's open rest is. Any
  * other open trade is not finished by a later fill.
+ *
+ * `entry` is the chosen trade's entry, or null; `unsure` says the fill could
+ * continue more than one open trade, so it continues none. Several closed
+ * ones that fit (a file imported again) choose none either, and are not said.
  */
 function carryFor(
   carries: readonly Carry[] | undefined,
   fill: Fill,
   used: ReadonlySet<string>,
   after?: Fill,
-): Fill | null {
+): { entry: Fill | null; unsure: boolean } {
   const at = fill.time;
-  if (!carries || !at || fill.effect === 'open') return null;
+  if (!carries || !at || fill.effect === 'open') return { entry: null, unsure: false };
   const fits = carries.filter(
     (c) =>
       !used.has(c.fill.carried as string) &&
@@ -157,7 +163,7 @@ function carryFor(
   );
   const closed = fits.filter((c) => c.closedAt);
   const pick = closed.length ? closed : fits;
-  return pick.length === 1 ? pick[0].fill : null;
+  return { entry: pick.length === 1 ? pick[0].fill : null, unsure: !closed.length && fits.length > 1 };
 }
 
 /**
@@ -187,11 +193,14 @@ function byPosition(fills: Fill[], newestFirst: boolean, carries?: ReadonlyMap<s
 
     while (left > EPS) {
       let state = open.get(fill.key);
+      let unsure = false;
 
       // the file begins in the middle of a position the journal has, or has
       // closed one of the journal's and goes on into the next
       if (!state && carries && !ended.has(fill.key)) {
-        const carried = carryFor(carries.get(fill.key), fill, used, closedEntry.get(fill.key));
+        const carry = carryFor(carries.get(fill.key), fill, used, closedEntry.get(fill.key));
+        const carried = carry.entry;
+        unsure = carry.unsure;
         if (carried) {
           used.add(carried.carried as string);
           state = {
@@ -219,6 +228,7 @@ function byPosition(fills: Fill[], newestFirst: boolean, carries?: ReadonlyMap<s
             entries: [],
             exits: [part(fill, left, !closing.length)],
             orphan: true,
+            ...(unsure ? { unsure } : {}),
           });
         } else {
           open.set(fill.key, {
@@ -228,6 +238,7 @@ function byPosition(fills: Fill[], newestFirst: boolean, carries?: ReadonlyMap<s
               entries: [part(fill, left, false)],
               exits: [],
               orphan: false,
+              ...(unsure ? { unsure } : {}),
             },
             signed: sign * left,
           });
@@ -307,6 +318,8 @@ export interface Summary {
   orphan: boolean;
   /** the journal trade carried in as its entry, by id */
   carried?: string;
+  /** see Position */
+  unsure?: boolean;
   /** the first of its fills in the file */
   firstLine: number;
   /** file lines of every fill in it */
@@ -356,6 +369,7 @@ export function summarise(p: Position): Summary[] {
     fillCount: fills,
     orphan: p.orphan,
     ...(carried ? { carried } : {}),
+    ...(p.unsure ? { unsure: true } : {}),
     firstLine: inFile[0].fill.line,
     lines: [...new Set(inFile.map((x) => x.fill.line))],
     entryPrices: p.entries.map((x) => x.fill.price),
