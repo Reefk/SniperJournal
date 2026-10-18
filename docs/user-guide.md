@@ -191,6 +191,7 @@ overlaps yesterday's is safe:
 an export ends with a position still open, it comes in as an open trade. The
 export that closes it then finishes that trade: the exit, the close time and
 the fees come from the file, and your notes, setup, tags, stop and chart stay.
+A file with no fees, or no point value, keeps the ones the trade has.
 This works whether the new file starts with the closing fills or repeats the
 opening one too. A file that closes only part of the position finishes the
 trade for that part; the rest stays open as a trade of its own, with the same
@@ -261,11 +262,14 @@ can check it.
 
 **Fees** come from every fee column in the file, added up. A commission
 written per contract, such as Rithmic's `Commission Fill Rate`, is multiplied
-by the size; Thinkorswim's fees, which its statement keeps in the Cash Balance
-section, are matched to each execution by time. Some exports carry no fees at
-all (Tradovate's, and TradingView's paper trading); the preview then says so,
-and those trades' P&L is before commissions until you add them (select the
-trades, then **Add details** → **Fees per trade**).
+by the size; a file with no fee column but a P&L both before and after fees
+has the difference as its fees. Thinkorswim's fees, which its statement keeps
+in the Cash Balance section, are matched to each execution by time (a spread's
+are shared between its legs by their sizes), and money back on a fee line
+takes from them. Some exports carry no fees at all (Tradovate's), or write
+every fee as 0 (TradingView's paper trading); the preview then says so, and
+those trades' P&L is before commissions until you add them (select the trades,
+then **Add details** → **Fees per trade**).
 
 A Rithmic trade performance report lists each contract above its own block of
 trades; each block's contract becomes the symbol of its trades. An export that

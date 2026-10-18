@@ -42,6 +42,12 @@ export interface Findings {
   inferred: Map<string, string>;
   /** units of fees that could not be added to the prices */
   foreignFees: Set<string>;
+  /** some row read writes a fee or a fee per contract, 0 included */
+  feesWritten: boolean;
+  /** file lines with a fee per contract but no size to multiply it by, so no fee */
+  rateNoSize: number[];
+  /** file lines whose P&L after fees is more than the one before them, so no fee was worked out */
+  netAboveGross: number[];
   /** times read with a time zone, and converted to this device's */
   zoned: number;
   /** times of day read with no time zone, and kept as written */
@@ -80,9 +86,9 @@ export interface Reader {
   /**
    * every fee column added up, and a fee per contract times the size, once
    * for each of `sides` (a fill is one, a closed trade two); null when none
-   * has a value
+   * has a value. `line` is the row's, noted when a rate has no size.
    */
-  feeOf(row: string[], sides?: number): number | null;
+  feeOf(row: string[], sides?: number, line?: number): number | null;
   /** the symbol, with an option's expiry, strike and call/put when they come in their own columns */
   symbolOf(row: string[]): string;
   setupIdFor(name: string): string | undefined;
@@ -107,6 +113,9 @@ export function createReader(sheet: Sheet, target: ImportTarget): Reader {
     badMultipliers: { rows: [], value: '' },
     inferred: new Map(),
     foreignFees: new Set(),
+    feesWritten: false,
+    rateNoSize: [],
+    netAboveGross: [],
     zoned: 0,
     unzoned: 0,
     duplicates: 0,
@@ -157,11 +166,12 @@ export function createReader(sheet: Sheet, target: ImportTarget): Reader {
       if (unit) valueUnits.add(unit);
     }
   }
-  const feeOf = (row: string[], sides = 1): number | null => {
+  const feeOf = (row: string[], sides = 1, line?: number): number | null => {
     let total: number | null = null;
     for (const c of feeColumns) {
       const n = parseNumber(row[c] ?? '');
       if (!n) continue;
+      findings.feesWritten = true;
       if (n.unit && valueUnits.size && !valueUnits.has(n.unit)) {
         findings.foreignFees.add(n.unit);
         continue;
@@ -171,7 +181,9 @@ export function createReader(sheet: Sheet, target: ImportTarget): Reader {
     // a rate for each contract (Rithmic's Commission Fill Rate)
     const rate = parseMoney(cell(row, 'fee_rate'));
     const size = Math.abs(parseMoney(cell(row, 'quantity')) ?? 0);
+    if (rate != null) findings.feesWritten = true;
     if (rate && size) total = (total ?? 0) + Math.round(Math.abs(rate) * size * sides * 1e8) / 1e8;
+    else if (rate && line != null) findings.rateNoSize.push(line);
     return total;
   };
 

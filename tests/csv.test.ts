@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { fileTooLarge, importTradesFromCsv, parseCsv, sheetTooLarge, tradesToCsv } from '@/lib/csv';
+import { NO_FEES, ZERO_FEES } from '@/lib/import/report';
 import { IMPORT_LIMIT } from '@/lib/import/size';
 import { grossPnl, isClosed, netPnl } from '@/lib/trade-math';
 import type { Account, Setup, Trade } from '@/lib/types';
@@ -357,12 +358,64 @@ describe('import: duplicates and partial fills', () => {
   });
 
   it('no fee in the file is said, unless its P&L is already after fees; one fee is enough to say nothing', () => {
-    const noFees = (csv: string) =>
-      importTradesFromCsv(csv, ctx()).notices.some((n) => n.startsWith('There are no fees in this file'));
-    expect(noFees('symbol,side,qty,entry,exit\nAAPL,long,1,100,101')).toBe(true);
-    expect(noFees('symbol,side,qty,entry,exit,fee\nAAPL,long,1,100,101,0\nMSFT,long,1,50,51,')).toBe(true);
-    expect(noFees('symbol,side,qty,entry,exit,fee\nAAPL,long,1,100,101,0\nMSFT,long,1,50,51,1.2')).toBe(false);
-    expect(noFees('symbol,side,qty,entry,exit,net p&l\nAAPL,long,1,100,101,0.8')).toBe(false);
+    const feeNotice = (csv: string) =>
+      importTradesFromCsv(csv, ctx()).notices.find((n) => n === NO_FEES || n === ZERO_FEES) ?? null;
+    expect(feeNotice('symbol,side,qty,entry,exit\nAAPL,long,1,100,101')).toBe(NO_FEES);
+    expect(feeNotice('symbol,side,qty,entry,exit,fee\nAAPL,long,1,100,101,\nMSFT,long,1,50,51,')).toBe(NO_FEES);
+    // a file that writes its fees, all 0, is not said to have none
+    expect(feeNotice('symbol,side,qty,entry,exit,fee\nAAPL,long,1,100,101,0\nMSFT,long,1,50,51,')).toBe(ZERO_FEES);
+    expect(feeNotice('symbol,side,qty,entry,exit,fee\nAAPL,long,1,100,101,0\nMSFT,long,1,50,51,1.2')).toBeNull();
+    expect(feeNotice('symbol,side,qty,entry,exit,net p&l\nAAPL,long,1,100,101,0.8')).toBeNull();
+  });
+
+  it('a P&L before fees and one after them, with no fee column: the fees are the difference', () => {
+    const r = importTradesFromCsv(
+      'symbol,side,qty,entry,exit,entry time,exit time,pnl,net pnl\nAAPL,long,10,100,110,2026-03-02 10:00,2026-03-02 11:00,100,95',
+      ctx(),
+    );
+    expect(r.trades.map((t) => [t.fees, grossPnl(t), netPnl(t)])).toEqual([[5, 100, 95]]);
+    expect(r.notices).not.toContain(NO_FEES);
+    // the same from a file with one row per fill, the P&L on the closing one
+    const fills = importTradesFromCsv(
+      'time,symbol,side,qty,price,pnl,net pnl\n2026-03-02 10:00,AAPL,buy,10,100,,\n2026-03-02 11:00,AAPL,sell,10,110,100,95',
+      ctx(),
+    );
+    expect(fills.trades.map((t) => [t.fees, netPnl(t)])).toEqual([[5, 95]]);
+    // at a point value of 5: 10 points on 1 MES is 50 before fees
+    const mes = importTradesFromCsv(
+      'symbol,side,qty,entry,exit,entry time,exit time,pnl,net pnl\nMESZ6,long,1,5000,5010,2026-03-02 10:00,2026-03-02 11:00,50,47.5',
+      ctx(),
+    );
+    expect(mes.trades.map((t) => [t.fees, t.multiplier, netPnl(t)])).toEqual([[2.5, 5, 47.5]]);
+  });
+
+  it('a P&L after fees larger than the one before them gives no fee, and says so', () => {
+    const r = importTradesFromCsv(
+      'symbol,side,qty,entry,exit,entry time,exit time,pnl,net pnl\nAAPL,long,10,100,110,2026-03-02 10:00,2026-03-02 11:00,100,105',
+      ctx(),
+    );
+    expect(r.trades.map((t) => t.fees)).toEqual([0]);
+    expect(r.errors).toContain(
+      'Row 2: the P&L after fees is more than the one before them, so no fee was worked out from the two. Check its fees.',
+    );
+  });
+
+  it('fees left out for a reason already said are not said to be missing too', () => {
+    const r = importTradesFromCsv('symbol,side,qty,entry,exit,fee\nBTC,long,1,60000 USDT,60100 USDT,0.0003BNB', ctx());
+    expect(r.errors).toContain('Fees paid in BNB were left out: they are not in the currency of the prices.');
+    expect(r.notices.find((n) => n === NO_FEES || n === ZERO_FEES)).toBeUndefined();
+  });
+
+  it('a fee per contract with no size to multiply it by is said, not left at 0 without a word', () => {
+    const r = importTradesFromCsv(
+      'symbol,side,qty,entry,exit,entry time,exit time,commission fill rate\nMES,long,,5000,5010,2026-03-02 10:00,2026-03-02 11:00,0.62\nMES,long,2,5000,5010,2026-03-02 12:00,2026-03-02 13:00,0.62',
+      ctx(),
+    );
+    expect(r.trades.map((t) => t.fees)).toEqual([0, 2.48]);
+    expect(r.errors).toContain(
+      'Row 2: a fee per contract but no size to multiply it by, so no fee was added. Add it with the size.',
+    );
+    expect(r.notices.find((n) => n === NO_FEES || n === ZERO_FEES)).toBeUndefined();
   });
 
   it('a fee per contract is the rate times the size, on each side of a closed trade', () => {

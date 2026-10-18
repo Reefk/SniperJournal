@@ -5,7 +5,7 @@ import { detectLayout, missingSymbol, type ImportLayout, type LayoutChoices } fr
 import { createReader, type ImportTarget } from './import/reader';
 import { combinePartials, tradesFromRows } from './import/rows';
 import { tradesFromFills } from './import/positions';
-import { NO_FEES, collectMessages } from './import/report';
+import { NO_FEES, ZERO_FEES, collectMessages } from './import/report';
 import { splitLikelyDuplicates } from './import/likely';
 import { recognisePlatform } from './import/platforms';
 import { formulaSafe } from './import/values';
@@ -207,11 +207,15 @@ export function importTradesFromCsv(text: string, ctx: ImportOptions): ImportRes
   const journal = finishing ? (ctx.existing ?? []) : undefined;
   const read = sheet.rowKind === 'fills' ? tradesFromFills(reader, journal) : tradesFromRows(reader, journal);
   const { errors, notices } = collectMessages(reader.findings, sheet.table, read, sheet.layout);
-  // not a fee anywhere: unless the file's P&L is after fees, it is before them
-  // (a statement whose fee lines matched no execution has fees, said already)
+  // not a fee anywhere: unless a P&L after fees says what they were, the P&L
+  // is before them. Fees the file has but that were left out are said already
+  // (fee lines that matched no execution, another currency, a rate with no
+  // size); fees the file writes, all 0, are said as such.
   const made = [...read.trades, ...(read.finished ?? [])];
-  const netOnly = sheet.has('net_pnl') && !sheet.has('pnl') && !sheet.has('gross_pnl');
-  if (made.length && !netOnly && !sheet.table.cashFeesUnmatched && made.every((t) => !t.fees)) notices.push(NO_FEES);
+  const { feesWritten, rateNoSize, foreignFees } = reader.findings;
+  const feesLeftOut = Boolean(sheet.table.cashFeesUnmatched) || foreignFees.size > 0 || rateNoSize.length > 0;
+  if (made.length && !sheet.has('net_pnl') && !feesLeftOut && made.every((t) => !t.fees))
+    notices.push(feesWritten ? ZERO_FEES : NO_FEES);
   const {
     trades: all,
     combined,

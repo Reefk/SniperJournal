@@ -13,6 +13,10 @@ import type { Table } from './table';
 export const NO_FEES =
   'There are no fees in this file, so the trades come in without them, and their P&L is before commissions. To add them, select the trades on the Trades page, then Add details > Fees per trade.';
 
+/** said instead when the file writes its fees, all 0 (TradingView's paper trading) */
+export const ZERO_FEES =
+  'Every fee in this file is 0, so the trades come in with none. If there were commissions, add them: select the trades on the Trades page, then Add details > Fees per trade.';
+
 /** "Row 4" or "Row 4 and 6 more" */
 export const rowsLabel = (rows: number[]) =>
   rows.length === 1 ? `Row ${rows[0]}` : `Row ${rows[0]} and ${rows.length - 1} more`;
@@ -84,6 +88,22 @@ export function collectMessages(
       `Fees paid in ${[...findings.foreignFees].join(', ')} were left out: they are not in the currency of the prices.`,
     );
   }
+  if (findings.rateNoSize.length)
+    errors.push(
+      rowsNote(
+        findings.rateNoSize,
+        'a fee per contract but no size to multiply it by, so no fee was added. Add it with the size.',
+        'a fee per contract but no size to multiply it by, so no fees were added. Add them with the sizes.',
+      ),
+    );
+  if (findings.netAboveGross.length)
+    errors.push(
+      rowsNote(
+        findings.netAboveGross,
+        'the P&L after fees is more than the one before them, so no fee was worked out from the two. Check its fees.',
+        'the P&L after fees is more than the one before them, so no fees were worked out from the two. Check their fees.',
+      ),
+    );
   for (const [symbol, how] of findings.inferred) {
     notices.push(`${symbol}: one point taken as worth ${how}. Check it if that is not right.`);
   }

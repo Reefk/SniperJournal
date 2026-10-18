@@ -85,6 +85,15 @@ export function parseFillRow(
   }
   const accountId = r.accountIdFor(r.textCell(row, 'account'));
   const reported = parseMoney(cell(row, net ? 'net_pnl' : has('gross_pnl') ? 'gross_pnl' : 'pnl'));
+  // no fee column, but a P&L before fees and one after them: the fees are the
+  // difference, unless the one after is the larger (then they aren't those two)
+  const before = net ? null : reported;
+  const after = parseMoney(cell(row, 'net_pnl'));
+  let fees = r.feeOf(row, 1, line);
+  if (fees == null && before != null && after != null) {
+    if (before >= after) fees = Math.round((before - after) * 1e8) / 1e8;
+    else r.findings.netAboveGross.push(line);
+  }
   return {
     fill: {
       line,
@@ -93,7 +102,7 @@ export function parseFillRow(
       quantity,
       price,
       time: r.moment(row, 'time', 'date') ?? r.moment(row, 'opened_at', 'opened_date'),
-      fees: r.feeOf(row) ?? 0,
+      fees: fees ?? 0,
       pnl: reported,
       id,
       effect: action.effect,
@@ -137,6 +146,8 @@ export function assemblePosition(
         return fill ? r.multiplierCell(fill.row, l) : null;
       })
       .find((m) => m != null) ?? null;
+  /** the file names the point value: a multiplier column, or the amount against the price */
+  let given = multiplier != null;
   // a reported P&L that fits the prices says it best: TradingView's position
   // value leaves the point value out (2 MNQ at 21000 is "42000")
   const fit =
@@ -148,6 +159,7 @@ export function assemblePosition(
     const worth = [...new Set(rows.map(fillWorth))];
     if (worth.length === 1 && worth[0] != null) {
       multiplier = worth[0];
+      given = true;
       if (multiplier !== 1) r.findings.inferred.set(first.symbol, `${multiplier} (from the amount against the price)`);
     }
   }
@@ -157,6 +169,10 @@ export function assemblePosition(
   multiplier ??= from?.multiplier ?? r.knownMultiplier(first.symbol, first.row);
   const unsaid: Unsaid = { multiplier: multiplier == null };
   multiplier ??= 1;
+  // a P&L with no point value named beside it: the journal's trade it may
+  // finish can tell whether it is before fees or after them (finishOpen)
+  if (!given && s.closed && !s.orphan && s.reportedPnl != null && s.move != null && s.move !== 0)
+    unsaid.reported = { pnl: s.reportedPnl, move: s.move };
 
   // averages rounded to the precision of the prices, and the exact P&L
   // kept as written when the rounded averages cannot reproduce it
@@ -168,10 +184,9 @@ export function assemblePosition(
     if (s.reportedPnl != null) manualPnl = net ? s.reportedPnl + s.fees : s.reportedPnl;
   } else if (manualPnl == null && s.closed && s.move != null && entryPrice != null && exitPrice != null) {
     const exact = s.move * multiplier;
-    if (Math.abs((exitPrice - entryPrice) * s.quantity * direction * multiplier - exact) >= 0.005) {
-      manualPnl = exact;
-      unsaid.pnlAtOne = unsaid.multiplier;
-    }
+    if (Math.abs((exitPrice - entryPrice) * s.quantity * direction * multiplier - exact) >= 0.005) manualPnl = exact;
+    // the P&L follows from the prices alone, at whatever point value finishing keeps (finishOpen)
+    if (unsaid.multiplier) unsaid.move = s.move;
   }
 
   const openedAt = s.openedAt?.value ?? '';
@@ -297,8 +312,11 @@ const sameClose = (s: Summary, t: Trade) =>
 export function tradesFromFills(r: Reader, journal?: readonly Trade[]): RowsRead {
   const { sheet, findings } = r;
   const net = !sheet.has('gross_pnl') && !sheet.has('pnl') && sheet.has('net_pnl');
-  // no fee anywhere in the file: no fee column, no rate, and no P&L the fees are already taken from
-  const feesUnsaid = !sheet.has('fees') && !sheet.has('fee_rate') && !net;
+  // no fee anywhere in the file: no fee column, no rate, and no P&L after fees
+  // (one alone has them taken off already; beside one before them, it gives them)
+  const feesUnsaid = !sheet.has('fees') && !sheet.has('fee_rate') && !sheet.has('net_pnl');
+  // a P&L that says neither, beside no fees: maybe before them, maybe after
+  const unlabelled = feesUnsaid && sheet.has('pnl') && !sheet.has('gross_pnl');
   const unsaid = new Map<string, Unsaid>();
   const cashSigned = cashSignedPrices(r);
   const fills: Fill[] = [];
@@ -392,7 +410,9 @@ export function tradesFromFills(r: Reader, journal?: readonly Trade[]): RowsRead
     const { trade } = position;
     if (!from) {
       trades.push(trade);
-      const left: Unsaid = { ...position.unsaid, fees: feesUnsaid };
+      // only a P&L that doesn't say whether it is after fees, beside none, is one to tell
+      const { reported, ...rest } = position.unsaid;
+      const left: Unsaid = { ...rest, fees: feesUnsaid, ...(unlabelled && reported ? { reported } : {}) };
       if (left.fees || left.multiplier) unsaid.set(trade.id, left);
     } else if (s.closed) finished.push(finishOpen(from, trade, (from.fillCount ?? 1) + s.fillCount));
     else trades.push(openRest(from, trade));

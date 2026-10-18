@@ -31,6 +31,8 @@ const read = (file: string) =>
 const cents = (v: number) => Math.round(v * 100) / 100;
 
 const NO_FEES = /^There are no fees in this file/;
+/** TradingView's paper trading writes a commission of 0 on every order */
+const ZERO_FEES = /^Every fee in this file is 0/;
 const FUTURES = { gross: 95, fees: 7.44, net: 87.56 };
 const FUTURES_NO_FEES = { gross: 95, fees: 0, net: 95 };
 const STOCKS = { gross: 252.5, fees: 4, net: 248.5 };
@@ -57,7 +59,7 @@ const SAMPLES: Array<[string, string, number, { gross: number; fees: number; net
     /^Each block's symbol/,
   ],
   ['topstepx_trades.csv', 'TopstepX, trades', 4, FUTURES],
-  ['tradingview_paper_history.csv', 'TradingView, order history', 3, FUTURES_NO_FEES, NO_FEES],
+  ['tradingview_paper_history.csv', 'TradingView, order history', 3, FUTURES_NO_FEES, ZERO_FEES],
   ['metatrader5_positions.csv', 'MetaTrader 4 and 5, positions', 3, FOREX],
   ['metatrader5_deals.csv', 'MetaTrader 4 and 5, deals', 3, FOREX],
   ['metatrader4_account_history.csv', 'MetaTrader 4 and 5, account history', 3, FOREX],
@@ -86,7 +88,7 @@ describe('sample exports of eight platforms', () => {
     }).toEqual(totals);
     if (notice) expect(r.notices.some((n) => notice.test(n))).toBe(true);
     // a file with fees never says it has none
-    if (totals.fees) expect(r.notices.some((n) => NO_FEES.test(n))).toBe(false);
+    if (totals.fees) expect(r.notices.some((n) => NO_FEES.test(n) || ZERO_FEES.test(n))).toBe(false);
   });
 
   it('no column of these files is read by the words of its name', () => {

@@ -30,6 +30,8 @@ export interface TradeRow {
   multiplier: number | null;
   /** a reported P&L that the prices can't reproduce, kept as written */
   manualPnl: number | null;
+  /** a P&L that doesn't say whether it is before fees or after them, and the price move it came from */
+  reported: { pnl: number; move: number } | null;
   /** the broker's ids of the buy and the sell fill, on a paired row; '' when not given */
   buyFill: string;
   sellFill: string;
@@ -87,23 +89,34 @@ export function parseTradeRow(row: string[], line: number, r: Reader): TradeRow 
   const unreadClose = unread(closedParts, ['closed_at', ...closingFill, 'closed_date']);
 
   // a fee per contract is paid on the way in and again on the way out
-  const fees = r.feeOf(row, exitPrice != null ? 2 : 1);
+  let fees = r.feeOf(row, exitPrice != null ? 2 : 1, line);
   // The P&L before commissions. A net column has them added back, so they
   // are not charged a second time through the fees column.
   const gross = parseMoney(cell(row, 'gross_pnl')) ?? parseMoney(cell(row, 'pnl'));
   const net = parseMoney(cell(row, 'net_pnl'));
+  // no fee column, but the P&L before fees and after them: the fees are the
+  // difference, unless the one after is the larger (then they aren't those two)
+  if (fees == null && gross != null && net != null) {
+    if (gross >= net) fees = Math.round((gross - net) * 1e8) / 1e8;
+    else r.findings.netAboveGross.push(line);
+  }
+  const direction = side === 'SHORT' ? -1 : 1;
+  const move =
+    entryPrice != null && exitPrice != null && quantity != null && quantity > 0
+      ? (exitPrice - entryPrice) * quantity * direction
+      : null;
 
   // ---- contract multiplier -------------------------------------------
   // When the file reports a P&L we can work out what one point is worth,
   // which keeps the prices and the P&L consistent if either is edited later.
-  let multiplier = r.multiplierCell(row, line);
+  const given = r.multiplierCell(row, line);
+  let multiplier = given;
+  // a P&L that says neither before nor after fees, and no point value beside
+  // it: the journal's trade it may finish can tell which (finishOpen)
+  const unlabelled = r.sheet.has('pnl') && !r.sheet.has('gross_pnl') && net == null && given == null;
+  const reported = unlabelled && gross != null && move != null && move !== 0 ? { pnl: gross, move } : null;
   let manualPnl: number | null = null;
   if (gross != null || net != null) {
-    const direction = side === 'SHORT' ? -1 : 1;
-    const move =
-      entryPrice != null && exitPrice != null && quantity != null && quantity > 0
-        ? (exitPrice - entryPrice) * quantity * direction
-        : null;
     if (move == null || multiplier == null) {
       const expected = r.expectedMultiplier(symbol, row) ?? 1;
       const fit = fitReported((gross ?? net) as number, move, fees ?? 0, gross == null, expected);
@@ -129,6 +142,7 @@ export function parseTradeRow(row: string[], line: number, r: Reader): TradeRow 
     fees,
     multiplier,
     manualPnl,
+    reported,
     buyFill,
     sellFill,
     externalId,
@@ -180,10 +194,14 @@ export function tradesFromRows(r: Reader, journal?: readonly Trade[]): RowsRead 
   const finished: Trade[] = [];
   const openingFill = new Map<string, string>();
   const unsaid = new Map<string, Unsaid>();
-  // no fee anywhere in the file: no fee column, no rate, and no P&L the fees are already taken from
-  const netOnly = sheet.has('net_pnl') && !sheet.has('pnl') && !sheet.has('gross_pnl');
-  const feesUnsaid = !sheet.has('fees') && !sheet.has('fee_rate') && !netOnly;
-  const unsaidOf = (read: TradeRow): Unsaid => ({ fees: feesUnsaid, multiplier: read.multiplier == null });
+  // no fee anywhere in the file: no fee column, no rate, and no P&L after fees
+  // (one alone has them taken off already; beside one before them, it gives them)
+  const feesUnsaid = !sheet.has('fees') && !sheet.has('fee_rate') && !sheet.has('net_pnl');
+  const unsaidOf = (read: TradeRow): Unsaid => ({
+    fees: feesUnsaid,
+    multiplier: read.multiplier == null,
+    ...(feesUnsaid && read.reported ? { reported: read.reported } : {}),
+  });
   const seenIds = new Set(r.existingIds);
   /** the journal's open trades, by the broker's id, until a row finishes one */
   const openById = new Map(
@@ -319,8 +337,13 @@ export function combinePartials(
       const one = mergeTrades(group);
       const fees = group.every((t) => left.get(t.id)?.fees);
       const multiplier = group.every((t) => left.get(t.id)?.multiplier);
+      // the P&L the rows reported, added up, when every row did
+      const parts = group.map((t) => left.get(t.id)?.reported);
+      const reported = parts.every((p): p is NonNullable<Unsaid['reported']> => p != null)
+        ? parts.reduce((a, p) => ({ pnl: a.pnl + p.pnl, move: a.move + p.move }), { pnl: 0, move: 0 })
+        : undefined;
       for (const t of group) left.delete(t.id);
-      if (fees || multiplier) left.set(one.id, { fees, multiplier });
+      if (fees || multiplier) left.set(one.id, { fees, multiplier, ...(reported ? { reported } : {}) });
       merged.push(one);
       combined += group.length;
     } else {
