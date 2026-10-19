@@ -92,11 +92,13 @@ Linux (in Chrome) for every push to `main` and every pull request:
 published. Lint warnings don't fail it, errors do. The warnings left today are
 known (see the comment in `eslint.config.mjs`); don't add new ones. A file
 Prettier would change fails it too: `npm run format -- .` fixes them all.
-A Windows job of its own also builds the Windows app (`npm run build:desktop`):
-Smart App Control on the developer's PC can block the unsigned programs a Rust
-build runs. `npm run e2e:desktop` and `npm run e2e:android` are still run by
-hand (on GitHub's runner, WebView2 doesn't open the DevTools port the Windows
-app's journey needs).
+A Windows job of its own also builds the Windows app (`npm run build:desktop`)
+and runs `npm run e2e:desktop` on it: Smart App Control on the developer's PC
+can block the unsigned programs a Rust build runs. The runner's WebView2
+ignores `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS`, so the journey also asks the
+app for its DevTools port through `SNIPER_JOURNAL_DEVTOOLS_PORT`, which the
+app takes only together with a test folder (`SNIPER_JOURNAL_DIR`), and only to
+open that port on this computer. `npm run e2e:android` is still run by hand.
 
 Every file was formatted at once in one commit, listed in
 `.git-blame-ignore-revs` so that GitHub's blame skips it. To skip it locally

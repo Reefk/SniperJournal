@@ -258,13 +258,27 @@ pub fn run() {
       let root = folder::locate(app.path().document_dir().ok()).map_err(|e| format!("The journal folder: {e}"))?;
       app.manage(Folder { root });
 
-      let config = app
+      let mut config = app
         .config()
         .app
         .windows
         .first()
         .cloned()
         .ok_or("no window in tauri.conf.json")?;
+      // The end-to-end test (tests/e2e/windows-app-journey.mjs) drives the
+      // window over WebView2's DevTools port, which it asks for through
+      // WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS. Where WebView2 doesn't take
+      // that (GitHub's Windows runner), the test names the port here instead.
+      // The port only ever listens on this computer, and only when asked for
+      // alongside a journal folder of the test's own (SNIPER_JOURNAL_DIR).
+      let port = std::env::var("SNIPER_JOURNAL_DEVTOOLS_PORT")
+        .ok()
+        .and_then(|p| p.parse::<u16>().ok())
+        .filter(|p| *p >= 1024);
+      if let Some(port) = port.filter(|_| std::env::var_os("SNIPER_JOURNAL_DIR").is_some()) {
+        let args = config.additional_browser_args.take().unwrap_or_default();
+        config.additional_browser_args = Some(format!("{args} --remote-debugging-port={port}").trim().to_string());
+      }
       let nav = app.handle().clone();
       let popup = app.handle().clone();
       WebviewWindowBuilder::from_config(app.handle(), &config)?

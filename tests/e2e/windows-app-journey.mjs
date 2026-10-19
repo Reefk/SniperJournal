@@ -58,6 +58,9 @@ const env = (debugPort) => ({
   SNIPER_JOURNAL_DIR: folder,
   WEBVIEW2_USER_DATA_FOLDER: join(work, 'webview'),
   WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `${shippedArgs} --remote-debugging-port=${debugPort}`.trim(),
+  // the same port, asked of the app itself: GitHub's Windows runner ignores
+  // the WebView2 variable above (see src-tauri/src/lib.rs, setup)
+  SNIPER_JOURNAL_DEVTOOLS_PORT: String(debugPort),
 });
 let app;
 /** what the page logged: CSP refusals, errors */

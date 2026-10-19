@@ -1,7 +1,8 @@
 # Checks every push to main and every pull request: types, lint, formatting,
 # tests, both builds (the desktop server and the static export the Android
-# app is made from), the desktop E2E journey, and the Windows app built. It
-# only reads the code. Nothing is signed, published or uploaded.
+# app is made from), the desktop E2E journey, and the Windows app built and
+# driven through its own journey. It only reads the code. Nothing is signed,
+# published or uploaded.
 name: CI
 
 on:
@@ -56,13 +57,13 @@ jobs:
         timeout-minutes: 10
       - run: npm run build:mobile
 
-  # The Windows app (src-tauri), built as build:desktop builds it: here because
+  # The Windows app (src-tauri), built as build:desktop builds it and driven
+  # through its own journey (e2e:desktop) in a WebView2 window: here because
   # Smart App Control on the developer's PC blocks the unsigned programs a Rust
   # build runs. Rust is on the runner; its build is kept between runs, so only
-  # the first one compiles everything. Its journey (e2e:desktop) isn't run here
-  # yet: on the runner the app and its WebView2 window start, but WebView2
-  # doesn't open the DevTools port the journey asks for through
-  # WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS, as it does on a PC.
+  # the first one compiles everything. The runner's WebView2 ignores
+  # WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS, so the journey also asks the app
+  # itself for the DevTools port (SNIPER_JOURNAL_DEVTOOLS_PORT).
   windows-app:
     name: windows app
     runs-on: windows-latest
@@ -93,8 +94,8 @@ jobs:
 
       - run: npm ci
       - run: npm run build:desktop
-      # saved straight after the build, so a step added after it that fails
-      # (the journey, once it runs here) doesn't throw the compile away
+      # saved straight after the build, so a failing journey below doesn't
+      # throw the compile away
       - uses: actions/cache/save@v6
         if: steps.cargo-cache.outputs.cache-hit != 'true'
         with:
@@ -105,3 +106,6 @@ jobs:
             src-tauri/target/
             !src-tauri/target/release/incremental/
           key: cargo-windows-${{ hashFiles('src-tauri/Cargo.lock') }}
+      # about a minute; the limit is for a window that hangs
+      - run: npm run e2e:desktop
+        timeout-minutes: 10
