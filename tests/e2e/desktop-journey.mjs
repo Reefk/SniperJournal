@@ -527,6 +527,34 @@ async function journey() {
   await dashboard(143, 100, 'after restoring the backup');
 
   // ---- 8. accessibility spot checks ----------------------------------------
+  // each chart says in words what it draws (the dashboard as section 7 left it,
+  // on All: AAPL +99 on 2 Mar, TSLA +38.50 on 4 Mar, ES +5.50 on 5 Mar)
+  const chartSummary = (title) =>
+    b.run(
+      `[...document.querySelectorAll('main section')].find((s) => s.querySelector('h3')?.textContent === ${JSON.stringify(title)})?.querySelector('p.sr-only')?.textContent ?? ''`,
+    );
+  const equityWords = await chartSummary('Equity curve');
+  check(
+    'the equity curve has a text alternative: its trades, days, start, end, lowest and highest',
+    equityWords ===
+      'Account balance after each of 3 closed trades, 02 Mar 2026 to 05 Mar 2026: from $10,000.00 to $10,143.00, lowest $10,000.00, highest $10,143.00.',
+    equityWords,
+  );
+  const dailyWords = await chartSummary('Daily P&L');
+  check(
+    'the daily P&L has a text alternative: its days, worst, best and last',
+    dailyWords ===
+      'Net P&L of each of 3 trading days, 02 Mar 2026 to 05 Mar 2026: worst +$5.50, best +$99.00, last day +$5.50.',
+    dailyWords,
+  );
+  const scoreWords = await chartSummary('Sniper Score');
+  check('the Sniper Score has a text alternative', /^Sniper Score.+\.$/.test(scoreWords), scoreWords);
+  const live = `document.querySelector('p.sr-only[aria-live=polite]')?.textContent`;
+  check(
+    'the save status is a polite live region for screen readers',
+    (await seen(`document.querySelector('aside').innerText.includes('Saved to disk')`, 'restore saved', 8000)) &&
+      (await b.run(live)) === 'Saved to disk',
+  );
   const a11y = await b.run(`(() => {
     const named = (el) => el.getAttribute('aria-label') || el.getAttribute('aria-labelledby') || (el.id && document.querySelector('label[for="' + CSS.escape(el.id) + '"]')) || el.closest('label') || el.getAttribute('title');
     $nav('/trades');
@@ -576,12 +604,14 @@ async function journey() {
       await seen(`${status}.includes('Saved in browser')`, 'failed save shown', 10000),
     );
     check('meanwhile the file on disk is left as it was', !onDisk());
+    check('a screen reader is told so too (the live region)', (await b.run(live)) === 'Saved in browser');
     await released;
     check(
       'once the file is free the change is saved, with no further edit',
       await seen(`${status}.includes('Saved to disk')`, 'saving recovered', 20000),
     );
     check('and it is in the file on disk', onDisk());
+    check('and a screen reader is told it is saved again', (await b.run(live)) === 'Saved to disk');
   }
 
   // ---- 8c. excluded trades and the balance (Settings → Accounts) ------------

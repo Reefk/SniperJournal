@@ -8,7 +8,7 @@ import { LogoMark } from '@/components/ui/Logo';
 import { Button } from '@/components/ui/Button';
 import { TradeFormModal } from '@/components/trades/TradeFormModal';
 import { useAndroidBack } from '@/hooks/useAndroidBack';
-import { MobileNav, Sidebar } from './Sidebar';
+import { MobileNav, SaveAnnouncer, Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { CopyNotice, RecoveredNotice, SaveConflictDialog } from './SaveConflict';
 import { WelcomeModal } from './WelcomeModal';
@@ -97,6 +97,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     // below md (a phone) the sidebar gives way to a tab bar at the bottom
     <div className="flex h-dvh overflow-hidden bg-app text-fg md:h-screen md:min-w-[1180px]">
       <Sidebar />
+      <SaveAnnouncer />
       <div className="flex min-w-0 flex-1 flex-col">
         <Header />
         {/* relative: hidden inputs and other absolutely placed bits then scroll

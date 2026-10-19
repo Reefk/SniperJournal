@@ -61,6 +61,26 @@ const SAVE_LABEL: Record<SaveStatus, string> =
 /** the states where changes are not reaching the file */
 const ALARM: SaveStatus[] = ['unsaved', 'error', 'conflict'];
 
+/**
+ * Tells a screen reader, politely, when where the journal is saved changes:
+ * "Saved in browser" when a save fails, "Saved to disk" once one lands.
+ * "Saving…", which comes and goes with every change, is left out, so an
+ * ordinary save, or another try at one that failed, says nothing new.
+ * Visually hidden, and outside the sidebar, which a phone hides (its own
+ * label only shows in the More sheet).
+ */
+export function SaveAnnouncer() {
+  const { saveStatus } = useSaveState();
+  // empty until a status settles, should it open in the middle of a save
+  const [settled, setSettled] = useState<SaveStatus | null>(saveStatus === 'saving' ? null : saveStatus);
+  if (saveStatus !== 'saving' && saveStatus !== settled) setSettled(saveStatus);
+  return (
+    <p className="sr-only" aria-live="polite" aria-atomic="true">
+      {settled && SAVE_LABEL[settled]}
+    </p>
+  );
+}
+
 /** "online" means nothing to an app that never uses the network: the phone and the Windows app */
 const SHOW_ONLINE = storage.kind === 'web';
 

@@ -21,6 +21,7 @@ import {
 import { useJournal } from '@/store/JournalProvider';
 import { useUI } from '@/store/UIProvider';
 import { computeStats, sniperScore, sqnLabel } from '@/lib/stats';
+import { dailySummary, equitySummary, scoreSummary } from '@/lib/chart-summary';
 import { RANGE_OPTIONS, splitByRange, type RangeKey } from '@/lib/ranges';
 import { formatDate, formatDuration, formatMoney, formatPct, formatRatio } from '@/lib/format';
 import { isClosed, tradeTimestamp } from '@/lib/trade-math';
@@ -263,6 +264,7 @@ export function DashboardView() {
             <ChartContainer
               className="h-[280px] md:col-span-2 md:h-[340px]"
               title="Equity curve"
+              summary={equitySummary(stats.equity, currency)}
               subtitle={
                 stats.maxDrawdown > 0
                   ? `Max drawdown ${formatMoney(stats.maxDrawdown, currency)}${stats.maxDrawdownPct != null ? ` (${stats.maxDrawdownPct.toFixed(1)}%)` : ''}`
@@ -287,6 +289,7 @@ export function DashboardView() {
             <ChartContainer
               className="h-[320px] md:h-[340px]"
               title="Sniper Score"
+              summary={scoreSummary(score)}
               subtitle={score.overall == null ? 'Rate your trades to build this' : `${score.overall} / 100 overall`}
               actions={
                 score.overall != null && <div className="num text-lg font-semibold text-accent">{score.overall}</div>
@@ -305,6 +308,7 @@ export function DashboardView() {
             <ChartContainer
               className="h-[240px] md:col-span-2 md:h-[300px]"
               title="Daily P&L"
+              summary={dailySummary(stats.days, currency)}
               subtitle={`${stats.days.filter((d) => d.net > 0).length} green days, ${stats.days.filter((d) => d.net < 0).length} red`}
               empty={stats.days.length === 0}
               emptyText="No closed trades in this range yet."

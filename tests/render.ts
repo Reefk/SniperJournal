@@ -31,9 +31,9 @@ export async function mount(element: ReactElement) {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-/** waits, letting React work, until `check` holds (about 2 seconds at most) */
-export async function until(check: () => boolean) {
-  for (let i = 0; i < 100 && !check(); i++) {
+/** waits, letting React work, until `check` holds (about 2 seconds at most, unless told otherwise) */
+export async function until(check: () => boolean, ms = 2000) {
+  for (let i = 0; i < ms / 20 && !check(); i++) {
     await act(async () => {
       await sleep(20);
     });

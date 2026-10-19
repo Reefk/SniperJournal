@@ -10,6 +10,7 @@ export function ChartContainer({
   bodyClassName,
   empty,
   emptyText,
+  summary,
 }: {
   title: ReactNode;
   subtitle?: ReactNode;
@@ -19,6 +20,8 @@ export function ChartContainer({
   bodyClassName?: string;
   empty?: boolean;
   emptyText?: ReactNode;
+  /** a chart in words, for a screen reader (src/lib/chart-summary.ts); visually hidden */
+  summary?: string;
 }) {
   return (
     <section className={cn('flex min-w-0 flex-col rounded-xl border border-line bg-surface', className)}>
@@ -29,6 +32,7 @@ export function ChartContainer({
         </div>
         {actions}
       </header>
+      {summary && !empty && <p className="sr-only">{summary}</p>}
       <div className={cn('relative min-h-0 flex-1 px-3 pb-4 pt-3', bodyClassName)}>
         {empty ? (
           <div className="grid h-full min-h-[180px] place-items-center px-6 text-center text-sm leading-relaxed text-faint">
