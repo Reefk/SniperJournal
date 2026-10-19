@@ -52,7 +52,9 @@ let failures = 0;
 // (and through its API) without opening the log
 const annotate = (text) => {
   if (process.env.GITHUB_ACTIONS)
-    console.log(`::error title=desktop E2E::${text.slice(0, 900).replace(/\r?\n/g, '%0A')}`);
+    console.log(
+      `::error title=desktop E2E::${text.slice(0, 900).replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A')}`,
+    );
 };
 const check = (label, ok, detail = '') => {
   if (!ok) failures++;

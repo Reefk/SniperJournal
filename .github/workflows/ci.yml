@@ -1,7 +1,8 @@
 # Checks every push to main and every pull request: types, lint, formatting,
 # tests, both builds (the desktop server and the static export the Android
-# app is made from) and the desktop E2E journey. It only reads the code.
-# Nothing is signed, published or uploaded.
+# app is made from), the desktop E2E journey, and the Windows app built and
+# driven through its own journey. It only reads the code. Nothing is signed,
+# published or uploaded.
 name: CI
 
 on:
@@ -49,10 +50,60 @@ jobs:
       - run: npm run build
       # The desktop build in a headless browser: Edge on Windows, Chrome on
       # Linux, both already on the runner. It runs while the desktop build is
-      # in place: build:mobile moves .next aside. The Windows app's journey
-      # (e2e:desktop) needs a Rust toolchain and a long compile, and the
-      # Android one (e2e:android) an emulator, so both are still run by hand.
-      # About a minute; the limit is for a browser that hangs.
+      # in place: build:mobile moves .next aside. The Windows app has a job of
+      # its own (below); the Android journey needs an emulator, so it is still
+      # run by hand. About a minute; the limit is for a browser that hangs.
       - run: npm run e2e
         timeout-minutes: 10
       - run: npm run build:mobile
+
+  # The Windows app (src-tauri): built as build:desktop builds it, then driven
+  # through its own journey (e2e:desktop) in a WebView2 window, which the runner
+  # has. Rust is on the runner too; its build is kept between runs, so only the
+  # first one compiles everything. Here because Smart App Control on the
+  # developer's PC blocks the unsigned programs a Rust build runs.
+  windows-app:
+    name: windows app
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - uses: actions/cache/restore@v6
+        id: cargo-cache
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            src-tauri/target/
+            !src-tauri/target/release/incremental/
+          key: cargo-windows-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: cargo-windows-
+
+      - run: npm ci
+      - run: npm run build:desktop
+      # kept as soon as the build is done, so a failing journey below doesn't
+      # throw the compile away
+      - uses: actions/cache/save@v6
+        if: steps.cargo-cache.outputs.cache-hit != 'true'
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            src-tauri/target/
+            !src-tauri/target/release/incremental/
+          key: cargo-windows-${{ hashFiles('src-tauri/Cargo.lock') }}
+      # about a minute; the limit is for a window that hangs
+      - run: npm run e2e:desktop
+        timeout-minutes: 10

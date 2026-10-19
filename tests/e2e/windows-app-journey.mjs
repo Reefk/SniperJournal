@@ -21,13 +21,23 @@ import { PAGE, drive } from './cdp.mjs';
 
 const project = resolve(import.meta.dirname, '..', '..');
 const exe = join(project, 'src-tauri', 'target', 'release', 'Sniper Journal.exe');
-const work = mkdtempSync(join(tmpdir(), 'sj-app-e2e-'));
+// on GitHub, the runner's own temp folder, on the checkout's drive (as in desktop-journey.mjs)
+const work = mkdtempSync(join(process.env.RUNNER_TEMP ?? tmpdir(), 'sj-app-e2e-'));
 const folder = join(work, 'journal');
 
 let failures = 0;
+// on GitHub, a failure is also an annotation, readable without the job log
+const annotate = (text) => {
+  if (process.env.GITHUB_ACTIONS)
+    console.log(
+      `::error title=Windows app E2E::${text.slice(0, 900).replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A')}`,
+    );
+};
 const check = (label, ok, detail = '') => {
   if (!ok) failures++;
-  console.log(`${ok ? 'PASS' : 'FAIL'}  ${label}${!ok && detail ? `  (${detail})` : ''}`);
+  const line = `${label}${!ok && detail ? `  (${detail})` : ''}`;
+  console.log(`${ok ? 'PASS' : 'FAIL'}  ${line}`);
+  if (!ok) annotate(line);
 };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const exited = (proc) =>
@@ -56,7 +66,8 @@ async function launch() {
   const debugPort = 9600 + Math.floor(Math.random() * 300);
   app = spawn(exe, [], { env: env(debugPort), stdio: 'ignore' });
   let ws;
-  for (let i = 0; i < 150 && !ws; i++) {
+  // up to a minute: the first launch on a fresh CI runner is slow
+  for (let i = 0; i < 300 && !ws; i++) {
     await sleep(200);
     try {
       const target = (await (await fetch(`http://127.0.0.1:${debugPort}/json`)).json()).find(
@@ -408,6 +419,7 @@ try {
 } catch (err) {
   failures++;
   console.log(`FAIL  ${err.message}`);
+  annotate(err.message);
 } finally {
   for (const holder of holders) holder.kill();
   if (app && app.exitCode === null && app.signalCode === null) app.kill();
