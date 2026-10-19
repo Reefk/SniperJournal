@@ -4,7 +4,6 @@ import { useJournal } from '@/store/JournalProvider';
 import { useUI } from '@/store/UIProvider';
 import { parseBackup } from '@/lib/backup';
 import { storage } from '@/lib/storage';
-import { copyOldImages, readOldJournal } from '@/lib/storage/tauri';
 
 /** the Windows app; the only one that can reach the earlier version's folder */
 export const CAN_BRING_OVER = storage.kind === 'native' && storage.device === 'pc';
@@ -25,9 +24,12 @@ export function useBringOver() {
   const { confirm, toast } = useUI();
 
   return async () => {
+    let tauri: typeof import('@/lib/storage/tauri');
     let old;
     try {
-      old = await readOldJournal();
+      // the Windows app's own code, loaded only there (the button is nowhere else)
+      tauri = await import('@/lib/storage/tauri');
+      old = await tauri.readOldJournal();
     } catch (err) {
       toast(said(err), 'error');
       return;
@@ -58,7 +60,7 @@ export function useBringOver() {
     }
 
     try {
-      await copyOldImages(old);
+      await tauri.copyOldImages(old);
     } catch {
       toast("The earlier version's chart images could not be copied, so nothing was changed.", 'error');
       return;

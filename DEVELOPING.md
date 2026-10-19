@@ -256,10 +256,12 @@ exactly as before.
 Every read and write — the journal, chart images, exported files — goes through
 the one interface in `src/lib/storage/types.ts`. Nothing else in the app touches
 the filesystem or the network. Supporting a new platform means writing one file
-that implements that interface and returning it from `pick()` in
-`src/lib/storage/index.ts`; `src/lib/storage/capacitor.ts`, the Android app's
-storage, is the worked example, and `src/lib/storage/tauri.ts`, the Windows
-app's, follows it.
+that implements that interface and adding it to `pick()` in
+`src/lib/storage/index.ts`: its `kind`, its `device`, and a `load()` that
+imports it, so that only the running platform's file is ever loaded (in
+`storage.init()`); `src/lib/storage/capacitor.ts`, the Android app's storage,
+is the worked example, and `src/lib/storage/tauri.ts`, the Windows app's,
+follows it.
 
 `storage.kind` says how the journal is kept (`web`: a browser and the server,
 several tabs, the browser's copy; `native`: one app window writing its own
