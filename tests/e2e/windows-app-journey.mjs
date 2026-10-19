@@ -62,21 +62,39 @@ const env = (debugPort) => ({
 let app;
 /** what the page logged: CSP refusals, errors */
 const logged = [];
+/** the WebView2 runtime Windows has, for when the window never opens */
+function webview2() {
+  const client = 'Microsoft\\EdgeUpdate\\Clients\\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}';
+  for (const key of [
+    `HKLM\\SOFTWARE\\WOW6432Node\\${client}`,
+    `HKLM\\SOFTWARE\\${client}`,
+    `HKCU\\Software\\${client}`,
+  ]) {
+    const version = spawnSync('reg', ['query', key, '/v', 'pv'], { encoding: 'utf8' }).stdout?.match(
+      /pv\s+REG_SZ\s+(\S+)/,
+    );
+    if (version) return `WebView2 ${version[1]}`;
+  }
+  return 'no WebView2 runtime found';
+}
 async function launch() {
   const debugPort = 9600 + Math.floor(Math.random() * 300);
   app = spawn(exe, [], { env: env(debugPort), stdio: 'ignore' });
   let ws;
+  /** what the DevTools port last said, for when the window never opens */
+  let answer = 'no answer';
   // up to a minute: the first launch on a fresh CI runner is slow
   for (let i = 0; i < 300 && !ws; i++) {
     await sleep(200);
+    if (app.exitCode !== null) throw new Error(`the app quit as it started (exit ${app.exitCode}; ${webview2()})`);
     try {
-      const target = (await (await fetch(`http://127.0.0.1:${debugPort}/json`)).json()).find(
-        (t) => t.type === 'page' && t.url.startsWith('http://tauri.localhost'),
-      );
+      const targets = await (await fetch(`http://127.0.0.1:${debugPort}/json`)).json();
+      answer = JSON.stringify(targets.map((t) => `${t.type} ${t.url}`));
+      const target = targets.find((t) => t.type === 'page' && t.url.startsWith('http://tauri.localhost'));
       if (target) ws = new WebSocket(target.webSocketDebuggerUrl);
     } catch {}
   }
-  if (!ws) throw new Error('the app did not open its window');
+  if (!ws) throw new Error(`the app did not open its window (DevTools: ${answer}; ${webview2()})`);
   await new Promise((r) => ws.addEventListener('open', r, { once: true }));
   ws.addEventListener('message', (e) => {
     const m = JSON.parse(e.data);
