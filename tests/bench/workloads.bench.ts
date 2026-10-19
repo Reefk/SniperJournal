@@ -15,6 +15,21 @@ import { seeded, trade } from '../helpers';
  * synthetic journal of closed trades spread over many days. Every workload
  * is warmed up, then run repeatedly for about half a second; the median is
  * reported, which is steadier than the mean on a busy machine.
+ *
+ * Each workload is timed at its own moment, so a machine busy for a few
+ * seconds slows some columns of a run and not others, and two columns can
+ * move in opposite directions between runs with no code changed. Compare runs
+ * made one after another, and look at 'save: stringify', which runs none of
+ * the app's code: when it moved with the rest, the machine did.
+ *
+ * Looked into on 2026-10-19: a 13 Oct run gave 44 ms for CSV export and
+ * 31 ms for launch at 10,000 trades, a 19 Oct run 68 and 42. Neither function
+ * got heavier. tradesToCsv is unchanged since 9 Oct, and a one-off script
+ * timing each on its own at nine commits from 12 to 19 Oct, at 10,000 trades,
+ * found export at 30–33 ms and parse+normalize at 18–21 ms throughout
+ * (normalize is about 3 ms of that, the rest is JSON.parse). Full runs of
+ * 12 and 19 Oct, taken in turn, matched, except one where export, launch and
+ * stringify were all about twice as slow.
  */
 function journalOf(size: number): Trade[] {
   const rand = seeded(size);
