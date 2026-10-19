@@ -77,6 +77,19 @@ function webview2() {
   }
   return 'no WebView2 runtime found';
 }
+/** what Windows says about the app's processes and its DevTools port, for when the window never opens */
+function processes(debugPort) {
+  // tasklist /v /fo csv: image, PID, session name, session #, memory, status, user, CPU time, window title
+  const list = (image) =>
+    spawnSync('tasklist', ['/v', '/fo', 'csv', '/nh', '/fi', `IMAGENAME eq ${image}`], { encoding: 'utf8' })
+      .stdout.split(/\r?\n/)
+      .filter((line) => line.startsWith('"'))
+      .map((line) => line.slice(1, -1).split('","'));
+  const apps = list('Sniper Journal.exe').map((c) => `session ${c[2]} #${c[3]}, window "${c[8]}"`);
+  const views = list('msedgewebview2.exe').length;
+  const listening = spawnSync('netstat', ['-ano', '-p', 'tcp'], { encoding: 'utf8' }).stdout.includes(`:${debugPort} `);
+  return `app: ${apps.join('; ') || 'not running'}; ${views} WebView2 processes; port ${debugPort} ${listening ? 'open' : 'not open'}`;
+}
 async function launch() {
   const debugPort = 9600 + Math.floor(Math.random() * 300);
   app = spawn(exe, [], { env: env(debugPort), stdio: 'ignore' });
@@ -94,7 +107,8 @@ async function launch() {
       if (target) ws = new WebSocket(target.webSocketDebuggerUrl);
     } catch {}
   }
-  if (!ws) throw new Error(`the app did not open its window (DevTools: ${answer}; ${webview2()})`);
+  if (!ws)
+    throw new Error(`the app did not open its window (DevTools: ${answer}; ${webview2()}; ${processes(debugPort)})`);
   await new Promise((r) => ws.addEventListener('open', r, { once: true }));
   ws.addEventListener('message', (e) => {
     const m = JSON.parse(e.data);
