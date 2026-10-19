@@ -44,9 +44,17 @@ const browserPath =
   ].find(existsSync);
 
 let failures = 0;
+// on GitHub, a failure is also an annotation, which shows on the run's page
+// (and through its API) without opening the log
+const annotate = (text) => {
+  if (process.env.GITHUB_ACTIONS)
+    console.log(`::error title=desktop E2E::${text.slice(0, 900).replace(/\r?\n/g, '%0A')}`);
+};
 const check = (label, ok, detail = '') => {
   if (!ok) failures++;
-  console.log(`${ok ? 'PASS' : 'FAIL'}  ${label}${!ok && detail ? `  (${detail})` : ''}`);
+  const line = `${label}${!ok && detail ? `  (${detail})` : ''}`;
+  console.log(`${ok ? 'PASS' : 'FAIL'}  ${line}`);
+  if (!ok) annotate(line);
 };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -56,15 +64,21 @@ async function startServer() {
   const next = join(project, 'node_modules', 'next', 'dist', 'bin', 'next');
   server = spawn(process.execPath, [next, 'start', project, '-H', '127.0.0.1', '-p', String(port)], {
     cwd: work,
-    stdio: 'ignore',
+    stdio: ['ignore', 'ignore', 'pipe'],
   });
-  for (let i = 0; i < 100; i++) {
+  // the end of what it printed as errors, to say why it stopped if it does
+  let said = '';
+  server.stderr.on('data', (chunk) => (said = (said + chunk).slice(-1500)));
+  // up to a minute: a warm PC takes a few seconds, a fresh CI runner (antivirus
+  // reading node_modules for the first time) far longer
+  for (let i = 0; i < 300; i++) {
+    if (server.exitCode !== null) throw new Error(`the server stopped (exit ${server.exitCode}): ${said.trim()}`);
     try {
       if ((await fetch(`${base}/api/journal`)).ok) return;
     } catch {}
     await sleep(200);
   }
-  throw new Error('the server did not start');
+  throw new Error(`the server did not start within a minute${said ? `: ${said.trim()}` : ''}`);
 }
 const exited = (proc) =>
   proc.exitCode !== null || proc.signalCode !== null ? Promise.resolve() : new Promise((r) => proc.once('exit', r));
@@ -103,6 +117,8 @@ async function openBrowser() {
     browserPath,
     [
       '--headless=new',
+      '--no-first-run',
+      '--no-default-browser-check',
       '--disable-gpu',
       `--remote-debugging-port=${debugPort}`,
       `--user-data-dir=${profile}`,
@@ -112,7 +128,8 @@ async function openBrowser() {
     { stdio: 'ignore' },
   );
   let ws;
-  for (let i = 0; i < 100 && !ws; i++) {
+  // up to a minute too: a browser's first start on a fresh runner is slow
+  for (let i = 0; i < 400 && !ws; i++) {
     await sleep(150);
     try {
       const page = (await (await fetch(`http://127.0.0.1:${debugPort}/json`)).json()).find((t) => t.type === 'page');
@@ -1501,6 +1518,7 @@ try {
 } catch (err) {
   failures++;
   console.log(`FAIL  ${err.message}`);
+  annotate(err.message);
 } finally {
   for (const close of [...browsers]) await close();
   for (const holder of holders) holder.kill();
