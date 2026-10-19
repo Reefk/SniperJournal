@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowDownRight, ArrowUpRight, ChevronDown, Trash2, TriangleAlert } from 'lucide-react';
-import type { Side, Trade, TradeInput } from '@/lib/types';
+import type { RuleChecks, Side, Trade, TradeInput } from '@/lib/types';
 import { useJournal } from '@/store/JournalProvider';
 import { useUI } from '@/store/UIProvider';
 import { detectSession, SESSIONS } from '@/lib/sessions';
+import { checksToSave, rulesShown } from '@/lib/rules';
 import { formatDuration, formatMoney, formatRatio } from '@/lib/format';
 import { grossPnl, holdMinutes, isClosed, netPnl, plannedRR, riskAmount, rMultiple } from '@/lib/trade-math';
 import { cn, toLocalInput, toNumberOrNull } from '@/lib/utils';
@@ -19,6 +20,7 @@ import { RatingInput } from '@/components/ui/RatingInput';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { ChartImage } from './ChartImage';
 import { ImportBody } from './ImportTradesModal';
+import { RuleChecklist } from './RuleChecklist';
 
 interface FormState {
   accountId: string;
@@ -39,6 +41,9 @@ interface FormState {
   session: string;
   sessionTouched: boolean;
   setupId: string;
+  ruleChecks?: RuleChecks;
+  /** the checklist was used, or the setup changed: the ticks are saved as the checklist shows them */
+  rulesTouched: boolean;
   tags: string[];
   notes: string;
   screenshotUrl: string;
@@ -76,6 +81,9 @@ function initialState(accountId: string, trade?: Trade, defaults?: Partial<Trade
     session: src.session ?? detectSession(openedAt),
     sessionTouched: Boolean(trade?.session),
     setupId: src.setupId ?? '',
+    // ticks belong to the trade they were made on, never to defaults for a new one
+    ruleChecks: trade?.ruleChecks,
+    rulesTouched: false,
     tags: src.tags ?? [],
     notes: src.notes ?? '',
     screenshotUrl: src.screenshotUrl ?? '',
@@ -86,7 +94,8 @@ function initialState(accountId: string, trade?: Trade, defaults?: Partial<Trade
   };
 }
 
-function validate(f: FormState, editing?: Trade): { errors: Errors; input?: TradeInput } {
+/** `setupRules`: the rules of the setup chosen in the form */
+function validate(f: FormState, setupRules: string[], editing?: Trade): { errors: Errors; input?: TradeInput } {
   const errors: Errors = {};
   const symbol = f.symbol.trim().toUpperCase();
   const quantity = toNumberOrNull(f.quantity);
@@ -128,6 +137,8 @@ function validate(f: FormState, editing?: Trade): { errors: Errors; input?: Trad
       leverage: toNumberOrNull(f.leverage),
       session: f.session || undefined,
       setupId: f.setupId || undefined,
+      // untouched, a trade keeps the ticks it was saved with, so editing its notes doesn't re-judge it
+      ruleChecks: !f.setupId ? undefined : f.rulesTouched ? checksToSave(setupRules, f.ruleChecks) : f.ruleChecks,
       tags: f.tags,
       notes: f.notes.trim() || undefined,
       screenshotUrl: f.screenshotUrl.trim() || undefined,
@@ -267,6 +278,12 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
     setForm((f) => {
       const next = { ...f, [key]: value };
       if (key === 'openedAt' && !f.sessionTouched) next.session = detectSession(String(value));
+      if (key === 'setupId') {
+        // another setup has other rules; going back to the trade's own brings its ticks back
+        const own = value === (trade?.setupId ?? '');
+        next.ruleChecks = own ? trade?.ruleChecks : undefined;
+        next.rulesTouched = !own;
+      }
       return next;
     });
     if (errors[key]) setErrors((e) => ({ ...e, [key]: undefined }));
@@ -278,6 +295,9 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
     for (const t of data.trades) for (const tag of t.tags) counts.set(tag, (counts.get(tag) ?? 0) + 1);
     return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([tag]) => tag);
   }, [data.trades]);
+
+  const chosenSetup = data.setups.find((s) => s.id === form.setupId);
+  const shownRules = chosenSetup ? rulesShown(chosenSetup.rules, form.ruleChecks) : [];
 
   const preview = previewTrade(form);
   const closed = isClosed(preview) && preview.quantity > 0;
@@ -296,7 +316,7 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
       : null;
 
   const save = (addAnother: boolean) => {
-    const result = validate(form, trade);
+    const result = validate(form, chosenSetup?.rules ?? [], trade);
     if (!result.input) {
       setErrors(result.errors);
       return;
@@ -548,6 +568,16 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
               </div>
             </Field>
           </div>
+
+          {chosenSetup && shownRules.length > 0 && (
+            <RuleChecklist
+              setupName={chosenSetup.name}
+              rules={shownRules}
+              setupRules={chosenSetup.rules}
+              value={form.ruleChecks}
+              onChange={(ruleChecks) => setForm((f) => ({ ...f, ruleChecks, rulesTouched: true }))}
+            />
+          )}
 
           <Field label="Tags" hint="mistakes, catalysts, emotions">
             <TagInput value={form.tags} onChange={(tags) => set('tags', tags)} suggestions={tagSuggestions} />

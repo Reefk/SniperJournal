@@ -1,6 +1,7 @@
 import type { Settings, Setup, Trade } from './types';
 import { formatMoney, WEEKDAYS } from './format';
 import { aggregateDays, computeStats, groupTrades, type GroupStat, type Stats } from './stats';
+import { playbookRuleReport } from './rules';
 import { netPnl, sortChronological, statTrades, tradeDay } from './trade-math';
 import { dateKey, mean, parseLocal } from './utils';
 
@@ -248,6 +249,35 @@ export function buildInsights(trades: Trade[], setups: Setup[], settings: Settin
       body: `${worstTag.trades} trades carry this tag and together they are down ${formatMoney(Math.abs(worstTag.net), money)} at a ${worstTag.winRate.toFixed(0)}% win rate. You already named the problem when you tagged them.`,
       metric: `${worstTag.trades} trades tagged`,
     });
+  }
+
+  // the playbook's rules: what the trades that broke one gave up against the ones that kept them all
+  const rules = playbookRuleReport(closed, setups);
+  if (rules.cost != null && rules.kept && rules.broken) {
+    const { kept, broken, costliest } = rules;
+    const against = `${formatMoney(broken.avg, money, { sign: true })} a trade, against ${formatMoney(kept.avg, money, { sign: true })} for the ${kept.trades} that kept every rule`;
+    const worst = costliest
+      ? ` The rule that cost the most to break: "${costliest.rule}"${setups.length > 1 ? ` (${setupNames.get(costliest.setupId)})` : ''}, ${formatMoney(costliest.brokenNet, money, { sign: true })} over the ${costliest.broken === 1 ? 'trade' : `${costliest.broken} trades`} that broke it.`
+      : '';
+    out.push(
+      rules.cost > 0
+        ? {
+            id: 'rules',
+            tone: 'bad',
+            category: 'Behaviour',
+            title: `Breaking your rules cost you about ${formatMoney(rules.cost, money)}`,
+            body: `${broken.trades} trades broke a rule of their setup and averaged ${against}. Had they done as well, you would be about that much better off.${worst}`,
+            metric: `${broken.trades} of ${rules.checked} checked trades broke a rule`,
+          }
+        : {
+            id: 'rules',
+            tone: 'info',
+            category: 'Behaviour',
+            title: 'Breaking your rules has not cost you so far',
+            body: `The ${broken.trades} trades that broke a rule of their setup averaged ${against}. Either those rules are not what makes your setups work, or it is too early to tell. Worth reading them again.`,
+            metric: `${broken.trades} of ${rules.checked} checked trades broke a rule`,
+          },
+    );
   }
 
   // --- direction -------------------------------------------------------

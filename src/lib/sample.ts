@@ -1,4 +1,4 @@
-import type { Setup, Trade } from './types';
+import type { RuleChecks, Setup, Trade } from './types';
 import { detectSession } from './sessions';
 import { pad2, uid } from './utils';
 
@@ -91,8 +91,20 @@ export function sampleSetups(): Setup[] {
   ];
 }
 
+/**
+ * Rule ticks for a test trade: most winners kept every rule, about half the
+ * losers broke one, and a few trades were never checked. They come from their
+ * own random numbers, so the trades themselves are the same as without them.
+ */
+function sampleTicks(rules: string[], good: boolean, rand: () => number): RuleChecks | undefined {
+  if (rand() < 0.15) return undefined;
+  const broken = rand() < (good ? 0.12 : 0.55) ? Math.floor(rand() * rules.length) : -1;
+  return Object.fromEntries(rules.map((rule, i) => [rule, i !== broken]));
+}
+
 export function generateSampleData(accountId: string): { trades: Trade[]; setups: Setup[] } {
   const rand = mulberry32(20260101);
+  const ruleRand = mulberry32(20261019);
   const setups = sampleSetups();
   const trades: Trade[] = [];
   const now = new Date().toISOString();
@@ -149,6 +161,9 @@ export function generateSampleData(accountId: string): { trades: Trade[]; setups
 
         const good = rMultipleOutcome > 0;
         const rate = (base: number) => Math.max(1, Math.min(5, Math.round(base + (rand() - 0.5) * 2)));
+        // drawn in the order the trade below always drew them, so the same seed gives the same trades
+        const fees = Number((0.6 + rand() * 3.4).toFixed(2));
+        const setup = setups[Math.floor(rand() * setups.length)];
 
         trades.push({
           id: uid(),
@@ -162,12 +177,13 @@ export function generateSampleData(accountId: string): { trades: Trade[]; setups
           exitPrice,
           stopLoss,
           takeProfit,
-          fees: Number((0.6 + rand() * 3.4).toFixed(2)),
+          fees,
           multiplier: spec.mult,
           manualPnl: null,
           leverage: spec.symbol === 'EURUSD' ? 10 : spec.symbol === 'BTCUSD' ? 5 : null,
           session: detectSession(openedAt),
-          setupId: setups[Math.floor(rand() * setups.length)].id,
+          setupId: setup.id,
+          ruleChecks: sampleTicks(setup.rules, good, ruleRand),
           tags: [...new Set(tags)],
           notes: good ? 'Followed the plan, let the runner work.' : 'Entered before confirmation and paid for it.',
           review: { discipline: rate(good ? 4 : 2.5), execution: rate(good ? 4 : 3), patience: rate(good ? 4 : 2.5) },

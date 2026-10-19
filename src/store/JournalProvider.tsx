@@ -8,6 +8,7 @@ import { newerJournal } from '@/lib/journal-version';
 import { generateSampleData } from '@/lib/sample';
 import { isIncomplete } from '@/lib/trade-math';
 import { mergeIssue, mergeTrades as combineTrades } from '@/lib/merge';
+import { renameRuleChecks } from '@/lib/rules';
 import { chartsOnlyInSample, deleteScreenshot, imagesOnlyIn } from '@/lib/screenshots';
 import { JournalConflict, storage } from '@/lib/storage';
 import { uid } from '@/lib/utils';
@@ -97,7 +98,8 @@ interface Actions {
   updateAccount: (id: string, patch: Partial<Account>) => void;
   deleteAccount: (id: string) => void;
   setActiveAccount: (id: string) => void;
-  upsertSetup: (setup: Setup) => void;
+  /** `renamedRules`: old wording → new, so the trades' rule ticks follow a reworded rule */
+  upsertSetup: (setup: Setup, renamedRules?: ReadonlyMap<string, string>) => void;
   deleteSetup: (id: string) => void;
   upsertResource: (resource: Resource) => void;
   deleteResource: (id: string) => void;
@@ -363,6 +365,10 @@ export function JournalProvider({ children }: { children: ReactNode }) {
           trades: d.trades.map((t) => {
             if (!set.has(t.id)) return t;
             const next: Trade = { ...t, ...patch, id: t.id, createdAt: t.createdAt, updatedAt: now };
+            // rule ticks are about the rules of the setup they were made against
+            if ('setupId' in patch && patch.setupId !== t.setupId && !('ruleChecks' in patch)) {
+              next.ruleChecks = undefined;
+            }
             next.needsReview = isIncomplete(next) ? true : undefined;
             return next;
           }),
@@ -435,19 +441,20 @@ export function JournalProvider({ children }: { children: ReactNode }) {
         });
       },
       setActiveAccount: (id) => mutate((d) => ({ ...d, activeAccountId: id })),
-      upsertSetup: (setup) => {
+      upsertSetup: (setup, renamedRules) => {
         mutate((d) => ({
           ...d,
           setups: d.setups.some((s) => s.id === setup.id)
             ? d.setups.map((s) => (s.id === setup.id ? setup : s))
             : [...d.setups, setup],
+          trades: renamedRules ? renameRuleChecks(d.trades, setup.id, renamedRules) : d.trades,
         }));
       },
       deleteSetup: (id) => {
         mutate((d) => ({
           ...d,
           setups: d.setups.filter((s) => s.id !== id),
-          trades: d.trades.map((t) => (t.setupId === id ? { ...t, setupId: undefined } : t)),
+          trades: d.trades.map((t) => (t.setupId === id ? { ...t, setupId: undefined, ruleChecks: undefined } : t)),
         }));
       },
       upsertResource: (resource) => {

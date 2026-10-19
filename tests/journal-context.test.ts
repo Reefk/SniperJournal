@@ -2,7 +2,7 @@
 import { act, createElement as h, useMemo } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { JournalData, Trade } from '@/lib/types';
+import type { JournalData, Setup, Trade } from '@/lib/types';
 import { JournalProvider, useJournal, useSaveState } from '@/store/JournalProvider';
 import { trade } from './helpers';
 
@@ -133,5 +133,53 @@ describe('a save going through', () => {
     expect(seen.journal!.activeLabel).toBe('Other');
     expect(seen.journal!.startingBalance).toBe(500);
     expect(seen.statsRuns).toBe(1);
+  });
+});
+
+describe("rule ticks follow their setup's rules", () => {
+  const orb: Setup = { id: 'orb', name: 'ORB', rules: ['Wait', 'Retest'] };
+  const ticksOf = () => seen.journal!.accountTrades.map((t) => t.ruleChecks);
+
+  beforeEach(async () => {
+    const ids = seen.journal!.accountTrades.map((t) => t.id);
+    await act(async () => seen.journal!.actions.upsertSetup(orb));
+    await act(async () =>
+      seen.journal!.actions.patchTrades(ids, { setupId: orb.id, ruleChecks: { Wait: true, Retest: false } }),
+    );
+    expect(ticksOf()).toEqual([
+      { Wait: true, Retest: false },
+      { Wait: true, Retest: false },
+    ]);
+  });
+
+  it('a reworded rule keeps its ticks', async () => {
+    const renamed = new Map([['Wait', 'Wait 15 minutes']]);
+    await act(async () => seen.journal!.actions.upsertSetup({ ...orb, rules: ['Wait 15 minutes', 'Retest'] }, renamed));
+    expect(ticksOf()).toEqual([
+      { 'Wait 15 minutes': true, Retest: false },
+      { 'Wait 15 minutes': true, Retest: false },
+    ]);
+  });
+
+  it('a bulk edit to another setup drops them; one that leaves the setup alone keeps them', async () => {
+    const [first, second] = seen.journal!.accountTrades.map((t) => t.id);
+    await act(async () => seen.journal!.actions.patchTrades([first], { setupId: undefined }));
+    await act(async () => seen.journal!.actions.patchTrades([second], { tags: ['news'], setupId: orb.id }));
+    expect(ticksOf()).toEqual([undefined, { Wait: true, Retest: false }]);
+  });
+
+  it('a change of setup that brings its own ticks keeps those', async () => {
+    const vwap: Setup = { id: 'vwap', name: 'VWAP', rules: ['Volume'] };
+    const [first] = seen.journal!.accountTrades.map((t) => t.id);
+    await act(async () => seen.journal!.actions.upsertSetup(vwap));
+    await act(async () =>
+      seen.journal!.actions.patchTrades([first], { setupId: vwap.id, ruleChecks: { Volume: false } }),
+    );
+    expect(ticksOf()[0]).toEqual({ Volume: false });
+  });
+
+  it('deleting the setup drops them', async () => {
+    await act(async () => seen.journal!.actions.deleteSetup(orb.id));
+    expect(ticksOf()).toEqual([undefined, undefined]);
   });
 });

@@ -17,6 +17,12 @@ export interface SelfReview {
   patience?: number;
 }
 
+/** true: the rule was kept; false: broken; null: not checked */
+export type RuleTick = boolean | null;
+
+/** a trade's ticks against its setup's rules, by the rule's wording (see lib/rules.ts) */
+export type RuleChecks = Record<string, RuleTick>;
+
 export interface Trade {
   id: string;
   accountId: string;
@@ -38,6 +44,8 @@ export interface Trade {
   leverage?: number | null;
   session?: string;
   setupId?: string;
+  /** which of the setup's rules this trade kept and broke */
+  ruleChecks?: RuleChecks;
   tags: string[];
   notes?: string;
   /** a link to a chart, e.g. a TradingView snapshot */

@@ -1,4 +1,4 @@
-import type { Account, Resource, Settings, Setup, Trade } from '@/lib/types';
+import type { Account, Resource, RuleChecks, Settings, Setup, Trade } from '@/lib/types';
 
 /**
  * Type-checks everything that comes in from outside the app's own code: the
@@ -29,6 +29,15 @@ const optBool = (v: unknown) => (typeof v === 'boolean' ? v : undefined);
 const nullableNum = (v: unknown): number | null | undefined =>
   v == null || isNum(v) ? (v as number | null | undefined) : null;
 const strings = (v: unknown) => (Array.isArray(v) ? v.filter((s): s is string => typeof s === 'string') : []);
+
+/** rule ticks: true, false or null each, under a rule's wording; anything else is dropped, and with it an empty set */
+function ruleChecks(v: unknown): RuleChecks | undefined {
+  if (!isRecord(v)) return undefined;
+  const ticks = Object.entries(v).filter(
+    ([rule, tick]) => rule.trim() && (tick === true || tick === false || tick === null),
+  );
+  return ticks.length ? (Object.fromEntries(ticks) as RuleChecks) : undefined;
+}
 
 /**
  * A link that is safe to put in an href: http or https only. Anything else —
@@ -133,6 +142,8 @@ export function cleanTrades(v: unknown): Trade[] {
       leverage: nullableNum(t.leverage),
       session: optText(t.session),
       setupId: optText(t.setupId),
+      // ticks are against a setup's rules: without the setup (an older version cleared it) they would join the next one
+      ruleChecks: optText(t.setupId) ? ruleChecks(t.ruleChecks) : undefined,
       tags: strings(t.tags),
       notes: optText(t.notes),
       screenshotUrl: optText(t.screenshotUrl),

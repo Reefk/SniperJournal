@@ -6,8 +6,16 @@ import type { Setup } from '@/lib/types';
 import { useJournal } from '@/store/JournalProvider';
 import { useUI } from '@/store/UIProvider';
 import { groupTrades } from '@/lib/stats';
+import {
+  editedRules,
+  MIN_RULE_SIDE,
+  setupRuleReport,
+  type EditedRule,
+  type RuleLine,
+  type RuleReport,
+} from '@/lib/rules';
 import { formatMoney, formatPct, formatRatio } from '@/lib/format';
-import { uid } from '@/lib/utils';
+import { cn, uid } from '@/lib/utils';
 import { storage } from '@/lib/storage';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
@@ -28,6 +36,11 @@ export function PlaybookView() {
     const groups = groupTrades(accountTrades, (t) => t.setupId);
     return new Map(groups.map((g) => [g.key, g]));
   }, [accountTrades]);
+
+  const ruleReports = useMemo(
+    () => new Map(data.setups.map((s) => [s.id, setupRuleReport(accountTrades, s)])),
+    [accountTrades, data.setups],
+  );
 
   const unassigned = accountTrades.filter((t) => !t.setupId).length;
 
@@ -88,6 +101,9 @@ export function PlaybookView() {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3">
           {data.setups.map((setup) => {
             const perf = performance.get(setup.id);
+            const rules = ruleReports.get(setup.id);
+            const lineOf = new Map(rules?.rules.map((line) => [line.rule, line]));
+            const removed = rules?.rules.filter((line) => !line.current) ?? [];
             return (
               <article key={setup.id} className="flex flex-col rounded-xl border border-line bg-surface">
                 <header className="flex items-start gap-3 border-b border-line px-5 py-4">
@@ -128,14 +144,32 @@ export function PlaybookView() {
                       {setup.rules.filter(Boolean).map((rule, i) => (
                         <li key={i} className="flex gap-2.5 text-sm text-muted">
                           <Check className="mt-0.5 size-3.5 shrink-0 text-profit" />
-                          <span className="leading-relaxed">{rule}</span>
+                          <div className="min-w-0">
+                            <span className="leading-relaxed">{rule}</span>
+                            <RuleTally line={lineOf.get(rule)} costliest={rules?.costliest} currency={currency} />
+                          </div>
                         </li>
                       ))}
                     </ul>
                   ) : (
                     <p className="text-sm text-faint">No rules written yet. Rules are what make a setup checkable.</p>
                   )}
+                  {removed.length > 0 && (
+                    <div className="mt-3">
+                      <div className="text-[11px] text-faint">No longer in this setup</div>
+                      <ul className="mt-1 space-y-2">
+                        {removed.map((line) => (
+                          <li key={line.rule} className="text-sm text-faint">
+                            <span className="leading-relaxed">{line.rule}</span>
+                            <RuleTally line={line} costliest={rules?.costliest} currency={currency} />
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
+
+                {rules && rules.checked > 0 && <RulesKept report={rules} currency={currency} />}
 
                 <footer className="border-t border-line px-5 py-3">
                   {perf ? (
@@ -182,8 +216,8 @@ export function PlaybookView() {
         <SetupEditor
           setup={editing}
           onClose={() => setEditing(null)}
-          onSave={(next) => {
-            actions.upsertSetup({ ...next, rules: next.rules.map((r) => r.trim()).filter(Boolean) });
+          onSave={(next, renamedRules) => {
+            actions.upsertSetup(next, renamedRules);
             setEditing(null);
             toast(`Setup "${next.name}" saved`);
           }}
@@ -193,20 +227,128 @@ export function PlaybookView() {
   );
 }
 
+/** signed money; compact only from a thousand up, where it reads +$3.34K (below, compact gives +$541.1) */
+const short = (value: number, currency: string) =>
+  formatMoney(value, currency, { sign: true, compact: Math.abs(value) >= 1000 });
+
+/** How a setup's trades did against one of its rules */
+function RuleTally({
+  line,
+  costliest,
+  currency,
+}: {
+  line: RuleLine | undefined;
+  costliest: RuleLine | null | undefined;
+  currency: string;
+}) {
+  if (!line || line.kept + line.broken === 0) return null;
+  return (
+    <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-faint">
+      <span className="num">
+        kept {line.kept} of {line.kept + line.broken}
+      </span>
+      {line.broken > 0 && (
+        <span className={cn('num', line.brokenNet < 0 && 'text-loss')}>
+          broken {line.broken}× · {short(line.brokenNet, currency)}
+        </span>
+      )}
+      {line === costliest && <StatusBadge tone="loss">costliest to break</StatusBadge>}
+    </div>
+  );
+}
+
+/** The trades that kept every rule of the setup against the ones that broke one */
+function RulesKept({ report, currency }: { report: RuleReport; currency: string }) {
+  const { kept, broken, checked, partial, cost } = report;
+  const unchecked = report.trades - checked;
+  const many = (n: number) => (n === 1 ? 'trade' : 'trades');
+  const net = (v: number) => (v > 0 ? 'text-profit' : v < 0 ? 'text-loss' : 'text-fg');
+
+  return (
+    <section aria-label="Rules kept" className="border-t border-line px-5 py-3 text-xs">
+      <p className="text-muted">
+        Every rule kept on <span className="num font-semibold text-fg">{kept?.trades ?? 0}</span> of {checked} checked{' '}
+        {many(checked)}
+        {partial > 0 && <> · {partial} partly checked</>}
+        {unchecked > 0 && <> · {unchecked} not checked</>}
+      </p>
+      <table className="mt-2 w-full">
+        <thead>
+          <tr className="text-[11px] text-faint">
+            <th className="text-left font-normal">
+              <span className="sr-only">Rules</span>
+            </th>
+            <th className="pl-2 text-right font-normal">Trades</th>
+            <th className="pl-2 text-right font-normal">Net</th>
+            <th className="pl-2 text-right font-normal">Win rate</th>
+            <th className="pl-2 text-right font-normal">Avg R</th>
+          </tr>
+        </thead>
+        <tbody>
+          {(
+            [
+              ['Every rule kept', kept],
+              ['A rule broken', broken],
+            ] as const
+          ).map(([label, side]) => (
+            <tr key={label}>
+              <th scope="row" className="py-0.5 text-left font-normal text-muted">
+                {label}
+              </th>
+              <td className="num pl-2 text-right text-fg">{side?.trades ?? 0}</td>
+              <td className={cn('num pl-2 text-right', side ? net(side.net) : 'text-faint')}>
+                {side ? short(side.net, currency) : '—'}
+              </td>
+              <td className="num pl-2 text-right text-fg">{side ? formatPct(side.winRate, 0) : '—'}</td>
+              <td className="num pl-2 text-right text-fg">
+                {side?.avgR != null ? `${side.avgR >= 0 ? '+' : ''}${side.avgR.toFixed(2)}R` : '—'}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {cost != null && broken && (
+        <p className="mt-2 leading-relaxed text-muted">
+          {cost > 0 ? (
+            <>
+              Breaking a rule cost about{' '}
+              <span className="num font-semibold text-loss">{formatMoney(cost, currency)}</span> here: the{' '}
+              {broken.trades} {many(broken.trades)} that broke one would have made that much more at the average of the
+              trades that kept every rule.
+            </>
+          ) : (
+            'Breaking a rule has not cost money on this setup so far.'
+          )}
+        </p>
+      )}
+      {cost == null && kept && broken && (
+        <p className="mt-2 leading-relaxed text-faint">
+          What breaking a rule costs shows once {MIN_RULE_SIDE} trades are on each side.
+        </p>
+      )}
+    </section>
+  );
+}
+
 function SetupEditor({
   setup,
   onSave,
   onClose,
 }: {
   setup: Setup;
-  onSave: (setup: Setup) => void;
+  /** `renamedRules`: each reworded rule, old wording → new, so its trades' ticks follow it */
+  onSave: (setup: Setup, renamedRules: Map<string, string>) => void;
   onClose: () => void;
 }) {
-  const [draft, setDraft] = useState<Setup>({ ...setup, rules: setup.rules.length ? setup.rules : [''] });
+  const [draft, setDraft] = useState<Setup>(setup);
+  const [rows, setRows] = useState<EditedRule[]>(() =>
+    setup.rules.length ? setup.rules.map((text) => ({ text, was: text })) : [{ text: '', was: null }],
+  );
   const [error, setError] = useState('');
 
   const setRule = (index: number, value: string) =>
-    setDraft((d) => ({ ...d, rules: d.rules.map((r, i) => (i === index ? value : r)) }));
+    setRows((rs) => rs.map((r, i) => (i === index ? { ...r, text: value } : r)));
+  const addRule = () => setRows((rs) => [...rs, { text: '', was: null }]);
 
   return (
     <Modal
@@ -224,7 +366,8 @@ function SetupEditor({
             setError('Give the setup a name');
             return;
           }
-          onSave({ ...draft, name: draft.name.trim() });
+          const { rules, renamed } = editedRules(rows);
+          onSave({ ...draft, name: draft.name.trim(), rules }, renamed);
         }}
         className="space-y-4"
       >
@@ -271,17 +414,17 @@ function SetupEditor({
             <span className="text-faint">every one must be true before you take the trade</span>
           </div>
           <div className="space-y-2">
-            {draft.rules.map((rule, i) => (
+            {rows.map((row, i) => (
               <div key={i} className="flex items-center gap-2">
                 <span className="num w-5 shrink-0 text-center text-xs text-faint">{i + 1}</span>
                 <Input
-                  value={rule}
+                  value={row.text}
                   onChange={(e) => setRule(i, e.target.value)}
                   placeholder="e.g. Volume above the 20 period average"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault();
-                      setDraft((d) => ({ ...d, rules: [...d.rules, ''] }));
+                      addRule();
                     }
                   }}
                 />
@@ -289,19 +432,14 @@ function SetupEditor({
                   size="icon"
                   variant="ghost"
                   aria-label={`Remove rule ${i + 1}`}
-                  onClick={() => setDraft((d) => ({ ...d, rules: d.rules.filter((_, idx) => idx !== i) }))}
+                  onClick={() => setRows((rs) => rs.filter((_, idx) => idx !== i))}
                 >
                   <X className="size-4" />
                 </Button>
               </div>
             ))}
           </div>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="mt-2"
-            onClick={() => setDraft((d) => ({ ...d, rules: [...d.rules, ''] }))}
-          >
+          <Button size="sm" variant="ghost" className="mt-2" onClick={addRule}>
             <Plus className="size-3.5" /> Add a rule
           </Button>
         </div>
