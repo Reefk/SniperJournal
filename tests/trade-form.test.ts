@@ -138,18 +138,13 @@ describe('logging a new trade by hand', () => {
     expect(logged()?.needsReview).toBeUndefined();
   });
 
-  // Under review: an edit marks a trade with an entry price of 0 needsReview
-  // (above), but a new one is saved without the mark, because addTrade in
-  // src/store/JournalProvider.tsx doesn't set it as updateTrade does. Nothing
-  // reads the stored mark on a journal's trades today (the Trades page and the
-  // statistics ask isIncomplete), so nothing a user sees is wrong. Planned: set
-  // it on add too, or refuse an entry price of 0 in the form.
-  it('current behaviour, under review: a new trade with an entry price of 0 is saved without needsReview', async () => {
+  // decided 2026-10-19: marked, as an edit is (until then a new one was saved
+  // without the mark, though the Trades page showed it as needing details)
+  it('with an entry price of 0, which is what an empty column becomes, is saved marked needsReview', async () => {
     await log('AMD', '2', '0');
     await until(() => !dialog());
     const t = logged();
-    expect(t).toMatchObject({ symbol: 'AMD', entryPrice: 0 });
+    expect(t).toMatchObject({ symbol: 'AMD', entryPrice: 0, needsReview: true });
     expect(t && isIncomplete(t)).toBe(true);
-    expect(t?.needsReview).toBeUndefined();
   });
 });

@@ -342,7 +342,11 @@ export function JournalProvider({ children }: { children: ReactNode }) {
     () => ({
       addTrade: (input) => {
         const now = new Date().toISOString();
-        mutate((d) => ({ ...d, trades: [...d.trades, { ...input, id: uid(), createdAt: now, updatedAt: now }] }));
+        const trade: Trade = { ...input, id: uid(), createdAt: now, updatedAt: now };
+        // as when editing one: a trade still missing something it needs (an
+        // entry price of 0 is what an empty column becomes) is marked
+        trade.needsReview = isIncomplete(trade) ? true : undefined;
+        mutate((d) => ({ ...d, trades: [...d.trades, trade] }));
       },
       updateTrade: (id, input) => {
         const now = new Date().toISOString();
