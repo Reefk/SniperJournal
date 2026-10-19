@@ -1,5 +1,5 @@
 import { fileURLToPath } from 'node:url';
-import { defineConfig } from 'vitest/config';
+import { coverageConfigDefaults, defineConfig } from 'vitest/config';
 
 /**
  * Unit and integration tests for the journal's logic. They run in Node, never
@@ -37,6 +37,10 @@ export default defineConfig({
         'src/components/trades/TradeFormModal.tsx',
         'src/components/trades/ImportTradesModal.tsx',
       ],
+      // sample.ts only makes up the demo trades of Load test data. Some tests
+      // build their journals with it, which covers it without testing it, and
+      // whatever it covers or not says nothing about the numbers you see.
+      exclude: [...coverageConfigDefaults.exclude, 'src/lib/sample.ts'],
       reporter: ['text-summary', 'text'],
     },
   },
