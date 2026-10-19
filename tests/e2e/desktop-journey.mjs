@@ -119,6 +119,10 @@ async function openBrowser() {
       if (page) ws = new WebSocket(page.webSocketDebuggerUrl);
     } catch {}
   }
+  if (!ws) {
+    proc.kill();
+    throw new Error(`the browser did not start (${browserPath})`);
+  }
   await new Promise((r) => ws.addEventListener('open', r, { once: true }));
   const page = drive(ws);
   const { send } = page;

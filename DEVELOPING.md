@@ -85,13 +85,14 @@ It is there so the behaviour can't change by accident in the meantime; the
 change that settles it updates that test on purpose. `grep -rn "under review"
 tests/` lists them.
 
-GitHub runs typecheck, lint, a formatting check, the tests and both builds
-(desktop and the Android export) on Windows and Linux for every push to `main`
-and every pull request: `.github/workflows/ci.yml`. It only reads the code;
-nothing is signed or published. Lint warnings don't fail it, errors do. The
-warnings left today are known (see the comment in `eslint.config.mjs`); don't
-add new ones. A file Prettier would change fails it too: `npm run format -- .`
-fixes them all.
+GitHub runs typecheck, lint, a formatting check, the tests, both builds
+(desktop and the Android export) and `npm run e2e` on Windows (in Edge) and
+Linux (in Chrome) for every push to `main` and every pull request:
+`.github/workflows/ci.yml`. It only reads the code; nothing is signed or
+published. Lint warnings don't fail it, errors do. The warnings left today are
+known (see the comment in `eslint.config.mjs`); don't add new ones. A file
+Prettier would change fails it too: `npm run format -- .` fixes them all.
+`npm run e2e:desktop` and `npm run e2e:android` are still run by hand.
 
 Every file was formatted at once in one commit, listed in
 `.git-blame-ignore-revs` so that GitHub's blame skips it. To skip it locally

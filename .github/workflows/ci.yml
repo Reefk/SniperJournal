@@ -1,7 +1,7 @@
 # Checks every push to main and every pull request: types, lint, formatting,
-# tests and both builds (the desktop server and the static export the Android
-# app is made from). It only reads the code. Nothing is signed, published or
-# uploaded.
+# tests, both builds (the desktop server and the static export the Android
+# app is made from) and the desktop E2E journey. It only reads the code.
+# Nothing is signed, published or uploaded.
 name: CI
 
 on:
@@ -47,4 +47,12 @@ jobs:
       - run: npm run format:check
       - run: npm test
       - run: npm run build
+      # The desktop build in a headless browser: Edge on Windows, Chrome on
+      # Linux, both already on the runner. It runs while the desktop build is
+      # in place: build:mobile moves .next aside. The Windows app's journey
+      # (e2e:desktop) needs a Rust toolchain and a long compile, and the
+      # Android one (e2e:android) an emulator, so both are still run by hand.
+      # About a minute; the limit is for a browser that hangs.
+      - run: npm run e2e
+        timeout-minutes: 10
       - run: npm run build:mobile
