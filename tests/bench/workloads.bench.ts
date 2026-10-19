@@ -104,15 +104,17 @@ it('workload timings', { timeout: 600_000 }, () => {
     };
     const json = JSON.stringify(journal);
     const ms = (fn: () => void) => `${median(fn).toFixed(2)} ms`;
-    // the dashboard works the stats out once and hands them to sniperScore, so
-    // sniperScore is timed on its own (until 2026-10-12 this column included a
-    // computeStats call)
+    // the pages work the stats out once and hand them on: the dashboard to
+    // sniperScore, the Insights page to sniperScore and buildInsights. So both
+    // are timed given the stats, not with a computeStats call of their own
+    // (the sniperScore column included one until 2026-10-12; buildInsights,
+    // which works them out itself when not given them, until 2026-10-19)
     const stats = computeStats(trades);
     rows[`${size} trades`] = {
       'journal JSON': `${(json.length / 1024 / 1024).toFixed(2)} MB`,
       computeStats: ms(() => computeStats(trades, 25000)),
       sniperScore: ms(() => sniperScore(trades, stats)),
-      buildInsights: ms(() => buildInsights(trades, [], settings)),
+      buildInsights: ms(() => buildInsights(trades, [], settings, stats)),
       'CSV import': ms(() => importTradesFromCsv(csv, { accountId: 'acc1', accounts, setups: [] })),
       'CSV import, one row per fill': ms(() => importTradesFromCsv(fills, { accountId: 'acc1', accounts, setups: [] })),
       'CSV export': ms(() => tradesToCsv(trades, [], accounts)),
