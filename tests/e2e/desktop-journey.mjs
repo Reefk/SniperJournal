@@ -31,7 +31,11 @@ import { excelSerial, makeXlsx } from '../xlsx-writer.mjs';
 const project = resolve(import.meta.dirname, '..', '..');
 const port = 3200 + Math.floor(Math.random() * 500);
 const base = `http://127.0.0.1:${port}`;
-const work = mkdtempSync(join(tmpdir(), 'sj-e2e-'));
+// The server runs in this folder, and next start can't find a project on
+// another drive from there (it joins the two paths). GitHub's Windows runner
+// has the checkout on D: and the system temp folder on C:, so on GitHub the
+// folder goes in the runner's own temp folder, on the checkout's drive.
+const work = mkdtempSync(join(process.env.RUNNER_TEMP ?? tmpdir(), 'sj-e2e-'));
 const downloads = join(work, 'downloads');
 const browserPath =
   process.env.CHROME_PATH ??
