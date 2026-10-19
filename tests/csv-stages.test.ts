@@ -51,6 +51,35 @@ describe('stage 1: the layout of the file', () => {
     expect(sheetOf('time,symbol,qty,price\n2026-03-02 10:00,AAPL,-1,100').rowKind).toBe('fills');
   });
 
+  it('an Action column with a buy or a sell in it is the direction; a Type column needs half of its values to be', () => {
+    const rows = ['Security Transfer', 'Sell Short', 'Stock Split', 'Dividend'].map(
+      (v, i) => `2026-03-0${i + 2},AAPL,${v},1,100`,
+    );
+    const side = (name: string, values = rows) =>
+      sheetOf(`date,symbol,${name},qty,price\n${values.join('\n')}`).has('side');
+    expect([side('action'), side('trans code'), side('type')]).toEqual([true, true, false]);
+    // one trade among twenty other lines is enough for an Action column
+    const quiet = Array.from({ length: 19 }, (_, i) => `2026-03-${String(i + 2).padStart(2, '0')},AAPL,Dividend,1,1`);
+    expect(side('action', [...quiet, '2026-03-30,AAPL,Sell Short,1,100'])).toBe(true);
+    // a Type column half buys and sells is the direction
+    expect(side('type', ['2026-03-02,AAPL,Buy,1,100', '2026-03-03,AAPL,Dividend,1,1'])).toBe(true);
+    // beside one, an Action that names a buy on one row of four gives way
+    const both = sheetOf(
+      'date,symbol,action,type,qty,price\n' +
+        ['Filled,Buy', 'Filled,Sell', 'Filled,Buy', 'Buy limit placed,Sell']
+          .map((v, i) => `2026-03-0${i + 2},AAPL,${v},1,100`)
+          .join('\n'),
+    );
+    expect(both.plan.roles.get('side')).toEqual([3]);
+    // nothing in it is a buy or a sell
+    expect(
+      side(
+        'action',
+        rows.filter((row) => !row.includes('Sell')),
+      ),
+    ).toBe(false);
+  });
+
   it('what was chosen in the preview wins, but only fills the columns allow', () => {
     const fills = 'time,symbol,side,qty,price\n2026-03-02 10:00,AAPL,buy,1,100';
     expect(sheetOf(fills, { rowKind: 'trades' }).rowKind).toBe('trades');
@@ -535,6 +564,43 @@ describe('stage 4: rows of single fills', () => {
       return 'fill' in got ? 'fill' : got.skip;
     });
     expect(why).toEqual(['unfilled', 'not a trade', 'no symbol', 'no quantity', 'no price', 'fill', 'duplicate']);
+  });
+
+  it('rows that share an id are one execution listed twice only when all the rest is the same too', () => {
+    const r = fills(
+      [
+        // a spread's two legs, one order
+        '2026-03-02 10:00,SPY 260320P00500000,sell,1,2.5,0,9001',
+        '2026-03-02 10:00,SPY 260320P00495000,buy,1,1,0,9001',
+        // the first leg with one thing changed: the price, the time, the
+        // account, the size, the side, the symbol
+        '2026-03-02 10:00,SPY 260320P00500000,sell,1,2.45,0,9001',
+        '2026-03-02 10:01,SPY 260320P00500000,sell,1,2.5,0,9001',
+        '2026-03-02 10:00,SPY 260320P00500000,sell,1,2.5,0,9001,Prop Challenge',
+        '2026-03-02 10:00,SPY 260320P00500000,sell,2,2.5,0,9001',
+        '2026-03-02 10:00,SPY 260320P00500000,buy,1,2.5,0,9001',
+        '2026-03-02 10:00,SPY 260320P00495000,sell,1,2.5,0,9001',
+        // the first leg again, its numbers written another way
+        '2026-03-02 10:00,SPY 260320P00500000,sell,1.0,2.50,0,9001',
+      ].join('\n'),
+      'time,symbol,side,qty,price,fee,id,account',
+    );
+    const seen = new Set<string>();
+    const why = r.sheet.table.data.map((row, i) => {
+      const got = parseFillRow(row, i + 2, r, seen, false);
+      return 'fill' in got ? 'fill' : got.skip;
+    });
+    expect(why).toEqual([...Array(8).fill('fill'), 'duplicate']);
+    // a file of dates alone: the same order on another day is another fill
+    const days = fills(
+      '2026-03-02,AAPL,buy,1,100,0,7\n2026-03-03,AAPL,buy,1,100,0,7',
+      'date,symbol,side,qty,price,fee,id',
+    );
+    const dated = new Set<string>();
+    expect(days.sheet.table.data.map((row, i) => 'fill' in parseFillRow(row, i + 2, days, dated, false))).toEqual([
+      true,
+      true,
+    ]);
   });
 
   it('a signed quantity is the direction when there is no side column', () => {

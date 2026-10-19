@@ -467,6 +467,106 @@ describe('one row per fill', () => {
     expect(r.notices.join(' ')).toMatch(/2 rows are not a buy or a sell/);
   });
 
+  it('tastytrade transactions: the two legs of a spread share an Order #, and both come in', () => {
+    const csv = lines(
+      'Date,Type,Sub Type,Action,Symbol,Instrument Type,Description,Value,Quantity,Average Price,Commissions,Fees,Multiplier,Root Symbol,Underlying Symbol,Expiration Date,Strike Price,Call or Put,Order #,Total,Currency',
+      '2026-03-06T15:30:00+0000,Trade,Buy to Close,BUY_TO_CLOSE,SPY   260320P00500000,Equity Option,Bought 1 SPY 03/20/26 Put 500.00 @ 0.40,-40.00,1,-40.00,0.00,-0.14,100,SPY,SPY,3/20/26,500.0,PUT,9002,-40.14,USD',
+      '2026-03-06T15:30:00+0000,Trade,Sell to Close,SELL_TO_CLOSE,SPY   260320P00495000,Equity Option,Sold 1 SPY 03/20/26 Put 495.00 @ 0.10,10.00,1,10.00,0.00,-0.14,100,SPY,SPY,3/20/26,495.0,PUT,9002,9.86,USD',
+      '2026-03-02T15:00:00+0000,Trade,Sell to Open,SELL_TO_OPEN,SPY   260320P00500000,Equity Option,Sold 1 SPY 03/20/26 Put 500.00 @ 2.50,250.00,1,250.00,-1.00,-0.14,100,SPY,SPY,3/20/26,500.0,PUT,9001,248.86,USD',
+      '2026-03-02T15:00:00+0000,Trade,Buy to Open,BUY_TO_OPEN,SPY   260320P00495000,Equity Option,Bought 1 SPY 03/20/26 Put 495.00 @ 1.00,-100.00,1,-100.00,-1.00,-0.14,100,SPY,SPY,3/20/26,495.0,PUT,9001,-101.14,USD',
+      '2026-03-01T22:00:00+0000,Money Movement,Credit Interest,,,,INTEREST ON CREDIT BALANCE,0.04,0,,--,0.00,,,,,,,,0.04,USD',
+    );
+    const r = read(csv);
+    expect(r.duplicates).toBe(0);
+    const leg = (symbol: string) => {
+      const t = bySymbol(r.trades, symbol);
+      return [t.side, t.quantity, t.entryPrice, t.exitPrice, t.multiplier, money(grossPnl(t)), money(t.fees)];
+    };
+    // until 2026-10-19 the second leg of each order was taken for the first listed twice
+    expect(leg('SPY   260320P00500000')).toEqual(['SHORT', 1, 2.5, 0.4, 100, 210, 1.28]);
+    expect(leg('SPY   260320P00495000')).toEqual(['LONG', 1, 1, 0.1, 100, -90, 1.28]);
+    // the legs' ids are in the journal, so the same file again adds nothing
+    const again = read(csv, { existing: r.trades });
+    expect([again.trades.length, again.duplicates]).toEqual([0, 2]);
+  });
+
+  it('an order filled in equal lots at one price in the same second keeps every lot; an execution listed twice is one', () => {
+    const csv = (id: string) =>
+      lines(
+        `time,symbol,side,qty,price,${id}`,
+        '2026-03-02 10:00:00,AAA,buy,1,10,77',
+        '2026-03-02 10:00:00,AAA,buy,1,10,77',
+        '2026-03-02 10:05:00,AAA,sell,2,11,78',
+      );
+    const orders = read(csv('Order #'));
+    expect(orders.trades.map((t) => [t.side, t.quantity, t.exitPrice])).toEqual([['LONG', 2, 11]]);
+    expect(orders.duplicates).toBe(0);
+    // a file that lists its fills twice looks the same, so it is said
+    expect(orders.errors).toContain(
+      "1 fill is the same as another of the same order (time, size and price), so it was kept as more of that order. If the file lists fills twice, check those trades' sizes.",
+    );
+    expect(read(csv('Exec ID')).duplicates).toBe(1);
+  });
+
+  it('Schwab transactions: transfers and splits beside the trades leave the Action column the direction', () => {
+    const r = read(
+      lines(
+        '"Transactions  for account Brokerage ...1234 as of 03/09/2026 09:00:00 AM ET"',
+        '"Date","Action","Symbol","Description","Quantity","Price","Fees & Comm","Amount"',
+        '"03/09/2026","Security Transfer","MSFT","MICROSOFT CORP","10","","",""',
+        '"03/06/2026","Buy to Cover","ABC","ABC INC","10","$18.00","$0.02","-$180.02"',
+        '"03/04/2026","Sell Short","ABC","ABC INC","10","$20.00","$0.02","$199.98"',
+        '"03/03/2026 as of 03/02/2026","Stock Split","DEF","DEF CORP","9","$17.00","",""',
+        '"03/02/2026","Buy","DEF","DEF CORP","1","$170.00","","-$170.00"',
+        '"03/02/2026","Reverse Split","GHI","GHI HOLDINGS","1","","",""',
+        '"03/02/2026","Reverse Split","000000001","GHI HOLDINGS XXXREVERSE SPLIT","-10","","",""',
+        'Transactions Total,,,,,,,"-$150.04"',
+      ),
+    );
+    // until 2026-10-19 the Action column was dropped (a third of it buys and
+    // sells), every fill went by the sign of its size, and the short came in long
+    const abc = bySymbol(r.trades, 'ABC');
+    expect([abc.side, abc.quantity, abc.entryPrice, abc.exitPrice, money(grossPnl(abc)), money(abc.fees)]).toEqual([
+      'SHORT',
+      10,
+      20,
+      18,
+      20,
+      0.04,
+    ]);
+    // the split is said, not bought: 1 share at 170, not 10 at 32.30
+    const def = bySymbol(r.trades, 'DEF');
+    expect([def.side, def.quantity, def.entryPrice, isClosed(def)]).toEqual(['LONG', 1, 170, false]);
+    expect(r.trades).toHaveLength(2);
+    const notices = r.notices.join(' ');
+    for (const what of ['Security Transfer', 'Stock Split', 'Reverse Split']) expect(notices).toContain(`"${what}"`);
+    expect(notices).toMatch(/not a buy or a sell/);
+    expect(r.errors.join(' ')).not.toMatch(/direction/);
+  });
+
+  it('no direction column: a size below zero is a sell, and a file where no fill read has one says so', () => {
+    // the one size below zero is on a row with no price, so every fill read is a buy; it still comes in
+    const allBuys = read(
+      lines('date,symbol,qty,price', '2026-03-02,AAPL,5,100', '2026-03-03,AAPL,5,101', '2026-03-04,XYZ,-10,'),
+    );
+    expect(allBuys.trades.map((t) => [t.symbol, t.side, t.quantity])).toEqual([['AAPL', 'LONG', 10]]);
+    expect(allBuys.errors).toContain(
+      'There is no direction column and no fill has a size below zero, so every fill was read as a buy. Check any sells.',
+    );
+    // a minus sign says sell; buys beside it, or none, are nothing to check
+    const direction = (...rows: string[]) => read(lines('date,symbol,qty,price', ...rows)).errors.join(' ');
+    expect(direction('2026-03-02,AAPL,-5,100')).not.toMatch(/direction/);
+    expect(direction('2026-03-02,AAPL,5,100', '2026-03-03,AAPL,-5,101')).not.toMatch(/direction/);
+    // a file that names the direction can be all buys
+    const named = read(lines('date,symbol,side,qty,price', '2026-03-02,AAPL,buy,5,100', '2026-03-03,AAPL,buy,5,101'));
+    expect(named.errors.join(' ')).not.toMatch(/direction/);
+    // a sell the journal already has counts: the file has one
+    const first = lines('date,symbol,qty,price,id', '2026-03-02,AAPL,5,100,A1', '2026-03-03,AAPL,-5,101,A2');
+    const more = read(lines(first, '2026-03-04,AAPL,5,102,A3'), { existing: read(first).trades });
+    expect(more.trades.map((t) => t.entryPrice)).toEqual([102]);
+    expect(more.errors.join(' ')).not.toMatch(/direction/);
+  });
+
   it('Binance spot history: UTC times, quantities and amounts with units, a fee paid in BNB left out', () => {
     process.env.TZ = 'Asia/Jerusalem'; // UTC+2 in early March
     const r = read(

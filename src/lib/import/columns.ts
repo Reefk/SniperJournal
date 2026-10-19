@@ -637,6 +637,8 @@ export function planColumns(
 ): ColumnPlan {
   const values = (i: number) => sample.map((row) => row[i] ?? '');
   const infos = headers.map(headerInfo);
+  /** column -> the share of its values that are a buy or a sell, for each column still the direction */
+  const sideShares = new Map<number, number>();
   const candidates: Candidate[] = infos.map((info, i) => {
     const hit = ALIASES[info.key];
     if (!hit) return guess(headers[i], values(i));
@@ -649,12 +651,17 @@ export function planColumns(
       const options = share(v, (x) => parsePutCall(x) != null);
       if (role === 'side' && sides < 0.5) {
         // a column plainly named Side or Direction stays the direction, so an
-        // odd value in it is reported; a vaguer "Type" or "Action" is dropped
+        // odd value in it is reported. So does an "Action" with a buy or a sell
+        // in it: a broker's activity lists transfers and splits beside the
+        // trades (Schwab), and those rows are said not to be trades. A vaguer
+        // "Type" (Market, Limit) is dropped, and so is an "Action" with no buy
+        // or sell in it
         if (effects >= 0.5) role = 'effect';
         else if (options > 0) role = 'put_call';
-        else if (priority < 3) role = '';
+        else if (priority < 2 || (priority === 2 && sides === 0)) role = '';
       } else if (role === 'effect' && effects < 0.5 && priority < 3) role = '';
       else if (role === 'put_call' && options === 0) role = '';
+      if (role === 'side') sideShares.set(i, sides);
     } else if (role === 'quantity' && share(values(i), (x) => parseMoney(x) != null) < 0.5) {
       // Bybit's "Contracts" names the contract; a symbol column of its own wins
       return share(values(i), (x) => TICKER.test(x.trim())) >= 0.5
@@ -666,6 +673,12 @@ export function planColumns(
     }
     return { role, priority };
   });
+  // an Action kept for a few buys and sells gives way to a column that says
+  // the direction on most rows: a Type of Buy and Sell beside an Action of Filled
+  if ([...sideShares.values()].some((s) => s >= 0.5)) {
+    for (const [i, s] of sideShares)
+      if (s < 0.5 && candidates[i].priority < 3) candidates[i] = { role: '', priority: 0 };
+  }
 
   // the same header twice: MetaTrader writes Time and Price once for the
   // opening and once for the closing

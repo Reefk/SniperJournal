@@ -5,6 +5,7 @@ import { decimalsOf } from '../merge';
 import { uid } from '../utils';
 import { fillsToPositions, summarise, type Carry, type Fill, type Summary } from './fills';
 import { finishOpen, openRest, type Unsaid } from './finish';
+import { headerInfo } from './columns';
 import { believable, fitReported, type Reader, type RowsRead } from './reader';
 import { rowsNote } from './report';
 import { parseAction, parseEffect, parseMoment, parseMoney, parseStatus, type Moment } from './values';
@@ -34,8 +35,9 @@ export type FillSkip =
   | { skip: 'duplicate' };
 
 /**
- * A row read as a fill, or why it isn't one. `seen` holds the ids of the
- * fills read so far; this one's is added. `net` says the file's P&L column
+ * A row read as a fill, or why it isn't one. `seen` holds the fills with an id
+ * read so far, and this one is added; with none, no row is taken for another
+ * listed twice (the ids number orders). `net` says the file's P&L column
  * is after fees; `cashSigned` that its prices carry the sign of the cash, a
  * buy's below zero (tastytrade).
  */
@@ -43,7 +45,7 @@ export function parseFillRow(
   row: string[],
   line: number,
   r: Reader,
-  seen: Set<string>,
+  seen: Set<string> | null,
   net: boolean,
   cashSigned = false,
 ): FillRow | FillSkip {
@@ -79,11 +81,16 @@ export function parseFillRow(
   )
     price = price / multiplier;
   const id = cell(row, 'external_id') || undefined;
-  if (id) {
-    if (seen.has(id)) return { skip: 'duplicate' };
-    seen.add(id);
-  }
   const accountId = r.accountIdFor(r.textCell(row, 'account'));
+  if (id && seen) {
+    // the same execution listed twice is the same id with the same everything
+    // else; rows that share only the id are fills of one order: a spread's
+    // legs, a roll, a partial fill
+    const when = (['time', 'date', 'opened_at', 'opened_date'] as const).map((role) => cell(row, role));
+    const fill = [id, accountId, symbol, action.side, quantity, price, ...when].join('\u0000');
+    if (seen.has(fill)) return { skip: 'duplicate' };
+    seen.add(fill);
+  }
   const reported = parseMoney(cell(row, net ? 'net_pnl' : has('gross_pnl') ? 'gross_pnl' : 'pnl'));
   // no fee column, but a P&L before fees and one after them: the fees are the
   // difference, unless the one after is the larger (then they aren't those two)
@@ -249,6 +256,17 @@ function cashSignedPrices(r: Reader): boolean {
   return buysBelow > 0 && sellsAbove > 0;
 }
 
+const ORDER_IDS = new Set(['orderid', 'orderno', 'ordernumber']);
+/**
+ * Whether the id column numbers orders (tastytrade's Order #), not fills: an
+ * order fills in as many rows as it takes, two of them alike when it filled
+ * in equal lots at one price in the same second.
+ */
+function numbersOrders(r: Reader): boolean {
+  const i = r.sheet.at('external_id');
+  return i != null && ORDER_IDS.has(headerInfo(r.sheet.table.header[i] ?? '').key);
+}
+
 /** Whether the file lists its newest rows first, judged by every dated row in it, trades or not. */
 function runsNewestFirst(r: Reader): boolean {
   const { cell, order, table } = r.sheet;
@@ -328,7 +346,9 @@ export function tradesFromFills(r: Reader, journal?: readonly Trade[]): RowsRead
   const cashSigned = cashSignedPrices(r);
   const fills: Fill[] = [];
   const read = new Map<number, FillRow>();
-  const seen = new Set<string>();
+  const seen = numbersOrders(r) ? null : new Set<string>();
+  /** a fill read was a sell, the journal's own included */
+  let sold = false;
   const notTrades = new Map<string, number>();
   let unfilled = 0;
   const noQuantity: number[] = [];
@@ -340,6 +360,7 @@ export function tradesFromFills(r: Reader, journal?: readonly Trade[]): RowsRead
     const line = sheet.table.lines[index];
     const got = parseFillRow(row, line, r, seen, net, cashSigned);
     if ('fill' in got) {
+      if (got.fill.side === 'SELL') sold = true;
       if (journal && got.fill.id && r.existingIds.has(got.fill.id)) {
         known.add(got.fill.id);
         return;
@@ -458,6 +479,12 @@ export function tradesFromFills(r: Reader, journal?: readonly Trade[]): RowsRead
     errors.push(rowsNote(noQuantity, 'no quantity, so the fill was left out.', 'no quantity, so they were left out.'));
   if (noPrice.length)
     errors.push(rowsNote(noPrice, 'no price, so the fill was left out.', 'no price, so they were left out.'));
+  // with no direction column, a size below zero is a sell and any other a buy:
+  // when no fill read has one, nothing in the file said any fill was a sell
+  if (!sheet.has('side') && fills.length && !sold)
+    errors.push(
+      'There is no direction column and no fill has a size below zero, so every fill was read as a buy. Check any sells.',
+    );
   if (open) {
     notices.push(
       `${open} ${open === 1 ? 'position was' : 'positions were'} still open at the end of the file, so ${open === 1 ? 'it was' : 'they were'} imported as open ${open === 1 ? 'trade' : 'trades'}.`,
@@ -472,6 +499,21 @@ export function tradesFromFills(r: Reader, journal?: readonly Trade[]): RowsRead
     errors.push(
       `${overlapping} ${overlapping === 1 ? 'trade shares' : 'trades share'} fills with trades already in your journal (a position that runs across two exports). Check for doubles.`,
     );
+  }
+  // ids that number orders keep two rows alike (an order filled in equal lots
+  // in one second), but a file that lists its fills twice would count them twice
+  if (!seen) {
+    const rows = new Set<string>();
+    let alike = 0;
+    for (const f of fills) {
+      const same = [f.id, f.key, f.side, f.quantity, f.price, f.time?.value].join('\u0000');
+      if (rows.has(same)) alike++;
+      else rows.add(same);
+    }
+    if (alike)
+      errors.push(
+        `${alike} ${alike === 1 ? 'fill is' : 'fills are'} the same as another of the same order (time, size and price), so ${alike === 1 ? 'it was' : 'they were'} kept as more of that order. If the file lists fills twice, check those trades' sizes.`,
+      );
   }
   return { trades, errors, notices, finished, unsaid };
 }
