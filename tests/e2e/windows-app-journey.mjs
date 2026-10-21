@@ -243,7 +243,7 @@ async function journey() {
   await b.until(`$text().includes('Set up your journal')`, 'welcome screen');
   check('the welcome screen offers to bring over the earlier version', await b.run(`!!$t('Bring your journal over')`));
   check(
-    "the window's own parts (date fields, menus) are in British English, whatever Windows is set to",
+    "the window's own parts (date fields, menus) are in English: navigator.language is en-GB",
     (await b.run(`navigator.language`)) === 'en-GB',
     await b.run(`navigator.language`),
   );

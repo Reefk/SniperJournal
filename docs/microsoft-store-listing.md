@@ -108,7 +108,7 @@ ALSO NEW
 • Faded placeholders, as an option in Settings
 • Screen readers hear when the journal is saved, and each chart is described in words
 • A journal saved by a newer version of the app is never opened or written over
-• Date fields and menus in British English, whatever Windows is set to
+• Date fields and menus in English, whatever language Windows is in
 • Many smaller fixes to wording and numbers
 ```
 

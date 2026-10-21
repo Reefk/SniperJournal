@@ -30,8 +30,8 @@ const work = mkdtempSync(join(process.env.RUNNER_TEMP ?? tmpdir(), 'sj-store-sho
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const debugPort = 9600 + Math.floor(Math.random() * 300);
-// the browser flags the app ships with (British English, whatever Windows is
-// set to), passed again because the variable replaces them, plus DevTools
+// the browser flags the app ships with (English, whatever language Windows is
+// in), passed again because the variable replaces them, plus DevTools
 const shippedArgs =
   JSON.parse(readFileSync(join(project, 'src-tauri', 'tauri.conf.json'), 'utf8')).app.windows[0]
     .additionalBrowserArgs ?? '';

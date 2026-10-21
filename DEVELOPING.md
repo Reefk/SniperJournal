@@ -278,11 +278,13 @@ folder). `storage.device` says what it runs on (`pc` or `phone`): keyboard
 focus, the print button, the back button, the share sheet and the words
 "phone" and "PC" go by that one. The Windows app is `native` on a `pc`.
 
-The Windows app's window speaks British English whatever Windows is set to:
+The Windows app's window speaks English whatever language Windows is in:
 `additionalBrowserArgs` in `src-tauri/tauri.conf.json` ends in `--lang=en-GB`,
 so the browser's own parts (the date and time fields, their date picker, the
-right-click menu) match the app's English, with day/month/year and a 24-hour
-clock. Without it, a Hebrew Windows showed `dd/מ״מ/YYYY`. The rest of that
+right-click menu) match the app's English. Without it, a Hebrew Windows showed
+`dd/מ״מ/YYYY`. The order of day and month still follows Windows: on GitHub's
+US English runner the date fields show `mm/dd/yyyy` (see the Store screenshot
+of Trades), although `navigator.language` is `en-GB` there. The rest of that
 setting is Tauri's own default, which a custom value replaces. Scripts that set
 `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` (the Windows app's E2E, the Store
 screenshots) pass the same flags again: that variable replaces them too. The
