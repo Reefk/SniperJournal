@@ -22,7 +22,7 @@
 <p align="center">
   <img src="assets/microsoft-store/screenshots/02-trades.png" alt="The trades list" width="265" />
   <img src="assets/microsoft-store/screenshots/04-insights.png" alt="Insights found in your own trades" width="265" />
-  <img src="assets/microsoft-store/screenshots/06-calendar-light.png" alt="The performance calendar, in the light theme" width="265" />
+  <img src="assets/readme/calendar-dark.png" alt="The performance calendar" width="265" />
 </p>
 
 ## What you get
