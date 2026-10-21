@@ -16,6 +16,11 @@ import { join, resolve } from 'node:path';
 
 const apk = process.argv.includes('--apk');
 
+// the certificate of the key the APK has been signed with since 1.1.0
+// (android/upload-keystore.jks): Android won't install an APK signed with any
+// other key over the app people already have
+const RELEASE_CERT_SHA256 = 'D4F0DE81FC2D9F56191AB970F4CBD18741E4BF20F574AC3F4D672260D9A17940';
+
 const fail = (message) => {
   console.error(`\n  ${message}\n`);
   process.exit(1);
@@ -97,9 +102,12 @@ if (apk) {
   if (verify.status !== 0 || !sha256) {
     fail(`${out} is not signed (apksigner exit ${verify.status}):\n${verify.stdout}${verify.stderr}`);
   }
+  const fingerprint = sha256.match(/../g).join(':').toUpperCase();
+  if (sha256.toUpperCase() !== RELEASE_CERT_SHA256) {
+    fail(`${out} is signed with another key (SHA-256 ${fingerprint}); it would not install over the released app.`);
+  }
   console.log(`\n  Signed APK ready: ${out} (${size} MB, version ${version})`);
-  console.log(`  Signing certificate SHA-256: ${sha256.match(/../g).join(':').toUpperCase()}`);
-  console.log('  Every later APK must show this same certificate, or it will not install over this one.\n');
+  console.log(`  Signed with the release key, certificate SHA-256 ${fingerprint}\n`);
 } else {
   const verify = spawnSync(join(javaHome, 'bin', 'jarsigner'), ['-verify', out], { encoding: 'utf8' });
   if (!/jar verified/i.test(verify.stdout ?? '')) fail(`${out} is not signed:\n${verify.stdout}${verify.stderr}`);

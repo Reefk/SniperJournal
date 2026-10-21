@@ -10,4 +10,5 @@ exclude:
   - user-guide.md
   - play-store-listing.md
   - microsoft-store-listing.md
+  - install-android.md
   - import-samples
