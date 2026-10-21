@@ -276,17 +276,20 @@ const clamp100 = (v: number) => Math.max(0, Math.min(100, v));
  *                                        no losing trade at all → 100
  *   Risk:reward    (avgR + 0.5) × 50     −0.5R → 0, 0R → 25, +1.5R or more → 100
  *   Consistency    green-day share × 60  every day green → 60 of the 100
- *                  + steadiness × 0.4    steadiness = |mean day| ÷ its standard
+ *                  + steadiness × 0.4    steadiness = mean day ÷ its standard
  *                                        deviation × 60, so a ratio of about
  *                                        1.67 or more → 100 (40 of the 100);
- *                                        identical days → 60 (24 of the 100)
+ *                                        identical winning days → 60 (24 of
+ *                                        the 100); a mean day at or below
+ *                                        zero → 0
  *   Discipline,    average rating ÷ 5    1 of 5 → 20, 5 of 5 → 100
  *   execution,     × 100
  *   patience
  *
- * The overall score is the plain average of the rated axes. Steadiness uses
- * the size of the average day, not its sign, so steadily losing days earn it
- * too; only the green-day share tells winning from losing there.
+ * The overall score is the plain average of the rated axes. Steadiness is
+ * for steady gains: days that lose about the same every time are steady, but
+ * not in a way worth scoring (until 1.1 they earned it as fully as winning
+ * days did).
  */
 export function sniperScore(trades: Trade[], stats: Stats): SniperScore {
   const closed = statTrades(trades);
@@ -329,7 +332,8 @@ export function sniperScore(trades: Trade[], stats: Stats): SniperScore {
     const m = mean(dayNets);
     const sd = Math.sqrt(mean(dayNets.map((v) => (v - m) ** 2)));
     const greenDays = stats.days.filter((d) => d.net > 0).length / stats.days.length;
-    const steadiness = sd > 0 ? clamp100((Math.abs(m) / sd) * 60) : 60;
+    // steady gains, not steady results: an average day at or below zero earns none, however steady
+    const steadiness = m <= 0 ? 0 : sd > 0 ? clamp100((m / sd) * 60) : 60;
     consistency = clamp100(greenDays * 60 + steadiness * 0.4);
   }
   axes.push({

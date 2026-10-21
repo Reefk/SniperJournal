@@ -365,19 +365,38 @@ describe('sniperScore', () => {
     expect(score.unrated).toContain('Discipline');
   });
 
-  // Under review: steadiness uses the size of the average day, whatever its
-  // sign, so days that lose about the same every time earn it as fully as days
-  // that win it; only the share of green days tells them apart. Planned:
-  // steadiness only for steady gains.
-  it('current behaviour, under review: steadily losing days earn the same steadiness as steadily winning ones', () => {
+  describe('consistency: green days × 60, and steadiness of gains × 0.4', () => {
     const consistency = (nets: number[]) => {
       const trades = series(nets);
       return sniperScore(trades, computeStats(trades)).axes.find((a) => a.axis === 'Consistency')?.score;
     };
-    // no green day, yet the full 40 for steadiness
-    expect(consistency([-10, -12, -10, -12, -10])).toBe(40);
-    // every day green: 60 for that, and the same 40
-    expect(consistency([10, 12, 10, 12, 10])).toBe(100);
+
+    it('gives steadily losing days no steadiness, however steady', () => {
+      expect(consistency([-10, -12, -10, -12, -10])).toBe(0);
+      // every day green, as steady: 60 for that, and the full 40
+      expect(consistency([10, 12, 10, 12, 10])).toBe(100);
+    });
+
+    it('gives identical days 60 steadiness when they win, none when they lose or break even', () => {
+      expect(consistency([10, 10, 10, 10, 10])).toBeCloseTo(60 + 60 * 0.4, 10);
+      expect(consistency([-10, -10, -10, -10, -10])).toBe(0);
+      expect(consistency([0, 0, 0, 0, 0])).toBe(0);
+    });
+
+    it('gives an average day of zero no steadiness, only its green days', () => {
+      expect(consistency([10, -10, 10, -10, 0])).toBeCloseTo((2 / 5) * 60, 10);
+    });
+
+    it('caps steadiness at 100: a mean day 1.67 times its spread or more is as steady as it gets', () => {
+      // mean 7.8, spread 4.4: 7.8 ÷ 4.4 × 60 is about 106, counted as 100
+      expect(consistency([10, 10, 10, 10, -1])).toBeCloseTo((4 / 5) * 60 + 100 * 0.4, 10);
+    });
+
+    it('scores the mean day against its spread when it gains', () => {
+      // mean 7, spread √((13² + 12² + 8² + 12² + 3²) ÷ 5) = √106
+      const steadiness = Math.min(100, (7 / Math.sqrt(106)) * 60);
+      expect(consistency([20, -5, 15, -5, 10])).toBeCloseTo((3 / 5) * 60 + steadiness * 0.4, 10);
+    });
   });
 
   it('labels SQN bands', () => {
