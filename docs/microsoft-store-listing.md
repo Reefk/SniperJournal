@@ -47,7 +47,7 @@ INSIGHTS AND SIGNALS
 Patterns found in your own trades, explained in plain language: your most profitable session, the weekday that costs you, whether the trade after a loss performs worse, whether you hold losers longer than winners, and which tags lose money. Set a daily loss limit or a maximum number of trades and get a warning as you approach it.
 
 YOUR PLAYBOOK
-Write down the setups you allow yourself to trade and the rules that make each one valid, then see how every setup actually performs.
+Write down the setups you allow yourself to trade and the rules that make each one valid, then see how every setup actually performs. Tick each trade's rules as kept or broken, and Insights shows what breaking them cost.
 
 TRADES, FILTERS AND REPORTS
 • Search and filter by symbol, session, setup, leverage, date, direction and result
@@ -57,7 +57,7 @@ TRADES, FILTERS AND REPORTS
 • Reports month by month and by symbol, setup and weekday, ready to print
 
 IMPORT FROM YOUR BROKER
-Import a CSV export and preview exactly what was understood before anything is added. Common broker column names are recognised, and paired buy/sell exports such as Tradovate's are supported: the fill IDs are remembered, so importing your history again never adds the same fill twice. Export your trades to CSV at any time.
+Import a CSV or Excel export and preview exactly what was understood before anything is added. The exports of 30 trading platforms import as they come, from NinjaTrader, Tradovate and TopstepX to Interactive Brokers, thinkorswim, MetaTrader and Binance, and many other brokers' files are understood too. Importing your history again leaves out the trades already in your journal, and a file that closes a trade you logged as open finishes it. Export your trades to CSV at any time.
 
 SEVERAL ACCOUNTS
 Keep a live account, a prop firm challenge and a practice account apart, or view them all together.
@@ -87,8 +87,30 @@ Sniper Journal is a record-keeping and analysis tool. It does not place trades, 
 
 ### What's new in this version
 
-Leave empty for the first submission (Microsoft's own advice). From the second
-release on, describe the changes here (1,500 characters max).
+1,500 characters max. Left empty for the first submission (Microsoft's own
+advice). For 1.1:
+
+```
+IMPORT FROM 30 PLATFORMS
+• Exports of 30 trading platforms import as they come, from NinjaTrader, Tradovate and TopstepX to Interactive Brokers, thinkorswim, MetaTrader and Binance, and the preview names the platform it recognised
+• Excel workbooks (.xlsx) import as well as CSV files
+• Importing a file again leaves out the trades already in your journal
+• A file that closes a trade you logged as open finishes it, the oldest open trade first
+• Spreads, partial closes, rebates and fees are read more accurately
+• Log a trade can take trades from a CSV file too
+
+PLAYBOOK RULES
+Tick each rule of a trade's setup as kept or broken. Insights then shows what breaking your rules cost, comparing each setup with itself.
+
+ALSO NEW
+• Sniper Score: steadiness now counts only for steady gains, so steadily losing days no longer raise your score
+• A new logo
+• Faded placeholders, as an option in Settings
+• Screen readers hear when the journal is saved, and each chart is described in words
+• A journal saved by a newer version of the app is never opened or written over
+• Date fields and menus in British English, whatever Windows is set to
+• Many smaller fixes to wording and numbers
+```
 
 ### Product features (up to 20, 200 characters each; the Store adds the bullets)
 
@@ -98,8 +120,8 @@ Win rate, profit factor, expectancy, SQN and average reward-to-risk, worked out 
 Equity curve with maximum drawdown, and a daily P&L chart
 Performance calendar with every day's net P&L
 Insights found in your own trades, explained in plain language
-A playbook of your setups, with how each one actually performs
-Import broker CSV exports, with a preview before anything is added
+A playbook of your setups and their rules, with how each one performs and what breaking a rule cost
+Import the exports of 30 trading platforms, CSV or Excel, with a preview before anything is added
 Reports by month, symbol, setup and weekday, ready to print or export to CSV
 Several accounts, kept apart or viewed together
 Rate your discipline, execution and patience on every trade
