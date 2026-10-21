@@ -464,6 +464,13 @@ async function journey() {
   // ---- 5b. a bulk action only ever touches trades that are still shown ------
   await b.run(`$nav('/trades'); true`);
   await b.until(`!!document.querySelector('main input[aria-label="Search trades"]')`, 'trades page');
+  // the header's search goes through every trade; a screen reader tells the two apart by name (SJ-40)
+  check(
+    'the header search and the Trades page search have different names',
+    await b.run(
+      `document.querySelectorAll('input[aria-label="Search trades"]').length === 1 && !!document.querySelector('header input[aria-label="Search all trades"]')`,
+    ),
+  );
   const tick = (symbol) =>
     `[...document.querySelectorAll('input[aria-label="Select ${symbol} trade"]')].find((c) => c.offsetParent !== null).click(); true`;
   const selectedCount = `Number(document.body.innerText.match(/(\\d+)\\s*selected/)?.[1] ?? 0)`;
@@ -572,6 +579,32 @@ async function journey() {
   );
   const scoreWords = await chartSummary('Sniper Score');
   check('the Sniper Score has a text alternative', /^Sniper Score.+\.$/.test(scoreWords), scoreWords);
+  check(
+    "the sidebar's logo is left unnamed beside the name, so a screen reader says it once",
+    await b.run(
+      `document.querySelector('aside img')?.getAttribute('alt') === '' && document.querySelector('aside').innerText.includes('Sniper Journal')`,
+    ),
+  );
+  // a laptop's width puts the eight smaller figures in one row, the narrowest they get
+  await b.send('Emulation.setDeviceMetricsOverride', { width: 1536, height: 864, deviceScaleFactor: 1, mobile: false });
+  const strip = await b.run(`(() => {
+    // a cell: its label, its figure, the line under it
+    const label = [...document.querySelectorAll('main span')].find((s) => s.textContent === 'Avg win / loss');
+    const cell = label?.parentElement?.parentElement;
+    const cells = [...(cell?.parentElement?.children ?? [])];
+    return {
+      columns: cell?.parentElement ? getComputedStyle(cell.parentElement).gridTemplateColumns.split(' ').length : 0,
+      lines: cells.map((c) => c.children[2]).filter(Boolean).length,
+      cut: cells.map((c) => c.children[2]).filter((l) => l && l.scrollWidth > l.clientWidth + 1).map((l) => l.textContent),
+      hold: cell?.children[2]?.textContent ?? '',
+    };
+  })()`);
+  await b.send('Emulation.clearDeviceMetricsOverride');
+  check(
+    'at laptop width every line under the smaller figures is shown whole, "held … on average" included',
+    strip.columns === 8 && strip.lines >= 7 && strip.cut.length === 0 && /^held .+ on average$/.test(strip.hold),
+    JSON.stringify(strip),
+  );
   const live = `document.querySelector('p.sr-only[aria-live=polite]')?.textContent`;
   check(
     'the save status is a polite live region for screen readers',

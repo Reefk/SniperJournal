@@ -20,7 +20,8 @@
   --faint: #7e8ba6;
   --placeholder: #7e8ba6;
   --accent: #818cf8;
-  --accent-strong: #6366f1;
+  /* white text on it stays above 4.5:1 at rest (5.2:1) and brightened for hover (4.55:1) */
+  --accent-strong: #5558f0;
   --profit: #34d399;
   --loss: #ff6879;
   --warn: #f59e0b;

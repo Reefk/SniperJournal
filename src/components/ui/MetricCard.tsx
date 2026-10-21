@@ -83,7 +83,8 @@ export function MetricCell({
         {info && <InfoTip text={info} />}
       </div>
       <div className={cn('num mt-1.5 truncate text-[15px] font-semibold', toneText(tone))}>{value}</div>
-      {sub && <div className="mt-0.5 truncate text-[11px] text-faint">{sub}</div>}
+      {/* eight to a row on a laptop leaves too little room for "held 1h 49m on average": it wraps rather than being cut */}
+      {sub && <div className="mt-0.5 text-[11px] text-faint">{sub}</div>}
     </div>
   );
 }

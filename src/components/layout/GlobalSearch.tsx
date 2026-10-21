@@ -56,7 +56,8 @@ export function GlobalSearch() {
         size="icon"
         variant="ghost"
         className="ml-auto md:hidden"
-        aria-label="Search trades"
+        aria-label="Open search"
+        aria-expanded={phoneOpen}
         onClick={() => {
           setPhoneOpen(true);
           requestAnimationFrame(() => inputRef.current?.focus());
@@ -86,7 +87,7 @@ export function GlobalSearch() {
               if (e.key === 'Escape') inputRef.current?.blur();
             }}
             placeholder="Search symbols, tags, notes, setups"
-            aria-label="Search trades"
+            aria-label="Search all trades"
             enterKeyHint="search"
             className="h-10 w-full rounded-md border border-line bg-app pl-9 pr-3 text-sm text-fg placeholder:text-placeholder transition focus:border-accent/70 focus:outline-none focus:ring-2 focus:ring-accent/20 md:h-9 md:pr-16"
           />

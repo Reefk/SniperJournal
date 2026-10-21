@@ -186,7 +186,7 @@ No Critical findings were made.
 | SJ-37 | Info   | Persistence              | Desktop `localStorage` mirror fails silently past about 5 MB                                                      | Fixed and Verified (2026-10-13)                                                                                                       |
 | SJ-38 | Info   | Dependencies             | Dev-only advisories: `@capacitor/cli` (3 moderate) and, since 2026-10-12, `eslint-config-next` (5 high, `braces`) | Accepted Risk                                                                                                                         |
 | SJ-39 | Info   | Persistence              | A cleaned-up journal is only written back on the next change                                                      | Accepted Risk                                                                                                                         |
-| SJ-40 | Info   | Accessibility            | Two different inputs are both named "Search trades"                                                               | Confirmed                                                                                                                             |
+| SJ-40 | Info   | Accessibility            | Two different inputs are both named "Search trades"                                                               | Fixed and Verified                                                                                                                    |
 | SJ-41 | Info   | Android                  | Real devices and WebView ≥ 140 (edge-to-edge) not tested                                                          | Unverified                                                                                                                            |
 | SJ-42 | Info   | Performance              | Large journals on phones not measured                                                                             | Unverified                                                                                                                            |
 | SJ-43 | Info   | Security                 | Journal API has no request-size limit (loopback only)                                                             | Accepted Risk                                                                                                                         |
@@ -576,7 +576,7 @@ No Critical findings were made.
 - **Impact:** Hints, timestamps and light-theme P&L figures are hard to read, especially in sunlight on a phone.
 - **Recommended fix:** Adopt the suggested shades, or similar ones. This is a visual design decision, so it was left to the owner. Re-check large-text uses, where only 3:1 is required.
 - **Fix (2026-10-12):** The nearest passing shades of the same hues: dark `faint` `#7e8ba6` and `loss` `#ff6879`; light `muted` `#5f6f86`, `faint` `#616f83`, `profit` `#056e4c`, `loss` `#ba0236` and `warn` `#9a5304`. Every text token is now at least 4.5:1 on `app`, `surface` and `raised`, and `profit`, `loss` and `warn` also on the 10–15% tinted fills of their own badges and toggles. The shades suggested above did not allow for those fills: light `#047f59` is about 4:1 on its own badge. The chart palette in `useChartTheme.ts` was changed to match.
-- **Still below AA:** white text on the dark theme's primary buttons (`--accent-strong`, `#6366f1`) is 4.47:1, and the danger button's hover fill (`bg-loss/20`) puts its text at 4.2–4.6:1. Placeholders use `faint`, so in the light theme they are now nearly as dark as typed values.
+- **Still below AA, fixed 2026-10-21:** white text on the dark theme's primary buttons (`--accent-strong`, `#6366f1`) was 4.47:1, and 3.87:1 brightened for hover; the danger button's hover fill (`bg-loss/20`) put its text at 4.2–4.6:1. Now `--accent-strong` is `#5558f0`, the nearest shade of the same hue that passes at rest and on hover (5.20:1, 4.55:1), and the danger hover is `bg-loss/15` (at least 4.55:1 dark, 4.57:1 light). Placeholders use `faint`, so in the light theme they are now nearly as dark as typed values (an option since 2026-10-16: Settings, "Example text in empty fields").
 - **Status:** Fixed and Verified (contrast computed for every token; both themes checked in screenshots).
 
 ### SJ-30: No CI and no lint
@@ -690,7 +690,7 @@ No Critical findings were made.
 - **Location:** `src/components/layout/GlobalSearch.tsx:59,89` and `src/views/TradesView.tsx:342`
 - **Impact:** On the Trades page, a screen-reader user meets two different controls with the same name. The E2E test first typed into the wrong one.
 - **Recommended fix:** Name the header one "Search all trades" or "Go to a trade".
-- **Status:** Confirmed.
+- **Status:** Fixed and Verified (2026-10-21): the header's search is "Search all trades" (the box and the phone's button); the Trades page keeps "Search trades". `npm run e2e` checks only one input has each name.
 
 ### SJ-41: Real devices and newer WebViews
 
@@ -1047,7 +1047,7 @@ A build that compiles is not evidence of readiness. These items are.
 | ~~Warn about or convert time-zone suffixes~~ Done 2026-10-09: converted | SJ-31   | S      |
 | Component tests for TradeForm, ImportTradesModal and Settings           | §12     | M      |
 | Tests for each insights rule                                            | §12     | M      |
-| Distinct names for the two search inputs                                | SJ-40   | XS     |
+| ~~Distinct names for the two search inputs~~ Done 2026-10-21            | SJ-40   | XS     |
 
 ### P3: when it matters
 

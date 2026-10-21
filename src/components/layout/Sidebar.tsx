@@ -96,7 +96,7 @@ export function Sidebar() {
   return (
     <aside className="hidden w-[248px] shrink-0 flex-col border-r border-line bg-surface md:flex">
       <div className="flex h-14 shrink-0 items-center gap-2.5 border-b border-line px-5">
-        <LogoMark />
+        <LogoMark alt="" />
         <span className="text-[15px] font-semibold tracking-tight text-fg">Sniper Journal</span>
       </div>
 

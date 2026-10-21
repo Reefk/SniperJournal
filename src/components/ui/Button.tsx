@@ -8,7 +8,8 @@ const VARIANTS: Record<Variant, string> = {
   primary: 'bg-accent-strong text-white hover:brightness-110 active:brightness-95',
   secondary: 'border border-line bg-raised text-fg hover:border-line-strong',
   ghost: 'text-muted hover:bg-raised hover:text-fg',
-  danger: 'border border-loss/30 bg-loss/10 text-loss hover:bg-loss/20',
+  // a 20% tint on hover took the red text below 4.5:1 in both themes; 15% keeps it above
+  danger: 'border border-loss/30 bg-loss/10 text-loss hover:bg-loss/15',
 };
 
 // a finger needs more room than a pointer: larger below md, unchanged above
