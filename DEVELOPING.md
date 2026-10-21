@@ -45,6 +45,9 @@ Then open <http://localhost:3000>. Changes appear as soon as you save.
 
 `npm run dev` is for editing. `npm run build` followed by `npm start` is the
 faster version you use day to day — that is what `start.bat` runs.
+`INSTALLER.bat` sets that up for good, with a desktop shortcut and the app
+running quietly in the background; the [PC user guide](docs/user-guide.md)
+walks through it.
 
 More commands worth knowing:
 
@@ -293,6 +296,99 @@ page save that change at once, and closes once it is written
 
 Nothing is fetched from anywhere. Every number on every screen is computed from
 that one object in memory, which is why the app works offline.
+
+## Building the Android app
+
+Needs a JDK 21 (`JAVA_HOME`) and the Android SDK (`ANDROID_HOME`). Android
+Studio provides both, but neither needs Android Studio itself.
+
+```bash
+npm run build:mobile         # static export into out/ (leaves the desktop build alone)
+npx cap sync android         # copy it into the Android project
+cd android && gradlew assembleDebug
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
+
+`npm run android` does the first two steps and opens Android Studio, if it is
+installed.
+
+The release APK is `npm run apk`, signed with the key named in
+`android/keystore.properties` (see `android/keystore.properties.example`). It
+prints the signing certificate's SHA-256, and every later release must show
+the same one, or it won't install over the version people have.
+
+**Live reload on a phone:** run `npm run dev`, then
+`adb reverse tcp:3000 tcp:3000`, sync with `CAP_LIVE_URL=http://localhost:3000`
+set and install a debug build. The app then loads from your PC and updates as
+you save. A plain `npx cap sync android` switches back. Release builds refuse to
+build while the dev-server setting is synced in.
+
+## Building the Windows app
+
+The same static export, in a window of its own, built with
+[Tauri](https://tauri.app): a single program with no server and no Node.js,
+showing the pages in WebView2, the Edge engine Windows 10 and 11 already have.
+Needs [Rust](https://rustup.rs) and the Visual Studio C++ build tools.
+
+```bash
+npm run desktop          # the app in its window, from a dev server on port 3100, with live reload
+npm run build:desktop    # build:mobile, then src-tauri/target/release/Sniper Journal.exe
+npm run package:desktop  # then the Store package: src-tauri/target/msix/SniperJournal_<version>_x64.msix
+npm run e2e:desktop      # after build:desktop: the whole app, made-up trades, a throwaway folder
+npm run screenshots:store  # after build:desktop: the Store screenshots, from the app's test trades
+cd src-tauri && cargo test   # the Rust side's own tests
+```
+
+`src-tauri/src/folder.rs` is the only code that touches the disk: it keeps
+every file inside `Documents\Sniper Journal` and writes each one whole. The
+rules for what is kept where are in `src/lib/storage/tauri.ts`, beside the
+phone's.
+
+## Releasing
+
+### To Google Play
+
+1. **Once:** create the upload key. Copy
+   `android/keystore.properties.example` to `android/keystore.properties` and
+   follow the instructions inside it. The key and that file are gitignored;
+   back both up somewhere other than this PC.
+2. **Every release:** bump the version with `npm version patch` (or `minor` /
+   `major`). The Android version code is derived from it, so it always goes up.
+3. `npm run bundle` builds, signs and verifies
+   `android/app/build/outputs/bundle/release/app-release.aab`.
+4. Upload it in Play Console. The store listing text is in
+   [`docs/play-store-listing.md`](docs/play-store-listing.md) and the artwork in
+   `assets/play-store/`. `npm run icons` redraws every icon from the one logo.
+
+### To the Microsoft Store
+
+1. **Every release:** bump the version as above; the package takes it from
+   `package.json`.
+2. `npm run build:desktop`, then `npm run package:desktop` builds
+   `src-tauri/target/msix/SniperJournal_<version>_x64.msix`. Leave it
+   unsigned: the Store signs it.
+3. Upload it in Partner Center. The listing text, captions and the answers to
+   Partner Center's questions are in
+   [`docs/microsoft-store-listing.md`](docs/microsoft-store-listing.md), the
+   artwork in `assets/microsoft-store/`. `npm run screenshots:store` retakes
+   the screenshots.
+
+## Ground rules
+
+1. Change the calculations in `src/lib/` (stats, insights, CSV, trade maths)
+   only with a test in `tests/` that shows the new behaviour, and run
+   `npm test`. Every number in the app rests on them.
+2. The desktop app must keep working after every change. Run `npm run build`
+   and open it on the PC before calling something done.
+3. Run `npm run typecheck`, `npm run lint` and `npm run format:check` before
+   finishing anything. GitHub runs all three, with the tests and builds, on
+   every push to `main`.
+4. If you change the shape of the journal, update `normalize()` in
+   `src/lib/journal.ts` so existing journals still load.
+5. Keep it offline. The app makes no network requests and keeps no telemetry.
+
+Built with Next.js 16, React 19, TypeScript, Tailwind CSS 4, Recharts, Lucide
+icons, Capacitor 8 and Tauri 2.
 
 ## Git
 
