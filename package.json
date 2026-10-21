@@ -12,6 +12,7 @@
     "android": "npm run build:mobile && npx cap sync android && npx cap open android",
     "desktop": "tauri dev",
     "bundle": "node scripts/bundle-android.mjs",
+    "apk": "node scripts/bundle-android.mjs --apk",
     "start": "next start -H 127.0.0.1 -p 3000",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
