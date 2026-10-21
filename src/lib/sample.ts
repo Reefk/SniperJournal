@@ -1,4 +1,5 @@
 import type { RuleChecks, Setup, Trade } from './types';
+import { checksSetupId } from './rules';
 import { detectSession } from './sessions';
 import { pad2, uid } from './utils';
 
@@ -164,6 +165,7 @@ export function generateSampleData(accountId: string): { trades: Trade[]; setups
         // drawn in the order the trade below always drew them, so the same seed gives the same trades
         const fees = Number((0.6 + rand() * 3.4).toFixed(2));
         const setup = setups[Math.floor(rand() * setups.length)];
+        const ruleChecks = sampleTicks(setup.rules, good, ruleRand);
 
         trades.push({
           id: uid(),
@@ -183,7 +185,8 @@ export function generateSampleData(accountId: string): { trades: Trade[]; setups
           leverage: spec.symbol === 'EURUSD' ? 10 : spec.symbol === 'BTCUSD' ? 5 : null,
           session: detectSession(openedAt),
           setupId: setup.id,
-          ruleChecks: sampleTicks(setup.rules, good, ruleRand),
+          ruleChecks,
+          ruleChecksSetupId: checksSetupId(setup.id, ruleChecks),
           tags: [...new Set(tags)],
           notes: good ? 'Followed the plan, let the runner work.' : 'Entered before confirmation and paid for it.',
           review: { discipline: rate(good ? 4 : 2.5), execution: rate(good ? 4 : 3), patience: rate(good ? 4 : 2.5) },

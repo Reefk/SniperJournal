@@ -120,6 +120,20 @@ export function cleanAccounts(v: unknown): Account[] {
   return uniqueIds(accounts, 'drop');
 }
 
+/**
+ * Ticks are against the rules of the setup they were made for. Without a
+ * setup (an older version deleting it cleared it) they would join the next one
+ * the trade is given; with another setup (an older version moved the trade,
+ * keeping the ticks and the id of their setup) they are about other rules.
+ * Either way they are dropped. Ticks saved before their setup's id was saved
+ * with them are taken as the trade's own setup's.
+ */
+function ownTicks(t: Loose): Pick<Trade, 'ruleChecks' | 'ruleChecksSetupId'> {
+  const setupId = optText(t.setupId);
+  const ticks = setupId && (optText(t.ruleChecksSetupId) ?? setupId) === setupId ? ruleChecks(t.ruleChecks) : undefined;
+  return { ruleChecks: ticks, ruleChecksSetupId: ticks ? setupId : undefined };
+}
+
 export function cleanTrades(v: unknown): Trade[] {
   const trades: Trade[] = records(v)
     .filter((t) => typeof t.id === 'string')
@@ -142,8 +156,7 @@ export function cleanTrades(v: unknown): Trade[] {
       leverage: nullableNum(t.leverage),
       session: optText(t.session),
       setupId: optText(t.setupId),
-      // ticks are against a setup's rules: without the setup (an older version cleared it) they would join the next one
-      ruleChecks: optText(t.setupId) ? ruleChecks(t.ruleChecks) : undefined,
+      ...ownTicks(t),
       tags: strings(t.tags),
       notes: optText(t.notes),
       screenshotUrl: optText(t.screenshotUrl),

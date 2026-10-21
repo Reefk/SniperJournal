@@ -46,6 +46,8 @@ export interface Trade {
   setupId?: string;
   /** which of the setup's rules this trade kept and broke */
   ruleChecks?: RuleChecks;
+  /** the setup the ticks were made against (see checksSetupId in lib/rules.ts) */
+  ruleChecksSetupId?: string;
   tags: string[];
   notes?: string;
   /** a link to a chart, e.g. a TradingView snapshot */

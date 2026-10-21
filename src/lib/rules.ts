@@ -69,6 +69,17 @@ export function combineChecks(parts: Array<RuleChecks | undefined>): RuleChecks 
   return fromTicks(parts.flatMap((checks) => Object.entries(checks ?? {})));
 }
 
+/**
+ * The setup a trade's ticks were made against, saved beside them. A version
+ * from before rule ticks keeps both when it moves the trade to another setup,
+ * so a trade whose setup is not this one has ticks about another setup's rules,
+ * and the journal drops them when it opens (cleanTrades). Every trade the app
+ * saves with ticks has it.
+ */
+export function checksSetupId(setupId: string | undefined, checks: RuleChecks | undefined): string | undefined {
+  return setupId && checks ? setupId : undefined;
+}
+
 /** a rule in the Playbook's editor, with the wording it had when the editor opened (null for a new one) */
 export interface EditedRule {
   text: string;

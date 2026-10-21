@@ -16,7 +16,7 @@ import {
 import { buildInsights } from '@/lib/insights';
 import { createDefaultData, normalize } from '@/lib/journal';
 import { mergeTrades } from '@/lib/merge';
-import { openRest } from '@/lib/import/finish';
+import { finishOpen, openRest } from '@/lib/import/finish';
 import { generateSampleData } from '@/lib/sample';
 import { netPnl } from '@/lib/trade-math';
 import { cleanTrades } from '@/store/sanitize';
@@ -98,7 +98,10 @@ describe('ticks when trades are merged, imported and rules reworded', () => {
     ]);
     expect(merged.setupId).toBe(orb.id);
     expect(merged.ruleChecks).toEqual({ Wait: true, Retest: false });
-    expect(mergeTrades([trade(), trade()]).ruleChecks).toBeUndefined();
+    expect(merged.ruleChecksSetupId).toBe(orb.id);
+    const unticked = mergeTrades([trade({ ruleChecksSetupId: 'vwap' }), trade()]);
+    expect(unticked.ruleChecks).toBeUndefined();
+    expect(unticked.ruleChecksSetupId).toBeUndefined();
   });
 
   it('the open rest of a partly closed trade keeps its ticks, as it keeps its setup', () => {
@@ -106,6 +109,15 @@ describe('ticks when trades are merged, imported and rules reworded', () => {
     const rest = openRest(open, trade({ exitPrice: null, closedAt: undefined, quantity: 2 }));
     expect(rest.setupId).toBe(orb.id);
     expect(rest.ruleChecks).toEqual({ Wait: true });
+    expect(rest.ruleChecksSetupId).toBe(orb.id);
+  });
+
+  it('a trade an import finishes keeps its ticks and their setup', () => {
+    const open = trade({ exitPrice: null, closedAt: undefined, setupId: orb.id, ruleChecks: { Wait: false } });
+    const done = finishOpen(open, trade({ setupId: 'vwap' }), undefined);
+    expect(done.setupId).toBe(orb.id);
+    expect(done.ruleChecks).toEqual({ Wait: false });
+    expect(done.ruleChecksSetupId).toBe(orb.id);
   });
 
   it('a reworded rule takes its ticks with it, on the trades of that setup only', () => {
@@ -199,18 +211,53 @@ describe('rule ticks in a journal file', () => {
 
   it('drops the ticks of a trade without a setup, so they never join the next setup it is given', () => {
     // an older version deleting the setup clears setupId but not the ticks it doesn't know
-    const [a, b] = cleanTrades([
+    const [a, b, c] = cleanTrades([
       { ...trade(), ruleChecks: { Wait: false } },
       { ...trade({ setupId: '' }), ruleChecks: { Wait: false } },
+      { ...trade(), ruleChecks: { Wait: false }, ruleChecksSetupId: orb.id },
     ]);
-    expect(a.ruleChecks).toBeUndefined();
-    expect(b.ruleChecks).toBeUndefined();
+    for (const t of [a, b, c]) {
+      expect(t.ruleChecks).toBeUndefined();
+      expect(t.ruleChecksSetupId).toBeUndefined();
+    }
   });
 
   it('survive a save and a reopen', () => {
     const data = { ...createDefaultData(), trades: [ticked(10, { Wait: true, Retest: false })], setups: [orb] };
     const reopened = normalize(JSON.parse(JSON.stringify(data)));
     expect(reopened.trades[0].ruleChecks).toEqual({ Wait: true, Retest: false });
+    expect(reopened.trades[0].ruleChecksSetupId).toBe(orb.id);
+  });
+
+  it("keeps ticks saved with their setup; ticks saved without one are taken as the trade's own setup's", () => {
+    const [saved, before, odd] = cleanTrades([
+      { ...withSetup(), ruleChecks: { Wait: true }, ruleChecksSetupId: orb.id },
+      { ...withSetup(), ruleChecks: { Wait: true } },
+      { ...withSetup(), ruleChecks: { Wait: true }, ruleChecksSetupId: 42 },
+    ]);
+    for (const t of [saved, before, odd]) {
+      expect(t.ruleChecks).toEqual({ Wait: true });
+      expect(t.ruleChecksSetupId).toBe(orb.id);
+    }
+  });
+
+  it('drops ticks made against another setup, as an older version moving the trade leaves them', () => {
+    const vwap: Setup = { id: 'vwap', name: 'VWAP', rules: ['Wait', 'Volume'] };
+    const data = { ...createDefaultData(), trades: [ticked(-50, { Wait: false, Retest: true })], setups: [orb, vwap] };
+    const saved = normalize(JSON.parse(JSON.stringify(data)));
+    // an older version knows nothing of ticks: it moves the trade and keeps every field it doesn't know
+    const moved = { ...saved, trades: saved.trades.map((t) => ({ ...t, setupId: vwap.id })) };
+    const reopened = normalize(JSON.parse(JSON.stringify(moved)));
+    expect(reopened.trades[0].setupId).toBe(vwap.id);
+    expect(reopened.trades[0].ruleChecks).toBeUndefined();
+    expect(reopened.trades[0].ruleChecksSetupId).toBeUndefined();
+    // so they count against neither setup's rules
+    expect(setupRuleReport(reopened.trades, vwap).checked).toBe(0);
+    expect(setupRuleReport(reopened.trades, orb).checked).toBe(0);
+
+    // moved back to the setup they were made against, they are about its rules again
+    const back = { ...moved, trades: moved.trades.map((t) => ({ ...t, setupId: orb.id })) };
+    expect(normalize(JSON.parse(JSON.stringify(back))).trades[0].ruleChecks).toEqual({ Wait: false, Retest: true });
   });
 
   it('a rule named __proto__ in a file stays a rule, and the ticks stay plain data', () => {
@@ -378,7 +425,11 @@ describe('the test trades', () => {
     const { trades, setups } = generateSampleData('acc1');
     const rulesOf = new Map(setups.map((s) => [s.id, s.rules]));
     const ticks = trades.filter((t) => t.ruleChecks);
-    for (const t of ticks) expect(Object.keys(t.ruleChecks!)).toEqual(rulesOf.get(t.setupId!));
+    for (const t of ticks) {
+      expect(Object.keys(t.ruleChecks!)).toEqual(rulesOf.get(t.setupId!));
+      expect(t.ruleChecksSetupId).toBe(t.setupId);
+    }
+    expect(trades.filter((t) => !t.ruleChecks).every((t) => t.ruleChecksSetupId === undefined)).toBe(true);
     expect(ticks.length).toBeGreaterThan(0);
     expect(ticks.length).toBeLessThan(trades.length);
     expect(ticks.some((t) => ruleVerdict(t.ruleChecks) === 'broken')).toBe(true);

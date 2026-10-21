@@ -1,4 +1,5 @@
 import type { Trade } from '../types';
+import { checksSetupId } from '../rules';
 import { isIncomplete } from '../trade-math';
 
 /**
@@ -18,6 +19,7 @@ const idsOf = (...trades: Trade[]) => [
 const described = (open: Trade, file: Trade) => ({
   setupId: open.setupId ?? file.setupId,
   ruleChecks: open.ruleChecks,
+  ruleChecksSetupId: checksSetupId(open.setupId, open.ruleChecks),
   tags: [...new Set([...open.tags, ...file.tags])],
   notes: open.notes || file.notes,
   session: open.session || file.session,

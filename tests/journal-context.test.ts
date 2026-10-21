@@ -139,6 +139,7 @@ describe('a save going through', () => {
 describe("rule ticks follow their setup's rules", () => {
   const orb: Setup = { id: 'orb', name: 'ORB', rules: ['Wait', 'Retest'] };
   const ticksOf = () => seen.journal!.accountTrades.map((t) => t.ruleChecks);
+  const madeFor = () => seen.journal!.accountTrades.map((t) => t.ruleChecksSetupId);
 
   beforeEach(async () => {
     const ids = seen.journal!.accountTrades.map((t) => t.id);
@@ -181,5 +182,32 @@ describe("rule ticks follow their setup's rules", () => {
   it('deleting the setup drops them', async () => {
     await act(async () => seen.journal!.actions.deleteSetup(orb.id));
     expect(ticksOf()).toEqual([undefined, undefined]);
+    expect(madeFor()).toEqual([undefined, undefined]);
+  });
+
+  it('are saved with the setup they were made against, which goes when they do', async () => {
+    const vwap: Setup = { id: 'vwap', name: 'VWAP', rules: ['Volume'] };
+    const [first, second] = seen.journal!.accountTrades.map((t) => t.id);
+    expect(madeFor()).toEqual([orb.id, orb.id]);
+    await act(async () => seen.journal!.actions.upsertSetup(vwap));
+    await act(async () =>
+      seen.journal!.actions.patchTrades([first], { setupId: vwap.id, ruleChecks: { Volume: false } }),
+    );
+    await act(async () => seen.journal!.actions.patchTrades([second], { setupId: vwap.id }));
+    expect(madeFor()).toEqual([vwap.id, undefined]);
+  });
+
+  it("a trade the form saves has its ticks' setup, and loses it with them", async () => {
+    await act(async () =>
+      seen.journal!.actions.addTrade(trade({ accountId: 'acc1', setupId: orb.id, ruleChecks: { Wait: true } })),
+    );
+    expect(madeFor()).toEqual([orb.id, orb.id, orb.id]);
+    // the form takes the ticks away with the setup
+    const [first] = seen.journal!.accountTrades;
+    await act(async () =>
+      seen.journal!.actions.updateTrade(first.id, { ...first, setupId: undefined, ruleChecks: undefined }),
+    );
+    expect(seen.journal!.accountTrades.find((t) => t.id === first.id)?.ruleChecksSetupId).toBeUndefined();
+    expect(madeFor().filter((id) => id === orb.id)).toHaveLength(2);
   });
 });

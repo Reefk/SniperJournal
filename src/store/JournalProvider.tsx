@@ -8,7 +8,7 @@ import { newerJournal } from '@/lib/journal-version';
 import { generateSampleData } from '@/lib/sample';
 import { isIncomplete } from '@/lib/trade-math';
 import { mergeIssue, mergeTrades as combineTrades } from '@/lib/merge';
-import { renameRuleChecks } from '@/lib/rules';
+import { checksSetupId, renameRuleChecks } from '@/lib/rules';
 import { chartsOnlyInSample, deleteScreenshot, imagesOnlyIn } from '@/lib/screenshots';
 import { JournalConflict, storage } from '@/lib/storage';
 import { uid } from '@/lib/utils';
@@ -346,6 +346,7 @@ export function JournalProvider({ children }: { children: ReactNode }) {
         // as when editing one: a trade still missing something it needs (an
         // entry price of 0 is what an empty column becomes) is marked
         trade.needsReview = isIncomplete(trade) ? true : undefined;
+        trade.ruleChecksSetupId = checksSetupId(trade.setupId, trade.ruleChecks);
         mutate((d) => ({ ...d, trades: [...d.trades, trade] }));
       },
       updateTrade: (id, input) => {
@@ -357,6 +358,7 @@ export function JournalProvider({ children }: { children: ReactNode }) {
             const next: Trade = { ...t, ...input, id, createdAt: t.createdAt, updatedAt: now };
             // the gaps are filled or they are not; the flag follows the trade
             next.needsReview = isIncomplete(next) ? true : undefined;
+            next.ruleChecksSetupId = checksSetupId(next.setupId, next.ruleChecks);
             return next;
           }),
         }));
@@ -373,6 +375,7 @@ export function JournalProvider({ children }: { children: ReactNode }) {
             if ('setupId' in patch && patch.setupId !== t.setupId && !('ruleChecks' in patch)) {
               next.ruleChecks = undefined;
             }
+            next.ruleChecksSetupId = checksSetupId(next.setupId, next.ruleChecks);
             next.needsReview = isIncomplete(next) ? true : undefined;
             return next;
           }),
@@ -458,7 +461,9 @@ export function JournalProvider({ children }: { children: ReactNode }) {
         mutate((d) => ({
           ...d,
           setups: d.setups.filter((s) => s.id !== id),
-          trades: d.trades.map((t) => (t.setupId === id ? { ...t, setupId: undefined, ruleChecks: undefined } : t)),
+          trades: d.trades.map((t) =>
+            t.setupId === id ? { ...t, setupId: undefined, ruleChecks: undefined, ruleChecksSetupId: undefined } : t,
+          ),
         }));
       },
       upsertResource: (resource) => {

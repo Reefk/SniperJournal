@@ -1,6 +1,6 @@
 import type { Trade } from './types';
 import { grossPnl, isClosed } from './trade-math';
-import { combineChecks } from './rules';
+import { checksSetupId, combineChecks } from './rules';
 
 /**
  * Scaling out of a position leaves one entry matched against several exits,
@@ -116,6 +116,9 @@ export function mergeTrades(trades: Trade[]): Trade {
   const externalIds = legs.flatMap((t) => (t.externalId ? t.externalId.split('|') : []));
   // the merged trade has the first setup found; the ticks of a part with another setup are about other rules
   const setupId = legs.find((t) => t.setupId)?.setupId;
+  const ruleChecks = setupId
+    ? combineChecks(legs.filter((t) => t.setupId === setupId).map((t) => t.ruleChecks))
+    : undefined;
 
   return {
     ...first,
@@ -134,7 +137,8 @@ export function mergeTrades(trades: Trade[]): Trade {
     stopLoss: legs.find((t) => t.stopLoss != null)?.stopLoss ?? null,
     takeProfit: legs.find((t) => t.takeProfit != null)?.takeProfit ?? null,
     setupId,
-    ruleChecks: setupId ? combineChecks(legs.filter((t) => t.setupId === setupId).map((t) => t.ruleChecks)) : undefined,
+    ruleChecks,
+    ruleChecksSetupId: checksSetupId(setupId, ruleChecks),
     session: legs.find((t) => t.session)?.session,
     leverage: legs.find((t) => t.leverage != null)?.leverage ?? null,
     tags: [...new Set(legs.flatMap((t) => t.tags))],
