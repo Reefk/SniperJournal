@@ -1,8 +1,9 @@
 # Checks every push to main and every pull request: types, lint, formatting,
 # tests, both builds (the desktop server and the static export the Android
 # app is made from), the desktop E2E journey, and the Windows app built and
-# driven through its own journey. It only reads the code. Nothing is signed,
-# published or uploaded.
+# driven through its own journey. It only reads the code. Nothing is signed or
+# published: the Windows job keeps the Store package and screenshots it made
+# with the run (the "windows-store" artifact), for a release.
 name: CI
 
 on:
@@ -109,3 +110,17 @@ jobs:
       # about a minute; the limit is for a window that hangs
       - run: npm run e2e:desktop
         timeout-minutes: 10
+      # The unsigned Store package (the Store signs it) and the Store
+      # screenshots, from the program just built and tested: Smart App Control
+      # on the developer's PC blocks the build that would make them there.
+      - run: npm run package:desktop
+      - run: npm run screenshots:store
+        timeout-minutes: 5
+      - uses: actions/upload-artifact@v7
+        with:
+          name: windows-store
+          path: |
+            src-tauri/target/msix/*.msix
+            assets/microsoft-store/screenshots/*.png
+          if-no-files-found: error
+          retention-days: 30

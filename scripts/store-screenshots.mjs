@@ -5,6 +5,10 @@
 //
 //   npm run build:desktop && npm run screenshots:store
 //
+// CI takes them too, on GitHub's Windows runner, and keeps them with the run
+// (the "windows-store" artifact), for a PC where Smart App Control blocks the
+// Rust build.
+//
 // Each page is laid out at SIZE (CSS pixels, a 1920 x 1080 laptop at 125%)
 // and captured at SCALE, so the files come out at 2560 x 1440: inside the
 // Store's 1366 x 768 to 3840 x 2160 for desktop screenshots.
@@ -21,7 +25,8 @@ const SCALE = 5 / 3;
 const project = resolve(import.meta.dirname, '..');
 const exe = join(project, 'src-tauri', 'target', 'release', 'Sniper Journal.exe');
 const out = join(project, 'assets', 'microsoft-store', 'screenshots');
-const work = mkdtempSync(join(tmpdir(), 'sj-store-shots-'));
+// on GitHub, the runner's own temp folder, as in tests/e2e/windows-app-journey.mjs
+const work = mkdtempSync(join(process.env.RUNNER_TEMP ?? tmpdir(), 'sj-store-shots-'));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const debugPort = 9600 + Math.floor(Math.random() * 300);
@@ -37,6 +42,9 @@ const app = spawn(exe, [], {
     SNIPER_JOURNAL_DIR: join(work, 'journal'),
     WEBVIEW2_USER_DATA_FOLDER: join(work, 'webview'),
     WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `${shippedArgs} --remote-debugging-port=${debugPort}`.trim(),
+    // the same port, asked of the app itself: GitHub's Windows runner ignores
+    // the WebView2 variable above (see src-tauri/src/lib.rs, setup)
+    SNIPER_JOURNAL_DEVTOOLS_PORT: String(debugPort),
   },
 });
 
