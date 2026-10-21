@@ -154,11 +154,15 @@ export interface RuleReport {
   broken: RuleSide | null;
   /**
    * What the trades that broke a rule would have made, had they done as well
-   * on average as the ones that kept every rule, less what they did make.
-   * Null with fewer than MIN_RULE_SIDE trades on either side; below zero when
-   * breaking rules has paid so far.
+   * on average as the trades of the same setup that kept every rule, less what
+   * they did make. Worked out setup by setup, so one setup doing better than
+   * another never passes for the cost of breaking rules, and added up over the
+   * setups with MIN_RULE_SIDE trades on each side. Null when none has; below
+   * zero when breaking rules has paid so far.
    */
   cost: number | null;
+  /** the trades that broke a rule in the setups the cost is worked out for */
+  costed: number;
   rules: RuleLine[];
   /** of the rules broken MIN_BREAKS_TO_NAME times or more, the one whose broken trades lost the most; null when none lost money */
   costliest: RuleLine | null;
@@ -206,6 +210,13 @@ function linesOf(setup: Setup, trades: Trade[]): RuleLine[] {
   }));
 }
 
+/** (kept average − broken average) × broken trades, given MIN_RULE_SIDE trades on each side */
+function costOf(kept: RuleSide | null, broken: RuleSide | null): number | null {
+  return kept && broken && kept.trades >= MIN_RULE_SIDE && broken.trades >= MIN_RULE_SIDE
+    ? (kept.avg - broken.avg) * broken.trades
+    : null;
+}
+
 function report(trades: Trade[], setups: Setup[]): RuleReport {
   const closed = statTrades(trades);
   const kept: Trade[] = [];
@@ -213,24 +224,29 @@ function report(trades: Trade[], setups: Setup[]): RuleReport {
   const lines: RuleLine[] = [];
   let count = 0;
   let partial = 0;
+  let cost: number | null = null;
+  let costed = 0;
   for (const setup of setups) {
     const own = closed.filter((t) => t.setupId === setup.id);
+    const ownKept: Trade[] = [];
+    const ownBroken: Trade[] = [];
     count += own.length;
     for (const t of own) {
       const verdict = ruleVerdict(t.ruleChecks);
-      if (verdict === 'kept') kept.push(t);
-      else if (verdict === 'broken') broken.push(t);
+      if (verdict === 'kept') ownKept.push(t);
+      else if (verdict === 'broken') ownBroken.push(t);
       else if (verdict === 'partial') partial += 1;
     }
+    kept.push(...ownKept);
+    broken.push(...ownBroken);
     lines.push(...linesOf(setup, own));
+    const ownCost = costOf(side(ownKept), side(ownBroken));
+    if (ownCost != null) {
+      cost = (cost ?? 0) + ownCost;
+      costed += ownBroken.length;
+    }
   }
 
-  const keptSide = side(kept);
-  const brokenSide = side(broken);
-  const cost =
-    keptSide && brokenSide && keptSide.trades >= MIN_RULE_SIDE && brokenSide.trades >= MIN_RULE_SIDE
-      ? (keptSide.avg - brokenSide.avg) * brokenSide.trades
-      : null;
   const costliest = lines
     .filter((line) => line.broken >= MIN_BREAKS_TO_NAME && line.brokenNet < 0)
     .reduce<RuleLine | null>((worst, line) => (!worst || line.brokenNet < worst.brokenNet ? line : worst), null);
@@ -239,9 +255,10 @@ function report(trades: Trade[], setups: Setup[]): RuleReport {
     trades: count,
     checked: kept.length + broken.length + partial,
     partial,
-    kept: keptSide,
-    broken: brokenSide,
+    kept: side(kept),
+    broken: side(broken),
     cost,
+    costed,
     rules: lines,
     costliest,
   };

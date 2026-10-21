@@ -308,6 +308,12 @@ describe("a setup's record against its rules", () => {
     const r = setupRuleReport(three, orb);
     expect(r.kept?.trades).toBe(3);
     expect(r.cost).toBeNull();
+    const threeBroken = setupRuleReport(
+      book().filter((t) => netPnl(t) !== -60),
+      orb,
+    );
+    expect(threeBroken.broken?.trades).toBe(3);
+    expect(threeBroken.cost).toBeNull();
   });
 
   it('gives a negative cost when breaking rules has paid', () => {
@@ -377,19 +383,58 @@ describe("a setup's record against its rules", () => {
 
   it('adds every setup up for the whole playbook', () => {
     const vwap: Setup = { id: 'vwap', name: 'VWAP Reclaim', rules: ['Volume'] };
-    const r = playbookRuleReport(
-      [
-        ...book(),
-        pnl(-80, { setupId: 'vwap', ruleChecks: { Volume: false } }),
-        pnl(-20, { setupId: 'vwap', ruleChecks: { Volume: false } }),
-        pnl(15, { setupId: 'nowhere' }),
-      ],
-      [orb, vwap],
-    );
+    const trades = [
+      ...book(),
+      pnl(-80, { setupId: 'vwap', ruleChecks: { Volume: false } }),
+      pnl(-20, { setupId: 'vwap', ruleChecks: { Volume: false } }),
+      pnl(15, { setupId: 'nowhere' }),
+    ];
+    const r = playbookRuleReport(trades, [orb, vwap]);
+    // whichever setup comes first in the playbook
+    expect(playbookRuleReport(trades, [vwap, orb])).toMatchObject({ cost: r.cost, costed: 4 });
     expect(r.trades).toBe(12);
     expect(r.broken?.trades).toBe(6);
     // Volume (−100 over 2) against ORB's Retest (−60 over 3)
     expect(r.costliest).toMatchObject({ rule: 'Volume', setupId: 'vwap', brokenNet: -100 });
+    // VWAP has no trade that kept every rule, so only ORB's cost counts
+    expect(r.cost).toBe((50 - -25) * 4);
+    expect(r.costed).toBe(4);
+  });
+
+  it('works the playbook cost out setup by setup, so a better setup never passes for the cost of breaking rules', () => {
+    const vwap: Setup = { id: 'vwap', name: 'VWAP Reclaim', rules: ['Volume'] };
+    const of = (setupId: string, net: number, kept: boolean, times: number) =>
+      Array.from({ length: times }, () => pnl(net, { setupId, ruleChecks: { Wait: kept, Retest: true } }));
+    // ORB makes +100 a trade and VWAP loses 50, rules kept or not; VWAP's trades broke a rule more often
+    const trades = [
+      ...of(orb.id, 100, true, 4),
+      ...of(orb.id, 100, false, 4),
+      ...of(vwap.id, -50, true, 4),
+      ...of(vwap.id, -50, false, 8),
+    ];
+    const r = playbookRuleReport(trades, [orb, vwap]);
+    // taken all together, kept +25 a trade and broke one 0 would read as 25 × 12 = 300 lost
+    expect(r.kept?.avg).toBe(25);
+    expect(r.broken?.avg).toBe(0);
+    expect(r.cost).toBe(0);
+    expect(r.costed).toBe(12);
+    // one setup's report is the same either way
+    expect(setupRuleReport(trades, orb).cost).toBe(0);
+    expect(setupRuleReport(trades, orb).costed).toBe(4);
+  });
+
+  it(`adds up only the setups with ${MIN_RULE_SIDE} trades on each side, and gives no cost when none has`, () => {
+    const vwap: Setup = { id: 'vwap', name: 'VWAP Reclaim', rules: ['Volume'] };
+    const vwapBook = book().map((t) => ({ ...t, setupId: vwap.id }));
+    const both = playbookRuleReport([...book(), ...vwapBook], [orb, vwap]);
+    expect(both.cost).toBe(2 * (50 - -25) * 4);
+    expect(both.costed).toBe(8);
+    const thin = book().filter((t) => netPnl(t) !== 100);
+    const neither = playbookRuleReport([...thin, ...thin.map((t) => ({ ...t, setupId: vwap.id }))], [orb, vwap]);
+    // 6 kept every rule taken together, but only 3 in each setup
+    expect(neither.kept?.trades).toBe(6);
+    expect(neither.cost).toBeNull();
+    expect(neither.costed).toBe(0);
   });
 });
 
@@ -404,7 +449,11 @@ describe('the rules insight', () => {
     const insight = buildInsights(book(50, -25), [orb], settings).find((i) => i.id === 'rules');
     expect(insight?.tone).toBe('bad');
     expect(insight?.title).toBe('Breaking your rules cost you about $300.00');
+    expect(insight?.body).toContain(
+      '4 trades broke a rule of their setup and made $75.00 a trade less than the trades of the same setup that kept every rule.',
+    );
     expect(insight?.body).toContain('"Retest"');
+    expect(insight?.body).not.toContain('before it can be compared');
     expect(insight?.metric).toBe('4 of 8 checked trades broke a rule');
   });
 
@@ -412,6 +461,64 @@ describe('the rules insight', () => {
     const insight = buildInsights(book(-25, 50), [orb], settings).find((i) => i.id === 'rules');
     expect(insight?.tone).toBe('info');
     expect(insight?.title).toBe('Breaking your rules has not cost you so far');
+    expect(insight?.body).toContain(
+      'The 4 trades that broke a rule of their setup made $75.00 a trade more than the trades of the same setup',
+    );
+  });
+
+  it('compares each setup with itself: a better setup kept to its rules more is no cost of breaking them', () => {
+    const vwap: Setup = { id: 'vwap', name: 'VWAP Reclaim', rules: ['Wait', 'Retest'] };
+    const of = (setupId: string, net: number, wait: boolean, times: number) =>
+      Array.from({ length: times }, () => pnl(net, { setupId, ruleChecks: { Wait: wait, Retest: true } }));
+    const trades = [...of(orb.id, 100, true, 4), ...of(orb.id, 100, false, 4)];
+    trades.push(...of(vwap.id, -50, true, 4), ...of(vwap.id, -50, false, 8));
+    const insight = buildInsights(trades, [orb, vwap], settings).find((i) => i.id === 'rules');
+    expect(insight?.tone).toBe('info');
+    expect(insight?.body).toContain('The 12 trades that broke a rule of their setup made as much as');
+  });
+
+  it('lets a setup where breaking rules paid take from one where it cost', () => {
+    const vwap: Setup = { id: 'vwap', name: 'VWAP Reclaim', rules: ['Wait', 'Retest'] };
+    const inVwap = (trades: Trade[]) => trades.map((t) => ({ ...t, setupId: vwap.id }));
+    // ORB: (50 − −25) × 4 = +300; VWAP the other way round, −300
+    expect(playbookRuleReport([...book(50, -25), ...inVwap(book(-25, 50))], [orb, vwap])).toMatchObject({
+      cost: 0,
+      costed: 8,
+    });
+    // VWAP: (−10 − 20) × 4 = −120, so 180 in all, over 8 trades
+    const insight = buildInsights([...book(50, -25), ...inVwap(book(-10, 20))], [orb, vwap], settings).find(
+      (i) => i.id === 'rules',
+    );
+    expect(insight?.title).toBe('Breaking your rules cost you about $180.00');
+    expect(insight?.body).toContain('8 trades broke a rule of their setup and made $22.50 a trade less');
+  });
+
+  it('says how many broke a rule in setups with too few trades to compare', () => {
+    const vwap: Setup = { id: 'vwap', name: 'VWAP Reclaim', rules: ['Volume'] };
+    const thinVwap = (n: number) =>
+      Array.from({ length: n }, () => pnl(-10, { setupId: vwap.id, ruleChecks: { Volume: false } }));
+    const one = buildInsights([...book(50, -25), ...thinVwap(1)], [orb, vwap], settings).find((i) => i.id === 'rules');
+    expect(one?.title).toBe('Breaking your rules cost you about $300.00');
+    // the trade that can't be compared isn't in the average either
+    expect(one?.body).toContain('4 trades broke a rule of their setup and made $75.00 a trade less');
+    expect(one?.body).toContain(
+      'One more trade broke a rule in a setup that needs 4 trades that kept every rule and 4 that broke one before it can be compared.',
+    );
+    expect(one?.metric).toBe('5 of 9 checked trades broke a rule');
+    const two = buildInsights([...book(50, -25), ...thinVwap(2)], [orb, vwap], settings).find((i) => i.id === 'rules');
+    expect(two?.body).toContain(
+      '2 more broke a rule in setups that need 4 trades that kept every rule and 4 that broke one before they can be compared.',
+    );
+  });
+
+  it('reads what is left over from adding up cents as no cost at all', () => {
+    // both sides +0.25 a trade, but added in another order: 1 against 0.9999999999999999
+    const kept = [0.1, 0.2, 0.3, 0.4].map((net) => ticked(net, { Wait: true, Retest: true }));
+    const broke = [0.4, 0.3, 0.2, 0.1].map((net) => ticked(net, { Wait: true, Retest: false }));
+    expect(playbookRuleReport([...kept, ...broke], [orb]).cost).toBeGreaterThan(0);
+    const insight = buildInsights([...kept, ...broke], [orb], settings).find((i) => i.id === 'rules');
+    expect(insight?.tone).toBe('info');
+    expect(insight?.body).toContain('made as much as the trades of the same setup');
   });
 
   it(`stays quiet with fewer than ${MIN_RULE_SIDE} trades on a side`, () => {

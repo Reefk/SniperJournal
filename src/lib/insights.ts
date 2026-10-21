@@ -1,7 +1,7 @@
 import type { Settings, Setup, Trade } from './types';
 import { formatMoney, WEEKDAYS } from './format';
 import { aggregateDays, computeStats, groupTrades, type GroupStat, type Stats } from './stats';
-import { playbookRuleReport } from './rules';
+import { MIN_RULE_SIDE, playbookRuleReport } from './rules';
 import { netPnl, sortChronological, statTrades, tradeDay } from './trade-math';
 import { dateKey, mean, parseLocal } from './utils';
 
@@ -251,22 +251,29 @@ export function buildInsights(trades: Trade[], setups: Setup[], settings: Settin
     });
   }
 
-  // the playbook's rules: what the trades that broke one gave up against the ones that kept them all
+  // the playbook's rules: what the trades that broke one gave up against the trades of the same setup that kept them all
   const rules = playbookRuleReport(closed, setups);
-  if (rules.cost != null && rules.kept && rules.broken) {
-    const { kept, broken, costliest } = rules;
-    const against = `${formatMoney(broken.avg, money, { sign: true })} a trade, against ${formatMoney(kept.avg, money, { sign: true })} for the ${kept.trades} that kept every rule`;
+  if (rules.cost != null && rules.broken) {
+    const { broken, costed, costliest } = rules;
+    // to the cent, so what is left over from adding up never reads as "cost you about $0.00"
+    const cost = Math.round(rules.cost * 100) / 100;
+    const gap = cost / costed;
+    const sameSetup = 'the trades of the same setup that kept every rule';
+    const rest = broken.trades - costed;
+    const others = rest
+      ? ` ${rest === 1 ? 'One more trade broke a rule in a setup that needs' : `${rest} more broke a rule in setups that need`} ${MIN_RULE_SIDE} trades that kept every rule and ${MIN_RULE_SIDE} that broke one before ${rest === 1 ? 'it' : 'they'} can be compared.`
+      : '';
     const worst = costliest
       ? ` The rule that cost the most to break: "${costliest.rule}"${setups.length > 1 ? ` (${setupNames.get(costliest.setupId)})` : ''}, ${formatMoney(costliest.brokenNet, money, { sign: true })} over the ${costliest.broken === 1 ? 'trade' : `${costliest.broken} trades`} that broke it.`
       : '';
     out.push(
-      rules.cost > 0
+      cost > 0
         ? {
             id: 'rules',
             tone: 'bad',
             category: 'Behaviour',
-            title: `Breaking your rules cost you about ${formatMoney(rules.cost, money)}`,
-            body: `${broken.trades} trades broke a rule of their setup and averaged ${against}. Had they done as well, you would be about that much better off.${worst}`,
+            title: `Breaking your rules cost you about ${formatMoney(cost, money)}`,
+            body: `${costed} trades broke a rule of their setup and made ${formatMoney(gap, money)} a trade less than ${sameSetup}. Had they done as well, you would be about that much better off.${others}${worst}`,
             metric: `${broken.trades} of ${rules.checked} checked trades broke a rule`,
           }
         : {
@@ -274,7 +281,7 @@ export function buildInsights(trades: Trade[], setups: Setup[], settings: Settin
             tone: 'info',
             category: 'Behaviour',
             title: 'Breaking your rules has not cost you so far',
-            body: `The ${broken.trades} trades that broke a rule of their setup averaged ${against}. Either those rules are not what makes your setups work, or it is too early to tell. Worth reading them again.`,
+            body: `The ${costed} trades that broke a rule of their setup made ${gap <= -0.005 ? `${formatMoney(-gap, money)} a trade more than` : 'as much as'} ${sameSetup}. Either those rules are not what makes your setups work, or it is too early to tell. Worth reading them again.${others}`,
             metric: `${broken.trades} of ${rules.checked} checked trades broke a rule`,
           },
     );
