@@ -88,7 +88,8 @@ Sniper Journal is a record-keeping and analysis tool. It does not place trades, 
 ### What's new in this version
 
 1,500 characters max. Left empty for the first submission (Microsoft's own
-advice). For 1.1:
+advice). For 1.1.1, the first Store release since 1.0 (1.1 never went to the
+Store on its own):
 
 ```
 IMPORT FROM 30 PLATFORMS
@@ -109,6 +110,7 @@ ALSO NEW
 • Screen readers hear when the journal is saved, and each chart is described in words
 • A journal saved by a newer version of the app is never opened or written over
 • Date fields and menus in English, whatever language Windows is in
+• Clearer numbers: amounts under $1,000 show both decimals ($103.80, not $103.8), and the equity curve's labels tell its levels apart
 • Many smaller fixes to wording and numbers
 ```
 
