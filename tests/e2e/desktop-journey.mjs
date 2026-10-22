@@ -605,6 +605,29 @@ async function journey() {
     strip.columns === 8 && strip.lines >= 7 && strip.cut.length === 0 && /^held .+ on average$/.test(strip.hold),
     JSON.stringify(strip),
   );
+  // $10,000 to $10,143: compact labels read "$10K" at every tick
+  const equityTicks = await b.run(
+    `[...[...document.querySelectorAll('main section')].find((s) => s.querySelector('h3')?.textContent === 'Equity curve').querySelectorAll('.recharts-yAxis-tick-labels .recharts-cartesian-axis-tick-value')].map((t) => t.textContent)`,
+  );
+  check(
+    "the equity curve's axis labels tell its ticks apart, $10,000 to $10,143",
+    equityTicks.length >= 3 && new Set(equityTicks).size === equityTicks.length,
+    equityTicks.join(' '),
+  );
+  // a narrow phone: the note under the Sniper Score wraps to the most lines
+  await b.send('Emulation.setDeviceMetricsOverride', { width: 360, height: 780, deviceScaleFactor: 1, mobile: true });
+  const scoreCard = await b.run(`new Promise((r) => setTimeout(() => {
+    const card = [...document.querySelectorAll('main section')].find((s) => s.querySelector('h3')?.textContent === 'Sniper Score');
+    const note = [...(card?.querySelectorAll('p') ?? [])].find((p) => p.textContent.startsWith('Not yet rated'));
+    const bottom = (el) => Math.round(el.getBoundingClientRect().bottom);
+    r(card && note ? { card: bottom(card), note: bottom(note), chart: Math.round(card.querySelector('.recharts-wrapper')?.getBoundingClientRect().height ?? 0) } : null);
+  }, 500))`);
+  await b.send('Emulation.clearDeviceMetricsOverride');
+  check(
+    'on a phone the note under the Sniper Score stays inside its card, beside the chart',
+    scoreCard !== null && scoreCard.note <= scoreCard.card && scoreCard.chart >= 100,
+    JSON.stringify(scoreCard),
+  );
   const live = `document.querySelector('p.sr-only[aria-live=polite]')?.textContent`;
   check(
     'the save status is a polite live region for screen readers',

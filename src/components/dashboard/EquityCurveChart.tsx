@@ -19,6 +19,10 @@ export function EquityCurveChart({
   const last = points[points.length - 1];
   const up = last.equity >= startingBalance;
   const stroke = up ? theme.profit : theme.loss;
+  // how much the axis covers, so its labels tell the ticks apart
+  const span =
+    points.reduce((hi, p) => Math.max(hi, p.equity), -Infinity) -
+    points.reduce((lo, p) => Math.min(lo, p.equity), Infinity);
 
   return (
     <ResponsiveContainer width="100%" height="100%">
@@ -48,7 +52,8 @@ export function EquityCurveChart({
           axisLine={false}
           width={74}
           domain={['auto', 'auto']}
-          tickFormatter={(v: number) => formatAxisMoney(v, currency)}
+          // the labels count on recharts' default five ticks (tickCount): fewer would put them further apart, more closer
+          tickFormatter={(v: number) => formatAxisMoney(v, currency, span)}
         />
         {startingBalance > 0 && <ReferenceLine y={startingBalance} stroke={theme.axis} strokeDasharray="3 4" />}
         <Tooltip

@@ -26,14 +26,29 @@ export function formatMoney(
 ): string {
   if (!Number.isFinite(value)) return '—';
   const decimals = opts.decimals ?? 2;
-  const text = nf(currency, decimals, Boolean(opts.compact)).format(Math.abs(value));
+  // compact shortens thousands and up; below that it would only drop a cent's zero ($103.8)
+  const compact = Boolean(opts.compact) && Math.abs(value) >= 1000;
+  const text = nf(currency, decimals, compact).format(Math.abs(value));
   const prefix = value < 0 ? '-' : opts.sign && value > 0 ? '+' : '';
   return prefix + text;
 }
 
-/** Axis labels: plain thousands until the numbers get big, then compact */
-export function formatAxisMoney(value: number, currency = 'USD'): string {
-  return formatMoney(value, currency, { compact: Math.abs(value) >= 10000, decimals: 0 });
+/**
+ * Axis labels: plain thousands until the numbers get big, then compact. `span`
+ * is how much the axis covers (its highest value less its lowest): an axis
+ * spanning little of a big number keeps whole dollars, where compact labels
+ * would all read the same ($10K at every tick).
+ */
+export function formatAxisMoney(value: number, currency = 'USD', span = Number.POSITIVE_INFINITY): string {
+  // recharts' five ticks are at least a quarter of the span apart
+  const step = span > 0 ? span / 4 : Number.POSITIVE_INFINITY;
+  const abs = Math.abs(value);
+  if (abs >= 10000) {
+    // K, M, B…: two decimals of it tell apart ticks a tenth of it apart, or more
+    const unit = 1000 ** Math.floor(Math.log10(abs) / 3);
+    if (step >= unit / 10) return formatMoney(value, currency, { compact: true });
+  }
+  return formatMoney(value, currency, { decimals: step >= 1 ? 0 : 2 });
 }
 
 export function formatNumber(value: number, decimals = 2): string {

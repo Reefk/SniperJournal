@@ -107,6 +107,7 @@ export function DashboardView() {
   const pfRing = pf == null ? 0 : Number.isFinite(pf) ? Math.min(pf / 4, 1) : 1;
   const rrRing = stats.payoff == null ? 0 : Math.min(Number.isFinite(stats.payoff) ? stats.payoff / 3 : 1, 1);
   const balanceNow = opening + stats.net + excludedNet;
+  const greenDays = stats.days.filter((d) => d.net > 0).length;
 
   return (
     <>
@@ -295,12 +296,17 @@ export function DashboardView() {
                 score.overall != null && <div className="num text-lg font-semibold text-accent">{score.overall}</div>
               }
             >
-              <SniperScoreChart score={score} />
-              {score.unrated.length > 0 && (
-                <p className="px-3 text-center text-[11px] leading-relaxed text-faint">
-                  Not yet rated: {score.unrated.join(', ')}. Add stops and self-ratings when you log a trade.
-                </p>
-              )}
+              {/* the note takes the room it needs and the chart the rest, so it stays inside the card */}
+              <div className="flex h-full flex-col">
+                <div className="min-h-0 flex-1">
+                  <SniperScoreChart score={score} />
+                </div>
+                {score.unrated.length > 0 && (
+                  <p className="shrink-0 px-3 text-center text-[11px] leading-relaxed text-faint">
+                    Not yet rated: {score.unrated.join(', ')}. Add stops and self-ratings when you log a trade.
+                  </p>
+                )}
+              </div>
             </ChartContainer>
           </div>
 
@@ -309,7 +315,7 @@ export function DashboardView() {
               className="h-[240px] md:col-span-2 md:h-[300px]"
               title="Daily P&L"
               summary={dailySummary(stats.days, currency)}
-              subtitle={`${stats.days.filter((d) => d.net > 0).length} green days, ${stats.days.filter((d) => d.net < 0).length} red`}
+              subtitle={`${greenDays} green ${greenDays === 1 ? 'day' : 'days'}, ${stats.days.filter((d) => d.net < 0).length} red`}
               empty={stats.days.length === 0}
               emptyText="No closed trades in this range yet."
             >

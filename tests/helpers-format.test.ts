@@ -104,6 +104,16 @@ describe('formatting', () => {
     expect(formatMoney(5, 'USDT')).toBe('$5.00');
   });
 
+  it('compact shortens only from a thousand: below it, money keeps its cents', () => {
+    expect(formatMoney(103.8, 'USD', { compact: true })).toBe('$103.80');
+    expect(formatMoney(103.8, 'USD', { sign: true, compact: true })).toBe('+$103.80');
+    expect(formatMoney(-999.5, 'USD', { compact: true })).toBe('-$999.50');
+    expect(formatMoney(0, 'USD', { compact: true })).toBe('$0.00');
+    expect(formatMoney(103.8, 'USD', { compact: true, decimals: 0 })).toBe('$104');
+    expect(formatMoney(1000, 'USD', { compact: true })).toBe('$1K');
+    expect(formatMoney(1620, 'USD', { sign: true, compact: true })).toBe('+$1.62K');
+  });
+
   it('ratios show infinity as ∞ and missing values as a dash', () => {
     expect(formatRatio(Number.POSITIVE_INFINITY)).toBe('∞');
     expect(formatRatio(null)).toBe('—');

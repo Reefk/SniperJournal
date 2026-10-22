@@ -17,6 +17,36 @@ describe('formatAxisMoney', () => {
     expect(formatAxisMoney(10000)).toBe('$10K');
     expect(formatAxisMoney(-10000)).toBe('-$10K');
   });
+
+  it('keeps whole dollars where compact labels would all read the same, and decimals of K where they tell ticks apart', () => {
+    // an equity curve from $10,000 to $10,143: compact, every tick read "$10K"
+    expect([10_000, 10_050, 10_100, 10_150].map((v) => formatAxisMoney(v, 'USD', 143))).toEqual([
+      '$10,000',
+      '$10,050',
+      '$10,100',
+      '$10,150',
+    ]);
+    expect(formatAxisMoney(49_500, 'USD', 2_000)).toBe('$49.5K');
+    expect(formatAxisMoney(10_250, 'USD', 1_000)).toBe('$10.25K');
+    expect(formatAxisMoney(32_000, 'USD', 14_000)).toBe('$32K');
+    expect(formatAxisMoney(10_000.5, 'USD', 2)).toBe('$10,000.50');
+  });
+
+  it('tells apart the ticks of any axis, however narrow and however big its numbers', () => {
+    // the ticks recharts draws: five, a nice step apart (1, 2, 2.5 or 5 times a power of ten), at least a quarter of the span
+    const ticks = (from: number, span: number) => {
+      const rough = span / 4;
+      const power = 10 ** Math.floor(Math.log10(rough));
+      const step = [1, 2, 2.5, 5, 10].map((m) => m * power).find((s) => s >= rough) ?? 10 * power;
+      const first = Math.floor(from / step) * step;
+      return [0, 1, 2, 3, 4].map((i) => first + i * step);
+    };
+    for (const from of [10_000, 43_856.12, 250_000, 1_234_567])
+      for (const span of [3, 40, 143, 900, 2_000, 14_000, 400_000]) {
+        const labels = ticks(from, span).map((v) => formatAxisMoney(v, 'USD', span));
+        expect(new Set(labels).size, `from ${from} over ${span}: ${labels.join(' ')}`).toBe(5);
+      }
+  });
 });
 
 describe('formatNumber', () => {
