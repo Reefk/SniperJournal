@@ -1,9 +1,10 @@
 # Checks every push to main and every pull request: types, lint, formatting,
 # tests, both builds (the desktop server and the static export the Android
-# app is made from), the desktop E2E journey, and the Windows app built and
-# driven through its own journey. It only reads the code. Nothing is signed or
-# published: the Windows job keeps the Store package and screenshots it made
-# with the run (the "windows-store" artifact), for a release.
+# app is made from), the desktop E2E journey, and the Windows app built, its
+# Rust tests run, and driven through its own journey. It only reads the code.
+# Nothing is signed or published: the Windows job keeps the Store package and
+# screenshots it made with the run (the "windows-store" artifact), for a
+# release.
 name: CI
 
 on:
@@ -58,13 +59,13 @@ jobs:
         timeout-minutes: 10
       - run: npm run build:mobile
 
-  # The Windows app (src-tauri), built as build:desktop builds it and driven
-  # through its own journey (e2e:desktop) in a WebView2 window: here because
-  # Smart App Control on the developer's PC blocks the unsigned programs a Rust
-  # build runs. Rust is on the runner; its build is kept between runs, so only
-  # the first one compiles everything. The runner's WebView2 ignores
-  # WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS, so the journey also asks the app
-  # itself for the DevTools port (SNIPER_JOURNAL_DEVTOOLS_PORT).
+  # The Windows app (src-tauri), built as build:desktop builds it, its Rust
+  # tests run, and driven through its own journey (e2e:desktop) in a WebView2
+  # window: here because Smart App Control on the developer's PC blocks the
+  # unsigned programs a Rust build runs. Rust is on the runner; its build is
+  # kept between runs, so only the first one compiles everything. The runner's
+  # WebView2 ignores WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS, so the journey also
+  # asks the app itself for the DevTools port (SNIPER_JOURNAL_DEVTOOLS_PORT).
   windows-app:
     name: windows app
     runs-on: windows-latest
@@ -81,6 +82,9 @@ jobs:
           node-version: 24
           cache: npm
 
+      # The cache holds the release build and the tests' debug build ("v2":
+      # the first cache had the release build only, and an exact hit is never
+      # saved again, so the tests would have compiled from scratch every run).
       - uses: actions/cache/restore@v6
         id: cargo-cache
         with:
@@ -90,15 +94,21 @@ jobs:
             ~/.cargo/git/db/
             src-tauri/target/
             !src-tauri/target/release/incremental/
-          key: cargo-windows-${{ hashFiles('src-tauri/Cargo.lock') }}
+            !src-tauri/target/debug/incremental/
+          key: cargo-windows-v2-${{ hashFiles('src-tauri/Cargo.lock') }}
           restore-keys: cargo-windows-
 
       - run: npm ci
       - run: npm run build:desktop
-      # saved straight after the build, so a failing journey below doesn't
-      # throw the compile away
+        id: build
+      # the Rust side's own tests (src-tauri/src/folder.rs)
+      - run: cargo test --manifest-path src-tauri/Cargo.toml
+        env:
+          CARGO_INCREMENTAL: '0'
+      # saved once the app is built, even if its tests fail, so a failure
+      # below doesn't throw the compile away
       - uses: actions/cache/save@v6
-        if: steps.cargo-cache.outputs.cache-hit != 'true'
+        if: ${{ !cancelled() && steps.build.outcome == 'success' && steps.cargo-cache.outputs.cache-hit != 'true' }}
         with:
           path: |
             ~/.cargo/registry/index/
@@ -106,7 +116,8 @@ jobs:
             ~/.cargo/git/db/
             src-tauri/target/
             !src-tauri/target/release/incremental/
-          key: cargo-windows-${{ hashFiles('src-tauri/Cargo.lock') }}
+            !src-tauri/target/debug/incremental/
+          key: cargo-windows-v2-${{ hashFiles('src-tauri/Cargo.lock') }}
       # about a minute; the limit is for a window that hangs
       - run: npm run e2e:desktop
         timeout-minutes: 10
