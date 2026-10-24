@@ -118,9 +118,19 @@ jobs:
             !src-tauri/target/release/incremental/
             !src-tauri/target/debug/incremental/
           key: cargo-windows-v2-${{ hashFiles('src-tauri/Cargo.lock') }}
-      # about a minute; the limit is for a window that hangs
+      # about a minute; the limit is for a window that hangs. On a failure the
+      # journey prints what the app showed and saves screenshots of it here.
       - run: npm run e2e:desktop
         timeout-minutes: 10
+        env:
+          SNIPER_E2E_ARTIFACTS: ${{ runner.temp }}/windows-app-e2e
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: windows-app-e2e-failure
+          path: ${{ runner.temp }}/windows-app-e2e/
+          if-no-files-found: ignore
+          retention-days: 7
       # The unsigned Store package (the Store signs it) and the Store
       # screenshots, from the program just built and tested: Smart App Control
       # on the developer's PC blocks the build that would make them there.
