@@ -8,10 +8,13 @@
 //   start an emulator, then:  npm run e2e:android
 //
 // Emulator only: it replaces the app's journal with the generated sample in
-// fixtures/ while it runs, and puts back whatever was there at the end.
+// fixtures/ while it runs, and puts back whatever was there at the end: the
+// journal (or none), the backups, and the copy of the journal the app keeps in
+// its WebView. It works on an app just installed, with no journal or folders
+// yet, as on a CI emulator (.github/workflows/android.yml).
 // Needs the Android SDK (ANDROID_HOME, or the usual Windows location).
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -19,7 +22,10 @@ const PKG = 'com.sniperjournal.app';
 const APP = `/data/data/${PKG}`;
 const sdk = process.env.ANDROID_HOME ?? join(process.env.LOCALAPPDATA ?? '', 'Android', 'Sdk');
 const adbPath = join(sdk, 'platform-tools', process.platform === 'win32' ? 'adb.exe' : 'adb');
-const adb = (...args) => execFileSync(adbPath, args, { encoding: 'utf8', maxBuffer: 64 << 20 });
+// what adb says on stderr goes into the error, not the console: a fresh install
+// has no files to list, and that is not worth a line
+const adb = (...args) =>
+  execFileSync(adbPath, args, { encoding: 'utf8', maxBuffer: 64 << 20, stdio: ['ignore', 'pipe', 'pipe'] });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const work = mkdtempSync(join(tmpdir(), 'sj-android-'));
 const sample = join(import.meta.dirname, 'fixtures', 'sample-journal.json');
@@ -64,7 +70,16 @@ const owner = debuggable ? null : adb('shell', `stat -c %U ${APP}`).trim();
 const handBack = (path) => {
   if (!debuggable) adb('shell', `cd ${APP} && chown ${owner}:${owner} ${quote(path)} && restorecon ${quote(path)}`);
 };
-const backups = () => inApp('ls', 'files/backups').split(/\s+/).filter(Boolean);
+const isThere = (path) => {
+  try {
+    inApp('ls', '-d', path);
+    return true;
+  } catch {
+    return false;
+  }
+};
+/** the kept copies; none while the folder isn't there (an app just installed) */
+const backups = () => (isThere('files/backups') ? inApp('ls', 'files/backups').split(/\s+/).filter(Boolean) : []);
 const fileJson = (path) => JSON.parse(inApp('cat', path));
 async function pushJournal(local) {
   adb('push', local, '/data/local/tmp/sj-journal.json');
@@ -143,7 +158,59 @@ const setCurrency = (v) => `(() => {
   return el.value;
 })()`;
 
+// ---- what the app showed when a check failed ----------------------------------
+// printed before the emulator is put back; on GitHub (SNIPER_E2E_ARTIFACTS) the
+// screen is saved too, and the workflow keeps it with the run
+const artifacts = process.env.SNIPER_E2E_ARTIFACTS;
+/** `promise`, or an error once `ms` have passed: a WebView that hangs never answers */
+const within = (promise, ms = 5000) =>
+  Promise.race([
+    promise,
+    sleep(ms).then(() => {
+      throw new Error(`no answer in ${ms / 1000} s`);
+    }),
+  ]);
+async function diagnose() {
+  console.log('\n---- the app when the test failed ----');
+  try {
+    const page = await within(
+      ev(`({ url: location.href, text: (document.body?.innerText ?? '').replace(/\\s+/g, ' ').trim() })`),
+    );
+    console.log(`URL: ${page.url}`);
+    console.log(`text: ${page.text ? page.text.slice(0, 1500) + (page.text.length > 1500 ? ' …' : '') : '(none)'}`);
+  } catch (e) {
+    console.log(`the page did not answer: ${e.message}`);
+  }
+  console.log(`on screen: ${resumed().trim() || 'unknown'}`);
+  if (artifacts) {
+    try {
+      mkdirSync(artifacts, { recursive: true });
+      const png = execFileSync(adbPath, ['exec-out', 'screencap', '-p'], { maxBuffer: 64 << 20 });
+      writeFileSync(join(artifacts, 'screen.png'), png);
+      console.log(`screenshot: ${join(artifacts, 'screen.png')}`);
+    } catch (e) {
+      console.log(`no screenshot: ${e.message}`);
+    }
+  }
+  console.log('---- end ----\n');
+}
+
 // ---- what was on the emulator, to put back afterwards ---------------------------
+// An app just installed has no folders yet. The two the test writes into
+// first are made now, as the app's own; any it made is removed at the end if
+// it is empty again.
+const madeHere = ['files', 'files/backups', 'files/screenshots'].filter((dir) => !isThere(dir));
+for (const dir of madeHere.filter((d) => d !== 'files/screenshots')) {
+  inApp('mkdir', dir);
+  handBack(dir);
+}
+// The copy of the journal the app keeps in its WebView (src/store/mirror.ts):
+// a phone writes it when a save fails, and opens it rather than the file while
+// it is newer. Kept and cleared before the test, so the journals it puts in
+// place open from the file, and put back at the end.
+const MIRROR = JSON.stringify('sniper-journal:v1');
+let keptMirror = null;
+let mirrorKept = false;
 const keptJournal = join(work, 'kept.json');
 let hadJournal = false;
 try {
@@ -181,6 +248,12 @@ const SWEEP_COPY = 'files/backups/conflict-20260101-000000.json';
 const PLANTED = ['droidused1.png', 'droidcopy1.png', 'droidorph1.png', 'droidnew01.png'];
 
 try {
+  // the app as it is, for its own copy: opening the journal writes nothing
+  await launch();
+  keptMirror = await ev(`localStorage.getItem(${MIRROR})`);
+  mirrorKept = true;
+  await ev(`localStorage.removeItem(${MIRROR}); true`);
+
   await pushJournal(sample);
   await launch();
   check('the generated 78-trade sample journal opens', (await fileJson('files/journal.json')).trades.length === 78);
@@ -400,14 +473,52 @@ try {
   failures++;
   console.log(`FAIL  ${err.message}`);
 } finally {
-  // put the emulator back as it was
-  await pushJournal(hadJournal ? keptJournal : sample).catch(() => undefined);
-  for (const f of backups())
-    if (!copiesBefore.has(f) && /^before-(restore|erase)-/.test(f)) inApp('rm', `files/backups/${f}`);
+  // while the app still shows where it failed
+  if (failures) await diagnose();
+
+  // put the emulator back as it was: its journal, or none on an app just installed
+  if (hadJournal) await pushJournal(keptJournal).catch(() => undefined);
+  else {
+    adb('shell', 'am', 'force-stop', PKG);
+    inApp('rm', '-f', 'files/journal.json', 'files/journal.tmp');
+  }
+  // and the app's own copy, which it would otherwise open over that journal.
+  // Opening it writes nothing, so the journal above stays as it is.
+  let mirrorBack = !mirrorKept;
+  if (mirrorKept) {
+    try {
+      await launch();
+      await ev(
+        keptMirror == null
+          ? `localStorage.removeItem(${MIRROR}); true`
+          : `localStorage.setItem(${MIRROR}, ${JSON.stringify(keptMirror)}); true`,
+      );
+      mirrorBack = (await ev(`localStorage.getItem(${MIRROR})`)) === keptMirror;
+    } catch (err) {
+      console.log(`note: the app's own copy could not be put back: ${err.message}`);
+    }
+  }
+  adb('shell', 'am', 'force-stop', PKG);
+  // every copy made while the test ran holds one of its journals, the app's
+  // daily one included
+  for (const f of backups()) if (!copiesBefore.has(f)) inApp('rm', `files/backups/${f}`);
   try {
     inApp('rm', '-f', KEPT_COPY, SWEEP_COPY, ...PLANTED.map((n) => `files/screenshots/${n}`));
   } catch {}
-  adb('shell', 'am', 'force-stop', PKG);
+  // the folders it made, deepest first, if nothing else is in them
+  for (const dir of [...madeHere].reverse())
+    try {
+      inApp('rmdir', dir);
+    } catch {}
+  const journalBack = hadJournal
+    ? inApp('cat', 'files/journal.json') === readFileSync(keptJournal, 'utf8')
+    : !isThere('files/journal.json');
+  const backupsBack = backups().every((f) => copiesBefore.has(f));
+  check(
+    'afterwards the emulator has its own journal, backups and app copy back',
+    journalBack && backupsBack && mirrorBack,
+    JSON.stringify({ journalBack, backupsBack, mirrorBack }),
+  );
   if (rooted) adb('unroot');
   rmSync(work, { recursive: true, force: true });
 }
