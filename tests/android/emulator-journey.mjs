@@ -539,10 +539,28 @@ try {
   );
   adb('shell', 'input', 'keyevent', 'BACK');
   await sleep(1000);
-  const crashes = adb('logcat', '-d')
-    .split('\n')
-    .filter((l) => /FATAL EXCEPTION|ClassNotFoundException|NoSuchMethodException|NoClassDefFoundError/.test(l));
-  check('no crash or missing-class error in the log', crashes.length === 0, crashes.slice(0, 3).join(' | '));
+  // the log is the whole emulator's, and Google's services on the google_apis image
+  // log a NoSuchMethodException of their own now and then, so only the app's
+  // processes count: any started since the log was cleared, and the one running now
+  const log = adb('logcat', '-d').split('\n');
+  const startedAs = new RegExp(`Start proc (\\d+):${PKG.replace(/\./g, '\\.')}[:/]`);
+  const appPids = new Set(log.flatMap((l) => l.match(startedAs)?.[1] ?? []));
+  try {
+    for (const pid of adb('shell', 'pidof', PKG).trim().split(/\s+/)) appPids.add(pid);
+  } catch {
+    // not running: a crash, which its own lines show
+  }
+  // threadtime lines: date, time, pid, tid, level, tag
+  const crashes = log.filter(
+    (l) =>
+      appPids.has(l.trim().split(/\s+/)[2]) &&
+      /FATAL EXCEPTION|ClassNotFoundException|NoSuchMethodException|NoClassDefFoundError/.test(l),
+  );
+  check(
+    'no crash or missing-class error in the log',
+    appPids.size > 0 && crashes.length === 0,
+    appPids.size ? crashes.slice(0, 3).join(' | ') : "the app's process is not in the log",
+  );
 } catch (err) {
   failures++;
   console.log(`FAIL  ${err.message}`);
