@@ -115,6 +115,18 @@ The coverage floor is `coverage.thresholds` in `vitest.config.mts`:
 below it. `npm test` and `npm run check` don't measure coverage, so they never
 fail on it. When the tests climb well above the floor, raise it with them.
 
+Every Monday morning `.github/workflows/audit.yml` runs `npm audit`. A high or
+critical advisory in a package the app ships fails the run (GitHub emails
+about it); advisories in development tools only are listed in the run's
+summary. Actions → npm audit → Run workflow starts it by hand. Dependabot
+(`.github/dependabot.yml`) also looks every Monday, at npm, the workflows'
+actions and the Windows app's Rust crates, and opens pull requests: the minor
+and patch updates of each kind together, a major version on its own. It skips
+ESLint 10 (eslint-config-next's plugins support 9 only) and Tauri's minor and
+major versions: `@tauri-apps/api` and `@tauri-apps/cli` on npm and the `tauri`
+crate must move together, by hand (the steps are in `dependabot.yml`). Its alerts and security pull
+requests are on in the repo's settings.
+
 ## Where everything lives
 
 ```

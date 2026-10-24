@@ -1,0 +1,46 @@
+# Once a week, checks package-lock.json against npm's list of known security
+# advisories. A high or critical advisory in a package the app ships (the
+# dependencies in package.json, not the devDependencies) fails the run, and
+# GitHub emails about a failed run. The whole report, development tools
+# included, goes in the run's summary either way. It can also be started by
+# hand: Actions -> npm audit -> Run workflow. npm audit reads the lockfile, so
+# nothing is installed; it only reads the code. GitHub turns a schedule off
+# after 60 days without a commit; the Actions page then offers to turn it back
+# on.
+name: npm audit
+
+on:
+  schedule:
+    # Mondays at 05:17 UTC, 7 or 8 in the morning in Israel: off the hour,
+    # when GitHub's scheduled runs are busiest and can start late
+    - cron: '17 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      # every package, development tools included: listed, never fails the run
+      - name: report (all packages)
+        run: |
+          {
+            echo '### npm audit, all packages'
+            echo '```'
+            npm audit 2>&1 || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: the app's own packages, high or critical
+        run: npm audit --omit=dev --audit-level=high

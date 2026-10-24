@@ -1,0 +1,75 @@
+# Dependabot looks for newer versions every Monday morning and opens pull
+# requests for them: the minor and patch updates of each kind of package
+# together in one, and a new major version in one of its own. CI runs on each;
+# they're merged by hand. Its alerts and security pull requests (for a known
+# advisory, on any day) are turned on in the repo's settings, Settings -> Code
+# security.
+#
+# Tauri's npm packages and its Rust crate have to stay on the same major.minor
+# version, or `tauri build` stops with "version mismatched Tauri packages", so
+# a pull request that moved one side alone would fail the windows app job.
+# Dependabot only offers their patch updates; a minor or major one is done by
+# hand, both sides in one commit: `npm install @tauri-apps/api@2.x
+# @tauri-apps/cli@2.x`, the same version for `tauri` (and `tauri-build`) in
+# src-tauri/Cargo.toml, then `cargo update --manifest-path
+# src-tauri/Cargo.toml`. So is a Tauri advisory fixed only in a newer minor
+# version: its security pull request would fail the windows app job alone.
+version: 2
+updates:
+  # package.json: the app and its build and test tools
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '07:00'
+      timezone: Asia/Jerusalem
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      npm:
+        update-types: [minor, patch]
+    ignore:
+      # ESLint stays on 9 until eslint-plugin-react, -import and -jsx-a11y
+      # (all three through eslint-config-next) support 10
+      - dependency-name: eslint
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@tauri-apps/api'
+        update-types: ['version-update:semver-major', 'version-update:semver-minor']
+      - dependency-name: '@tauri-apps/cli'
+        update-types: ['version-update:semver-major', 'version-update:semver-minor']
+
+  # the actions the workflows in .github/workflows use
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '07:00'
+      timezone: Asia/Jerusalem
+    commit-message:
+      prefix: ci
+    groups:
+      actions:
+        update-types: [minor, patch]
+
+  # the Windows app's Rust crates, src-tauri/Cargo.toml
+  - package-ecosystem: cargo
+    directory: /src-tauri
+    schedule:
+      interval: weekly
+      day: monday
+      time: '07:00'
+      timezone: Asia/Jerusalem
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      cargo:
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: tauri
+        update-types: ['version-update:semver-major', 'version-update:semver-minor']
+      - dependency-name: tauri-build
+        update-types: ['version-update:semver-major', 'version-update:semver-minor']
