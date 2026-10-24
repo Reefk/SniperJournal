@@ -1,6 +1,7 @@
 // The Android app on an emulator: restore and erase with their safety copies,
 // the journal surviving a force-stop, a corrupted journal, a save the phone
-// refuses, reclaiming chart images nothing uses, the back button and the
+// refuses, reclaiming chart images nothing uses, a trade logged in the trade
+// form, a CSV imported with a fee per contract, the back button and the
 // share sheet. Works on a debug build and,
 // on an emulator image that allows `adb root`, on a release build too.
 //
@@ -9,14 +10,15 @@
 //
 // Emulator only: it replaces the app's journal with the generated sample in
 // fixtures/ while it runs, and puts back whatever was there at the end: the
-// journal (or none), the backups, and the copy of the journal the app keeps in
-// its WebView. It works on an app just installed, with no journal or folders
-// yet, as on a CI emulator (.github/workflows/android.yml).
+// journal (or none), the backups, and what the app keeps in its WebView's
+// storage. It works on an app just installed, with no journal or folders yet,
+// as on a CI emulator (.github/workflows/android.yml).
 // Needs the Android SDK (ANDROID_HOME, or the usual Windows location).
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { PAGE } from '../e2e/cdp.mjs';
 
 const PKG = 'com.sniperjournal.app';
 const APP = `/data/data/${PKG}`;
@@ -204,13 +206,13 @@ for (const dir of madeHere.filter((d) => d !== 'files/screenshots')) {
   inApp('mkdir', dir);
   handBack(dir);
 }
-// The copy of the journal the app keeps in its WebView (src/store/mirror.ts):
-// a phone writes it when a save fails, and opens it rather than the file while
-// it is newer. Kept and cleared before the test, so the journals it puts in
-// place open from the file, and put back at the end.
-const MIRROR = JSON.stringify('sniper-journal:v1');
-let keptMirror = null;
-let mirrorKept = false;
+// What the app keeps in its WebView's storage: a copy of the journal (written
+// when a save fails, and opened rather than the file while it is newer, see
+// src/store/mirror.ts), the fee last used to import, the trade form's last
+// tab. Kept and cleared before the test, so the journals it puts in place open
+// from the file and every run starts alike, and put back at the end.
+const STORAGE = `JSON.stringify(Object.keys(localStorage).sort().map((k) => [k, localStorage.getItem(k)]))`;
+let keptStorage = null;
 const keptJournal = join(work, 'kept.json');
 let hadJournal = false;
 try {
@@ -248,11 +250,10 @@ const SWEEP_COPY = 'files/backups/conflict-20260101-000000.json';
 const PLANTED = ['droidused1.png', 'droidcopy1.png', 'droidorph1.png', 'droidnew01.png'];
 
 try {
-  // the app as it is, for its own copy: opening the journal writes nothing
+  // the app as it is, for its storage: opening the journal writes nothing
   await launch();
-  keptMirror = await ev(`localStorage.getItem(${MIRROR})`);
-  mirrorKept = true;
-  await ev(`localStorage.removeItem(${MIRROR}); true`);
+  keptStorage = await ev(STORAGE);
+  await ev(`localStorage.clear(); true`);
 
   await pushJournal(sample);
   await launch();
@@ -429,6 +430,78 @@ try {
   );
   check('and says how much space it freed', await seen(`document.body.innerText.includes('${png.length} bytes freed: 1 unused chart image deleted')`, 'freed toast', 5000));
 
+  // ---- logging a trade on a phone ---------------------------------------------------
+  // the page helpers the desktop journeys use ($t, $field, $type, $modal …)
+  const tradeCount = `Number(document.body.innerText.match(/(\\d+) trades? in/)?.[1])`;
+  /** whether the journal on disk passes `test` within `timeout`: a save waits a moment */
+  const savedSoon = async (test, timeout = 10000) => {
+    const end = Date.now() + timeout;
+    while (Date.now() < end) {
+      try {
+        if (test(fileJson('files/journal.json'))) return true;
+      } catch {
+        // caught mid-write
+      }
+      await sleep(250);
+    }
+    return false;
+  };
+  await ev(goTrades);
+  await until(`${tradeCount} === 78`, 'the trades page', 15000);
+  await ev(`${PAGE}; true`);
+  // a phone has Log trade as the header's +
+  await ev(`document.querySelector('header button[aria-label="Log a trade"]').click(); true`);
+  await until(`!!$modal() && !!$field('Symbol', $modal())`, 'trade form');
+  await ev(
+    `$type($field('Symbol', $modal()), 'PHONE'); $type($field('Quantity', $modal()), '2'); $type($field('Entry price', $modal()), '100'); $t('Save trade', $modal()).click(); true`,
+  );
+  check(
+    "the header's + opens the trade form, and the trade typed in it is saved",
+    (await seen(`!$modal() && ${tradeCount} === 79`, 'trade saved', 15000)) &&
+      (await savedSoon((j) => j.trades.some((t) => t.symbol === 'PHONE' && t.quantity === 2 && t.entryPrice === 100))),
+  );
+
+  // ---- importing a broker's file on a phone, with a fee per contract --------------
+  const csv = [
+    'symbol,side,opened_at,closed_at,quantity,entry_price,exit_price',
+    'DROIDA,Buy,2026-03-12 10:00,2026-03-12 10:30,4,20,21',
+    'DROIDB,Buy,2026-03-13 10:00,2026-03-13 10:30,1,50,49',
+  ].join('\n');
+  await ev(`[...document.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Import').click(); true`);
+  await until(`!!$modal()?.querySelector('input[type=file]')`, 'import window');
+  await ev(`(() => {
+    const input = $modal().querySelector('input[type=file]');
+    const dt = new DataTransfer();
+    dt.items.add(new File([${JSON.stringify(csv)}], 'trades.csv', { type: 'text/csv' }));
+    input.files = dt.files;
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    return true;
+  })()`);
+  await until(`$modal().innerText.includes('ready to import')`, 'import preview', 15000);
+  check(
+    'a CSV chosen on the phone is read: 2 trades ready, and no fees in it',
+    await ev(
+      `/2\\s*ready to import/.test($modal().innerText) && $modal().innerText.includes('There are no fees in this file') && $field('Fee to add', $modal())?.value === 'none'`,
+    ),
+  );
+  await ev(`$type($field('Fee to add', $modal()), 'contract'); true`);
+  await until(`!!$field('Amount', $modal())`, 'amount field');
+  await ev(`$type($field('Amount', $modal()), '0.25'); true`);
+  check(
+    'a fee per contract, each side, in the preview: 0.25 × (4 + 1) contracts × 2 = $2.50',
+    await seen(`$modal().innerText.includes('Fees on these trades $2.50')`, 'fee in the preview', 5000),
+  );
+  await ev(`$tStarts('Import 2 trades', $modal()).click(); true`);
+  check(
+    'imported, both trades are in the journal with their fees',
+    (await seen(`!$modal() && ${tradeCount} === 81`, 'imported', 15000)) &&
+      (await savedSoon(
+        (j) =>
+          j.trades.some((t) => t.symbol === 'DROIDA' && t.fees === 2) &&
+          j.trades.some((t) => t.symbol === 'DROIDB' && t.fees === 0.5),
+      )),
+  );
+
   // ---- the App and Share plugins ------------------------------------------------
   adb('logcat', '-c');
   await launch();
@@ -482,20 +555,18 @@ try {
     adb('shell', 'am', 'force-stop', PKG);
     inApp('rm', '-f', 'files/journal.json', 'files/journal.tmp');
   }
-  // and the app's own copy, which it would otherwise open over that journal.
-  // Opening it writes nothing, so the journal above stays as it is.
-  let mirrorBack = !mirrorKept;
-  if (mirrorKept) {
+  // and the app's storage, whose copy of the journal it would otherwise open
+  // over that one. Opening it writes nothing, so the journal above stays.
+  let storageBack = keptStorage == null;
+  if (keptStorage != null) {
     try {
       await launch();
       await ev(
-        keptMirror == null
-          ? `localStorage.removeItem(${MIRROR}); true`
-          : `localStorage.setItem(${MIRROR}, ${JSON.stringify(keptMirror)}); true`,
+        `(() => { localStorage.clear(); for (const [k, v] of ${keptStorage}) localStorage.setItem(k, v); return true; })()`,
       );
-      mirrorBack = (await ev(`localStorage.getItem(${MIRROR})`)) === keptMirror;
+      storageBack = (await ev(STORAGE)) === keptStorage;
     } catch (err) {
-      console.log(`note: the app's own copy could not be put back: ${err.message}`);
+      console.log(`note: the app's storage could not be put back: ${err.message}`);
     }
   }
   adb('shell', 'am', 'force-stop', PKG);
@@ -515,9 +586,9 @@ try {
     : !isThere('files/journal.json');
   const backupsBack = backups().every((f) => copiesBefore.has(f));
   check(
-    'afterwards the emulator has its own journal, backups and app copy back',
-    journalBack && backupsBack && mirrorBack,
-    JSON.stringify({ journalBack, backupsBack, mirrorBack }),
+    "afterwards the emulator has its own journal, backups and app's storage back",
+    journalBack && backupsBack && storageBack,
+    JSON.stringify({ journalBack, backupsBack, storageBack }),
   );
   if (rooted) adb('unroot');
   rmSync(work, { recursive: true, force: true });
