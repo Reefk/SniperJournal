@@ -230,10 +230,29 @@ by the size; a file with no fee column but a P&L both before and after fees
 has the difference as its fees. Thinkorswim's fees, which its statement keeps
 in the Cash Balance section, are matched to each execution by time (a spread's
 are shared between its legs by their sizes), and money back on a fee line
-takes from them. Some exports carry no fees at all (Tradovate's), or write
-every fee as 0 (TradingView's paper trading); the preview then says so, and
-those trades' P&L is before commissions until you add them (select the trades,
-then **Add details** → **Fees per trade**).
+takes from them.
+
+The preview has a **fee box** with the total of the fees and the net P&L
+after them, so you can check them against your broker before you import:
+
+- **A file with no fees** (Tradovate's exports carry none, and TradingView's
+  paper trading writes every fee as 0) comes in with fees of 0, so its P&L is
+  before commissions. Under **Fee to add**, choose **Per trade** (the amount
+  once on every trade) or **Per contract, each side** (the amount × the size,
+  on the way in and again on the way out; a trade still open pays its way in
+  only), and type the **Amount**. The fee is remembered for that account on
+  this device, ready for the next file.
+- **A file with fees** keeps them: **Fees** says **From the file**. If they
+  are wrong, or you pay something else, choose **Your own, per trade** or
+  **Your own, per contract, each side** to charge yours in their place, for
+  that file only.
+
+An open trade that a file finishes is charged the fee you choose for the whole
+trade, its way in included.
+
+For trades already in your journal, select them on the Trades page, then
+**Add details** → **Fees**, charged **Per trade** or **Per contract** (in,
+and again out).
 
 A Rithmic trade performance report lists each contract above its own block of
 trades; each block's contract becomes the symbol of its trades. An export that
@@ -379,9 +398,9 @@ journal useful. Two ways to add it:
 - **One trade:** click any row to open it and edit everything, including the
   stop loss, fees and your 1–5 self-ratings.
 - **Many at once:** tick several rows, then **Add details**. You can set the
-  playbook setup, session, fees and leverage, and add tags or a note across the
-  whole selection in one go. Anything you leave untouched stays as it is on each
-  trade.
+  playbook setup, session, fees (per trade, or per contract by each trade's
+  size) and leverage, and add tags or a note across the whole selection in one
+  go. Anything you leave untouched stays as it is on each trade.
 
 ---
 

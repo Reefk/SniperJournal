@@ -139,6 +139,7 @@ data/               your journal and its backups, created at runtime
 | How a name not in those lists is read by its words | the `words(...)` lists and `RULES` in `src/lib/import/words.ts`                     |
 | How a file of single fills becomes trades          | `src/lib/import/fills.ts`                                                           |
 | Futures point values the importer knows            | `POINT_VALUES` in `src/lib/import/instruments.ts`                                   |
+| A fee per trade or per contract, typed in once     | `src/lib/fee-rate.ts` (the import's fee box, and Add details)                       |
 | How partial fills are combined into one trade      | `src/lib/merge.ts`                                                                  |
 | Chart image upload, scaling and storage            | `src/lib/screenshots.ts`, `src/app/api/screenshot/`                                 |
 | The app icon and the store artwork                 | `assets/logo.png` and `assets/banner.png`, then `npm run icons` redraws all of them |

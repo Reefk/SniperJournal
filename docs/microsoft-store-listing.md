@@ -114,6 +114,15 @@ ALSO NEW
 • Many smaller fixes to wording and numbers
 ```
 
+For the next release after 1.1.1, so far:
+
+```
+FEES WHEN IMPORTING
+• A file with no fees, such as Tradovate's exports, comes in with fees of 0, and the preview lets you add a fee per trade or per contract, each side, with the total and the net P&L after it. The fee is remembered for the account
+• A file with fees keeps them, and the preview shows what they come to; if they are wrong, charge your own in their place
+• Add details can set a fee per contract too, by each trade's size
+```
+
 ### Product features (up to 20, 200 characters each; the Store adds the bullets)
 
 ```
