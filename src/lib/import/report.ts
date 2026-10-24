@@ -11,11 +11,11 @@ import type { Table } from './table';
 
 /** said when no trade read has a fee (Tradovate's exports have none): the P&L shown is before commissions */
 export const NO_FEES =
-  'There are no fees in this file, so the trades come in without them, and their P&L is before commissions. To add them, select the trades on the Trades page, then Add details > Fees per trade.';
+  'There are no fees in this file, so the trades come in without them, and their P&L is before commissions. To add them, select the trades on the Trades page, then Add details > Fees, per trade or per contract.';
 
 /** said instead when the file writes its fees, all 0 (TradingView's paper trading) */
 export const ZERO_FEES =
-  'Every fee in this file is 0, so the trades come in with none. If there were commissions, add them: select the trades on the Trades page, then Add details > Fees per trade.';
+  'Every fee in this file is 0, so the trades come in with none. If there were commissions, add them: select the trades on the Trades page, then Add details > Fees, per trade or per contract.';
 
 /** "Row 4" or "Row 4 and 6 more" */
 export const rowsLabel = (rows: number[]) =>

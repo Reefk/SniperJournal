@@ -6,6 +6,7 @@ import { useJournal } from '@/store/JournalProvider';
 import { useUI } from '@/store/UIProvider';
 import { SESSIONS } from '@/lib/sessions';
 import { toNumberOrNull } from '@/lib/utils';
+import { feeAtRate, type FeeRate } from '@/lib/fee-rate';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Field, Input, Select, Textarea } from '@/components/ui/Field';
@@ -24,6 +25,7 @@ export function BulkDetailsModal({ ids, onClose }: { ids: string[]; onClose: () 
   const [session, setSession] = useState(KEEP);
   const [tags, setTags] = useState<string[]>([]);
   const [fees, setFees] = useState('');
+  const [feesPer, setFeesPer] = useState<FeeRate['per']>('trade');
   const [leverage, setLeverage] = useState('');
   const [notes, setNotes] = useState('');
   const [replaceTags, setReplaceTags] = useState(false);
@@ -36,7 +38,8 @@ export function BulkDetailsModal({ ids, onClose }: { ids: string[]; onClose: () 
     if (setupId !== KEEP) patch.setupId = setupId || undefined;
     if (session !== KEEP) patch.session = session || undefined;
     const feeValue = toNumberOrNull(fees);
-    if (fees.trim() && feeValue != null) patch.fees = feeValue;
+    const fee: FeeRate | null = fees.trim() && feeValue != null ? { per: feesPer, amount: feeValue } : null;
+    if (fee?.per === 'trade') patch.fees = fee.amount;
     const levValue = toNumberOrNull(leverage);
     if (leverage.trim() && levValue != null) patch.leverage = levValue;
     if (notes.trim()) patch.notes = notes.trim();
@@ -54,6 +57,12 @@ export function BulkDetailsModal({ ids, onClose }: { ids: string[]; onClose: () 
       }
     } else {
       actions.patchTrades(ids, patch);
+    }
+    // a fee per contract differs with each trade's size, so those go one at a time too
+    if (fee?.per === 'contract') {
+      for (const t of data.trades.filter((t) => ids.includes(t.id))) {
+        actions.patchTrades([t.id], { fees: feeAtRate(t, fee) });
+      }
     }
 
     toast(`Updated ${count} ${count === 1 ? 'trade' : 'trades'}`);
@@ -106,15 +115,24 @@ export function BulkDetailsModal({ ids, onClose }: { ids: string[]; onClose: () 
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Fees per trade" hint="leave blank to keep">
+          <Field label="Fees" hint="leave blank to keep">
             <Input
               inputMode="decimal"
               className="num"
               value={fees}
               onChange={(e) => setFees(e.target.value)}
-              placeholder="e.g. 1.24"
+              placeholder={feesPer === 'contract' ? 'e.g. 0.95' : 'e.g. 1.24'}
             />
           </Field>
+          <Field label="Charged" hint={feesPer === 'contract' ? 'in, and again out' : undefined}>
+            <Select value={feesPer} onChange={(e) => setFeesPer(e.target.value as FeeRate['per'])}>
+              <option value="trade">Per trade</option>
+              <option value="contract">Per contract</option>
+            </Select>
+          </Field>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
           <Field label="Leverage" hint="leave blank to keep">
             <Input
               inputMode="decimal"

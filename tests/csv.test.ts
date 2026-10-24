@@ -353,7 +353,7 @@ describe('import: duplicates and partial fills', () => {
     expect(again.errors).toEqual([]);
     expect(again.notices).toEqual([
       "Times in this file carry no time zone, so they were taken as written, in this device's local time.",
-      'There are no fees in this file, so the trades come in without them, and their P&L is before commissions. To add them, select the trades on the Trades page, then Add details > Fees per trade.',
+      'There are no fees in this file, so the trades come in without them, and their P&L is before commissions. To add them, select the trades on the Trades page, then Add details > Fees, per trade or per contract.',
     ]);
   });
 

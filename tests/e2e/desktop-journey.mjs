@@ -1621,6 +1621,21 @@ async function journey() {
     'the trade is saved with your fee',
     await savedSoon((j) => j.trades.some((t) => t.symbol === 'FEEY' && t.fees === 1)),
   );
+
+  // Trades → Add details: a fee per contract on the trades selected
+  await b.run(`$nav('/trades'); true`);
+  const feeyBox = `[...document.querySelectorAll('input[aria-label="Select FEEY trade"]')].find((c) => c.offsetParent !== null)`;
+  await b.until(`!!${feeyBox}`, 'FEEY on the Trades page');
+  await b.run(`${feeyBox}.click(); true`);
+  await b.until(`!!$t('Add details')`, 'Add details button');
+  await b.run(`$t('Add details').click(); true`);
+  await b.until(`!!$field('Charged', $modal())`, 'Add details dialog');
+  await b.run(`$type($field('Fees', $modal()), '0.4'); $type($field('Charged', $modal()), 'contract'); true`);
+  await b.run(`$t('Apply to 1', $modal()).click(); true`);
+  check(
+    'Add details charges a fee per contract by size: 0.4 × 2 contracts in and out',
+    await savedSoon((j) => j.trades.some((t) => t.symbol === 'FEEY' && t.fees === 1.6)),
+  );
   await b.close();
 
   // ---- 19. a journal a newer version saved is neither opened nor written over ----
