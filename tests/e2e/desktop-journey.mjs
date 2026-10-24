@@ -1271,7 +1271,7 @@ async function journey() {
   // a page that crashes: the page is replaced, the app around it carries on
   await b.send('Page.navigate', { url: `${base}/trades?sj-crash=4242.42` });
   const pageError = await seen(
-    `document.body.innerText.includes("This page couldn't be shown")`,
+    `document.readyState === 'complete' && document.body.innerText.includes("This page couldn't be shown")`,
     'page error screen',
     10000,
   );
@@ -1299,7 +1299,7 @@ async function journey() {
   // the app itself crashing (the sidebar shows the balance): the whole page is replaced
   await b.send('Page.navigate', { url: `${base}/?sj-crash=4342.42` });
   const appError = await seen(
-    `document.body.innerText.includes('Sniper Journal ran into a problem')`,
+    `document.readyState === 'complete' && document.body.innerText.includes('Sniper Journal ran into a problem')`,
     'global error screen',
     10000,
   );
@@ -1329,7 +1329,7 @@ async function journey() {
   check(
     'opened normally again, the app is back',
     await seen(
-      `!!document.querySelector('aside') && !document.body.innerText.includes('ran into a problem')`,
+      `document.readyState === 'complete' && !!document.querySelector('aside') && !document.body.innerText.includes('ran into a problem')`,
       'app back',
       10000,
     ),
@@ -1646,7 +1646,12 @@ async function journey() {
   await startServer();
   b = await openBrowser(); // no browser copy to open instead
   await b.send('Page.navigate', { url: base });
-  await b.until(`document.body.innerText.includes('This journal needs a newer Sniper Journal')`, 'newer journal');
+  // as at every navigation: until the new page has loaded it may have no
+  // <body> yet, and reading one would throw instead of waiting
+  await b.until(
+    `document.readyState === 'complete' && document.body.innerText.includes('This journal needs a newer Sniper Journal')`,
+    'newer journal',
+  );
   check(
     'a journal a newer version saved opens nothing, and says to update the app',
     await b.run(
