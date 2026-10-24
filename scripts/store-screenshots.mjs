@@ -5,9 +5,10 @@
 //
 //   npm run build:desktop && npm run screenshots:store
 //
-// CI takes them too, on GitHub's Windows runner, and keeps them with the run
-// (the "windows-store" artifact), for a PC where Smart App Control blocks the
-// Rust build.
+// CI takes them too, on GitHub's Windows runner, on a run started by hand
+// (Actions -> CI -> Run workflow), and keeps them with the run (the
+// "windows-store" artifact), for a PC where Smart App Control blocks the Rust
+// build.
 //
 // Each page is laid out at SIZE (CSS pixels, a 1920 x 1080 laptop at 125%)
 // and captured at SCALE, so the files come out at 2560 x 1440: inside the

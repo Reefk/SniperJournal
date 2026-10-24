@@ -96,6 +96,10 @@ ignores `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS`, so the journey also asks the
 app for its DevTools port through `SNIPER_JOURNAL_DEVTOOLS_PORT`, which the
 app takes only together with a test folder (`SNIPER_JOURNAL_DIR`), and only to
 open that port on this computer. `npm run e2e:android` is still run by hand.
+A push that changes only Markdown files or `docs/` skips CI; the next push that
+changes code checks their formatting. A run started by hand (Actions → CI →
+Run workflow) also makes the Store package and screenshots and keeps them with
+the run, as the `windows-store` artifact.
 
 Every file was formatted at once in one commit, listed in
 `.git-blame-ignore-revs` so that GitHub's blame skips it. To skip it locally
@@ -363,7 +367,9 @@ phone's.
    `package.json`.
 2. `npm run build:desktop`, then `npm run package:desktop` builds
    `src-tauri/target/msix/SniperJournal_<version>_x64.msix`. Leave it
-   unsigned: the Store signs it.
+   unsigned: the Store signs it. On a PC where Smart App Control blocks the
+   Rust build, start CI by hand instead (Actions → CI → Run workflow) and take
+   the package and the screenshots from its `windows-store` artifact.
 3. Upload it in Partner Center. The listing text, captions and the answers to
    Partner Center's questions are in
    [`docs/microsoft-store-listing.md`](docs/microsoft-store-listing.md), the
