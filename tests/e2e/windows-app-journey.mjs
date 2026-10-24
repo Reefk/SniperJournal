@@ -223,6 +223,11 @@ async function launch() {
   current = page;
   await page.send('Log.enable');
   await page.send('Runtime.enable');
+  // DevTools lists the window under the app's address as soon as the app
+  // starts loading its page, while the window still holds about:blank. A
+  // reload then reloads about:blank and cancels the app's page, and the window
+  // stays empty ("timed out waiting for: the app"), so wait for the page first.
+  await page.until(`location.origin === 'http://tauri.localhost'`, "the app's page");
   // from the top, so that anything the page refuses while loading is logged
   await page.send('Page.reload');
   await page.until(
