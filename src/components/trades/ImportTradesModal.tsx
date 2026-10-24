@@ -9,15 +9,18 @@ import {
   FileSpreadsheet,
   Info,
   Merge,
+  Receipt,
   TriangleAlert,
   Upload,
 } from 'lucide-react';
 import { useJournal } from '@/store/JournalProvider';
 import { useUI } from '@/store/UIProvider';
 import {
+  NO_FEES,
   PLATFORMS,
   ROLE_LABELS,
   WorkbookError,
+  ZERO_FEES,
   csvTemplate,
   describeGaps,
   fileTooLarge,
@@ -29,13 +32,14 @@ import {
   sheetToCsv,
   sheetTooLarge,
   type DateOrder,
+  type FeeRate,
   type PlatformGroup,
   type Role,
   type WorkbookSheet,
 } from '@/lib/csv';
-import { formatPrice, formatShortDate, formatTime } from '@/lib/format';
+import { formatMoney, formatPrice, formatShortDate, formatTime } from '@/lib/format';
 import { isClosed, netPnl } from '@/lib/trade-math';
-import { cn, downloadFile } from '@/lib/utils';
+import { cn, downloadFile, toNumberOrNull } from '@/lib/utils';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Field, Input, Select } from '@/components/ui/Field';
@@ -114,6 +118,47 @@ function rememberChoices(signature: string, choices: Choices) {
   }
 }
 
+/**
+ * a fee as typed: to add to a file with none of its own, or to charge in
+ * place of the file's; 'none' leaves the file's fees, or none, as they are
+ */
+interface FeeChoice {
+  per: 'none' | FeeRate['per'];
+  amount: string;
+}
+const NO_FEE: FeeChoice = { per: 'none', amount: '' };
+/** the fee typed, when it is one to charge: an amount above 0 */
+function rateOf(fee: FeeChoice): FeeRate | undefined {
+  if (fee.per === 'none') return undefined;
+  const amount = toNumberOrNull(fee.amount);
+  return amount != null && amount > 0 ? { per: fee.per, amount } : undefined;
+}
+
+/**
+ * The fee is remembered per account, on this device only, so the next export
+ * into the same account gets the same fee without typing it again.
+ */
+const FEE_KEY = 'sniper-journal:import-fee:';
+function rememberedFee(accountId: string): FeeChoice {
+  try {
+    const raw = localStorage.getItem(FEE_KEY + accountId);
+    const saved = raw ? (JSON.parse(raw) as Partial<FeeChoice>) : null;
+    return saved && (saved.per === 'trade' || saved.per === 'contract') && typeof saved.amount === 'string'
+      ? { per: saved.per, amount: saved.amount }
+      : NO_FEE;
+  } catch {
+    return NO_FEE;
+  }
+}
+function rememberFee(accountId: string, fee: FeeChoice) {
+  try {
+    if (!rateOf(fee)) localStorage.removeItem(FEE_KEY + accountId);
+    else localStorage.setItem(FEE_KEY + accountId, JSON.stringify(fee));
+  } catch {
+    /* storage unavailable: the fee simply is not remembered */
+  }
+}
+
 /** the import itself, also the "From a file" side of Log a trade */
 export function ImportBody({ onClose }: { onClose: () => void }) {
   const { data, actions } = useJournal();
@@ -137,6 +182,10 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
   const [lookedUp, setLookedUp] = useState('');
   const [restored, setRestored] = useState(false);
   const [showColumns, setShowColumns] = useState(false);
+  /** for a file with no fees of its own; kept from file to file, and per account */
+  const [fee, setFee] = useState(() => rememberedFee(accountId));
+  /** for a file with fees of its own, charged in their place; this file only */
+  const [replace, setReplace] = useState(NO_FEE);
   const currency = data.settings.currency;
 
   const options = useMemo(
@@ -150,8 +199,10 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
       rowKind: choices.rowKind,
       dateOrder: choices.dateOrder,
       defaultSymbol: choices.defaultSymbol,
+      addFee: rateOf(fee),
+      replaceFees: rateOf(replace),
     }),
-    [accountId, data.accounts, data.setups, data.trades, combinePartials, choices],
+    [accountId, data.accounts, data.setups, data.trades, combinePartials, choices, fee, replace],
   );
   // read as it finishes open trades, which is also how the preview knows which
   // they are; read again without, only when asked to leave them open
@@ -182,6 +233,7 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
     setShowColumns(false);
     setImportLikely(false);
     setFinishOpen(true);
+    setReplace(NO_FEE);
     setText(next);
   };
 
@@ -247,11 +299,30 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
   const preview = toImport.slice(0, 6);
   const journalById = useMemo(() => new Map(data.trades.map((t) => [t.id, t])), [data.trades]);
 
+  // the fee box: a fee to add to a file with no fees of its own, said there in
+  // place of the notice; or for a file with fees, your own in their place
+  const feeBox = toImport.length + likely.length + finished.length > 0;
+  const missing = Boolean(result?.feesMissing);
+  const notices = feeBox ? (result?.notices ?? []).filter((n) => n !== NO_FEES && n !== ZERO_FEES) : result?.notices;
+  const choice = missing ? fee : replace;
+  const setChoice = missing ? setFee : setReplace;
+  const feeTyped = choice.per !== 'none' && choice.amount.trim() !== '';
+  const feeError = feeTyped && !rateOf(choice) ? 'Enter an amount above 0' : undefined;
+  const charged = [...toImport, ...finished];
+  const feesTotal = charged.reduce((sum, t) => sum + t.fees, 0);
+  const netTotal = charged.filter((t) => isClosed(t) && !t.needsReview).reduce((sum, t) => sum + netPnl(t), 0);
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 items-end gap-3 md:grid-cols-[1fr_auto]">
         <Field label="Import into account" hint="a matching account column overrides this">
-          <Select value={accountId} onChange={(e) => setAccountId(e.target.value)}>
+          <Select
+            value={accountId}
+            onChange={(e) => {
+              setAccountId(e.target.value);
+              setFee(rememberedFee(e.target.value));
+            }}
+          >
             {data.accounts.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.name}
@@ -447,9 +518,66 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
             </div>
           )}
 
-          {result.notices.length > 0 && (
+          {feeBox && (
+            <div className="rounded-lg border border-accent/25 bg-accent/5 px-4 py-3 text-sm">
+              <p className="flex items-start gap-2 text-fg">
+                <Receipt className="mt-0.5 size-4 shrink-0 text-accent" />
+                {missing ? (
+                  <span>
+                    {result.feesMissing === 'zero' ? 'Every fee in this file is 0' : 'There are no fees in this file'},
+                    so the trades come in without them and their P&amp;L is before commissions. If your broker charges a
+                    fee, add it here.
+                  </span>
+                ) : (
+                  <span>
+                    The fees come from this file. If they are wrong, or you pay something else, charge your own instead,
+                    for this import.
+                  </span>
+                )}
+              </p>
+              <div className="mt-3 grid grid-cols-1 gap-3 pl-6 md:grid-cols-2">
+                <Field label={missing ? 'Fee to add' : 'Fees'}>
+                  <Select
+                    value={choice.per}
+                    onChange={(e) => setChoice((f) => ({ ...f, per: e.target.value as FeeChoice['per'] }))}
+                  >
+                    <option value="none">{missing ? 'None' : 'From the file'}</option>
+                    <option value="trade">{missing ? 'Per trade' : 'Your own, per trade'}</option>
+                    <option value="contract">
+                      {missing ? 'Per contract, each side' : 'Your own, per contract, each side'}
+                    </option>
+                  </Select>
+                </Field>
+                {choice.per !== 'none' && (
+                  <Field
+                    label="Amount"
+                    hint={choice.per === 'contract' ? 'charged in, and again out' : 'once for every trade'}
+                    error={feeError}
+                  >
+                    <Input
+                      inputMode="decimal"
+                      className="num"
+                      value={choice.amount}
+                      invalid={Boolean(feeError)}
+                      onChange={(e) => setChoice((f) => ({ ...f, amount: e.target.value }))}
+                      placeholder={choice.per === 'contract' ? 'e.g. 0.95' : 'e.g. 1.90'}
+                    />
+                  </Field>
+                )}
+              </div>
+              <p className="mt-2 pl-6 text-xs leading-relaxed text-muted">
+                Fees on these trades <span className="num text-fg">{formatMoney(feesTotal, currency)}</span> · net
+                P&amp;L after them <PnlValue value={netTotal} currency={currency} />
+                {rateOf(choice) &&
+                  finished.length > 0 &&
+                  '. Open trades this file finishes are charged for the whole trade.'}
+              </p>
+            </div>
+          )}
+
+          {notices && notices.length > 0 && (
             <ul className="space-y-1 rounded-lg border border-accent/25 bg-accent/5 px-4 py-2.5 text-xs leading-relaxed text-muted">
-              {result.notices.map((notice, i) => (
+              {notices.map((notice, i) => (
                 <li key={i} className="flex items-start gap-2">
                   <Info className="mt-px size-3.5 shrink-0 text-accent" />
                   <span>{notice}</span>
@@ -709,11 +837,14 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
             <span className="num">Filled</span>, <span className="num">Market pos.</span>,{' '}
             <span className="num">Comm/Fee</span>, <span className="num">Net P&amp;L (USD)</span>,{' '}
             <span className="num">Date/Time</span>, separate date and time columns — and several fee columns add up; a
-            commission per contract is multiplied by the size. A name it doesn&apos;t know as a whole is read by its
-            words when it knows every one of them, so <span className="num">Start Price</span> is the entry price and{' '}
-            <span className="num">Lots Traded</span> the quantity; the preview says which columns it read that way.
-            Title lines above the table and total lines below it are skipped. Anything read wrongly can be changed under
-            Columns. Separate several tags with a | character.
+            commission per contract is multiplied by the size. A file with no fees at all comes in with none, unless you
+            add a fee per trade or per contract in the preview; it is remembered for the account on this device. A file
+            with fees keeps its own, unless you charge yours in their place, for that file only. A name it doesn&apos;t
+            know as a whole is read by its words when it knows every one of them, so{' '}
+            <span className="num">Start Price</span> is the entry price and <span className="num">Lots Traded</span> the
+            quantity; the preview says which columns it read that way. Title lines above the table and total lines below
+            it are skipped. Anything read wrongly can be changed under Columns. Separate several tags with a |
+            character.
           </p>
           <p>
             What one point is worth comes from a multiplier column, the amount against the price, or the file&apos;s
@@ -749,6 +880,8 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
           onClick={() => {
             if (!toImport.length && !finished.length) return;
             if (layout) rememberChoices(layout.signature, choices);
+            // only a file with no fees of its own changes the one remembered
+            if (feeBox && missing) rememberFee(accountId, fee);
             actions.importTrades(toImport, newSetups, finished);
             const done = !finished.length
               ? `Imported ${tradesWord(toImport.length)}`

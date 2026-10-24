@@ -9,8 +9,11 @@ import { NO_FEES, ZERO_FEES, collectMessages } from './import/report';
 import { splitLikelyDuplicates } from './import/likely';
 import { recognisePlatform } from './import/platforms';
 import { formulaSafe } from './import/values';
+import { feeAtRate, type FeeRate } from './fee-rate';
 
 export { parseCsv } from './import/table';
+export { NO_FEES, ZERO_FEES } from './import/report';
+export type { FeeRate } from './fee-rate';
 export { ROLE_LABELS, type Role } from './import/columns';
 export type { DateOrder } from './import/values';
 export type { ImportLayout, RowKind } from './import/layout';
@@ -101,6 +104,16 @@ export interface ImportOptions extends ImportTarget, LayoutChoices {
    * the file starts from nothing: its closing fills become trades of their own.
    */
   finishOpen?: boolean;
+  /**
+   * a fee for every trade the import adds or finishes, used only when the
+   * file has none of its own (`feesMissing`); a file with fees keeps them
+   */
+  addFee?: FeeRate;
+  /**
+   * a fee charged on every trade in place of the file's own, used only when
+   * the file has some (`feesMissing` null): its fees are wrong, or yours differ
+   */
+  replaceFees?: FeeRate;
 }
 
 export interface ImportResult {
@@ -134,6 +147,12 @@ export interface ImportResult {
   layout: ImportLayout | null;
   /** the platform and export the file's columns say it came from (import/platforms.ts), if a known one */
   platform: { name: string; file: string } | null;
+  /**
+   * the file has no fees of its own, so a fee can be added (`addFee`): none
+   * written at all, or every one 0; null when it has some, or a P&L after
+   * them, which `replaceFees` replaces
+   */
+  feesMissing: 'none' | 'zero' | null;
 }
 
 /** a result with nothing imported, and why */
@@ -153,6 +172,7 @@ function nothingImported(why: Partial<ImportResult>): ImportResult {
     ignored: [],
     layout: null,
     platform: null,
+    feesMissing: null,
     ...why,
   };
 }
@@ -175,6 +195,7 @@ function nothingImported(why: Partial<ImportResult>): ImportResult {
  *   report.ts     what to check, and how the file was read
  *   likely.ts     trades that look like ones already in the journal, left out
  *   finish.ts     a trade the journal has open, finished by the file that closes it
+ * and a fee given in the import window, on every trade it makes: ../fee-rate.ts
  */
 export function importTradesFromCsv(text: string, ctx: ImportOptions): ImportResult {
   const sheet = detectLayout(text, ctx);
@@ -210,12 +231,18 @@ export function importTradesFromCsv(text: string, ctx: ImportOptions): ImportRes
   // not a fee anywhere: unless a P&L after fees says what they were, the P&L
   // is before them. Fees the file has but that were left out are said already
   // (fee lines that matched no execution, another currency, a rate with no
-  // size); fees the file writes, all 0, are said as such.
+  // size); fees the file writes, all 0, are said as such. Told from the rows
+  // read, not the trades: one the file finishes may keep the journal's fees.
   const made = [...read.trades, ...(read.finished ?? [])];
-  const { feesWritten, rateNoSize, foreignFees } = reader.findings;
+  const { feesWritten, feesFound, rateNoSize, foreignFees } = reader.findings;
   const feesLeftOut = Boolean(sheet.table.cashFeesUnmatched) || foreignFees.size > 0 || rateNoSize.length > 0;
-  if (made.length && !sheet.has('net_pnl') && !feesLeftOut && made.every((t) => !t.fees))
-    notices.push(feesWritten ? ZERO_FEES : NO_FEES);
+  const feesMissing = sheet.has('net_pnl') || feesLeftOut || feesFound ? null : feesWritten ? 'zero' : 'none';
+  // a fee given for such a file, or in place of the file's own, is charged on
+  // every trade it makes, so nothing is missing any more
+  const given = feesMissing ? ctx.addFee : ctx.replaceFees;
+  const rate = given && given.amount > 0 ? given : null;
+  const withFee = (t: Trade): Trade => (rate ? { ...t, fees: feeAtRate(t, rate) } : t);
+  if (made.length && feesMissing && !rate) notices.push(feesMissing === 'zero' ? ZERO_FEES : NO_FEES);
   const {
     trades: all,
     combined,
@@ -246,9 +273,9 @@ export function importTradesFromCsv(text: string, ctx: ImportOptions): ImportRes
   }
 
   return {
-    trades,
-    likelyDuplicates: likely,
-    finished: [...done.values(), ...finished],
+    trades: trades.map(withFee),
+    likelyDuplicates: likely.map(withFee),
+    finished: [...done.values(), ...finished].map(withFee),
     newSetups: reader.newSetups,
     errors,
     notices,
@@ -260,6 +287,7 @@ export function importTradesFromCsv(text: string, ctx: ImportOptions): ImportRes
     ignored: sheet.ignored,
     layout: sheet.layout,
     platform,
+    feesMissing,
   };
 }
 

@@ -684,6 +684,7 @@ describe('stage 5: the messages', () => {
     inferred: new Map(),
     foreignFees: new Set(),
     feesWritten: false,
+    feesFound: false,
     rateNoSize: [],
     netAboveGross: [],
     pnlSetAside: new Set(),

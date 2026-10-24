@@ -1547,6 +1547,80 @@ async function journey() {
   );
   await b.run(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); true`);
   await b.until(`!$modal()`, 'closed');
+
+  // ---- 18b. a file with no fees: a fee per contract added in the preview ------
+  const noFeesPath = join(work, 'no-fees.csv');
+  writeFileSync(
+    noFeesPath,
+    [
+      'symbol,side,opened_at,closed_at,quantity,entry_price,exit_price',
+      'FEEX,Buy,2026-03-12 10:00,2026-03-12 10:30,4,20,21',
+    ].join('\n'),
+  );
+  await openImport(noFeesPath);
+  await b.until(`$modal().innerText.includes('There are no fees in this file')`, 'fee box');
+  check(
+    'a file with no fees offers a fee to add, and says it has none once',
+    await b.run(
+      `$modal().innerText.split('There are no fees in this file').length === 2 && $field('Fee to add', $modal())?.value === 'none' && $modal().innerText.includes('Fees on these trades $0.00')`,
+    ),
+  );
+  await b.run(`$type($field('Fee to add', $modal()), 'contract'); true`);
+  await b.until(`!!$field('Amount', $modal())`, 'amount field');
+  await b.run(`$type($field('Amount', $modal()), '0.25'); true`);
+  check(
+    'a fee per contract, each side: 0.25 × 4 contracts in and out, taken off the P&L in the preview',
+    await seen(
+      `$modal().innerText.includes('Fees on these trades $2.00') && $modal().querySelector('tbody').innerText.includes('+$2.00')`,
+      'fee in the preview',
+      5000,
+    ),
+  );
+  await b.run(`$t('Import 1 trade', $modal()).click(); true`);
+  await b.until(`!$modal()`, 'imported');
+  check(
+    'the trade is saved with that fee',
+    await savedSoon((j) => j.trades.some((t) => t.symbol === 'FEEX' && t.fees === 2)),
+  );
+  await openImport(noFeesPath);
+  await b.until(`$modal().innerText.includes('already in your journal')`, 'again');
+  check(
+    'the next file into that account starts with the fee remembered',
+    await b.run(`$field('Fee to add', $modal())?.value === 'contract' && $field('Amount', $modal())?.value === '0.25'`),
+  );
+  await b.run(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); true`);
+  await b.until(`!$modal()`, 'closed');
+
+  // ---- 18c. a file with fees of its own: yours in their place, if you like ----
+  const withFeesPath = join(work, 'with-fees.csv');
+  writeFileSync(
+    withFeesPath,
+    [
+      'symbol,side,opened_at,closed_at,quantity,entry_price,exit_price,fees',
+      'FEEY,Buy,2026-03-13 10:00,2026-03-13 10:30,2,20,21,1.5',
+    ].join('\n'),
+  );
+  await openImport(withFeesPath);
+  await b.until(`$modal().innerText.includes('The fees come from this file')`, 'fee box for a file with fees');
+  check(
+    'a file with fees keeps them unless told otherwise, and the box says what they come to',
+    await b.run(
+      `$field('Fees', $modal())?.value === 'none' && !$field('Amount', $modal()) && $modal().innerText.includes('Fees on these trades $1.50') && !$field('Fee to add', $modal())`,
+    ),
+  );
+  await b.run(`$type($field('Fees', $modal()), 'contract'); true`);
+  await b.until(`!!$field('Amount', $modal())`, 'amount field');
+  await b.run(`$type($field('Amount', $modal()), '0.25'); true`);
+  check(
+    "your own fee per contract replaces the file's in the preview: 0.25 × 2 contracts in and out",
+    await seen(`$modal().innerText.includes('Fees on these trades $1.00')`, 'replaced fee', 5000),
+  );
+  await b.run(`$t('Import 1 trade', $modal()).click(); true`);
+  await b.until(`!$modal()`, 'imported');
+  check(
+    'the trade is saved with your fee',
+    await savedSoon((j) => j.trades.some((t) => t.symbol === 'FEEY' && t.fees === 1)),
+  );
   await b.close();
 
   // ---- 19. a journal a newer version saved is neither opened nor written over ----

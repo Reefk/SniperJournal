@@ -44,6 +44,8 @@ export interface Findings {
   foreignFees: Set<string>;
   /** some row read writes a fee or a fee per contract, 0 included */
   feesWritten: boolean;
+  /** some row read comes to a fee other than 0 */
+  feesFound: boolean;
   /** file lines with a fee per contract but no size to multiply it by, so no fee */
   rateNoSize: number[];
   /** file lines whose P&L after fees is more than the one before them, so no fee was worked out */
@@ -119,6 +121,7 @@ export function createReader(sheet: Sheet, target: ImportTarget): Reader {
     inferred: new Map(),
     foreignFees: new Set(),
     feesWritten: false,
+    feesFound: false,
     rateNoSize: [],
     netAboveGross: [],
     pnlSetAside: new Set(),
@@ -190,6 +193,7 @@ export function createReader(sheet: Sheet, target: ImportTarget): Reader {
     if (rate != null) findings.feesWritten = true;
     if (rate && size) total = (total ?? 0) + Math.round(Math.abs(rate) * size * sides * 1e8) / 1e8;
     else if (rate && line != null) findings.rateNoSize.push(line);
+    if (total) findings.feesFound = true;
     return total;
   };
 
