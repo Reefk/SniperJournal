@@ -65,6 +65,102 @@ const env = (debugPort) => ({
 let app;
 /** what the page logged: CSP refusals, errors */
 const logged = [];
+
+// ---- what the app showed when a step failed ------------------------------------
+// The URL, the page's text, its errors and two screenshots, printed and saved
+// before the test exits. On GitHub the job uploads the screenshots' folder.
+const artifacts = process.env.SNIPER_E2E_ARTIFACTS ?? join(tmpdir(), 'sniper-journal-app-e2e');
+/** the page being driven, and the DevTools port it was found on */
+let current = null;
+let currentPort = 0;
+/** every error the page reported since the first launch; `logged` is emptied by the checks, this is not */
+const pageErrors = [];
+function pageError(m) {
+  if (m.method === 'Runtime.exceptionThrown') {
+    const d = m.params.exceptionDetails;
+    return `exception: ${d.exception?.description ?? d.text}`;
+  }
+  if (m.method === 'Runtime.consoleAPICalled' && m.params.type === 'error')
+    return `console.error: ${m.params.args.map((a) => a.value ?? a.description ?? a.type).join(' ')}`;
+  if (m.method === 'Log.entryAdded' && m.params.entry.level === 'error')
+    return `${m.params.entry.source}: ${m.params.entry.text}${m.params.entry.url ? ` (${m.params.entry.url})` : ''}`;
+  return null;
+}
+/** `promise`, or an error once `ms` have passed: a page that hangs never answers */
+const within = (promise, ms = 3000) =>
+  Promise.race([
+    promise,
+    sleep(ms).then(() => {
+      throw new Error(`no answer in ${ms / 1000} s`);
+    }),
+  ]);
+async function diagnose() {
+  console.log('\n---- the app when the test failed ----');
+  if (currentPort) {
+    try {
+      const targets = await within(fetch(`http://127.0.0.1:${currentPort}/json`).then((r) => r.json()));
+      console.log(`DevTools pages: ${targets.map((t) => `${t.type} ${t.url}`).join(', ') || 'none'}`);
+    } catch (e) {
+      console.log(`DevTools pages: ${e.message}`);
+    }
+  }
+  if (current) {
+    try {
+      const page = await within(
+        current.run(
+          `({ url: location.href, state: document.readyState, text: (document.body?.innerText ?? '').replace(/\\s+/g, ' ').trim() })`,
+        ),
+      );
+      console.log(`URL: ${page.url} (document ${page.state})`);
+      console.log(`text: ${page.text ? page.text.slice(0, 1500) + (page.text.length > 1500 ? ' …' : '') : '(none)'}`);
+    } catch (e) {
+      console.log(`the page did not answer: ${e.message}`);
+    }
+  } else console.log('no page: the test never reached the window');
+  console.log(`console errors: ${pageErrors.length ? '' : 'none'}`);
+  for (const error of pageErrors.slice(-20)) console.log(`  ${error.slice(0, 500)}`);
+
+  mkdirSync(artifacts, { recursive: true });
+  if (current) {
+    try {
+      const { result } = await within(current.send('Page.captureScreenshot', { format: 'png' }), 5000);
+      writeFileSync(join(artifacts, 'page.png'), Buffer.from(result.data, 'base64'));
+      console.log(`screenshot of the page: ${join(artifacts, 'page.png')}`);
+    } catch (e) {
+      console.log(`no screenshot of the page: ${e.message}`);
+    }
+  }
+  // the app's window as Windows draws it, whatever its page is doing; on
+  // GitHub the whole screen if there is no window (never here: it would show
+  // your own desktop)
+  const windowShot = join(artifacts, 'window.png');
+  const script = `
+    Add-Type -AssemblyName System.Drawing, System.Windows.Forms
+    Add-Type 'using System; using System.Runtime.InteropServices; public struct Box { public int Left, Top, Right, Bottom; } public static class Win { [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr w, out Box b); }'
+    $p = Get-Process -Id ${app?.pid ?? 0} -ErrorAction SilentlyContinue
+    $box = New-Object Box
+    if ($p -and $p.MainWindowHandle -ne 0 -and [Win]::GetWindowRect($p.MainWindowHandle, [ref]$box)) {
+      $r = [System.Drawing.Rectangle]::FromLTRB($box.Left, $box.Top, $box.Right, $box.Bottom); $what = 'the window'
+    } elseif ($env:GITHUB_ACTIONS) {
+      $r = [System.Windows.Forms.SystemInformation]::VirtualScreen; $what = 'the screen, no window found'
+    } else { 'no window to take'; exit }
+    $b = New-Object System.Drawing.Bitmap $r.Width, $r.Height
+    [System.Drawing.Graphics]::FromImage($b).CopyFromScreen($r.Left, $r.Top, 0, 0, $b.Size)
+    $b.Save('${windowShot}')
+    "saved $what"`;
+  const shot = spawnSync(
+    'powershell',
+    ['-NoProfile', '-EncodedCommand', Buffer.from(script, 'utf16le').toString('base64')],
+    { encoding: 'utf8', timeout: 30000 },
+  );
+  const saved = shot.stdout?.match(/saved (.+)/);
+  console.log(
+    saved
+      ? `screenshot of ${saved[1].trim()}: ${windowShot}`
+      : `no screenshot of the window: ${(shot.stdout || shot.stderr || shot.error?.message || 'no answer').trim().slice(0, 300)}`,
+  );
+  console.log('---- end ----\n');
+}
 /** the WebView2 runtime Windows has, for when the window never opens */
 function webview2() {
   const client = 'Microsoft\\EdgeUpdate\\Clients\\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}';
@@ -95,6 +191,8 @@ function processes(debugPort) {
 }
 async function launch() {
   const debugPort = 9600 + Math.floor(Math.random() * 300);
+  current = null;
+  currentPort = debugPort;
   app = spawn(exe, [], { env: env(debugPort), stdio: 'ignore' });
   let ws;
   /** what the DevTools port last said, for when the window never opens */
@@ -118,8 +216,11 @@ async function launch() {
     if (m.method === 'Log.entryAdded') logged.push(m.params.entry.text);
     if (m.method === 'Runtime.exceptionThrown')
       logged.push(m.params.exceptionDetails.exception?.description ?? 'error');
+    const error = pageError(m);
+    if (error) pageErrors.push(error);
   });
   const page = drive(ws);
+  current = page;
   await page.send('Log.enable');
   await page.send('Runtime.enable');
   // from the top, so that anything the page refuses while loading is logged
@@ -454,6 +555,8 @@ try {
   console.log(`FAIL  ${err.message}`);
   annotate(err.message);
 } finally {
+  // while the app is still open, so its window can be seen
+  if (failures) await diagnose();
   for (const holder of holders) holder.kill();
   if (app && app.exitCode === null && app.signalCode === null) app.kill();
   if (app) await Promise.race([exited(app), sleep(5000)]);
