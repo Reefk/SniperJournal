@@ -488,8 +488,9 @@ try {
   await until(`!!$field('Amount', $modal())`, 'amount field');
   await ev(`$type($field('Amount', $modal()), '0.25'); true`);
   check(
-    'a fee per contract, each side, in the preview: 0.25 × (4 + 1) contracts × 2 = $2.50',
-    await seen(`$modal().innerText.includes('Fees on these trades $2.50')`, 'fee in the preview', 5000),
+    'a fee per contract, each side, in the preview: 0.25 × (4 + 1) contracts × 2 = 2.50',
+    // in the account's currency, which is euros in the sample journal
+    await seen(`/Fees on these trades\\s+[^\\d\\s]*2\\.50\\b/.test($modal().innerText)`, 'fee in the preview', 5000),
   );
   await ev(`$tStarts('Import 2 trades', $modal()).click(); true`);
   check(
