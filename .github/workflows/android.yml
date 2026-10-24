@@ -1,0 +1,75 @@
+# The Android app on an emulator: a debug build of the static export, driven
+# through tests/android/emulator-journey.mjs (npm run e2e:android) on GitHub's
+# Linux runner. Started by hand only (Actions -> Android -> Run workflow), and
+# before every APK release: people who installed the APK get no automatic
+# updates, so a broken one stays broken on their phones. Not on every push: an
+# emulator run is slow. It only reads the code; the debug build is signed with
+# the SDK's own debug key, never the release key, which stays off GitHub.
+name: Android
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  emulator:
+    name: android emulator
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      # the JDK the Android build needs (DEVELOPING.md, "Building the Android app")
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - run: npm ci
+      - run: npm run build:mobile
+      - run: npx cap sync android
+      - run: ./gradlew assembleDebug --console=plain
+        working-directory: android
+
+      # the emulator runs at full speed only with KVM, which the runner has but
+      # doesn't open to its user
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      # A fresh emulator every run, so the journey starts from an app just
+      # installed. On a failure it prints what the app showed and saves the
+      # emulator's screen here.
+      - uses: reactivecircus/android-emulator-runner@v2
+        env:
+          SNIPER_E2E_ARTIFACTS: ${{ runner.temp }}/android-e2e
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          cores: 4
+          ram-size: 4096M
+          script: |
+            adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+            npm run e2e:android
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: android-e2e-failure
+          path: ${{ runner.temp }}/android-e2e/
+          if-no-files-found: ignore
+          retention-days: 7

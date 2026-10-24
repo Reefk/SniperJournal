@@ -95,7 +95,10 @@ can block the unsigned programs a Rust build runs. The runner's WebView2
 ignores `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS`, so the journey also asks the
 app for its DevTools port through `SNIPER_JOURNAL_DEVTOOLS_PORT`, which the
 app takes only together with a test folder (`SNIPER_JOURNAL_DIR`), and only to
-open that port on this computer. `npm run e2e:android` is still run by hand.
+open that port on this computer. `npm run e2e:android` has a workflow of its
+own, `.github/workflows/android.yml`, started by hand only (Actions → Android →
+Run workflow): it builds a debug APK and runs the journey on a fresh emulator
+on GitHub's Linux runner, too slow for every push.
 A push that changes only Markdown files or `docs/` skips CI; the next push that
 changes code checks their formatting. A run started by hand (Actions → CI →
 Run workflow) also makes the Store package and screenshots and keeps them with
@@ -346,6 +349,10 @@ rules for what is kept where are in `src/lib/storage/tauri.ts`, beside the
 phone's.
 
 ## Releasing
+
+**Before every APK release, run the Android workflow and make sure it passes**
+(Actions → Android → Run workflow). People who installed the APK get no
+automatic updates, so a broken one stays broken on their phones.
 
 ### To Google Play
 
