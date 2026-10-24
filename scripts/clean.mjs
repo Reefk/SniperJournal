@@ -1,5 +1,5 @@
 // Deletes what builds and test runs leave behind, all of it recreated when
-// needed. Keeps the desktop build in .next (what start.bat runs) and never
+// needed. Keeps the server build in .next (what npm start runs) and never
 // touches data/ (your journal).
 //
 //   npm run clean

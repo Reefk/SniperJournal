@@ -1,97 +1,61 @@
-# Sniper Journal — desktop user guide
+# Sniper Journal — user guide
 
-A trading journal and performance analytics dashboard that runs on your own PC.
-(The Android app works the same way, but keeps its journal on the phone; see the
-[project README](../README.md).)
-You enter the trades. Nothing is uploaded anywhere, and there is no sample data
-unless you explicitly ask for it.
+A trading journal and performance analytics dashboard that runs on your own
+Windows PC or Android phone. You enter the trades. Nothing is uploaded anywhere,
+and there is no sample data unless you explicitly ask for it.
 
 ---
 
-## Setting it up (once)
+## Getting it
 
-**Before unzipping**, right-click `sniper-journal.zip`, choose **Properties**,
-tick **Unblock** at the bottom of the General tab, and click OK. Windows marks
-everything that arrives from the internet; clearing it on the ZIP means nothing
-inside is marked, and no security warning appears at all. It is one checkbox and
-it saves the whole dance below.
+- **Windows:** free from the
+  [Microsoft Store](https://apps.microsoft.com/detail/9NJC9KKLMTN5). Click
+  **Get**. It installs like any other app, opens from the Start menu, and
+  updates itself.
+- **Android:** the `.apk` file from this project's GitHub page;
+  [Installing Sniper Journal on Android](install-android.md) walks through it.
 
-1. **Install Node.js.** Get the LTS version from <https://nodejs.org> and accept
-   the default options in the installer.
-2. **Unzip this folder** somewhere permanent, such as `C:\SniperJournal`.
-   Your journal file lives inside it, so avoid the Downloads folder.
-3. **Double-click `INSTALLER.bat`.** It takes a few minutes: it installs what the
-   app needs, builds it, clears the download mark from every file, puts a
-   shortcut on your desktop, and sets the app to run quietly in the background.
-4. The app opens, and from then on it is simply there. **No black window to keep
-   open, nothing to close.** It starts with Windows and waits for you.
-5. **Install it as a proper app** (worth the ten seconds): in Chrome, click the
-   three dots at the top right → _Cast, save and share_ → **Install page as
-   app**. Sniper Journal then gets its own window with no address bar, its own
-   icon in the Start menu and on the taskbar, and behaves like any other
-   installed program.
+### Used the earlier Windows version?
 
-### If you skipped the Unblock step
+Before the Microsoft Store app, Sniper Journal was installed from its own folder
+with `INSTALLER.bat` and opened in the browser at <http://localhost:3000>. That
+version is no longer offered. To move your journal from it:
 
-You will see one blue screen saying _Windows protected your PC_ when you run the
-installer. Click **More info**, then **Run anyway**. That is the only time: part
-of the installer's job is clearing that mark from every file in the folder, so
-the desktop icon and the launcher open straight away afterwards.
-
-The warning is not about anything being wrong with the app. Windows shows it for
-any script it has not seen signed by a paid-for certificate, which this is not.
-
-The desktop shortcut is created once, on that first run, so if you delete it on
-purpose it stays deleted. To get it back — or after moving the folder somewhere
-else — double-click `create-shortcut.bat`.
-
-### Running it in the background
-
-The server is the app. It runs hidden, with no console window, and starts when
-you sign in to Windows, so <http://localhost:3000> always answers.
-
-| If you want to                 | Double-click                                  |
-| ------------------------------ | --------------------------------------------- |
-| Open the app                   | the desktop icon, or the installed app's icon |
-| Shut it down                   | `stop.bat`                                    |
-| Stop it starting with Windows  | `autostart-off.bat`                           |
-| Turn that back on              | `autostart-on.bat`                            |
-| Watch the server while it runs | `stop.bat`, then `start.bat`                  |
-
-Stopping it never loses anything: your journal is written to disk within a third
-of a second of every change.
-
-`start.bat` is the visible version, useful when something is wrong and you want
-to read the error. If the background copy is already running, it will say so and
-just open the app rather than fighting it for the port.
-
-On macOS or Linux there is no installer: run `./start.sh`, which sets itself up
-on the first run. The desktop shortcut is a Windows thing; elsewhere, keep a
-bookmark to <http://localhost:3000>.
-
-A black console window stays open while the app runs. Keep it open while you
-are using the journal and close it when you are finished.
+1. In the Windows app, open **Settings → Backups → Bring over from the earlier
+   version** and pick the folder you installed it in (the one with
+   `INSTALLER.bat` in it). Your trades and chart images are copied over, and the
+   old folder is left exactly as it was.
+2. Bring over **replaces** the journal the Windows app already has; the replaced
+   one is kept in its backups, without its chart images. If the Windows app has
+   trades of its own to keep, export the old version's trades to CSV instead and
+   **Import** that file in the Windows app: trades it already has are left out
+   (chart images don't come along that way).
+3. Then retire the old version, if it still runs on this PC. In its folder,
+   double-click `autostart-off.bat` so it no longer starts with Windows, then
+   `stop.bat`.
 
 ---
 
 ## Where your data lives
 
-| What                    | Where                                         |
-| ----------------------- | --------------------------------------------- |
-| Your journal            | `data/journal.json`                           |
-| Chart screenshots       | `data/screenshots/`                           |
-| Automatic daily backups | `data/backups/` (the last 30 are kept)        |
-| Manual backups          | wherever you save them, from the profile menu |
+| What                    | Windows app                                                | Android app                           |
+| ----------------------- | ---------------------------------------------------------- | ------------------------------------- |
+| Your journal            | `Documents\Sniper Journal\journal.json`                    | the app's private storage             |
+| Chart screenshots       | `Documents\Sniper Journal\screenshots\`                    | the app's private storage             |
+| Automatic daily backups | `Documents\Sniper Journal\backups\` (the last 30 are kept) | inside the app (the last 30 are kept) |
+| Manual backups          | wherever you save them, from the profile menu              | from **More → Back up your journal**  |
 
-`data/journal.json` is plain text. You can copy it, put it in Dropbox or
-OneDrive, or move it to another computer. To move your journal, use
-**Download a backup** on one machine and **Restore from a backup** in Settings
-on the other.
+On Windows, `journal.json` is plain text. You can copy it, and if OneDrive backs
+up your Documents, it backs up the journal too. The folder stays when you
+uninstall the app, so reinstalling picks your journal up again. On Android,
+uninstalling the app deletes the journal, so save a backup somewhere else now
+and then. To move your journal to another device, save a backup on one and
+restore it from **Settings** on the other.
 
 The app saves automatically about a third of a second after every change, and
 writes to a temporary file first so a crash can never corrupt your journal. It
-also keeps a copy in the browser, so nothing is lost if the server stops while
-you are mid-edit.
+also keeps a temporary copy of your latest changes, so nothing is
+lost if a save fails while you are mid-edit.
 
 ---
 
@@ -379,13 +343,14 @@ in, or just press **Ctrl + V** — screenshot your chart and paste it straight
 into the open form, which is by far the quickest. Hover the thumbnail to view it
 full size, replace it, or remove it.
 
-Images are saved as ordinary files in `data/screenshots/`, **not** inside
+Images are saved as ordinary files in the `screenshots` folder beside your
+journal (see [Where your data lives](#where-your-data-lives)), **not** inside
 `journal.json`. That keeps the journal file small and quick no matter how many
 charts you attach. Large captures are scaled down to 1800px before saving, so a
 few hundred charts stay in the tens of megabytes rather than gigabytes.
 
 Two things worth knowing: the JSON backup contains your trades but not the
-images, so copy `data/screenshots/` as well when moving to another computer, and
+images, so copy the `screenshots` folder as well when moving to another computer, and
 deleting a trade, or an account with its trades, deletes their images with them.
 So does **Erase all data**, and restoring a backup deletes the images that the
 backup's trades don't use. The copy of the old journal that both keep in your
@@ -396,7 +361,7 @@ Images can still be left behind, for example one pasted into a trade form that
 was never saved because the app was closed. **Settings → Chart images → Reclaim
 unused chart images** finds them and tells you how many there are and how much
 space they take before deleting anything. An image is kept while your journal or
-any of the copies in `data/backups/` uses it, and for a day after it was added,
+any of its backups uses it, and for a day after it was added,
 in case a trade form open in another window is about to save it. If your journal
 or one of the backups can't be read, or is damaged, nothing is deleted and the
 message says which file. Files you put in the folder yourself, under names the
@@ -427,25 +392,6 @@ with your phone's "Android System WebView". If that hasn't been updated for a
 long time, some screens can look off. Open the Play Store, search for
 **Android System WebView**, and update it (and Chrome).
 
-**The window closes immediately.** Node.js is probably not installed. Install it
-from <https://nodejs.org> and run `INSTALLER.bat` again.
-
-**"This site can't be reached" / ERR_CONNECTION_REFUSED.** The background server
-is not running — usually because something stopped it, or autostart is off. Open
-the app from the desktop icon, which starts it again, and refresh.
-
-**A security warning keeps coming back.** Run `INSTALLER.bat` once more — it
-clears the download mark from the app's launchers and scripts (`.bat`, `.cmd`,
-`.vbs`, `.ps1` and shortcuts). If it still appears, right-click the file, choose
-Properties, and tick Unblock.
-
-**"Port 3000 is already in use".** Another program is using that port, or a
-previous copy of the app is still running. Close the other console window, or
-edit the `dev` and `start` lines in `package.json` to use a different port.
-`stop.bat` only stops the Sniper Journal in its own folder: if it says another
-program is using port 3000, that program was left running, and it is the one to
-close (or a copy of the app in a different folder).
-
 **"This page couldn't be shown" or "Sniper Journal ran into a problem".**
 Something in the app went wrong while drawing the screen. Your journal is saved
 on its own and the screen doesn't change it. Use **Download a backup** there to
@@ -455,14 +401,14 @@ bug report** at the bottom says what went wrong.
 **"This journal was changed in another window".** You had the app open in two
 tabs or windows (or two copies of it on one journal), and the other one saved
 after this one opened. Rather than write over that work, this window stopped
-saving and kept its own version in `data/backups/` as `conflict-<date>.json`.
+saving and kept its own version in your backups as `conflict-<date>.json`.
 Press **Reload** to carry on with the journal as it is saved. If the window's
 own version was the one you wanted, restore that file from **Settings →
 Restore from a backup**.
 
-**The sidebar says "Saved in browser".** The app could not reach its own data
-folder, so it is holding your changes in the browser instead. Restart it with
-`start.bat`; your work is written to disk as soon as it can be.
+**The sidebar says "Saved temporarily".** The app could not write its journal
+file, so it is holding your changes in a temporary copy instead. Keep the app
+open: your work is written to the file as soon as it can be.
 
 **"This browser won't keep a spare copy of your journal".** Every change is
 also copied into the browser, in case the app is closed before its save is
@@ -471,14 +417,10 @@ whose storage is full or turned off refuses it. Nothing else changes: the
 journal file is saved after every change as before. The message is shown once
 each time you open the app; **Support** says the same under "Your journal file".
 
-**The sidebar says "Not saved".** The app can't reach its data folder _and_ the
-browser can't keep a copy, so your latest changes are only on the screen. Keep
-the app open: they are written to disk as soon as the folder can be reached
-(restart it with `start.bat` if that doesn't happen). To be safe, use
+**The sidebar says "Not saved".** The app can't write its journal file _and_
+can't keep a temporary copy, so your latest changes are only on the screen. Keep
+the app open: they are written to the file as soon as it can be. To be safe, use
 **Download a backup** in the message at the top of the page.
-
-**The launcher says it has not been set up.** You opened `start.bat` before
-`INSTALLER.bat`. Run the installer first.
 
 **Nothing appears in the statistics.** Statistics only count closed trades that
 are complete. Check that the trade has an exit price, that it is not marked

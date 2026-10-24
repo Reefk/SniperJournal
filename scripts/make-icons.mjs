@@ -10,7 +10,7 @@
 // MARK_SPAN below.
 //
 // Writes the Android launcher icons and launch screen, the PWA icons in
-// public/, the browser tab icon, the Windows shortcut's .ico, the Windows
+// public/, the browser tab icon, the Windows
 // app's icon in src-tauri/icons, and the artwork the Play Store listing asks for. Nothing reads these at build time, so the
 // results are committed. The in-app mark (src/components/ui/Logo.tsx) shows
 // public/icon-192.png, so it follows by itself.
@@ -170,7 +170,7 @@ function write(path, buffer) {
   console.log(`  ${path}`);
 }
 
-/** A .ico holding one PNG per size — what Windows shortcuts want. */
+/** A .ico holding one PNG per size — what a Windows program's icon wants. */
 async function ico(drawing, sizes) {
   const images = await Promise.all(sizes.map((s) => render(drawing, s)));
   const header = Buffer.alloc(6);
@@ -226,14 +226,13 @@ for (const [bucket, factor] of Object.entries(DPI)) {
   write(`${RES}/drawable-${bucket}/splash_logo.png`, await render(squircle, SPLASH_LOGO_DP * factor));
 }
 
-console.log('PWA, browser tab and Windows shortcut');
+console.log('PWA and browser tab');
 write('public/icon-192.png', await render(squircle, 192));
 write('public/icon-512.png', await render(squircle, 512));
 // a maskable icon may be cropped to a circle, so keep the scope well inside
 write('public/icon-maskable-512.png', await render(await borderless(0.6), 512));
 write('public/apple-touch-icon.png', await render(square, 180));
 write('src/app/icon.png', await render(squircle, 64));
-write('assets/sniper-journal.ico', await ico(squircle, [16, 32, 48, 64, 128, 256]));
 
 console.log('Windows app');
 // the program's own icon (title bar, taskbar, Alt+Tab), built into the .exe

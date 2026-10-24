@@ -27,7 +27,7 @@ jobs:
       fail-fast: false
       matrix:
         # Windows is where the desktop app runs (and where the real file-lock
-        # test runs); Linux covers start.sh and the folder fsync after a save.
+        # test runs); Linux covers the folder fsync after a save.
         os: [windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20

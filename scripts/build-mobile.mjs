@@ -1,7 +1,7 @@
 // Builds the static export in out/ that Capacitor copies into the Android app.
 //
 // A static export always uses .next for its working files, which would replace
-// the desktop build that start.bat runs. So the desktop .next is moved aside
+// the server build that npm start and npm run e2e run. So that .next is moved aside
 // for the length of the build and put back afterwards, even if the build fails.
 // If a previous run was killed half way, the stash is restored first.
 

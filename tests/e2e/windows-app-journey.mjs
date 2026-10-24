@@ -293,10 +293,8 @@ async function journey() {
   check('it lists the keyboard shortcuts', await b.run(`$text().includes('Shortcuts')`));
   check('it explains bringing the earlier version over', await b.run(`$text().includes('bring my journal over')`));
   check(
-    'and leaves out the installer, the browser tab and the background server',
-    await b.run(
-      `!$text().includes('Why did Windows warn me') && !$text().includes('instead of a browser tab') && !$text().includes('Opening the app')`,
-    ),
+    'and leaves out the browser tab and the server',
+    await b.run(`!$text().includes('instead of a browser tab') && !$text().includes('Opening the app')`),
   );
 
   // ---- 4. import ------------------------------------------------------------------

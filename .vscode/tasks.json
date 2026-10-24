@@ -3,7 +3,7 @@
   "tasks": [
     {
       "label": "Dev server",
-      "detail": "Run stop.bat first — the background copy holds port 3000",
+      "detail": "next dev on port 3000, with live reload",
       "type": "npm",
       "script": "dev",
       "isBackground": true,

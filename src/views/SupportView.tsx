@@ -38,15 +38,11 @@ const FAQ: Array<{ q: string; a: string }> = [
   },
   {
     q: 'Do I need to keep a window open for this to work?',
-    a: 'No. The app runs as a hidden background server that starts with Windows, so it is always there when you want it. If you ever need to shut it down, double-click stop.bat in the app folder; autostart-off.bat stops it launching at sign-in. Nothing is lost by stopping it, because your journal is written to disk within a third of a second of every change.',
+    a: 'Yes, the one where you ran npm start (or npm run dev): that is the server, and the page needs it. Nothing is lost by stopping it, because your journal is written to disk within a third of a second of every change.',
   },
   {
     q: 'Can I open it in its own window instead of a browser tab?',
     a: 'Yes. In Chrome, click the three dots at the top right, choose Cast, save and share, then Install page as app. Sniper Journal gets its own window with no address bar, plus an icon in the Start menu and on the taskbar. It is the same app either way, using the same journal file.',
-  },
-  {
-    q: 'Why did Windows warn me the first time?',
-    a: "Windows marks every file that arrives from the internet and warns before running a script it has not seen signed by a paid-for certificate. Part of the installer's job is clearing that mark from every file in the app folder, which is why the warning appears once and then never again. You can avoid it entirely next time by ticking Unblock in the ZIP file's properties before extracting it.",
   },
   {
     q: 'Can I run this on more than one computer?',
@@ -64,14 +60,13 @@ const PHONE_ANSWERS: Record<string, { q?: string; a: string } | null> = {
   },
   'Do I need to keep a window open for this to work?': null,
   'Can I open it in its own window instead of a browser tab?': null,
-  'Why did Windows warn me the first time?': null,
   'Can I run this on more than one computer?': {
     q: 'Can I use it on more than one device?',
     a: 'Each phone and each computer keeps its own journal. To move yours, save a backup on one device and restore it on the other from Settings.',
   },
 };
 
-/** The Windows app answers them too, minus the background server, the installer and the browser */
+/** The Windows app answers them too, minus the server and the browser */
 const WINDOWS_APP_ANSWERS: Record<string, { q?: string; a: string } | null> = {
   'Where exactly is my data kept?': {
     a: 'In a plain JSON file, journal.json, in the Sniper Journal folder in your Documents. The app uploads nothing and works with your internet disconnected (if OneDrive backs up your Documents, it backs up the journal too). The folder stays when you uninstall the app, so reinstalling picks your journal up again.',
@@ -83,7 +78,6 @@ const WINDOWS_APP_ANSWERS: Record<string, { q?: string; a: string } | null> = {
     a: 'Only while you use it. Every change is written to disk within a third of a second, and closing the window waits for the last one, so nothing is lost when you close it.',
   },
   'Can I open it in its own window instead of a browser tab?': null,
-  'Why did Windows warn me the first time?': null,
   'Can I run this on more than one computer?': {
     a: 'Each computer keeps its own journal. To move yours, save a backup on one computer and restore it on the other from Settings, and copy the screenshots folder across for its chart images.',
   },
@@ -212,14 +206,14 @@ export function SupportView() {
             automatically, and any rows that cannot be read are listed before you commit the import.
           </p>
         </div>
-        {/* how to start the background server on Windows; a phone app just opens */}
+        {/* how to start the server version; the Windows and phone apps just open */}
         <div className={cn('rounded-xl border border-line bg-surface p-5', native && 'hidden')}>
           <FolderOpen className="size-5 text-accent" />
           <h2 className="mt-3 text-sm font-semibold text-fg">Opening the app</h2>
           <p className="mt-1.5 text-sm leading-relaxed text-muted">
-            It is already open, in a sense: the app runs in the background from the moment you sign in to Windows. Click
-            the Sniper Journal icon on your desktop, or the installed app icon, and it appears. If the icon is missing,
-            run create-shortcut.bat in the app folder.
+            This is the version served from the project folder: run npm start there (npm run dev while you edit the
+            code), then open http://localhost:3000. The Windows app from the Microsoft Store and the Android app open
+            like any other app.
           </p>
         </div>
       </section>

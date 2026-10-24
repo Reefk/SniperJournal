@@ -21,12 +21,6 @@ TypeScript as `npm run typecheck`, so it never disagrees with the build, and
 Tailwind completion is pointed at `globals.css`, which is where Tailwind v4 keeps
 its configuration.
 
-**Stop the background app before you start editing.** Double-click `stop.bat`,
-or run it from the terminal. The installed copy runs a server on port 3000 and
-writes to the same `data/journal.json` — leaving it running means two servers
-fighting over the port and over your journal. Turn it back on with the desktop
-icon when you are done.
-
 Useful while you work:
 
 - **Ctrl + Shift + B** — typecheck the whole project
@@ -43,11 +37,11 @@ npm run dev     # development server with live reload
 
 Then open <http://localhost:3000>. Changes appear as soon as you save.
 
-`npm run dev` is for editing. `npm run build` followed by `npm start` is the
-faster version you use day to day — that is what `start.bat` runs.
-`INSTALLER.bat` sets that up for good, with a desktop shortcut and the app
-running quietly in the background; the [PC user guide](docs/user-guide.md)
-walks through it.
+`npm run dev` is for editing. `npm run build` followed by `npm start` runs the
+production build, the one `npm run e2e` tests. People install the Windows app
+(Microsoft Store) or the Android app; the [user guide](docs/user-guide.md) is
+for them. The `INSTALLER.bat` version that used to run this server in the
+background was removed on 2026-10-24.
 
 More commands worth knowing:
 
@@ -410,5 +404,5 @@ Your journal is in `.gitignore`, so your trades are never committed.
 
 `data/journal.json` holds your real trades. It is excluded from git, but it is
 **not** excluded if you zip the folder by hand. Before you send this to anyone,
-delete `data/journal.json` and `data/backups/`, or send them the original zip
-rather than your own copy.
+delete `data/journal.json` and `data/backups/`, or point them at the GitHub
+repository instead of your own copy.
