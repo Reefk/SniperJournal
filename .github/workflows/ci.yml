@@ -1,12 +1,12 @@
 # Checks every push to main and every pull request: types, lint, formatting,
-# tests, both builds (the desktop server and the static export the Android
-# app is made from), the desktop E2E journey, and the Windows app built, its
-# Rust tests run, and driven through its own journey. It only reads the code.
-# Nothing is signed or published. A run started by hand (Actions -> CI -> Run
-# workflow) also makes the Store package and screenshots, and keeps them with
-# the run (the "windows-store" artifact), for a release. A push that changes
-# only Markdown files or docs/ doesn't run it; the next one that changes code
-# checks their formatting.
+# tests and their coverage floor, both builds (the desktop server and the
+# static export the Android app is made from), the desktop E2E journey, and
+# the Windows app built, its Rust tests run, and driven through its own
+# journey. It only reads the code. Nothing is signed or published. A run
+# started by hand (Actions -> CI -> Run workflow) also makes the Store package
+# and screenshots, and keeps them with the run (the "windows-store" artifact),
+# for a release. A push that changes only Markdown files or docs/ doesn't run
+# it; the next one that changes code checks their formatting.
 name: CI
 
 on:
@@ -52,7 +52,8 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run format:check
-      - run: npm test
+      # the tests, failing below the coverage floor in vitest.config.mts
+      - run: npm run coverage
       - run: npm run build
       # The desktop build in a headless browser: Edge on Windows, Chrome on
       # Linux, both already on the runner. It runs while the desktop build is

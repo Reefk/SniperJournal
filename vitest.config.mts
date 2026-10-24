@@ -42,6 +42,12 @@ export default defineConfig({
       // whatever it covers or not says nothing about the numbers you see.
       exclude: [...coverageConfigDefaults.exclude, 'src/lib/sample.ts'],
       reporter: ['text-summary', 'text'],
+      // `npm run coverage` fails below these, and CI runs it in place of
+      // `npm test`. Just under what the tests reached on 2026-10-24 (93.81%
+      // of statements, 88.01% of branches, 90.44% of functions, 95.44% of
+      // lines), so a real drop fails, not a little new code waiting for its
+      // tests. Raise them when the tests climb well above them.
+      thresholds: { statements: 93, branches: 87, functions: 90, lines: 95 },
     },
   },
 });
