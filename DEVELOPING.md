@@ -122,10 +122,12 @@ summary. Actions → npm audit → Run workflow starts it by hand. Dependabot
 (`.github/dependabot.yml`) also looks every Monday, at npm, the workflows'
 actions and the Windows app's Rust crates, and opens pull requests: the minor
 and patch updates of each kind together, a major version on its own. It skips
-ESLint 10 (eslint-config-next's plugins support 9 only) and Tauri's minor and
-major versions: `@tauri-apps/api` and `@tauri-apps/cli` on npm and the `tauri`
-crate must move together, by hand (the steps are in `dependabot.yml`). Its alerts and security pull
-requests are on in the repo's settings.
+ESLint 10 (eslint-config-next's plugins support 9 only), TypeScript's major
+versions (typescript-eslint, through eslint-config-next, has to support them
+first) and Tauri's minor and major versions: `@tauri-apps/api` and
+`@tauri-apps/cli` on npm and the `tauri` crate must move together, by hand
+(the steps are in `dependabot.yml`). Its alerts and security pull requests are
+on in the repo's settings.
 
 ## Where everything lives
 

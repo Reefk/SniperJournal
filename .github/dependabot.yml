@@ -35,6 +35,11 @@ updates:
       # (all three through eslint-config-next) support 10
       - dependency-name: eslint
         update-types: ['version-update:semver-major']
+      # TypeScript's majors by hand, once typescript-eslint's `typescript`
+      # peer range (it comes through eslint-config-next) includes them: lint
+      # fails on 7.0
+      - dependency-name: typescript
+        update-types: ['version-update:semver-major']
       - dependency-name: '@tauri-apps/api'
         update-types: ['version-update:semver-major', 'version-update:semver-minor']
       - dependency-name: '@tauri-apps/cli'
