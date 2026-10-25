@@ -23,7 +23,7 @@ import { useUI } from '@/store/UIProvider';
 import { computeStats, sniperScore, sqnLabel } from '@/lib/stats';
 import { dailySummary, equitySummary, scoreSummary } from '@/lib/chart-summary';
 import { RANGE_OPTIONS, splitByRange, type RangeKey } from '@/lib/ranges';
-import { formatDate, formatDuration, formatMoney, formatPct, formatRatio } from '@/lib/format';
+import { formatDate, formatDuration, formatMoney, formatPct, formatRatio, wholePct } from '@/lib/format';
 import { isClosed, tradeTimestamp } from '@/lib/trade-math';
 import { excludedRealised, openingBalance } from '@/store/selectors';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -107,7 +107,7 @@ export function DashboardView() {
   const pfRing = pf == null ? 0 : Number.isFinite(pf) ? Math.min(pf / 4, 1) : 1;
   const rrRing = stats.payoff == null ? 0 : Math.min(Number.isFinite(stats.payoff) ? stats.payoff / 3 : 1, 1);
   const balanceNow = opening + stats.net + excludedNet;
-  const greenDays = stats.days.filter((d) => d.net > 0).length;
+  const { greenDays } = stats;
 
   return (
     <>
@@ -315,7 +315,7 @@ export function DashboardView() {
               className="h-[240px] md:col-span-2 md:h-[300px]"
               title="Daily P&L"
               summary={dailySummary(stats.days, currency)}
-              subtitle={`${greenDays} green ${greenDays === 1 ? 'day' : 'days'}, ${stats.days.filter((d) => d.net < 0).length} red`}
+              subtitle={`${greenDays} green ${greenDays === 1 ? 'day' : 'days'}, ${stats.days.filter((d) => d.net < 0).length} red · ${wholePct(stats.greenDayRate)}% green`}
               empty={stats.days.length === 0}
               emptyText="No closed trades in this range yet."
             >

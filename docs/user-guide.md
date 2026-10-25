@@ -97,7 +97,7 @@ filled in.
 | **Insights & Signals** | Patterns found in your own trades: your best session, revenge trading, holding losers too long, fee drag, and more.           |
 | **Resources**          | Your own shortlist of tools and links.                                                                                        |
 | **Support**            | How the app works, where your data is, and the keyboard shortcuts.                                                            |
-| **Reports**            | A printable summary, month by month and per symbol, setup and tag group, and what each of your mistakes cost.                 |
+| **Reports**            | A printable summary: green days and the recovery factor, month by month, per symbol, setup and tag group, and mistake costs.  |
 
 ---
 

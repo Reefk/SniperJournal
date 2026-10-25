@@ -442,6 +442,38 @@ async function journey() {
   };
   await dashboard(111, 75, 'after import');
 
+  // ---- 3b. the day numbers: green days, the best day, the recovery factor ----
+  // one trade a day, +99, +48, -41.50 and +5.50; the deepest fall is TSLA's 41.50
+  check(
+    'the Daily P&L line says which share of the days was green (3 of 4)',
+    await b.run(`$text().includes('3 green days, 1 red · 75% green')`),
+  );
+  /** a line of the Reports cards, by its label (`label` is page code: a string literal or a name) */
+  const reportLine = (label) =>
+    `[...document.querySelectorAll('section > div')].find((d) => d.firstElementChild?.firstChild?.textContent === ${label})`;
+  const dayLines = ['Green days', "Best day's share", 'Net without the best day', 'Recovery factor'];
+  await b.run(`$nav('/reports'); true`);
+  await b.until(`!!${reportLine(JSON.stringify('Recovery factor'))}`, 'reports');
+  for (const [label, shown] of [
+    ['Green days', '75% (3 of 4)'],
+    ["Best day's share", '65% of 3 green days'], // 99 of 152.50
+    ['Net without the best day', `+${money(12)}`],
+    ['Recovery factor', '2.67'], // 111 / 41.50
+  ]) {
+    const got = await b.run(`${reportLine(JSON.stringify(label))}?.lastElementChild?.textContent`);
+    check(`Reports: ${label} ${shown}`, got === shown, got);
+  }
+  check(
+    'each of them says what it means (a tooltip)',
+    await b.run(
+      `${JSON.stringify(dayLines)}.every((l) => !!${reportLine('l')}?.querySelector('[role="tooltip"]')?.textContent)`,
+    ),
+  );
+  // back where section 4 expects to start: Reports has its own TSLA row, which
+  // the wait for the trades table would take for the Trades page
+  await b.run(`$nav('/'); true`);
+  await b.until(`!!$t('All')`, 'dashboard');
+
   // ---- 4. edit -------------------------------------------------------------
   await b.run(`$nav('/trades'); true`);
   await b.until(`[...document.querySelectorAll('tbody tr')].some((r) => r.innerText.includes('TSLA'))`, 'trades table');

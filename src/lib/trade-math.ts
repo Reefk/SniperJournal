@@ -11,7 +11,7 @@ export function isClosed(t: Trade): boolean {
  * -0.0000000000000013 and count as a loss. Rounding to 1e-8 removes the dust
  * while staying far below a cent.
  */
-const settle = (v: number) => Math.round(v * 1e8) / 1e8;
+export const settle = (v: number) => Math.round(v * 1e8) / 1e8;
 
 /** P&L before fees */
 export function grossPnl(t: Trade): number {

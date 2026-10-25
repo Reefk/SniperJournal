@@ -6,6 +6,7 @@ import {
   isClosed,
   netPnl,
   rMultiple,
+  settle,
   sortChronological,
   statTrades,
   tradeDay,
@@ -26,7 +27,8 @@ export function aggregateDays(trades: Trade[]): DayAgg[] {
     const day = tradeDay(t);
     const agg = map.get(day) ?? { day, net: 0, trades: 0, wins: 0, losses: 0 };
     const p = netPnl(t);
-    agg.net += p;
+    // settled like each trade, so +0.10, +0.20 and -0.30 make a day of 0, not a green one of 0.00000000000000006
+    agg.net = settle(agg.net + p);
     agg.trades += 1;
     if (p > 0) agg.wins += 1;
     else if (p < 0) agg.losses += 1;
@@ -69,17 +71,30 @@ export interface Stats {
   bestDay: DayAgg | null;
   worstDay: DayAgg | null;
   activeDays: number;
+  /** days that ended above zero, counted as the dashboard counts them */
+  greenDays: number;
+  /** green days ÷ trading days, 0–100 */
+  greenDayRate: number;
+  /** the best day ÷ every green day added up, 0–100; null with no green day */
+  bestDayShare: number | null;
+  /** every other day added up; null with no green day to take out */
+  netWithoutBestDay: number | null;
   avgDaily: number;
   largestWin: number;
   largestLoss: number;
   maxDrawdown: number;
   maxDrawdownPct: number | null;
+  /** net ÷ max drawdown; Infinity for a gain with no drawdown, null with neither */
+  recoveryFactor: number | null;
   avgHoldMinutes: number | null;
   avgWinHold: number | null;
   avgLossHold: number | null;
   equity: EquityPoint[];
   days: DayAgg[];
 }
+
+/** half a cent: less than that is what is left over from adding up cents, not money */
+const HALF_CENT = 0.005;
 
 const EMPTY_STATS = (startingBalance: number): Stats => ({
   total: 0,
@@ -107,11 +122,16 @@ const EMPTY_STATS = (startingBalance: number): Stats => ({
   bestDay: null,
   worstDay: null,
   activeDays: 0,
+  greenDays: 0,
+  greenDayRate: 0,
+  bestDayShare: null,
+  netWithoutBestDay: null,
   avgDaily: 0,
   largestWin: 0,
   largestLoss: 0,
   maxDrawdown: 0,
   maxDrawdownPct: null,
+  recoveryFactor: null,
   avgHoldMinutes: null,
   avgWinHold: null,
   avgLossHold: null,
@@ -187,6 +207,13 @@ export function computeStats(allTrades: Trade[], startingBalance = 0): Stats {
 
   const days = aggregateDays(allTrades);
   const sortedDays = [...days].sort((a, b) => a.net - b.net);
+  const bestDay = sortedDays.length ? sortedDays[sortedDays.length - 1] : null;
+  // is the record carried by one day? its best green day against all of them
+  const green = days.filter((d) => d.net > 0);
+  const topGreen = bestDay && bestDay.net > 0 ? bestDay : null;
+  const greenNet = green.reduce((a, d) => a + d.net, 0);
+  // under half a cent either way is nothing made, not a crumb to divide or to show as -$0.00
+  const made = Math.abs(net) < HALF_CENT ? 0 : net;
 
   const holds = closed.map(holdMinutes).filter((m): m is number => m != null);
   const winHolds = closed
@@ -221,14 +248,20 @@ export function computeStats(allTrades: Trade[], startingBalance = 0): Stats {
     maxWinStreak,
     maxLossStreak: Math.abs(maxLossStreak),
     currentStreak,
-    bestDay: sortedDays.length ? sortedDays[sortedDays.length - 1] : null,
+    bestDay,
     worstDay: sortedDays.length ? sortedDays[0] : null,
     activeDays: days.length,
+    greenDays: green.length,
+    greenDayRate: (green.length / days.length) * 100,
+    bestDayShare: topGreen ? (topGreen.net / greenNet) * 100 : null,
+    netWithoutBestDay: topGreen ? settle(net - topGreen.net) : null,
     avgDaily: days.length ? net / days.length : 0,
     largestWin: winPnls.length ? Math.max(...winPnls) : 0,
     largestLoss: lossPnls.length ? Math.min(...lossPnls) : 0,
     maxDrawdown,
     maxDrawdownPct: startingBalance > 0 ? maxDrawdownPct : null,
+    // a drawdown under half a cent is a sub-cent trade, not a fall: dividing by it would read in the millions
+    recoveryFactor: maxDrawdown >= HALF_CENT ? made / maxDrawdown : made > 0 ? Number.POSITIVE_INFINITY : null,
     avgHoldMinutes: holds.length ? mean(holds) : null,
     avgWinHold: winHolds.length ? mean(winHolds) : null,
     avgLossHold: lossHolds.length ? mean(lossHolds) : null,

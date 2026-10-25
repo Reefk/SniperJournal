@@ -69,10 +69,22 @@ export function formatPct(value: number, decimals = 1): string {
   return `${value.toFixed(decimals)}%`;
 }
 
+/**
+ * A percentage as a whole number that reads true: 99.6 is 99, not 100, and
+ * 0.4 is 1, not 0. Only all of it is 100, and none of it 0.
+ */
+export function wholePct(pct: number): number {
+  if (pct <= 0) return 0;
+  if (pct >= 100) return 100;
+  return Math.min(99, Math.max(1, Math.round(pct)));
+}
+
 export function formatRatio(value: number | null | undefined, decimals = 2): string {
   if (value == null || Number.isNaN(value)) return '—';
   if (!Number.isFinite(value)) return '∞';
-  return value.toFixed(decimals);
+  const text = value.toFixed(decimals);
+  // a loss too small to show is nothing, not -0.00
+  return Number(text) === 0 ? text.replace('-', '') : text;
 }
 
 export const MONTHS_LONG = [

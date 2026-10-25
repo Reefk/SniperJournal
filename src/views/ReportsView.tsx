@@ -8,7 +8,16 @@ import { computeStats, groupTrades, sqnLabel, thinMark } from '@/lib/stats';
 import { groupTables, type GroupTable } from '@/lib/tags';
 import { RANGE_OPTIONS, splitByRange, type RangeKey } from '@/lib/ranges';
 import { tradesToCsv } from '@/lib/csv';
-import { formatDate, formatDuration, formatMoney, formatPct, formatRatio, MONTHS_SHORT, WEEKDAYS } from '@/lib/format';
+import {
+  formatDate,
+  formatDuration,
+  formatMoney,
+  formatPct,
+  formatRatio,
+  MONTHS_SHORT,
+  WEEKDAYS,
+  wholePct,
+} from '@/lib/format';
 import {
   cleanMonths,
   MIN_MISTAKE_SIDE,
@@ -28,6 +37,7 @@ import { Button } from '@/components/ui/Button';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ChartContainer } from '@/components/ui/ChartContainer';
+import { InfoTip } from '@/components/ui/InfoTip';
 
 export function ReportsView() {
   const { accountTrades, data, startingBalance, activeLabel } = useJournal();
@@ -101,20 +111,6 @@ export function ReportsView() {
     );
   }
 
-  const Row = ({ label, value, tone }: { label: string; value: string; tone?: 'profit' | 'loss' }) => (
-    <div className="flex items-baseline justify-between gap-4 border-b border-line py-2 last:border-0">
-      <span className="text-sm text-muted">{label}</span>
-      <span
-        className={cn(
-          'num text-sm font-medium',
-          tone === 'profit' ? 'text-profit' : tone === 'loss' ? 'text-loss' : 'text-fg',
-        )}
-      >
-        {value}
-      </span>
-    </div>
-  );
-
   return (
     <>
       <PageHeader
@@ -164,6 +160,36 @@ export function ReportsView() {
           <h3 className="mb-2 text-sm font-semibold text-fg">Consistency</h3>
           <Row label="Trades" value={String(stats.total)} />
           <Row label="Win rate" value={stats.total ? formatPct(stats.winRate) : '—'} />
+          <Row
+            label="Green days"
+            value={stats.total ? `${wholePct(stats.greenDayRate)}% (${stats.greenDays} of ${stats.activeDays})` : '—'}
+            info="The share of your trading days that ended above zero, after fees. A day counts once, however many trades it had."
+          />
+          <Row
+            label="Best day's share"
+            value={
+              !stats.total
+                ? '—'
+                : stats.bestDayShare == null
+                  ? 'no green day'
+                  : `${wholePct(stats.bestDayShare)}% of ${stats.greenDays} green ${stats.greenDays === 1 ? 'day' : 'days'}`
+            }
+            info="Your best day's profit as a share of every green day's profit added up. High means one lucky day carries the record; low means the profit is spread over many days."
+          />
+          <Row
+            label="Net without the best day"
+            value={
+              stats.netWithoutBestDay == null ? '—' : formatMoney(stats.netWithoutBestDay, currency, { sign: true })
+            }
+            tone={
+              stats.netWithoutBestDay == null || stats.netWithoutBestDay === 0
+                ? undefined
+                : stats.netWithoutBestDay > 0
+                  ? 'profit'
+                  : 'loss'
+            }
+            info="Your net profit with your best day taken out. Red here means that one day is carrying the record."
+          />
           <Row label="Average win" value={formatMoney(stats.avgWin, currency)} />
           <Row label="Average loss" value={formatMoney(-stats.avgLoss, currency)} />
           <Row label="Longest win streak" value={String(stats.maxWinStreak)} />
@@ -180,6 +206,11 @@ export function ReportsView() {
           <Row
             label="Drawdown from peak"
             value={stats.maxDrawdownPct != null ? formatPct(stats.maxDrawdownPct) : 'set a starting balance'}
+          />
+          <Row
+            label="Recovery factor"
+            value={formatRatio(stats.recoveryFactor)}
+            info="Net profit divided by the max drawdown: how many times over the profit covers the deepest fall. Under 1, it is less than you once gave back; ∞ means no fall yet."
           />
           <Row label="Largest win" value={formatMoney(stats.largestWin, currency, { sign: true })} tone="profit" />
           <Row label="Largest loss" value={formatMoney(stats.largestLoss, currency, { sign: true })} tone="loss" />
@@ -278,6 +309,32 @@ export function ReportsView() {
         </p>
       )}
     </>
+  );
+}
+
+/** a line of the Results, Consistency and Risk cards */
+function Row({ label, value, tone, info }: { label: string; value: string; tone?: 'profit' | 'loss'; info?: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-4 border-b border-line py-2 last:border-0">
+      <span className="text-sm text-muted">
+        {label}
+        {/* held to the last word, so a label on two lines ends with it */}
+        {info && (
+          <span className="whitespace-nowrap">
+            {' '}
+            <InfoTip text={info} />
+          </span>
+        )}
+      </span>
+      <span
+        className={cn(
+          'num text-right text-sm font-medium',
+          tone === 'profit' ? 'text-profit' : tone === 'loss' ? 'text-loss' : 'text-fg',
+        )}
+      >
+        {value}
+      </span>
+    </div>
   );
 }
 

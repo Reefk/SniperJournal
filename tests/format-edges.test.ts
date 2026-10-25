@@ -6,8 +6,10 @@ import {
   formatNumber,
   formatPct,
   formatPrice,
+  formatRatio,
   formatShortDate,
   formatTime,
+  wholePct,
 } from '@/lib/format';
 
 /** The formatters' edges: the switch to compact axis labels, and what each shows for nothing to show. */
@@ -71,6 +73,29 @@ describe('formatPct', () => {
   it('shows a dash for what is not a number', () => {
     expect(formatPct(12.345)).toBe('12.3%');
     expect(formatPct(Number.NaN)).toBe('—');
+  });
+});
+
+describe('wholePct', () => {
+  it('rounds to a whole percentage that reads true: only all of it is 100, and only none 0', () => {
+    expect(wholePct(58.33)).toBe(58);
+    expect(wholePct(99.6)).toBe(99);
+    expect(wholePct(0.4)).toBe(1);
+    expect(wholePct(100)).toBe(100);
+    expect(wholePct(0)).toBe(0);
+    // halves round up, then the ends are kept for all and none
+    expect([wholePct(0.5), wholePct(99.5)]).toEqual([1, 99]);
+    expect([wholePct(100.4), wholePct(-3)]).toEqual([100, 0]);
+  });
+});
+
+describe('formatRatio', () => {
+  it('shows a loss too small to see as 0.00, not -0.00', () => {
+    expect(formatRatio(-0.0004)).toBe('0.00');
+    expect(formatRatio(-0.005)).toBe('-0.01');
+    expect(formatRatio(1.5)).toBe('1.50');
+    expect(formatRatio(Number.POSITIVE_INFINITY)).toBe('∞');
+    expect(formatRatio(null)).toBe('—');
   });
 });
 

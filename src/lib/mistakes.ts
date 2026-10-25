@@ -1,5 +1,6 @@
 import type { Settings, Trade } from './types';
 import type { EditedRule } from './rules';
+import { wholePct } from './format';
 import { netPnl, statTrades, tradeDay } from './trade-math';
 import { dateKey } from './utils';
 
@@ -234,9 +235,7 @@ export function mistakeReport(trades: Trade[], list: string[], from: string | nu
  * and 1 of 250 is 1%, not 0%. Only all of them is 100, and none 0.
  */
 export function wholeShare(part: number, whole: number): number {
-  if (whole <= 0 || part <= 0) return 0;
-  if (part >= whole) return 100;
-  return Math.min(99, Math.max(1, Math.round((part / whole) * 100)));
+  return whole <= 0 ? 0 : wholePct((part / whole) * 100);
 }
 
 export interface CleanMonth {

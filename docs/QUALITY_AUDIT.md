@@ -734,6 +734,10 @@ The tests in `tests/stats.test.ts` use a hand-calculated mixed record, boundary 
 | Expectancy             | mean net per trade                                                                                                                                                      |
 | R multiple             | net ÷ risk, where risk = \|entry − stop\| × qty × multiplier. `null` without a stop.                                                                                    |
 | Max drawdown           | realised only, trade by trade, from the balance when the range opens (SJ-20).                                                                                           |
+| Recovery factor        | net ÷ max drawdown. `Infinity` with a gain and no drawdown; `null` with neither. A drawdown or a net under half a cent counts as none.                                  |
+| Green-day rate         | days whose counted trades add up to more than 0 ÷ days with a counted trade. A day's total is settled to 1e-8 like a trade's; a day at 0 is not green.                  |
+| Best day's share       | the best day's net ÷ the nets of the green days added up. `null` with no green day.                                                                                     |
+| Net without best day   | net less the best day, settled to 1e-8. `null` with no green day.                                                                                                       |
 | SQN                    | mean ÷ sample SD × √N over R values when at least 5 and at least half the trades have a stop, otherwise over money (SJ-15).                                             |
 | Counted trades         | closed, not excluded, and complete. "Open" = not excluded and not closed (SJ-19).                                                                                       |
 | Balance                | starting balance + realised net of counted trades (SJ-16); plus excluded trades when the owner's setting "Count excluded trades in the balance" is on (off by default). |

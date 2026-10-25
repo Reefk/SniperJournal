@@ -30,7 +30,36 @@ function reference(trades: Trade[], start: number) {
     maxDD = Math.max(maxDD, peak - equity);
     if (peak > 0) maxPct = Math.max(maxPct, ((peak - equity) / peak) * 100);
   }
-  return { total: nets.length, net: sum(nets), wins: wins.length, losses: losses.length, maxDD, maxPct, end: equity };
+  const byDay = new Map<string, number>();
+  for (const t of trades) {
+    const day = (t.closedAt as string).slice(0, 10);
+    byDay.set(day, (byDay.get(day) ?? 0) + (t.manualPnl as number));
+  }
+  // in cents, as money is: a day of +0.10, +0.20 and -0.30 is a day of 0
+  const dayNets = [...byDay.values()].map((n) => Math.round(n * 100) / 100);
+  const greens = dayNets.filter((n) => n > 0);
+  const best = greens.length ? Math.max(...greens) : null;
+  const net = sum(nets);
+  return {
+    total: nets.length,
+    net,
+    wins: wins.length,
+    losses: losses.length,
+    maxDD,
+    maxPct,
+    end: equity,
+    greenDays: greens.length,
+    greenRate: (greens.length / dayNets.length) * 100,
+    bestShare: best == null ? null : (best / sum(greens)) * 100,
+    withoutBest: best == null ? null : sum(dayNets) - best,
+    recovery: maxDD > 0 ? net / maxDD : net > 0 ? Number.POSITIVE_INFINITY : null,
+  };
+}
+
+/** equal to 8 decimals, or both the same null or infinity */
+function near(actual: number | null, expected: number | null) {
+  if (expected == null || !Number.isFinite(expected)) expect(actual).toBe(expected);
+  else expect(actual).toBeCloseTo(expected, 8);
 }
 
 describe('computeStats: a hand-calculated mixed record', () => {
@@ -81,6 +110,20 @@ describe('computeStats: a hand-calculated mixed record', () => {
     expect(s.largestLoss).toBe(-100);
   });
 
+  it('green days: 2 of 5, the breakeven day a trading day but not a green one', () => {
+    expect(s.greenDays).toBe(2);
+    expect(s.greenDayRate).toBeCloseTo(40, 10);
+  });
+
+  it("the best day's share of the green days, and the net without that day", () => {
+    expect(s.bestDayShare).toBeCloseTo((200 / (100 + 200)) * 100, 10);
+    expect(s.netWithoutBestDay).toBe(-50); // 100 - 50 + 0 - 100: without its best day the record is red
+  });
+
+  it('recovery factor: the net over the deepest fall', () => {
+    expect(s.recoveryFactor).toBe(1.5); // 150 / 100
+  });
+
   it("SQN follows Van Tharp's definition: mean / sample standard deviation * sqrt(n)", () => {
     // no stops were logged, so the basis is money: mean 30, sample variance 58000 / 4
     const expected = (30 / Math.sqrt(58000 / 4)) * Math.sqrt(5);
@@ -98,6 +141,8 @@ describe('computeStats: boundaries', () => {
     expect(s.maxDrawdown).toBe(0);
     expect(s.maxDrawdownPct).toBeNull();
     expect(s.equity).toEqual([{ index: 0, label: 'Start', equity: 500, net: 0, peak: 500 }]);
+    expect([s.greenDays, s.greenDayRate, s.bestDayShare, s.netWithoutBestDay]).toEqual([0, 0, null, null]);
+    expect(s.recoveryFactor).toBeNull();
   });
 
   it('one winning trade: profit factor and payoff are infinite, not a number', () => {
@@ -105,6 +150,9 @@ describe('computeStats: boundaries', () => {
     expect(s.profitFactor).toBe(Number.POSITIVE_INFINITY);
     expect(s.payoff).toBe(Number.POSITIVE_INFINITY);
     expect(s.sqn).toBeNull(); // a single sample has no spread
+    // no fall to divide by; the one green day is all of them, and nothing is left without it
+    expect(s.recoveryFactor).toBe(Number.POSITIVE_INFINITY);
+    expect([s.greenDayRate, s.bestDayShare, s.netWithoutBestDay]).toEqual([100, 100, 0]);
   });
 
   it('every trade a winner', () => {
@@ -113,6 +161,8 @@ describe('computeStats: boundaries', () => {
     expect(s.profitFactor).toBe(Number.POSITIVE_INFINITY);
     expect(s.maxDrawdown).toBe(0);
     expect(s.avgLoss).toBe(0);
+    expect(s.recoveryFactor).toBe(Number.POSITIVE_INFINITY);
+    expect([s.greenDays, s.greenDayRate, s.bestDayShare, s.netWithoutBestDay]).toEqual([3, 100, 50, 30]);
   });
 
   it('every trade a loser: profit factor 0, payoff 0', () => {
@@ -122,6 +172,9 @@ describe('computeStats: boundaries', () => {
     expect(s.payoff).toBe(0);
     expect(s.maxDrawdown).toBe(30);
     expect(s.maxDrawdownPct).toBeCloseTo(30, 10);
+    // the whole net is the fall: a recovery factor of -1, and no green day to take a share of
+    expect(s.recoveryFactor).toBe(-1);
+    expect([s.greenDays, s.greenDayRate, s.bestDayShare, s.netWithoutBestDay]).toEqual([0, 0, null, null]);
   });
 
   it('every trade breakeven: profit factor is undefined (null), SQN undefined', () => {
@@ -130,6 +183,65 @@ describe('computeStats: boundaries', () => {
     expect(s.profitFactor).toBeNull();
     expect(s.expectancy).toBe(0);
     expect(s.sqn).toBeNull();
+    expect(s.recoveryFactor).toBeNull();
+    expect([s.activeDays, s.greenDays, s.greenDayRate, s.bestDayShare]).toEqual([3, 0, 0, null]);
+  });
+
+  it('a day counts once: its trades are added up before it is green or red', () => {
+    const on = (day: string, net: number) => pnl(net, { openedAt: `${day}T10:00`, closedAt: `${day}T11:00` });
+    // +70 on the 2nd, -30 on the 3rd: two winning trades, but one green day
+    const s = computeStats([on('2026-03-02', 100), on('2026-03-02', -30), on('2026-03-03', -50), on('2026-03-03', 20)]);
+    expect([s.wins, s.greenDays, s.activeDays, s.greenDayRate]).toEqual([2, 1, 2, 50]);
+    expect(s.bestDayShare).toBe(100);
+    expect(s.netWithoutBestDay).toBe(-30);
+  });
+
+  it('two best days of the same size: only one is taken out', () => {
+    const s = computeStats(series([50, 50, -20]));
+    expect(s.bestDayShare).toBe(50);
+    expect(s.netWithoutBestDay).toBe(30);
+  });
+
+  it('a drawdown under half a cent is no fall to divide by', () => {
+    // a sub-cent loss first: a "drawdown" of $0.001 would make it 49,999
+    expect(computeStats(series([-0.001, 50])).recoveryFactor).toBe(Number.POSITIVE_INFINITY);
+    // half a cent is a fall
+    expect(computeStats(series([-0.005, 10])).recoveryFactor).toBeCloseTo(9.995 / 0.005, 6);
+  });
+
+  it('a net under half a cent is nothing made: no gain to call infinite, no loss to show as -0.00', () => {
+    expect(computeStats(series([0.001])).recoveryFactor).toBeNull();
+    expect(computeStats(series([-0.001])).recoveryFactor).toBeNull();
+    // half a cent is a gain
+    expect(computeStats(series([0.005])).recoveryFactor).toBe(Number.POSITIVE_INFINITY);
+    // back to a tenth of a cent under the start after a $50 fall: 0, not -0.00002
+    expect(computeStats(series([-50, 49.999])).recoveryFactor).toBe(0);
+  });
+
+  it('a day is settled like a trade: +0.10, +0.20 and -0.30 make a day of 0, neither green nor red', () => {
+    const on = (net: number) => pnl(net, { closedAt: '2026-03-02T11:00' });
+    expect(aggregateDays([on(0.1), on(0.2), on(-0.3)])[0].net).toBe(0);
+    // was a red day of -0.0000000000000005
+    expect(Math.abs(aggregateDays([on(12.35), on(-7.2), on(-5.15)])[0].net)).toBe(0);
+    const s = computeStats([on(0.1), on(0.2), on(-0.3)]);
+    expect([s.activeDays, s.greenDays, s.bestDayShare, s.netWithoutBestDay]).toEqual([1, 0, null, null]);
+  });
+
+  it('the net without the best day leaves no crumb of a cent behind', () => {
+    // 1 less the best day's 0.7 is 0.30000000000000004 in binary; the two other days made 0.30
+    expect(computeStats(series([0.7, 0.1, 0.2])).netWithoutBestDay).toBe(0.3);
+  });
+
+  it('a day is green or red after fees', () => {
+    // up $5 before an $8 fee: a red day
+    const s = computeStats([trade({ entryPrice: 100, exitPrice: 105, quantity: 1, fees: 8 })]);
+    expect([s.days[0].net, s.greenDays, s.bestDayShare]).toEqual([-3, 0, null]);
+  });
+
+  it('the starting balance changes no recovery factor: the fall is in money', () => {
+    const trades = series([100, -50, 0, 200, -100]);
+    expect(computeStats(trades, 0).recoveryFactor).toBe(1.5);
+    expect(computeStats(trades, 25000).recoveryFactor).toBe(1.5);
   });
 
   it('drawdown percentage needs a starting balance', () => {
@@ -154,6 +266,8 @@ describe('computeStats: which trades count', () => {
     const s = computeStats([...counted, ...others], 1000);
     expect(s.total).toBe(2);
     expect(s.net).toBe(60);
+    // the excluded $5,000 and the incomplete import fall on the first day, the open trade on a third: no day moves
+    expect([s.greenDays, s.activeDays, s.bestDayShare, s.netWithoutBestDay]).toEqual([1, 2, 100, -40]);
   });
 
   it('the open count is positions still open, not trades that are merely incomplete', () => {
@@ -265,6 +379,13 @@ describe('computeStats: properties over random records', () => {
       expect(s.maxDrawdown).toBeCloseTo(r.maxDD, 8);
       if (start > 0) expect(s.maxDrawdownPct).toBeCloseTo(r.maxPct, 8);
       expect(s.equity.at(-1)?.equity).toBeCloseTo(r.end, 8);
+      expect(s.greenDays).toBe(r.greenDays);
+      near(s.greenDayRate, r.greenRate);
+      near(s.bestDayShare, r.bestShare);
+      near(s.netWithoutBestDay, r.withoutBest);
+      near(s.recoveryFactor, r.recovery);
+      // the best day and the rest make up the whole
+      if (s.netWithoutBestDay != null) expect(s.netWithoutBestDay + (s.bestDay?.net ?? 0)).toBeCloseTo(s.net, 8);
     }
   });
 
@@ -277,6 +398,11 @@ describe('computeStats: properties over random records', () => {
       expect(b.winRate).toBe(a.winRate);
       expect(b.profitFactor).toBe(a.profitFactor);
       expect(b.maxDrawdown).toBeCloseTo(a.maxDrawdown, 8);
+      expect(b.greenDays).toBe(a.greenDays);
+      near(b.greenDayRate, a.greenDayRate);
+      near(b.bestDayShare, a.bestDayShare);
+      near(b.netWithoutBestDay, a.netWithoutBestDay);
+      near(b.recoveryFactor, a.recoveryFactor);
     }
   });
 
@@ -289,6 +415,11 @@ describe('computeStats: properties over random records', () => {
       expect(b.grossProfit).toBeCloseTo(a.grossProfit, 8);
       expect(b.grossLoss).toBeCloseTo(a.grossLoss, 8);
       expect(b.breakeven).toBe(a.breakeven + 1);
+      // a day of its own: one more trading day, and no money figure of the days moves
+      expect(b.greenDays).toBe(a.greenDays);
+      near(b.bestDayShare, a.bestDayShare);
+      near(b.netWithoutBestDay, a.netWithoutBestDay);
+      near(b.recoveryFactor, a.recoveryFactor);
     }
   });
 });
