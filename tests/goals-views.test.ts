@@ -147,6 +147,28 @@ describe('the Dashboard: the Goals card', () => {
     expect(card()).toBeUndefined();
   });
 
+  it('comes last: under the Daily P&L, its four cards and the recent trades', async () => {
+    await show(DashboardView, journalWith(RECORD, { goals: { winRate: 60 } }));
+    const leaf = (text: string) =>
+      [...document.querySelectorAll('body *')].find((el) => el.children.length === 0 && el.textContent === text);
+    const order = [
+      'Equity curve',
+      'Sniper Score',
+      'Daily P&L',
+      'Largest win',
+      'Largest loss',
+      'Max drawdown',
+      'Average day',
+      'Recent trades',
+      'Goals',
+    ];
+    const found = order.map(leaf);
+    expect(found.map((el, i) => (el ? order[i] : `${order[i]} missing`))).toEqual(order);
+    for (let i = 1; i < found.length; i++) {
+      expect(found[i - 1]!.compareDocumentPosition(found[i]!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
+  });
+
   it('each goal set, in order, against its target, for the account shown', async () => {
     await show(
       DashboardView,

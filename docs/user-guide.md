@@ -90,7 +90,7 @@ filled in.
 
 | Page                   | What it is for                                                                                                                |
 | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| **Dashboard**          | Net profit, win rate, profit factor, average R:R, expectancy, SQN, your goals, equity curve, daily P&L and your Sniper Score. |
+| **Dashboard**          | Net profit, win rate, profit factor, average R:R, expectancy, SQN, equity curve, Sniper Score, daily P&L and your goals.      |
 | **Calendar**           | A month at a glance: each day shows its net P&L and trade count. Click a day to see the trades behind the number.             |
 | **The Playbook**       | The setups you allow yourself to trade and their rules, with the real performance of each one underneath.                     |
 | **Trades**             | The full table, with filters for pair, session, leverage, setup, mistake, date, direction and result. Click a row to edit it. |

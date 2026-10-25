@@ -275,10 +275,6 @@ export function DashboardView() {
             />
           </MetricStrip>
 
-          {goals.length > 0 && (
-            <GoalsCard className="mt-4" lines={goals} currency={currency} before={BEFORE_WORDS[range]} />
-          )}
-
           {/* ---------- charts ---------- */}
           <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
             <ChartContainer
@@ -329,34 +325,18 @@ export function DashboardView() {
             </ChartContainer>
           </div>
 
-          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
-            <ChartContainer
-              className="h-[240px] md:col-span-2 md:h-[300px]"
-              title="Daily P&L"
-              summary={dailySummary(stats.days, currency)}
-              subtitle={`${greenDays} green ${greenDays === 1 ? 'day' : 'days'}, ${stats.days.filter((d) => d.net < 0).length} red · ${wholePct(stats.greenDayRate)}% green`}
-              empty={stats.days.length === 0}
-              emptyText="No closed trades in this range yet."
-            >
-              <DailyPnlChart days={stats.days} currency={currency} />
-            </ChartContainer>
+          <ChartContainer
+            className="mt-4 h-[240px] md:h-[300px]"
+            title="Daily P&L"
+            summary={dailySummary(stats.days, currency)}
+            subtitle={`${greenDays} green ${greenDays === 1 ? 'day' : 'days'}, ${stats.days.filter((d) => d.net < 0).length} red · ${wholePct(stats.greenDayRate)}% green`}
+            empty={stats.days.length === 0}
+            emptyText="No closed trades in this range yet."
+          >
+            <DailyPnlChart days={stats.days} currency={currency} />
+          </ChartContainer>
 
-            <ChartContainer
-              className="md:h-[300px]"
-              title="Recent trades"
-              subtitle="Your last five, newest first"
-              bodyClassName="px-0 pt-1"
-              actions={
-                <Link href="/trades" className="text-xs text-accent underline-offset-4 transition hover:underline">
-                  View all
-                </Link>
-              }
-            >
-              <RecentTrades trades={recent} currency={currency} />
-            </ChartContainer>
-          </div>
-
-          {/* ---------- footer stats ---------- */}
+          {/* ---------- the extremes and the average day, under the days they come from ---------- */}
           <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
             <MetricCard
               label="Largest win"
@@ -392,6 +372,25 @@ export function DashboardView() {
               sub={`Across ${stats.activeDays} trading ${stats.activeDays === 1 ? 'day' : 'days'}`}
             />
           </div>
+
+          <ChartContainer
+            className="mt-4"
+            title="Recent trades"
+            subtitle="Your last five, newest first"
+            bodyClassName="px-0 pt-1"
+            actions={
+              <Link href="/trades" className="text-xs text-accent underline-offset-4 transition hover:underline">
+                View all
+              </Link>
+            }
+          >
+            <RecentTrades trades={recent} currency={currency} />
+          </ChartContainer>
+
+          {/* last, as the targets for these numbers */}
+          {goals.length > 0 && (
+            <GoalsCard className="mt-4" lines={goals} currency={currency} before={BEFORE_WORDS[range]} />
+          )}
         </>
       )}
 
