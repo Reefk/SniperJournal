@@ -8,6 +8,7 @@ import { useUI } from '@/store/UIProvider';
 import { detectSession, SESSIONS } from '@/lib/sessions';
 import { checksToSave, rulesShown } from '@/lib/rules';
 import { mistakeList, mistakesShown } from '@/lib/mistakes';
+import { arrangeByGroup } from '@/lib/tags';
 import { formatDuration, formatMoney, formatRatio } from '@/lib/format';
 import { grossPnl, holdMinutes, isClosed, netPnl, plannedRR, riskAmount, rMultiple } from '@/lib/trade-math';
 import { cn, toLocalInput, toNumberOrNull } from '@/lib/utils';
@@ -599,7 +600,12 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
           />
 
           <Field label="Tags" hint="catalysts, emotions, sources">
-            <TagInput value={form.tags} onChange={(tags) => set('tags', tags)} suggestions={tagSuggestions} />
+            <TagInput
+              value={form.tags}
+              onChange={(tags) => set('tags', tags)}
+              suggestions={tagSuggestions}
+              arrange={(shown) => arrangeByGroup(shown, data.settings.tagGroups ?? [])}
+            />
           </Field>
 
           <Field label="Notes">

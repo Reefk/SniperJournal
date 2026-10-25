@@ -8,10 +8,13 @@ export function TagInput({
   value,
   onChange,
   suggestions,
+  arrange = (shown) => shown,
 }: {
   value: string[];
   onChange: (tags: string[]) => void;
   suggestions: string[];
+  /** the order the suggestions picked are shown in (the trade form keeps a tag group's together) */
+  arrange?: (shown: string[]) => string[];
 }) {
   const [draft, setDraft] = useState('');
   // labelled by the Field it sits in
@@ -23,9 +26,9 @@ export function TagInput({
     setDraft('');
   };
 
-  const matches = suggestions
-    .filter((s) => !value.includes(s) && s.toLowerCase().includes(draft.trim().toLowerCase()))
-    .slice(0, 8);
+  const matches = arrange(
+    suggestions.filter((s) => !value.includes(s) && s.toLowerCase().includes(draft.trim().toLowerCase())).slice(0, 8),
+  );
 
   return (
     <div>

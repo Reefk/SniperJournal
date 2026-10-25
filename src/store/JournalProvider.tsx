@@ -10,6 +10,7 @@ import { isIncomplete } from '@/lib/trade-math';
 import { mergeIssue, mergeTrades as combineTrades } from '@/lib/merge';
 import { checksSetupId, renameRuleChecks } from '@/lib/rules';
 import { renameMistakes } from '@/lib/mistakes';
+import { changeTags as applyTagChange, type TagChange } from '@/lib/tags';
 import { chartsOnlyInSample, deleteScreenshot, imagesOnlyIn } from '@/lib/screenshots';
 import { JournalConflict, storage } from '@/lib/storage';
 import { uid } from '@/lib/utils';
@@ -107,6 +108,8 @@ interface Actions {
   updateSettings: (patch: Partial<Settings>) => void;
   /** the mistake list in Settings; `renamed`: old name → new, so the trades' mistakes follow a renamed one */
   saveMistakes: (list: string[], renamed?: ReadonlyMap<string, string>) => void;
+  /** a tag renamed, merged, deleted or moved to the mistakes on every trade (Settings → Tags) */
+  changeTags: (change: TagChange) => void;
   updateProfile: (patch: Partial<Profile>) => void;
   completeOnboarding: (input: { name: string; accountName: string; startingBalance: number; currency: string }) => void;
   loadSampleData: () => void;
@@ -486,6 +489,7 @@ export function JournalProvider({ children }: { children: ReactNode }) {
           trades: renamed ? renameMistakes(d.trades, renamed) : d.trades,
         }));
       },
+      changeTags: (change) => mutate((d) => ({ ...d, ...applyTagChange(d.trades, d.settings, change) })),
       updateProfile: (patch) => mutate((d) => ({ ...d, profile: { ...d.profile, ...patch } })),
       completeOnboarding: ({ name, accountName, startingBalance, currency }) => {
         mutate((d) => ({

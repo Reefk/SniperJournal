@@ -742,10 +742,71 @@ async function journey() {
     '"Clear" brings it back',
     await seen(`${hintColour} === ${JSON.stringify(clearColour)}`, 'clear placeholders', 5000),
   );
+  // ---- 8e. Settings → Tags: rename, move to the mistakes, a group in Reports ----
+  const tagMenu = (tag, item) =>
+    `document.querySelector(${JSON.stringify(`button[aria-label="Change “${tag}”"]`)}).click();
+     setTimeout(() => $t(${JSON.stringify(item)}, document.querySelector('[data-popover]')).click(), 50); true`;
+  const tradeOnDisk = (j, symbol) => j.trades.find((t) => t.symbol === symbol);
+  await b.until(`!!document.querySelector('ul[aria-label="Your tags"]')`, 'tag list');
+  check(
+    'Settings → Tags lists the imported tags',
+    await b.run(
+      `['breakout', 'fomo'].every((t) => document.querySelector('ul[aria-label="Your tags"]').innerText.includes(t))`,
+    ),
+  );
+  await b.run(tagMenu('breakout', 'Rename…'));
+  await b.until(`!!$modal() && !!$field('New name', $modal())`, 'rename dialog');
+  await b.run(`$type($field('New name', $modal()), 'Breakout setup'); $t('Rename', $modal()).click(); true`);
+  check(
+    'a renamed tag is renamed on its trade',
+    await savedSoon((j) => tradeOnDisk(j, 'AAPL')?.tags.join() === 'Breakout setup'),
+  );
+  await b.until(`!$modal()`, 'rename dialog closed');
+  await b.run(tagMenu('fomo', 'Move to mistakes…'));
+  await b.until(`!!$modal() && !!$field('The mistake', $modal())`, 'move dialog');
+  check(
+    '"fomo" is offered as "Entered early (FOMO)"',
+    await b.run(`$field('The mistake', $modal()).selectedOptions[0].textContent === 'Entered early (FOMO)'`),
+  );
+  await b.run(`$t('Move to mistakes', $modal()).click(); true`);
+  check(
+    'moved to the mistakes: the tag comes off the trade, the mistake goes on',
+    await savedSoon(
+      (j) =>
+        tradeOnDisk(j, 'TSLA')?.tags.length === 0 && tradeOnDisk(j, 'TSLA')?.mistakes?.[0] === 'Entered early (FOMO)',
+    ),
+  );
+  await b.until(`!$modal()`, 'move dialog closed');
+  await b.run(`$t('New group').click(); true`);
+  await b.until(`!!$modal() && !!$field('Name', $modal())`, 'group editor');
+  await b.run(
+    `$type($field('Name', $modal()), 'Setup type');
+     [...$modal().querySelectorAll('label')].find((l) => l.innerText.includes('Breakout setup')).querySelector('input').click();
+     true`,
+  );
+  await b.run(`$t('Save group', $modal()).click(); true`);
+  check(
+    'a group is saved in the journal file',
+    await savedSoon(
+      (j) => JSON.stringify(j.settings.tagGroups) === '[{"name":"Setup type","tags":["Breakout setup"]}]',
+    ),
+  );
+  const groupTable = `[...document.querySelectorAll('section')].find((s) => s.querySelector('h3')?.textContent === 'Setup type')`;
+  await b.run(`$nav('/reports'); true`);
+  check(
+    'Reports shows a table for the group; its one trade (AAPL) is still excluded, so it has none',
+    await seen(`${groupTable}?.innerText.includes('No trade in this range has its tags')`, 'empty group table', 5000),
+  );
+
   await b.run(`$nav('/trades'); true`);
   await b.until(`[...document.querySelectorAll('tbody tr')].some((r) => r.innerText.includes('AAPL'))`, 'trades table');
   await b.run(eye('AAPL', 'Excluded'));
   await dashboard(143, 100, 'AAPL included again');
+  await b.run(`$nav('/reports'); true`);
+  check(
+    'included again, AAPL is in the group table under its tag',
+    await seen(`/Breakout setup\\s+1\\b/.test(${groupTable}?.innerText ?? '')`, 'group table row', 5000),
+  );
   // section 9 opens a fresh browser with no copy of its own, so the last
   // changes must be in the file before this one closes (saves wait 350ms)
   check(

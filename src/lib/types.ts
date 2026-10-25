@@ -113,6 +113,15 @@ export interface Settings {
    * first changed, which reads as STARTING_MISTAKES (lib/mistakes.ts).
    */
   mistakes?: string[];
+  /** my own groups of tags (Emotion, Source…), a tag in one at most; see lib/tags.ts */
+  tagGroups?: TagGroup[];
+  /** tags that look alike but are not the same: the tag list stops offering to merge them */
+  tagsKeptApart?: string[][];
+}
+
+export interface TagGroup {
+  name: string;
+  tags: string[];
 }
 
 export interface Profile {

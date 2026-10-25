@@ -4,7 +4,8 @@ import { useMemo, useState } from 'react';
 import { Download, FileBarChart, Printer } from 'lucide-react';
 import { useJournal } from '@/store/JournalProvider';
 import { useUI } from '@/store/UIProvider';
-import { computeStats, groupTrades, sqnLabel } from '@/lib/stats';
+import { computeStats, groupTrades, sqnLabel, thinMark } from '@/lib/stats';
+import { groupTables, type GroupTable } from '@/lib/tags';
 import { RANGE_OPTIONS, splitByRange, type RangeKey } from '@/lib/ranges';
 import { tradesToCsv } from '@/lib/csv';
 import { formatDate, formatDuration, formatMoney, formatPct, formatRatio, MONTHS_SHORT, WEEKDAYS } from '@/lib/format';
@@ -82,6 +83,10 @@ export function ReportsView() {
     [accountTrades, data.settings, start],
   );
   const cleanByMonth = useMemo(() => thisAndLastMonth(cleanMonths(accountTrades)), [accountTrades]);
+  const byGroup = useMemo(
+    () => groupTables(inRange, data.settings.tagGroups ?? []),
+    [inRange, data.settings.tagGroups],
+  );
 
   if (accountTrades.length === 0) {
     return (
@@ -262,6 +267,8 @@ export function ReportsView() {
         </div>
       </div>
 
+      <TagGroupTables tables={byGroup} currency={currency} />
+
       <MistakesReport report={mistakes} rangeStart={start} months={cleanByMonth} currency={currency} />
 
       {stats.bestDay && stats.worstDay && (
@@ -275,6 +282,94 @@ export function ReportsView() {
 }
 
 const tone = (v: number) => (v > 0 ? 'text-profit' : v < 0 ? 'text-loss' : 'text-muted');
+
+/** Reports → a table for each tag group (Settings → Tags), with each of its tags */
+function TagGroupTables({ tables, currency }: { tables: GroupTable[]; currency: string }) {
+  if (!tables.length) return null;
+  return (
+    <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+      {tables.map((g) => {
+        const marks = new Set(g.rows.map((row) => thinMark(row.trades)));
+        return (
+          <ChartContainer
+            key={g.name}
+            title={g.name}
+            subtitle="Tag group"
+            bodyClassName="px-2 pb-3 pt-1"
+            empty={!g.rows.length}
+            emptyText="No trade in this range has its tags."
+          >
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-xs text-muted">
+                  <th className="px-2 py-2 text-left font-medium md:px-3">Tag</th>
+                  <th className="px-2 py-2 text-right font-medium md:px-3">Trades</th>
+                  <th className="px-2 py-2 text-right font-medium max-md:hidden md:px-3">Win rate</th>
+                  <th className="px-2 py-2 text-right font-medium md:px-3">Net</th>
+                  <th className="px-2 py-2 text-right font-medium md:px-3">Avg R</th>
+                </tr>
+              </thead>
+              <tbody>
+                {g.rows.map((row) => {
+                  const mark = thinMark(row.trades);
+                  const few = mark === 'few';
+                  return (
+                    <tr key={row.tag} className="border-t border-line" data-mark={mark ?? undefined}>
+                      <td
+                        className={cn(
+                          'max-w-[140px] truncate whitespace-pre px-2 py-2 md:px-3',
+                          few ? 'text-faint' : 'text-fg',
+                        )}
+                      >
+                        {row.tag}
+                      </td>
+                      <td className="num px-2 py-2 text-right md:px-3">
+                        <span
+                          className={cn(
+                            few ? 'text-faint' : 'text-muted',
+                            mark === 'thin' && 'underline decoration-dotted underline-offset-4',
+                          )}
+                        >
+                          {row.trades}
+                        </span>
+                      </td>
+                      <td
+                        className={cn(
+                          'num px-2 py-2 text-right max-md:hidden md:px-3',
+                          few ? 'text-faint' : 'text-muted',
+                        )}
+                      >
+                        {formatPct(row.winRate, 0)}
+                      </td>
+                      <td
+                        className={cn(
+                          'num px-2 py-2 text-right font-medium md:px-3',
+                          few ? 'text-faint' : tone(row.net),
+                        )}
+                      >
+                        {formatMoney(row.net, currency, { sign: true, compact: true })}
+                      </td>
+                      <td className={cn('num px-2 py-2 text-right md:px-3', few ? 'text-faint' : 'text-muted')}>
+                        {row.avgR == null ? '—' : `${row.avgR >= 0 ? '+' : ''}${row.avgR.toFixed(2)}R`}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            <p className="px-3 pt-3 text-xs leading-relaxed text-faint">
+              Average R is over the trades with a stop.
+              {marks.has('few') && ' Greyed: under 3 trades.'}
+              {marks.has('thin') && ' Dotted: under 10, too few to go by yet.'}
+              {g.shared > 0 &&
+                ` ${g.shared} ${g.shared === 1 ? 'trade has' : 'trades have'} two of these tags and count${g.shared === 1 ? 's' : ''} in each row.`}
+            </p>
+          </ChartContainer>
+        );
+      })}
+    </div>
+  );
+}
 /** half a cent: less than that is what is left over from adding up cents, not money */
 const isMoney = (v: number | null | undefined): v is number => v != null && v >= 0.005;
 

@@ -1,4 +1,5 @@
-import type { Account, Resource, RuleChecks, Settings, Setup, Trade } from '@/lib/types';
+import type { Account, Resource, RuleChecks, Settings, Setup, TagGroup, Trade } from '@/lib/types';
+import { distinctSets } from '@/lib/tags';
 
 /**
  * Type-checks everything that comes in from outside the app's own code: the
@@ -29,12 +30,40 @@ const optBool = (v: unknown) => (typeof v === 'boolean' ? v : undefined);
 const nullableNum = (v: unknown): number | null | undefined =>
   v == null || isNum(v) ? (v as number | null | undefined) : null;
 const strings = (v: unknown) => (Array.isArray(v) ? v.filter((s): s is string => typeof s === 'string') : []);
-/** mistakes, on a trade or the list: names that aren't blank, each once (twice would count it twice) */
+/** mistakes, on a trade or the list, and tags in groups: names that aren't blank, each once (twice would count it twice) */
 const names = (v: unknown) => [...new Set(strings(v).filter((s) => s.trim()))];
 const optNames = (v: unknown) => {
   const list = names(v);
   return list.length ? list : undefined;
 };
+
+/**
+ * Tag groups: a group named like one before it (whatever its capitals) joins
+ * that one, and a tag is in the first group that lists it only. A group with
+ * no name is dropped. Absent, or not a list, is none.
+ */
+function tagGroups(v: unknown): TagGroup[] | undefined {
+  if (!Array.isArray(v)) return undefined;
+  const taken = new Set<string>();
+  const out: TagGroup[] = [];
+  for (const g of records(v)) {
+    const name = typeof g.name === 'string' ? g.name.trim() : '';
+    if (!name) continue;
+    const tags = names(g.tags).filter((tag) => !taken.has(tag));
+    for (const tag of tags) taken.add(tag);
+    const same = out.find((o) => o.name.toLowerCase() === name.toLowerCase());
+    if (same) same.tags.push(...tags);
+    else out.push({ name, tags });
+  }
+  return out;
+}
+
+/** sets of tags kept apart: two names or more each, no set twice; nothing usable is none */
+function keptApart(v: unknown): string[][] | undefined {
+  if (!Array.isArray(v)) return undefined;
+  const sets = distinctSets(v.map(names));
+  return sets.length ? sets : undefined;
+}
 
 /** rule ticks: true, false or null each, under a rule's wording; anything else is dropped, and with it an empty set */
 function ruleChecks(v: unknown): RuleChecks | undefined {
@@ -114,6 +143,8 @@ export function cleanSettings(v: unknown, base: Settings): Settings {
     // but one with nothing usable in it is damaged, and reads as absent
     mistakes:
       Array.isArray(s.mistakes) && (!s.mistakes.length || names(s.mistakes).length) ? names(s.mistakes) : undefined,
+    tagGroups: tagGroups(s.tagGroups),
+    tagsKeptApart: keptApart(s.tagsKeptApart),
   };
 }
 

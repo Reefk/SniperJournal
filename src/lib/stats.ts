@@ -367,6 +367,14 @@ export function sniperScore(trades: Trade[], stats: Stats): SniperScore {
   };
 }
 
+/**
+ * How far a table row of `trades` trades can be gone by: under 3 is 'few'
+ * (greyed), under 10 'thin' (marked), 10 or more null.
+ */
+export function thinMark(trades: number): 'few' | 'thin' | null {
+  return trades < 3 ? 'few' : trades < 10 ? 'thin' : null;
+}
+
 export interface GroupStat {
   key: string;
   label: string;

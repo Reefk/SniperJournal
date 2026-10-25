@@ -97,7 +97,7 @@ filled in.
 | **Insights & Signals** | Patterns found in your own trades: your best session, revenge trading, holding losers too long, fee drag, and more.           |
 | **Resources**          | Your own shortlist of tools and links.                                                                                        |
 | **Support**            | How the app works, where your data is, and the keyboard shortcuts.                                                            |
-| **Reports**            | A printable summary, month by month and per symbol and setup, and what each of your mistakes cost.                            |
+| **Reports**            | A printable summary, month by month and per symbol, setup and tag group, and what each of your mistakes cost.                 |
 
 ---
 
@@ -134,6 +134,16 @@ filled in.
   mistake was made 4 times. It also shows the share of clean trades this month
   against last month. Settings → Mistakes edits the list; renaming a mistake
   there renames it on every trade that has it.
+- **Tidy your tags.** Settings → Tags lists every tag on your trades, in every
+  account, with its trades and net. From a tag's **⋯** menu you can rename it,
+  merge it into another, delete it, or **move it to the mistakes** (it comes off
+  the trades and the mistake you pick goes on instead), each on every trade that
+  has it at once. Tags that look like one ("fomo" and "FOMO", "breakout" and
+  "breakouts") are listed together to merge, or to **keep apart** if they really
+  are different.
+- **Group your tags.** In Settings → Tags, make groups of your own, such as
+  Emotion or Source of the idea, and put tags in them. Reports then shows a table
+  for each group, and the trade form suggests a group's tags together.
 - **Trades marked "needs details"** are imported rows that are still missing a
   date, a quantity or an entry price. They never count towards a statistic until
   you complete them, so your numbers are never built on half a trade.

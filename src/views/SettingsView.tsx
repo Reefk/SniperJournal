@@ -28,6 +28,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Field, Input, Select } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
+import { TagManager } from '@/components/settings/TagManager';
 
 function Section({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
   return (
@@ -232,6 +233,13 @@ export function SettingsView() {
           <Button className="mt-3" onClick={() => setEditingMistakes(true)}>
             <Pencil className="size-4" /> Edit the list
           </Button>
+        </Section>
+
+        <Section
+          title="Tags"
+          description="Every tag on your trades, in every account. Renaming, merging or deleting one changes every trade that has it."
+        >
+          <TagManager />
         </Section>
 
         <Section title="Accounts" description="Each account keeps its own trades, balance and statistics.">

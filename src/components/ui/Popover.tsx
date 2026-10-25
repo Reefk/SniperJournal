@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, type ComponentType, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ComponentType, type ReactNode } from 'react';
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -17,6 +17,21 @@ export function Popover({
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const menu = useRef<HTMLDivElement>(null);
+
+  // opens upwards when it would run past the bottom of the page's scroller
+  // (on a phone, the tab bar) and fits above its button: a tag's menu low in
+  // Settings → Tags. The menus in the header always fit below.
+  // Measured from its button, 8px (mt-2) away, not from the menu's own box,
+  // which animate-pop still has moved and shrunk at this point.
+  useLayoutEffect(() => {
+    const box = menu.current;
+    if (!open || !box || !ref.current) return;
+    const view = box.closest('[data-page-scroll]')?.getBoundingClientRect() ?? { top: 0, bottom: window.innerHeight };
+    const button = ref.current.getBoundingClientRect();
+    const room = box.offsetHeight + 8;
+    if (button.bottom + room > view.bottom && button.top - room >= view.top) box.dataset.side = 'top';
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -39,9 +54,10 @@ export function Popover({
       {trigger({ open, toggle: () => setOpen((o) => !o) })}
       {open && (
         <div
+          ref={menu}
           data-popover
           className={cn(
-            'animate-pop absolute top-full z-40 mt-2 rounded-lg border border-line bg-surface p-1 shadow-2xl shadow-black/40',
+            'animate-pop absolute top-full z-40 mt-2 rounded-lg border border-line bg-surface p-1 shadow-2xl shadow-black/40 data-[side=top]:bottom-full data-[side=top]:top-auto data-[side=top]:mb-2 data-[side=top]:mt-0',
             align === 'end' ? 'right-0' : 'left-0',
             className,
           )}

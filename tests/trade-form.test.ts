@@ -270,3 +270,23 @@ describe('the mistakes a trade made', () => {
     expect(seen?.journal.data.trades.find((t) => t.symbol === 'AMD')?.mistakes).toEqual(['Revenge trade']);
   });
 });
+
+describe('tag suggestions', () => {
+  it("keep a tag group's tags together, in the groups' order, the rest after", async () => {
+    await act(async () => {
+      seen?.journal.actions.patchTrades(['imp1'], { tags: ['x', 'scanner', 'tired', 'calm'] });
+      seen?.journal.actions.updateSettings({
+        tagGroups: [
+          { name: 'Emotion', tags: ['calm', 'tired'] },
+          { name: 'Source', tags: ['scanner'] },
+        ],
+      });
+    });
+    await open();
+    const shown = [...(dialog()?.querySelectorAll('button') ?? [])]
+      .map((b) => b.textContent?.trim() ?? '')
+      .filter((text) => text.startsWith('+ '))
+      .map((text) => text.slice(2));
+    expect(shown).toEqual(['tired', 'calm', 'scanner', 'x']);
+  });
+});

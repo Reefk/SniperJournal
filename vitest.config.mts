@@ -24,11 +24,12 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       // The logic, the API routes and the store's plain modules (autosave,
-      // confirm, mirror, rescue, sanitize, selectors), plus the four components
+      // confirm, mirror, rescue, sanitize, selectors), plus the five components
       // with render tests of their own: the dialog (tests/modal.test.ts), the
-      // trade form and its mistake chips (tests/trade-form.test.ts) and the
-      // import dialog (tests/import-dialog.test.ts). Other .tsx files, the
-      // providers among them, only count once a render test is about them.
+      // trade form and its mistake chips (tests/trade-form.test.ts), the import
+      // dialog (tests/import-dialog.test.ts) and Settings → Tags
+      // (tests/tags-views.test.ts). Other .tsx files, the providers among
+      // them, only count once a render test is about them.
       include: [
         'src/lib/**/*.ts',
         'src/store/**/*.ts',
@@ -37,6 +38,7 @@ export default defineConfig({
         'src/components/trades/TradeFormModal.tsx',
         'src/components/trades/MistakeChips.tsx',
         'src/components/trades/ImportTradesModal.tsx',
+        'src/components/settings/TagManager.tsx',
       ],
       // sample.ts only makes up the demo trades of Load test data. Some tests
       // build their journals with it, which covers it without testing it, and
