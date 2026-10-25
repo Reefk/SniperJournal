@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { SystemBars, SystemBarsStyle } from '@capacitor/core';
-import type { Account, JournalData, Resource, Setup, Trade, TradeInput, Settings, Profile } from '@/lib/types';
+import type { Account, GoalKey, JournalData, Resource, Setup, Trade, TradeInput, Settings, Profile } from '@/lib/types';
 import { createDefaultData, normalize } from '@/lib/journal';
 import { newerJournal } from '@/lib/journal-version';
 import { generateSampleData } from '@/lib/sample';
@@ -11,6 +11,7 @@ import { mergeIssue, mergeTrades as combineTrades } from '@/lib/merge';
 import { checksSetupId, renameRuleChecks } from '@/lib/rules';
 import { renameMistakes } from '@/lib/mistakes';
 import { changeTags as applyTagChange, type TagChange } from '@/lib/tags';
+import { withGoal } from '@/lib/goals';
 import { chartsOnlyInSample, deleteScreenshot, imagesOnlyIn } from '@/lib/screenshots';
 import { JournalConflict, storage } from '@/lib/storage';
 import { uid } from '@/lib/utils';
@@ -106,6 +107,8 @@ interface Actions {
   upsertResource: (resource: Resource) => void;
   deleteResource: (id: string) => void;
   updateSettings: (patch: Partial<Settings>) => void;
+  /** one goal's target in Settings; null takes the goal off */
+  setGoal: (key: GoalKey, target: number | null) => void;
   /** the mistake list in Settings; `renamed`: old name → new, so the trades' mistakes follow a renamed one */
   saveMistakes: (list: string[], renamed?: ReadonlyMap<string, string>) => void;
   /** a tag renamed, merged, deleted or moved to the mistakes on every trade (Settings → Tags) */
@@ -482,6 +485,8 @@ export function JournalProvider({ children }: { children: ReactNode }) {
       },
       deleteResource: (id) => mutate((d) => ({ ...d, resources: d.resources.filter((r) => r.id !== id) })),
       updateSettings: (patch) => mutate((d) => ({ ...d, settings: { ...d.settings, ...patch } })),
+      setGoal: (key, target) =>
+        mutate((d) => ({ ...d, settings: { ...d.settings, goals: withGoal(d.settings.goals, key, target) } })),
       saveMistakes: (list, renamed) => {
         mutate((d) => ({
           ...d,

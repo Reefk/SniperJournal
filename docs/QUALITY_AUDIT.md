@@ -738,6 +738,8 @@ The tests in `tests/stats.test.ts` use a hand-calculated mixed record, boundary 
 | Green-day rate         | days whose counted trades add up to more than 0 ÷ days with a counted trade. A day's total is settled to 1e-8 like a trade's; a day at 0 is not green.                  |
 | Best day's share       | the best day's net ÷ the nets of the green days added up. `null` with no green day.                                                                                     |
 | Net without best day   | net less the best day, settled to 1e-8. `null` with no green day.                                                                                                       |
+| Goals                  | at least the target (to a tenth of a %, a hundredth otherwise), give or take 1e-9; judged from 10 trades or 5 trading days (week's dot: 5 or 3). Partial ticks out.     |
+| Days inside limits     | days that lost no more than the daily loss limit and took no more trades than the daily limit, as set now ÷ trading days. Nothing to measure with no limit set.         |
 | SQN                    | mean ÷ sample SD × √N over R values when at least 5 and at least half the trades have a stop, otherwise over money (SJ-15).                                             |
 | Counted trades         | closed, not excluded, and complete. "Open" = not excluded and not closed (SJ-19).                                                                                       |
 | Balance                | starting balance + realised net of counted trades (SJ-16); plus excluded trades when the owner's setting "Count excluded trades in the balance" is on (off by default). |

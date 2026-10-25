@@ -90,7 +90,7 @@ filled in.
 
 | Page                   | What it is for                                                                                                                |
 | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| **Dashboard**          | Net profit, win rate, profit factor, average R:R, expectancy, SQN, equity curve, daily P&L and your Sniper Score.             |
+| **Dashboard**          | Net profit, win rate, profit factor, average R:R, expectancy, SQN, your goals, equity curve, daily P&L and your Sniper Score. |
 | **Calendar**           | A month at a glance: each day shows its net P&L and trade count. Click a day to see the trades behind the number.             |
 | **The Playbook**       | The setups you allow yourself to trade and their rules, with the real performance of each one underneath.                     |
 | **Trades**             | The full table, with filters for pair, session, leverage, setup, mistake, date, direction and result. Click a row to edit it. |
@@ -144,6 +144,18 @@ filled in.
 - **Group your tags.** In Settings → Tags, make groups of your own, such as
   Emotion or Source of the idea, and put tags in them. Reports then shows a table
   for each group, and the trade form suggests a group's tags together.
+- **Set your goals.** Settings → Limits and goals has a box for each goal: rules
+  kept, clean trades, days inside your limits and trades with a stop first, as
+  you control them on the day, then win rate, profit factor, average R,
+  expectancy, average win ÷ average loss and green days. None is set to start
+  with. A goal you give a target shows on the Dashboard, for the range picked:
+  your number against the target, whether it was met, and how it compares with
+  as long a time before. A goal needs 10 trades (5 trading days for the day
+  goals) before it says met or not. Under each one, a dot for each of the last 8
+  weeks: met, below target, or too few trades to tell. A target takes one
+  decimal for a percentage and two for the rest; a number a goal can't take
+  says why and which target is still in use. Beside the win rate, Settings shows
+  the win rate your average win and loss break even at.
 - **Trades marked "needs details"** are imported rows that are still missing a
   date, a quantity or an entry price. They never count towards a statistic until
   you complete them, so your numbers are never built on half a trade.

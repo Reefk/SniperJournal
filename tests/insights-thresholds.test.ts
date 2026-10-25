@@ -170,6 +170,17 @@ describe('insights', () => {
     expect(tone(book(13, 10, 7, 15))).toBe('warn');
     // a cent less on the losses and it is just over 5: good
     expect(tone(book(13, 10, 7, 14.99))).toBe('good');
+    // the numbers it says: an average win of 10 and loss of 15 break even at 60%
+    expect(insight(book(13, 10, 7, 15), 'break-even-wr')).toMatchObject({
+      title: 'You need to win 60.0% to break even',
+      metric: '+5.0 pts of margin',
+    });
+    expect(insight(book(13, 10, 7, 15), 'break-even-wr')?.body).toContain(
+      'You are winning 65.0%, which leaves 5.0 points of cushion.',
+    );
+    // without a win, or without a loss, there is nothing to break even against
+    expect(has(book(0, 0, 5, 10), 'break-even-wr')).toBe(false);
+    expect(has(book(5, 10, 0, 0), 'break-even-wr')).toBe(false);
   });
 
   it('sessions: compared once two have at least four trades each', () => {

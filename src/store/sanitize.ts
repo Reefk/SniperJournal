@@ -1,5 +1,6 @@
-import type { Account, Resource, RuleChecks, Settings, Setup, TagGroup, Trade } from '@/lib/types';
+import type { Account, Goals, Resource, RuleChecks, Settings, Setup, TagGroup, Trade } from '@/lib/types';
 import { distinctSets } from '@/lib/tags';
+import { goalDef, goalTarget } from '@/lib/goals';
 
 /**
  * Type-checks everything that comes in from outside the app's own code: the
@@ -56,6 +57,24 @@ function tagGroups(v: unknown): TagGroup[] | undefined {
     else out.push({ name, tags });
   }
   return out;
+}
+
+/**
+ * Goals: a target of the right kind each, a percentage from 0 to 100 and the
+ * rest above 0, to the decimals the card shows (goalTarget); any other is no
+ * goal. A goal this version doesn't know is from a newer one, and is kept as
+ * it is. Not a record is none.
+ */
+function goals(v: unknown): Goals | undefined {
+  if (!isRecord(v)) return undefined;
+  return Object.fromEntries(
+    Object.entries(v).flatMap(([key, target]) => {
+      const def = goalDef(key);
+      if (!def) return [[key, target]];
+      const kept = goalTarget(def, target);
+      return kept == null ? [] : [[key, kept]];
+    }),
+  ) as Goals;
 }
 
 /** sets of tags kept apart: two names or more each, no set twice; nothing usable is none */
@@ -145,6 +164,7 @@ export function cleanSettings(v: unknown, base: Settings): Settings {
       Array.isArray(s.mistakes) && (!s.mistakes.length || names(s.mistakes).length) ? names(s.mistakes) : undefined,
     tagGroups: tagGroups(s.tagGroups),
     tagsKeptApart: keptApart(s.tagsKeptApart),
+    goals: goals(s.goals),
   };
 }
 

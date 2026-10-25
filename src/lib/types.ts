@@ -117,7 +117,24 @@ export interface Settings {
   tagGroups?: TagGroup[];
   /** tags that look alike but are not the same: the tag list stops offering to merge them */
   tagsKeptApart?: string[][];
+  /** my targets, one set for every account; absent until the first is set (see lib/goals.ts) */
+  goals?: Goals;
 }
+
+export type GoalKey =
+  | 'rulesKept'
+  | 'cleanTrades'
+  | 'daysInLimits'
+  | 'withStop'
+  | 'winRate'
+  | 'profitFactor'
+  | 'avgR'
+  | 'expectancy'
+  | 'winLossRatio'
+  | 'greenDayRate';
+
+/** a target for each goal set; a goal with none is not set */
+export type Goals = Partial<Record<GoalKey, number>>;
 
 export interface TagGroup {
   name: string;

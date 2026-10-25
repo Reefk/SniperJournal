@@ -23,6 +23,7 @@ import { useUI } from '@/store/UIProvider';
 import { computeStats, sniperScore, sqnLabel } from '@/lib/stats';
 import { dailySummary, equitySummary, scoreSummary } from '@/lib/chart-summary';
 import { RANGE_OPTIONS, splitByRange, type RangeKey } from '@/lib/ranges';
+import { goalReport } from '@/lib/goals';
 import { formatDate, formatDuration, formatMoney, formatPct, formatRatio, wholePct } from '@/lib/format';
 import { isClosed, tradeTimestamp } from '@/lib/trade-math';
 import { excludedRealised, openingBalance } from '@/store/selectors';
@@ -38,6 +39,7 @@ import { EquityCurveChart } from '@/components/dashboard/EquityCurveChart';
 import { DailyPnlChart } from '@/components/dashboard/DailyPnlChart';
 import { SniperScoreChart } from '@/components/dashboard/SniperScoreChart';
 import { RecentTrades } from '@/components/dashboard/RecentTrades';
+import { GoalsCard } from '@/components/dashboard/GoalsCard';
 import { ImportTradesModal } from '@/components/trades/ImportTradesModal';
 
 /** the range picked, in words: "No closed trades in the last 7 days" */
@@ -49,6 +51,15 @@ const RANGE_WORDS: Record<RangeKey, string> = {
   ALL: 'yet',
 };
 
+/** the period the goals' arrows compare with: as long as the range, just before it */
+const BEFORE_WORDS: Record<RangeKey, string | null> = {
+  '7D': 'the 7 days before',
+  '30D': 'the 30 days before',
+  '90D': 'the 90 days before',
+  YTD: 'as many days before',
+  ALL: null,
+};
+
 export function DashboardView() {
   const { accountTrades, data, startingBalance, activeLabel, actions } = useJournal();
   const { openTradeForm } = useUI();
@@ -56,7 +67,7 @@ export function DashboardView() {
   const [importing, setImporting] = useState(false);
   const currency = data.settings.currency;
 
-  const { inRange, before } = useMemo(() => splitByRange(accountTrades, range), [accountTrades, range]);
+  const { inRange, before, start } = useMemo(() => splitByRange(accountTrades, range), [accountTrades, range]);
   // the curve starts from whatever the balance already was when the range began
   const opening = useMemo(() => openingBalance(startingBalance, before), [startingBalance, before]);
   // the balance may also count trades left out of the statistics (Settings);
@@ -68,6 +79,10 @@ export function DashboardView() {
   );
   const stats = useMemo(() => computeStats(inRange, opening), [inRange, opening]);
   const score = useMemo(() => sniperScore(inRange, stats), [inRange, stats]);
+  const goals = useMemo(
+    () => goalReport({ trades: accountTrades, setups: data.setups, settings: data.settings, from: start }),
+    [accountTrades, data.setups, data.settings, start],
+  );
   const recent = useMemo(
     () => [...accountTrades].sort((a, b) => tradeTimestamp(b).localeCompare(tradeTimestamp(a))).slice(0, 5),
     [accountTrades],
@@ -259,6 +274,10 @@ export function DashboardView() {
               info="The size of your average winner against your average loser."
             />
           </MetricStrip>
+
+          {goals.length > 0 && (
+            <GoalsCard className="mt-4" lines={goals} currency={currency} before={BEFORE_WORDS[range]} />
+          )}
 
           {/* ---------- charts ---------- */}
           <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">

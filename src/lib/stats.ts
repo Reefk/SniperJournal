@@ -270,6 +270,11 @@ export function computeStats(allTrades: Trade[], startingBalance = 0): Stats {
   };
 }
 
+/** the win rate at which the average win and loss break even, 0–100; null without a win and a loss */
+export function breakEvenWinRate(stats: Pick<Stats, 'avgWin' | 'avgLoss'>): number | null {
+  return stats.avgWin > 0 && stats.avgLoss > 0 ? (stats.avgLoss / (stats.avgWin + stats.avgLoss)) * 100 : null;
+}
+
 export function sqnLabel(sqn: number | null): string {
   if (sqn == null) return 'Not enough data';
   if (sqn < 1.6) return 'Below average';

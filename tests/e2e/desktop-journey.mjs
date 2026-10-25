@@ -469,10 +469,48 @@ async function journey() {
       `${JSON.stringify(dayLines)}.every((l) => !!${reportLine('l')}?.querySelector('[role="tooltip"]')?.textContent)`,
     ),
   );
+
+  // ---- 3c. a goal: set in Settings, seen on the Dashboard -------------------
+  await b.run(`$nav('/settings'); true`);
+  await b.until(`!!$field('Win rate')`, 'goal fields');
+  check(
+    'no goal is set to start with, and days inside my limits waits for a limit',
+    await b.run(`$field('Win rate').value === '' && $field('Days inside my limits').disabled`),
+  );
+  await b.run(`$type($field('Win rate'), '70'); true`);
+  check('a goal typed is saved in the journal file', await savedSoon((j) => j.settings.goals?.winRate === 70));
+  const goalsCard = `[...document.querySelectorAll('section')].find((s) => s.querySelector('h3')?.textContent === 'Goals')`;
+  await b.run(`$nav('/'); true`);
+  await b.until(`!!$t('All')`, 'dashboard');
+  for (let i = 0; i < 10; i++) {
+    await b.run(`$t('All').click(); true`);
+    if (await seen(`!!${goalsCard}?.innerText.includes('Needs 10 trades')`, 'goals card', 800)) break;
+  }
+  const goalText = await b.run(`${goalsCard}?.innerText ?? ''`);
+  check(
+    'the Dashboard shows it: 75% against 70%, with 4 trades of the 10 it needs',
+    goalText.includes('Win rate') && /75%\s*\/\s*70%/.test(goalText) && goalText.includes('Needs 10 trades, 4 so far'),
+    goalText,
+  );
+  check(
+    'with a dot for each of the last 8 weeks',
+    await b.run(`${goalsCard}.querySelectorAll('ol > li').length === 8`),
+  );
+  // taken off again, so the sections after this one see the Dashboard as before
+  await b.run(`$nav('/settings'); true`);
+  await b.until(`!!$field('Win rate')`, 'goal fields');
+  await b.run(`$type($field('Win rate'), ''); true`);
+  check('a box left blank takes the goal off', await savedSoon((j) => j.settings.goals === undefined));
+
   // back where section 4 expects to start: Reports has its own TSLA row, which
   // the wait for the trades table would take for the Trades page
   await b.run(`$nav('/'); true`);
   await b.until(`!!$t('All')`, 'dashboard');
+  for (let i = 0; i < 10; i++) {
+    await b.run(`$t('All').click(); true`);
+    if (await seen(`$text().includes('Net profit')`, 'metrics', 800)) break;
+  }
+  check('and its card is gone', await b.run(`$text().includes('Net profit') && !${goalsCard}`));
 
   // ---- 4. edit -------------------------------------------------------------
   await b.run(`$nav('/trades'); true`);

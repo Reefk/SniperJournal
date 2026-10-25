@@ -1,6 +1,6 @@
 import type { Settings, Setup, Trade } from './types';
 import { formatMoney, WEEKDAYS } from './format';
-import { aggregateDays, computeStats, groupTrades, type GroupStat, type Stats } from './stats';
+import { aggregateDays, breakEvenWinRate, computeStats, groupTrades, type GroupStat, type Stats } from './stats';
 import { MIN_RULE_SIDE, playbookRuleReport } from './rules';
 import { mistakeList, mistakeReport } from './mistakes';
 import { netPnl, sortChronological, statTrades, tradeDay } from './trade-math';
@@ -161,8 +161,8 @@ export function buildInsights(trades: Trade[], setups: Setup[], settings: Settin
     metric: `${formatMoney(stats.expectancy, money, { sign: true })} per trade`,
   });
 
-  if (stats.avgWin > 0 && stats.avgLoss > 0) {
-    const breakEvenWR = (stats.avgLoss / (stats.avgWin + stats.avgLoss)) * 100;
+  const breakEvenWR = breakEvenWinRate(stats);
+  if (breakEvenWR != null) {
     const margin = stats.winRate - breakEvenWR;
     out.push({
       id: 'break-even-wr',

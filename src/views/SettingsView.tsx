@@ -29,6 +29,7 @@ import { Button } from '@/components/ui/Button';
 import { Field, Input, Select } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
 import { TagManager } from '@/components/settings/TagManager';
+import { GoalFields } from '@/components/settings/GoalFields';
 
 function Section({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
   return (
@@ -190,10 +191,11 @@ export function SettingsView() {
         </Section>
 
         <Section
-          title="Risk limits"
-          description="Used by the signals on the Insights page. Leave blank to turn a limit off."
+          title="Limits and goals"
+          description="The daily limits drive the signals on the Insights page. A goal shows on the Dashboard once you give it a target. Leave a box blank to turn it off."
         >
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <h3 className="text-xs font-semibold text-fg">Daily limits</h3>
+          <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2">
             <Field label="Maximum loss in a day" hint={currency}>
               <Input
                 inputMode="decimal"
@@ -213,6 +215,7 @@ export function SettingsView() {
               />
             </Field>
           </div>
+          <GoalFields />
         </Section>
 
         <Section
