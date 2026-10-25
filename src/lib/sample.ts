@@ -1,5 +1,6 @@
 import type { RuleChecks, Setup, Trade } from './types';
 import { checksSetupId } from './rules';
+import { STARTING_MISTAKES } from './mistakes';
 import { detectSession } from './sessions';
 import { pad2, uid } from './utils';
 
@@ -103,9 +104,35 @@ function sampleTicks(rules: string[], good: boolean, rand: () => number): RuleCh
   return Object.fromEntries(rules.map((rule, i) => [rule, i !== broken]));
 }
 
+/** the mistakes most of the test losers made, so several are made often enough to be costed */
+const LOSING_MISTAKES = [
+  'Entered early (FOMO)',
+  'Chased the entry',
+  'Moved my stop',
+  'Oversized',
+  'Held a loser too long',
+];
+
+/**
+ * Mistakes for a test trade: most losers made one, a few winners did too
+ * (half of them exited too early), and now and then a second one. From their
+ * own random numbers, like the rule ticks.
+ */
+function sampleMistakes(good: boolean, rand: () => number): string[] | undefined {
+  if (rand() >= (good ? 0.15 : 0.6)) return undefined;
+  const any = () => STARTING_MISTAKES[Math.floor(rand() * STARTING_MISTAKES.length)];
+  const first = good
+    ? rand() < 0.5
+      ? 'Exited too early'
+      : any()
+    : LOSING_MISTAKES[Math.floor(rand() * LOSING_MISTAKES.length)];
+  return [...new Set([first, rand() < 0.1 ? any() : first])];
+}
+
 export function generateSampleData(accountId: string): { trades: Trade[]; setups: Setup[] } {
   const rand = mulberry32(20260101);
   const ruleRand = mulberry32(20261019);
+  const mistakeRand = mulberry32(20261025);
   const setups = sampleSetups();
   const trades: Trade[] = [];
   const now = new Date().toISOString();
@@ -187,6 +214,7 @@ export function generateSampleData(accountId: string): { trades: Trade[]; setups
           setupId: setup.id,
           ruleChecks,
           ruleChecksSetupId: checksSetupId(setup.id, ruleChecks),
+          mistakes: sampleMistakes(good, mistakeRand),
           tags: [...new Set(tags)],
           notes: good ? 'Followed the plan, let the runner work.' : 'Entered before confirmation and paid for it.',
           review: { discipline: rate(good ? 4 : 2.5), execution: rate(good ? 4 : 3), patience: rate(good ? 4 : 2.5) },

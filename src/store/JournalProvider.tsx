@@ -9,6 +9,7 @@ import { generateSampleData } from '@/lib/sample';
 import { isIncomplete } from '@/lib/trade-math';
 import { mergeIssue, mergeTrades as combineTrades } from '@/lib/merge';
 import { checksSetupId, renameRuleChecks } from '@/lib/rules';
+import { renameMistakes } from '@/lib/mistakes';
 import { chartsOnlyInSample, deleteScreenshot, imagesOnlyIn } from '@/lib/screenshots';
 import { JournalConflict, storage } from '@/lib/storage';
 import { uid } from '@/lib/utils';
@@ -104,6 +105,8 @@ interface Actions {
   upsertResource: (resource: Resource) => void;
   deleteResource: (id: string) => void;
   updateSettings: (patch: Partial<Settings>) => void;
+  /** the mistake list in Settings; `renamed`: old name → new, so the trades' mistakes follow a renamed one */
+  saveMistakes: (list: string[], renamed?: ReadonlyMap<string, string>) => void;
   updateProfile: (patch: Partial<Profile>) => void;
   completeOnboarding: (input: { name: string; accountName: string; startingBalance: number; currency: string }) => void;
   loadSampleData: () => void;
@@ -476,6 +479,13 @@ export function JournalProvider({ children }: { children: ReactNode }) {
       },
       deleteResource: (id) => mutate((d) => ({ ...d, resources: d.resources.filter((r) => r.id !== id) })),
       updateSettings: (patch) => mutate((d) => ({ ...d, settings: { ...d.settings, ...patch } })),
+      saveMistakes: (list, renamed) => {
+        mutate((d) => ({
+          ...d,
+          settings: { ...d.settings, mistakes: list },
+          trades: renamed ? renameMistakes(d.trades, renamed) : d.trades,
+        }));
+      },
       updateProfile: (patch) => mutate((d) => ({ ...d, profile: { ...d.profile, ...patch } })),
       completeOnboarding: ({ name, accountName, startingBalance, currency }) => {
         mutate((d) => ({

@@ -88,16 +88,16 @@ filled in.
 
 ## What each page does
 
-| Page                   | What it is for                                                                                                       |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| **Dashboard**          | Net profit, win rate, profit factor, average R:R, expectancy, SQN, equity curve, daily P&L and your Sniper Score.    |
-| **Calendar**           | A month at a glance: each day shows its net P&L and trade count. Click a day to see the trades behind the number.    |
-| **The Playbook**       | The setups you allow yourself to trade and their rules, with the real performance of each one underneath.            |
-| **Trades**             | The full table, with filters for pair, session, leverage, setup, date, direction and result. Click a row to edit it. |
-| **Insights & Signals** | Patterns found in your own trades: your best session, revenge trading, holding losers too long, fee drag, and more.  |
-| **Resources**          | Your own shortlist of tools and links.                                                                               |
-| **Support**            | How the app works, where your data is, and the keyboard shortcuts.                                                   |
-| **Reports**            | A printable summary, month by month and per symbol and setup.                                                        |
+| Page                   | What it is for                                                                                                                |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **Dashboard**          | Net profit, win rate, profit factor, average R:R, expectancy, SQN, equity curve, daily P&L and your Sniper Score.             |
+| **Calendar**           | A month at a glance: each day shows its net P&L and trade count. Click a day to see the trades behind the number.             |
+| **The Playbook**       | The setups you allow yourself to trade and their rules, with the real performance of each one underneath.                     |
+| **Trades**             | The full table, with filters for pair, session, leverage, setup, mistake, date, direction and result. Click a row to edit it. |
+| **Insights & Signals** | Patterns found in your own trades: your best session, revenge trading, holding losers too long, fee drag, and more.           |
+| **Resources**          | Your own shortlist of tools and links.                                                                                        |
+| **Support**            | How the app works, where your data is, and the keyboard shortcuts.                                                            |
+| **Reports**            | A printable summary, month by month and per symbol and setup, and what each of your mistakes cost.                            |
 
 ---
 
@@ -127,6 +127,13 @@ filled in.
   It is left out of the account balance too, unless you tick **Count excluded
   trades in the balance** in Settings → Accounts, so the balance matches your
   broker's statement. The statistics leave it out either way.
+- **Mark your mistakes.** Under _Mistakes_ in the trade form, tap any the trade
+  made (an early entry, a moved stop, too big a size…), or name a new one with
+  **Add one**. Reports → Mistakes then shows what each one cost: how much less
+  those trades made than your clean trades, the ones with no mistake, once a
+  mistake was made 4 times. It also shows the share of clean trades this month
+  against last month. Settings → Mistakes edits the list; renaming a mistake
+  there renames it on every trade that has it.
 - **Trades marked "needs details"** are imported rows that are still missing a
   date, a quantity or an entry price. They never count towards a statistic until
   you complete them, so your numbers are never built on half a trade.

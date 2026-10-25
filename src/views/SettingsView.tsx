@@ -1,11 +1,25 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { Download, FlaskConical, FolderInput, ImageMinus, Plus, RotateCcw, Trash2, Upload, Wallet } from 'lucide-react';
+import {
+  Download,
+  FlaskConical,
+  FolderInput,
+  ImageMinus,
+  Pencil,
+  Plus,
+  RotateCcw,
+  Trash2,
+  Upload,
+  Wallet,
+  X,
+} from 'lucide-react';
 import { useJournal } from '@/store/JournalProvider';
 import { useUI } from '@/store/UIProvider';
 import { exportBackup, parseBackup } from '@/lib/backup';
 import { CURRENCIES, formatBytes, formatMoney } from '@/lib/format';
+import { editedMistakes, mistakeList } from '@/lib/mistakes';
+import type { EditedRule } from '@/lib/rules';
 import { findUnusedCharts, removeUnusedCharts } from '@/lib/screenshots';
 import { toNumberOrNull } from '@/lib/utils';
 import { storage, type CopyReason } from '@/lib/storage';
@@ -13,6 +27,7 @@ import { CAN_BRING_OVER, useBringOver } from '@/hooks/useBringOver';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Field, Input, Select } from '@/components/ui/Field';
+import { Modal } from '@/components/ui/Modal';
 
 function Section({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
   return (
@@ -35,8 +50,10 @@ export function SettingsView() {
   const fileInput = useRef<HTMLInputElement>(null);
   const [newAccount, setNewAccount] = useState('');
   const [reclaiming, setReclaiming] = useState(false);
+  const [editingMistakes, setEditingMistakes] = useState(false);
   const bringOver = useBringOver();
   const currency = data.settings.currency;
+  const mistakes = mistakeList(data.settings);
 
   const restore = async (file: File | undefined) => {
     if (!file) return;
@@ -195,6 +212,26 @@ export function SettingsView() {
               />
             </Field>
           </div>
+        </Section>
+
+        <Section
+          title="Mistakes"
+          description="The ones the trade form offers to tap. Reports work out what each one cost you."
+        >
+          {mistakes.length ? (
+            <ul className="flex flex-wrap gap-1.5" aria-label="Your mistakes">
+              {mistakes.map((mistake) => (
+                <li key={mistake} className="rounded-md border border-line bg-app px-2.5 py-1 text-xs text-muted">
+                  {mistake}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted">The list is empty, so the trade form offers none.</p>
+          )}
+          <Button className="mt-3" onClick={() => setEditingMistakes(true)}>
+            <Pencil className="size-4" /> Edit the list
+          </Button>
         </Section>
 
         <Section title="Accounts" description="Each account keeps its own trades, balance and statistics.">
@@ -414,6 +451,99 @@ export function SettingsView() {
           </Button>
         </Section>
       </div>
+
+      {editingMistakes && (
+        <MistakeListEditor
+          list={mistakes}
+          onClose={() => setEditingMistakes(false)}
+          onSave={(list, renamed) => {
+            const moved = data.trades.filter((t) => t.mistakes?.some((m) => renamed.has(m))).length;
+            actions.saveMistakes(list, renamed);
+            setEditingMistakes(false);
+            toast(
+              moved ? `Mistakes saved, and renamed on ${moved} ${moved === 1 ? 'trade' : 'trades'}` : 'Mistakes saved',
+            );
+          }}
+        />
+      )}
     </>
+  );
+}
+
+/** The mistake list, one per row, as the Playbook edits a setup's rules */
+function MistakeListEditor({
+  list,
+  onSave,
+  onClose,
+}: {
+  list: string[];
+  /** `renamed`: each renamed mistake, old name → new, so the trades that have it follow */
+  onSave: (list: string[], renamed: Map<string, string>) => void;
+  onClose: () => void;
+}) {
+  const [rows, setRows] = useState<EditedRule[]>(() =>
+    list.length ? list.map((text) => ({ text, was: text })) : [{ text: '', was: null }],
+  );
+  const setRow = (index: number, value: string) =>
+    setRows((rs) => rs.map((r, i) => (i === index ? { ...r, text: value } : r)));
+  const addRow = () => setRows((rs) => [...rs, { text: '', was: null }]);
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      closeOnBackdrop={false}
+      size="md"
+      title="Your mistakes"
+      description="Renaming one renames it on every trade that has it. Taking one off the list leaves those trades as they are, and Reports still count it."
+    >
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          const { list: saved, renamed } = editedMistakes(rows);
+          onSave(saved, renamed);
+        }}
+        className="space-y-4"
+      >
+        <div className="space-y-2">
+          {rows.map((row, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <Input
+                aria-label={`Mistake ${i + 1}`}
+                value={row.text}
+                onChange={(e) => setRow(i, e.target.value)}
+                placeholder="e.g. Traded the first minute"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addRow();
+                  }
+                }}
+              />
+              <Button
+                size="icon"
+                variant="ghost"
+                aria-label={`Remove mistake ${i + 1}`}
+                onClick={() => setRows((rs) => rs.filter((_, idx) => idx !== i))}
+              >
+                <X className="size-4" />
+              </Button>
+            </div>
+          ))}
+        </div>
+        <Button size="sm" variant="ghost" onClick={addRow}>
+          <Plus className="size-3.5" /> Add a mistake
+        </Button>
+
+        <div className="-mx-5 -mb-4 flex justify-end gap-2 border-t border-line px-5 py-3">
+          <Button variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="primary" type="submit">
+            Save mistakes
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 }

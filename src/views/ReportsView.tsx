@@ -8,6 +8,16 @@ import { computeStats, groupTrades, sqnLabel } from '@/lib/stats';
 import { RANGE_OPTIONS, splitByRange, type RangeKey } from '@/lib/ranges';
 import { tradesToCsv } from '@/lib/csv';
 import { formatDate, formatDuration, formatMoney, formatPct, formatRatio, MONTHS_SHORT, WEEKDAYS } from '@/lib/format';
+import {
+  cleanMonths,
+  MIN_MISTAKE_SIDE,
+  mistakeList,
+  mistakeReport,
+  thisAndLastMonth,
+  wholeShare,
+  type CleanMonth,
+  type MistakeReport,
+} from '@/lib/mistakes';
 import { netPnl, statTrades, tradeDay } from '@/lib/trade-math';
 import { cn, dateKey, downloadFile, parseLocal } from '@/lib/utils';
 import { storage } from '@/lib/storage';
@@ -24,7 +34,7 @@ export function ReportsView() {
   const [range, setRange] = useState<RangeKey>('ALL');
   const currency = data.settings.currency;
 
-  const { inRange, before } = useMemo(() => splitByRange(accountTrades, range), [accountTrades, range]);
+  const { inRange, before, start } = useMemo(() => splitByRange(accountTrades, range), [accountTrades, range]);
   // like the dashboard: the range starts from the balance it actually started at,
   // so its drawdown percentage matches the dashboard's for the same range
   const stats = useMemo(
@@ -65,6 +75,13 @@ export function ReportsView() {
       ),
     [closed],
   );
+
+  // from every trade of the account, so the day mistakes started being logged is known whatever the range
+  const mistakes = useMemo(
+    () => mistakeReport(accountTrades, mistakeList(data.settings), start),
+    [accountTrades, data.settings, start],
+  );
+  const cleanByMonth = useMemo(() => thisAndLastMonth(cleanMonths(accountTrades)), [accountTrades]);
 
   if (accountTrades.length === 0) {
     return (
@@ -245,6 +262,8 @@ export function ReportsView() {
         </div>
       </div>
 
+      <MistakesReport report={mistakes} rangeStart={start} months={cleanByMonth} currency={currency} />
+
       {stats.bestDay && stats.worstDay && (
         <p className="mt-4 text-xs text-faint">
           Best day {formatDate(stats.bestDay.day)} at {formatMoney(stats.bestDay.net, currency, { sign: true })}; worst
@@ -252,5 +271,112 @@ export function ReportsView() {
         </p>
       )}
     </>
+  );
+}
+
+const tone = (v: number) => (v > 0 ? 'text-profit' : v < 0 ? 'text-loss' : 'text-muted');
+/** half a cent: less than that is what is left over from adding up cents, not money */
+const isMoney = (v: number | null | undefined): v is number => v != null && v >= 0.005;
+
+/** "58% clean (7 of 12)" */
+const cleanShare = (m: CleanMonth) => `${wholeShare(m.clean, m.trades)}% clean (${m.clean} of ${m.trades})`;
+
+/** What each mistake cost: how much less its trades made than the clean ones, with no mistake */
+function MistakesReport({
+  report,
+  rangeStart,
+  months: { thisMonth, lastMonth },
+  currency,
+}: {
+  report: MistakeReport;
+  /** the first day of the range shown, or null for all of it */
+  rangeStart: string | null;
+  months: { thisMonth: CleanMonth | null; lastMonth: CleanMonth | null };
+  currency: string;
+}) {
+  const { clean, withMistake, lines, since, from } = report;
+  const cleanCount = clean?.trades ?? 0;
+  // per trade, so it never reads "$0.00 a trade less"
+  const gap = clean && withMistake && report.cost != null ? clean.avg - withMistake.avg : null;
+  const month = thisMonth
+    ? `This month ${cleanShare(thisMonth)}${lastMonth ? `, last month ${cleanShare(lastMonth)}` : ''}.`
+    : lastMonth
+      ? `No trade closed this month yet; last month ${cleanShare(lastMonth)}.`
+      : null;
+
+  return (
+    <ChartContainer
+      title="Mistakes"
+      subtitle={
+        report.trades > 0 && from ? (
+          <>
+            Clean trades, with no mistake:{' '}
+            <span className="num font-medium text-fg">{wholeShare(cleanCount, report.trades)}%</span> ({cleanCount} of{' '}
+            {report.trades}) {from === rangeStart ? 'in this range' : `since ${formatDate(from)}`}. {month}
+          </>
+        ) : undefined
+      }
+      className="mt-4"
+      bodyClassName="px-2 pb-3 pt-1"
+      empty={!lines.length}
+      emptyText={
+        since
+          ? 'No trade in this range made a mistake.'
+          : 'No mistakes logged yet. Tap the ones a trade made in its form, under Mistakes, and this works out what each one costs you.'
+      }
+    >
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="text-xs text-muted">
+            <th className="px-2 py-2 text-left font-medium md:px-3">Mistake</th>
+            <th className="px-2 py-2 text-right font-medium md:px-3">Times</th>
+            <th className="px-2 py-2 text-right font-medium max-md:hidden md:px-3">Win rate</th>
+            <th className="px-2 py-2 text-right font-medium md:px-3">Net</th>
+            <th className="px-2 py-2 text-right font-medium md:px-3">Cost</th>
+          </tr>
+        </thead>
+        <tbody>
+          {lines.map((line) => (
+            <tr key={line.mistake} className="border-t border-line">
+              <td className="px-2 py-2 text-fg md:px-3">
+                {line.mistake}
+                {!line.listed && <span className="text-xs text-faint"> (not on your list)</span>}
+              </td>
+              <td className="num px-2 py-2 text-right text-muted md:px-3">{line.trades}</td>
+              <td className="num px-2 py-2 text-right text-muted max-md:hidden md:px-3">
+                {formatPct(line.winRate, 0)}
+              </td>
+              <td className={cn('num px-2 py-2 text-right md:px-3', tone(line.net))}>
+                {formatMoney(line.net, currency, { sign: true, compact: true })}
+              </td>
+              <td
+                className={cn(
+                  'num px-2 py-2 text-right font-medium md:px-3',
+                  isMoney(line.cost) ? 'text-loss' : 'text-faint',
+                )}
+              >
+                {line.cost == null ? '—' : isMoney(line.cost) ? formatMoney(line.cost, currency) : 'none so far'}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="space-y-1.5 px-3 pt-3 text-xs leading-relaxed text-faint">
+        {withMistake && isMoney(gap) && isMoney(report.cost) && (
+          <p className="text-muted">
+            The {withMistake.trades} trades with a mistake made {formatMoney(gap, currency)} a trade less than the clean
+            ones: about <span className="num font-semibold text-loss">{formatMoney(report.cost, currency)}</span> in
+            all.
+          </p>
+        )}
+        <p>
+          A mistake&apos;s cost is what its trades would have made more at the average of the clean trades
+          {clean ? ` (${formatMoney(clean.avg, currency, { sign: true })})` : ''}, so a trade that won despite it counts
+          too. It shows once a mistake was made {MIN_MISTAKE_SIDE} times and {MIN_MISTAKE_SIDE} trades were clean. A
+          trade with two mistakes counts for both.
+          {since && <> Trades from before {formatDate(since)}, the first day a trade has a mistake, are not counted.</>}
+        </p>
+      </div>
+    </ChartContainer>
   );
 }

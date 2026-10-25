@@ -211,3 +211,26 @@ describe("rule ticks follow their setup's rules", () => {
     expect(madeFor().filter((id) => id === orb.id)).toHaveLength(2);
   });
 });
+
+describe('the mistake list', () => {
+  const mistakesOf = () => seen.journal!.data.trades.map((t) => t.mistakes);
+
+  it('saved with a mistake renamed, renames it on every trade, in every account', async () => {
+    const ids = seen.journal!.data.trades.map((t) => t.id);
+    await act(async () => seen.journal!.actions.patchTrades(ids.slice(0, 2), { mistakes: ['Oversized', 'No stop'] }));
+    await act(async () => seen.journal!.actions.patchTrades(ids.slice(2), { mistakes: ['Oversized'] }));
+    await act(async () =>
+      seen.journal!.actions.saveMistakes(['Too big', 'No stop'], new Map([['Oversized', 'Too big']])),
+    );
+    expect(seen.journal!.data.settings.mistakes).toEqual(['Too big', 'No stop']);
+    expect(mistakesOf()).toEqual([['Too big', 'No stop'], ['Too big', 'No stop'], ['Too big']]);
+  });
+
+  it('saved without a mistake, leaves the trades that made it as they are', async () => {
+    const [first] = seen.journal!.data.trades.map((t) => t.id);
+    await act(async () => seen.journal!.actions.patchTrades([first], { mistakes: ['Oversized'] }));
+    await act(async () => seen.journal!.actions.saveMistakes(['No stop']));
+    expect(seen.journal!.data.settings.mistakes).toEqual(['No stop']);
+    expect(mistakesOf()).toEqual([['Oversized'], undefined, undefined]);
+  });
+});

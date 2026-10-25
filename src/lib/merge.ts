@@ -1,6 +1,7 @@
 import type { Trade } from './types';
 import { grossPnl, isClosed } from './trade-math';
 import { checksSetupId, combineChecks } from './rules';
+import { combineMistakes } from './mistakes';
 
 /**
  * Scaling out of a position leaves one entry matched against several exits,
@@ -139,6 +140,7 @@ export function mergeTrades(trades: Trade[]): Trade {
     setupId,
     ruleChecks,
     ruleChecksSetupId: checksSetupId(setupId, ruleChecks),
+    mistakes: combineMistakes(legs.map((t) => t.mistakes)),
     session: legs.find((t) => t.session)?.session,
     leverage: legs.find((t) => t.leverage != null)?.leverage ?? null,
     tags: [...new Set(legs.flatMap((t) => t.tags))],

@@ -48,6 +48,8 @@ export interface Trade {
   ruleChecks?: RuleChecks;
   /** the setup the ticks were made against (see checksSetupId in lib/rules.ts) */
   ruleChecksSetupId?: string;
+  /** the mistakes this trade made, by name (see lib/mistakes.ts) */
+  mistakes?: string[];
   tags: string[];
   notes?: string;
   /** a link to a chart, e.g. a TradingView snapshot */
@@ -106,6 +108,11 @@ export interface Settings {
    * Absent or false (the default): it keeps the 4.5:1 contrast of other text.
    */
   fadedPlaceholders?: boolean;
+  /**
+   * The mistakes the trade form offers, in order. Absent until the list is
+   * first changed, which reads as STARTING_MISTAKES (lib/mistakes.ts).
+   */
+  mistakes?: string[];
 }
 
 export interface Profile {

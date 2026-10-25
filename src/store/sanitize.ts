@@ -29,6 +29,12 @@ const optBool = (v: unknown) => (typeof v === 'boolean' ? v : undefined);
 const nullableNum = (v: unknown): number | null | undefined =>
   v == null || isNum(v) ? (v as number | null | undefined) : null;
 const strings = (v: unknown) => (Array.isArray(v) ? v.filter((s): s is string => typeof s === 'string') : []);
+/** mistakes, on a trade or the list: names that aren't blank, each once (twice would count it twice) */
+const names = (v: unknown) => [...new Set(strings(v).filter((s) => s.trim()))];
+const optNames = (v: unknown) => {
+  const list = names(v);
+  return list.length ? list : undefined;
+};
 
 /** rule ticks: true, false or null each, under a rule's wording; anything else is dropped, and with it an empty set */
 function ruleChecks(v: unknown): RuleChecks | undefined {
@@ -104,6 +110,10 @@ export function cleanSettings(v: unknown, base: Settings): Settings {
     // absent until it is first changed, which reads as off
     countExcludedInBalance: optBool(s.countExcludedInBalance),
     fadedPlaceholders: optBool(s.fadedPlaceholders),
+    // absent reads as the starting list; an empty one is a list with every mistake taken off,
+    // but one with nothing usable in it is damaged, and reads as absent
+    mistakes:
+      Array.isArray(s.mistakes) && (!s.mistakes.length || names(s.mistakes).length) ? names(s.mistakes) : undefined,
   };
 }
 
@@ -157,6 +167,7 @@ export function cleanTrades(v: unknown): Trade[] {
       session: optText(t.session),
       setupId: optText(t.setupId),
       ...ownTicks(t),
+      mistakes: optNames(t.mistakes),
       tags: strings(t.tags),
       notes: optText(t.notes),
       screenshotUrl: optText(t.screenshotUrl),

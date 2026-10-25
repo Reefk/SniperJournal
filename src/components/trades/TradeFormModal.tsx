@@ -7,6 +7,7 @@ import { useJournal } from '@/store/JournalProvider';
 import { useUI } from '@/store/UIProvider';
 import { detectSession, SESSIONS } from '@/lib/sessions';
 import { checksToSave, rulesShown } from '@/lib/rules';
+import { mistakeList, mistakesShown } from '@/lib/mistakes';
 import { formatDuration, formatMoney, formatRatio } from '@/lib/format';
 import { grossPnl, holdMinutes, isClosed, netPnl, plannedRR, riskAmount, rMultiple } from '@/lib/trade-math';
 import { cn, toLocalInput, toNumberOrNull } from '@/lib/utils';
@@ -21,6 +22,7 @@ import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { ChartImage } from './ChartImage';
 import { ImportBody } from './ImportTradesModal';
 import { RuleChecklist } from './RuleChecklist';
+import { MistakeChips } from './MistakeChips';
 
 interface FormState {
   accountId: string;
@@ -44,6 +46,7 @@ interface FormState {
   ruleChecks?: RuleChecks;
   /** the checklist was used, or the setup changed: the ticks are saved as the checklist shows them */
   rulesTouched: boolean;
+  mistakes: string[];
   tags: string[];
   notes: string;
   screenshotUrl: string;
@@ -84,6 +87,8 @@ function initialState(accountId: string, trade?: Trade, defaults?: Partial<Trade
     // ticks belong to the trade they were made on, never to defaults for a new one
     ruleChecks: trade?.ruleChecks,
     rulesTouched: false,
+    // like the ticks: what this trade did wrong, never a default for a new one
+    mistakes: trade?.mistakes ?? [],
     tags: src.tags ?? [],
     notes: src.notes ?? '',
     screenshotUrl: src.screenshotUrl ?? '',
@@ -139,6 +144,7 @@ function validate(f: FormState, setupRules: string[], editing?: Trade): { errors
       setupId: f.setupId || undefined,
       // untouched, a trade keeps the ticks it was saved with, so editing its notes doesn't re-judge it
       ruleChecks: !f.setupId ? undefined : f.rulesTouched ? checksToSave(setupRules, f.ruleChecks) : f.ruleChecks,
+      mistakes: f.mistakes.length ? f.mistakes : undefined,
       tags: f.tags,
       notes: f.notes.trim() || undefined,
       screenshotUrl: f.screenshotUrl.trim() || undefined,
@@ -298,6 +304,7 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
 
   const chosenSetup = data.setups.find((s) => s.id === form.setupId);
   const shownRules = chosenSetup ? rulesShown(chosenSetup.rules, form.ruleChecks) : [];
+  const listedMistakes = mistakeList(data.settings);
 
   const preview = previewTrade(form);
   const closed = isClosed(preview) && preview.quantity > 0;
@@ -322,6 +329,11 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
       return;
     }
     discardCharts(result.input.screenshotFile);
+    // a mistake named here goes on the list; one the trade already had stays off it, if it was taken off
+    const named = (result.input.mistakes ?? []).filter(
+      (m) => !listedMistakes.includes(m) && !trade?.mistakes?.includes(m),
+    );
+    if (named.length) actions.saveMistakes([...listedMistakes, ...named]);
     if (trade) {
       actions.updateTrade(trade.id, result.input);
       toast(`${result.input.symbol} trade updated`);
@@ -579,7 +591,14 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
             />
           )}
 
-          <Field label="Tags" hint="mistakes, catalysts, emotions">
+          <MistakeChips
+            shown={mistakesShown(listedMistakes, trade?.mistakes)}
+            listed={listedMistakes}
+            value={form.mistakes}
+            onChange={(mistakes) => set('mistakes', mistakes)}
+          />
+
+          <Field label="Tags" hint="catalysts, emotions, sources">
             <TagInput value={form.tags} onChange={(tags) => set('tags', tags)} suggestions={tagSuggestions} />
           </Field>
 

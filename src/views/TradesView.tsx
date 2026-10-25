@@ -29,6 +29,7 @@ import { useJournal } from '@/store/JournalProvider';
 import { useUI } from '@/store/UIProvider';
 import { computeStats } from '@/lib/stats';
 import { SESSIONS } from '@/lib/sessions';
+import { matchesMistakeFilter, mistakeList, type MistakeFilter } from '@/lib/mistakes';
 import { tradesToCsv } from '@/lib/csv';
 import { formatDate, formatMoney, formatNumber, formatPct, formatPrice, formatTime } from '@/lib/format';
 import { isClosed, isIncomplete, matchesSearch, missingDetails, netPnl, outcome, rMultiple } from '@/lib/trade-math';
@@ -50,6 +51,7 @@ interface Filters {
   session: string;
   leverage: string;
   setup: string;
+  mistake: MistakeFilter;
   from: string;
   to: string;
   side: 'ALL' | 'LONG' | 'SHORT';
@@ -62,6 +64,7 @@ const EMPTY: Filters = {
   session: '',
   leverage: '',
   setup: '',
+  mistake: '',
   from: '',
   to: '',
   side: 'ALL',
@@ -107,6 +110,18 @@ export function TradesView() {
       [...new Set(accountTrades.map((t) => t.leverage).filter((l): l is number => l != null))].sort((a, b) => a - b),
     [accountTrades],
   );
+  // the list, then any a trade has that the list no longer does, and the one filtered on, even
+  // once it is renamed or another account is open, so the box never hides a filter still on
+  const mistakes = useMemo(
+    () => [
+      ...new Set([
+        ...mistakeList(data.settings),
+        ...accountTrades.flatMap((t) => t.mistakes ?? []),
+        ...(filters.mistake.startsWith('m:') ? [filters.mistake.slice(2)] : []),
+      ]),
+    ],
+    [accountTrades, data.settings, filters.mistake],
+  );
 
   const filtered = useMemo(() => {
     const term = filters.q.trim().toLowerCase();
@@ -116,6 +131,7 @@ export function TradesView() {
       if (filters.session && t.session !== filters.session) return false;
       if (filters.leverage && String(t.leverage ?? '') !== filters.leverage) return false;
       if (filters.setup && t.setupId !== filters.setup) return false;
+      if (!matchesMistakeFilter(t, filters.mistake)) return false;
       const day = t.openedAt.slice(0, 10);
       if (filters.from && day < filters.from) return false;
       if (filters.to && day > filters.to) return false;
@@ -420,6 +436,23 @@ export function TradesView() {
               {data.setups.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name}
+                </option>
+              ))}
+            </Select>
+          )}
+          {mistakes.length > 0 && (
+            <Select
+              className={cn('w-[calc(50%_-_0.25rem)] md:w-44', !showFilters && 'max-md:hidden')}
+              value={filters.mistake}
+              onChange={(e) => update('mistake', e.target.value as MistakeFilter)}
+              aria-label="Mistake"
+            >
+              <option value="">All mistakes</option>
+              <option value="any">Made a mistake</option>
+              <option value="clean">No mistake logged</option>
+              {mistakes.map((m) => (
+                <option key={m} value={`m:${m}`}>
+                  {m}
                 </option>
               ))}
             </Select>

@@ -2,6 +2,7 @@ import type { Settings, Setup, Trade } from './types';
 import { formatMoney, WEEKDAYS } from './format';
 import { aggregateDays, computeStats, groupTrades, type GroupStat, type Stats } from './stats';
 import { MIN_RULE_SIDE, playbookRuleReport } from './rules';
+import { mistakeList, mistakeReport } from './mistakes';
 import { netPnl, sortChronological, statTrades, tradeDay } from './trade-math';
 import { dateKey, mean, parseLocal } from './utils';
 
@@ -285,6 +286,20 @@ export function buildInsights(trades: Trade[], setups: Setup[], settings: Settin
             metric: `${broken.trades} of ${rules.checked} checked trades broke a rule`,
           },
     );
+  }
+
+  // mistakes: what the trades with the costliest one made less than the clean trades, with none
+  const { costliest, clean } = mistakeReport(closed, mistakeList(settings));
+  if (costliest?.cost != null && clean) {
+    const cost = Math.round(costliest.cost * 100) / 100;
+    out.push({
+      id: 'mistake',
+      tone: 'bad',
+      category: 'Behaviour',
+      title: `"${costliest.mistake}" is your most expensive mistake`,
+      body: `You made it on ${costliest.trades} trades, and they averaged ${formatMoney(costliest.avg, money, { sign: true })} against ${formatMoney(clean.avg, money, { sign: true })} for the ${clean.trades} clean trades, the ones with no mistake. Had they done as well, you would be about ${formatMoney(cost, money)} better off.`,
+      metric: `about ${formatMoney(cost, money)} over ${costliest.trades} trades`,
+    });
   }
 
   // --- direction -------------------------------------------------------

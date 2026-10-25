@@ -6,7 +6,7 @@ import { isIncomplete } from '../trade-math';
  * A trade the journal has open, and a file that closes it. The file's trade
  * says how the position went (size, prices, the close, and the fees and point
  * value when it gives them);
- * what you wrote about the trade (notes, setup and its rule ticks, tags, stop,
+ * what you wrote about the trade (notes, setup and its rule ticks, mistakes, tags, stop,
  * target, chart, review) stays as it is. Used by every kind of file: fills that continue it
  * (positions.ts), the same trade again with its exit (likely.ts, rows.ts).
  */
@@ -20,6 +20,7 @@ const described = (open: Trade, file: Trade) => ({
   setupId: open.setupId ?? file.setupId,
   ruleChecks: open.ruleChecks,
   ruleChecksSetupId: checksSetupId(open.setupId, open.ruleChecks),
+  mistakes: open.mistakes,
   tags: [...new Set([...open.tags, ...file.tags])],
   notes: open.notes || file.notes,
   session: open.session || file.session,
