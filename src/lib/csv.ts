@@ -1,23 +1,24 @@
 import type { Account, Setup, Trade } from './types';
-import { grossPnl, isClosed, missingDetails, netPnl, rMultiple } from './trade-math';
+import { grossPnl, isClosed, needsText, netPnl, rMultiple } from './trade-math';
 import { pad2 } from './utils';
 import { detectLayout, missingSymbol, type ImportLayout, type LayoutChoices } from './import/layout';
 import { createReader, type ImportTarget } from './import/reader';
 import { combinePartials, tradesFromRows } from './import/rows';
 import { tradesFromFills } from './import/positions';
-import { NO_FEES, ZERO_FEES, collectMessages } from './import/report';
+import { collectMessages, noFeesNotice, zeroFeesNotice } from './import/report';
+import { tr } from './i18n';
 import { splitLikelyDuplicates } from './import/likely';
 import { recognisePlatform } from './import/platforms';
 import { formulaSafe } from './import/values';
 import { feeAtRate, type FeeRate } from './fee-rate';
 
 export { parseCsv } from './import/table';
-export { NO_FEES, ZERO_FEES } from './import/report';
+export { noFeesNotice, quoted, zeroFeesNotice } from './import/report';
 export type { FeeRate } from './fee-rate';
-export { ROLE_LABELS, type Role } from './import/columns';
+export { roleLabels, type Role } from './import/columns';
 export type { DateOrder } from './import/values';
 export type { ImportLayout, RowKind } from './import/layout';
-export { PLATFORMS, type Platform, type PlatformGroup } from './import/platforms';
+export { PLATFORMS, groupName, say, type Platform, type PlatformGroup } from './import/platforms';
 export { fileTooLarge, sheetTooLarge } from './import/size';
 export {
   WorkbookError,
@@ -199,7 +200,7 @@ function nothingImported(why: Partial<ImportResult>): ImportResult {
  */
 export function importTradesFromCsv(text: string, ctx: ImportOptions): ImportResult {
   const sheet = detectLayout(text, ctx);
-  if (!sheet) return nothingImported({ errors: ['The file has no data rows.'] });
+  if (!sheet) return nothingImported({ errors: [tr('imp.noRows')] });
   const known = recognisePlatform(sheet.table.header, sheet.table.statement);
   const platform = known && { name: known.name, file: known.file };
   // a platform's export that holds no trades: say which one does
@@ -242,7 +243,7 @@ export function importTradesFromCsv(text: string, ctx: ImportOptions): ImportRes
   const given = feesMissing ? ctx.addFee : ctx.replaceFees;
   const rate = given && given.amount > 0 ? given : null;
   const withFee = (t: Trade): Trade => (rate ? { ...t, fees: feeAtRate(t, rate) } : t);
-  if (made.length && feesMissing && !rate) notices.push(feesMissing === 'zero' ? ZERO_FEES : NO_FEES);
+  if (made.length && feesMissing && !rate) notices.push(feesMissing === 'zero' ? zeroFeesNotice() : noFeesNotice());
   const {
     trades: all,
     combined,
@@ -255,22 +256,9 @@ export function importTradesFromCsv(text: string, ctx: ImportOptions): ImportRes
   const existing = (ctx.existing ?? []).map((t) => done.get(t.id) ?? t);
   const split = splitLikelyDuplicates(all, existing, finishing, new Set(done.keys()), unsaid);
   const { fresh: trades, likely, closesOpen, closesPart, finished } = split;
-  if (closesOpen) {
-    errors.push(
-      `${closesOpen} ${closesOpen === 1 ? 'trade closes a position' : 'trades close positions'} your journal still has as open. Both are kept: delete the open ${closesOpen === 1 ? 'copy' : 'copies'} once you have checked.`,
-    );
-  }
-  if (closesPart && finishing) {
-    notices.push(
-      closesPart === 1
-        ? '1 trade closes part of a position your journal had open: that part was finished, and the rest stays open as a trade of its own.'
-        : `${closesPart} trades close part of positions your journal had open: those parts were finished, and the rest of each stays open as a trade of its own.`,
-    );
-  } else if (closesPart) {
-    errors.push(
-      `${closesPart} ${closesPart === 1 ? 'trade closes part of a position' : 'trades close part of positions'} your journal still has as open. Both are kept: make the open ${closesPart === 1 ? 'trade' : 'trades'} smaller once you have checked.`,
-    );
-  }
+  if (closesOpen) errors.push(tr('imp.closesOpen', { count: closesOpen }));
+  if (closesPart && finishing) notices.push(tr('imp.closesPart.finished', { count: closesPart }));
+  else if (closesPart) errors.push(tr('imp.closesPart.kept', { count: closesPart }));
 
   return {
     trades: trades.map(withFee),
@@ -293,7 +281,5 @@ export function importTradesFromCsv(text: string, ctx: ImportOptions): ImportRes
 
 /** Human-readable list of what a row still needs, for the import preview */
 export function describeGaps(trade: Trade): string {
-  const gaps = missingDetails(trade);
-  if (!gaps.length) return '';
-  return `needs ${gaps.join(', ')}`;
+  return needsText(trade);
 }

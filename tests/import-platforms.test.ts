@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { PLATFORMS, importTradesFromCsv } from '@/lib/csv';
-import { recognisePlatform } from '@/lib/import/platforms';
+import { recognisePlatform, say } from '@/lib/import/platforms';
 import { netPnl } from '@/lib/trade-math';
 import type { Account } from '@/lib/types';
 import { PLATFORM_EXPORTS } from './platform-exports';
@@ -107,7 +107,7 @@ describe('which platform a file came from', () => {
 
   it('every platform in the list says which export to choose', () => {
     for (const p of PLATFORMS) {
-      expect(p.how.length, p.name).toBeGreaterThan(10);
+      expect(say(p.how).length, p.name).toBeGreaterThan(10);
       expect(p.exports.length, p.name).toBeGreaterThan(0);
     }
     const names = PLATFORMS.map((p) => p.name);

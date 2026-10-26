@@ -1,5 +1,6 @@
 import type { Account, Setup, Trade } from '../types';
 import { uid } from '../utils';
+import { decimalMark, tr } from '../i18n';
 import type { Role } from './columns';
 import type { Unsaid } from './finish';
 import { OPTION_MULTIPLIER, futuresPointValue, isOption, isStock, optionSymbol } from './instruments';
@@ -217,7 +218,7 @@ export function createReader(sheet: Sheet, target: ImportTarget): Reader {
     const key = name.toLowerCase();
     let setup = setupsByName.get(key);
     if (!setup) {
-      setup = { id: uid(), name, rules: [], description: 'Created during a CSV import.' };
+      setup = { id: uid(), name, rules: [], description: tr('imp.newSetup') };
       setupsByName.set(key, setup);
       newSetups.push(setup);
     }
@@ -246,9 +247,13 @@ export function createReader(sheet: Sheet, target: ImportTarget): Reader {
   const instrumentWorth = (symbol: string, row: string[]): { value: number; how: string | null } | null => {
     const assetClass = cell(row, 'asset_class');
     const future = futuresPointValue(symbol, assetClass);
-    if (future) return { value: future.value, how: `${future.value} a point (${future.root} futures)` };
+    if (future)
+      return {
+        value: future.value,
+        how: tr('imp.how.future', { value: decimalMark(String(future.value)), root: future.root }),
+      };
     if (isOption(symbol, assetClass, cell(row, 'put_call')))
-      return { value: OPTION_MULTIPLIER, how: `${OPTION_MULTIPLIER} (an option contract)` };
+      return { value: OPTION_MULTIPLIER, how: tr('imp.how.option', { value: OPTION_MULTIPLIER }) };
     if (isStock(assetClass)) return { value: 1, how: null };
     return null;
   };

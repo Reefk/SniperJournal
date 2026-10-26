@@ -1,3 +1,4 @@
+import { tr } from '../i18n';
 import { planColumns, type ColumnPlan, type Role } from './columns';
 import { findTable, parseCsv, type Table } from './table';
 import { dateOrderOf, parseMoney, type DateOrder } from './values';
@@ -200,5 +201,8 @@ export function detectLayout(text: string, choices: LayoutChoices): Sheet | null
 /** Why no row can be read, when no column holds the symbol and none was typed; null otherwise. */
 export function missingSymbol(sheet: Sheet): string | null {
   if (sheet.has('symbol') || sheet.has('underlying') || sheet.fallbackSymbol) return null;
-  return `No symbol column found. The columns in this file are: ${sheet.table.header.join(', ')}. Choose which column holds the symbol under "Columns" below, or type the symbol for every row.`;
+  return tr('imp.noSymbolColumn', {
+    columns: sheet.table.header.join(tr('format.comma')),
+    columnsLabel: tr('imp.label.columns'),
+  });
 }

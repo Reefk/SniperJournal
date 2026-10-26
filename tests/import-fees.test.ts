@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { NO_FEES, ZERO_FEES, importTradesFromCsv, type FeeRate, type ImportResult } from '@/lib/csv';
+import { importTradesFromCsv, noFeesNotice, zeroFeesNotice, type FeeRate, type ImportResult } from '@/lib/csv';
 import { grossPnl, netPnl } from '@/lib/trade-math';
+
+const NO_FEES = noFeesNotice();
+const ZERO_FEES = zeroFeesNotice();
 import type { Account, Setup, Trade } from '@/lib/types';
 
 /**

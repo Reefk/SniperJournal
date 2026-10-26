@@ -6,7 +6,8 @@ import { uid } from '../utils';
 import type { Role } from './columns';
 import { finishOpen, type Unsaid } from './finish';
 import { fitReported, type Reader, type RowsRead } from './reader';
-import { rowsNote } from './report';
+import { quoted, rowsNote } from './report';
+import { tr } from '../i18n';
 import { parseMoney, parseSide, type Moment } from './values';
 
 /**
@@ -269,41 +270,32 @@ export function tradesFromRows(r: Reader, journal?: readonly Trade[]): RowsRead 
     errors.push(
       rowsNote(
         unreadOpen.rows,
-        `the entry time "${unreadOpen.value}" could not be read, so it was left blank and the trade marked needs details.`,
-        `the entry time could not be read (the first is "${unreadOpen.value}"), so it was left blank and the trades marked needs details.`,
+        tr('imp.unreadOpen.one', { value: unreadOpen.value }),
+        tr('imp.unreadOpen.many', { value: unreadOpen.value }),
       ),
     );
   if (unreadClose.rows.length)
     errors.push(
       rowsNote(
         unreadClose.rows,
-        `the exit time "${unreadClose.value}" could not be read, so it was left blank: until it is filled in, the trade counts on the day it was opened.`,
-        `the exit time could not be read (the first is "${unreadClose.value}"), so it was left blank: until it is filled in, the trades count on the day they were opened.`,
+        tr('imp.unreadClose.one', { value: unreadClose.value }),
+        tr('imp.unreadClose.many', { value: unreadClose.value }),
       ),
     );
   if (!sheet.has('quantity') && trades.length) {
-    errors.push('There is no size column, so every trade was marked needs details. Fill in the sizes after importing.');
+    errors.push(tr('imp.noSizeColumn'));
   } else if (noSize.length) {
-    errors.push(
-      rowsNote(
-        noSize,
-        'no size above 0, so the trade was marked needs details.',
-        'no size above 0, so the trades were marked needs details.',
-      ),
-    );
+    errors.push(rowsNote(noSize, tr('imp.noSize.one'), tr('imp.noSize.many')));
   }
   if (!sheet.has('side') && !sheet.paired && !sheet.signedQuantities && trades.length) {
-    errors.push('There is no direction column, so every row was imported as LONG. Check any shorts.');
+    errors.push(tr('imp.noSideColumn', { side: tr('side.LONG') }));
   }
   if (notTrades.length) {
-    const n = notTrades.length;
     const examples = [...new Set(notTrades)]
       .slice(0, 3)
-      .map((v) => `"${v}"`)
-      .join(', ');
-    notices.push(
-      `${n} ${n === 1 ? 'row has' : 'rows have'} no price and no size (${examples}), so ${n === 1 ? 'it is not a trade and was' : 'they are not trades and were'} left out.`,
-    );
+      .map((v) => quoted(v))
+      .join(tr('format.comma'));
+    notices.push(tr('imp.notTrades', { count: notTrades.length, examples }));
   }
   return { trades, errors, notices, openingFill, finished, unsaid };
 }

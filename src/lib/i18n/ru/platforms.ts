@@ -1,0 +1,72 @@
+import type { platforms as en } from '../en/platforms';
+import type { Translation } from '../types';
+
+export const platforms: Translation<typeof en> = {
+  'plat.group.Futures': 'Фьючерсы',
+  'plat.group.TradingView': 'TradingView',
+  'plat.group.Forex and CFDs': 'Форекс и CFD',
+  'plat.group.Stocks and options': 'Акции и опционы',
+  'plat.group.Crypto': 'Криптовалюты',
+  'plat.group.Other journals': 'Другие журналы',
+
+  'plat.file.executions': 'исполнения',
+  'plat.file.trades': 'сделки',
+  'plat.file.performance report': 'отчёт о результатах',
+  'plat.file.orders': 'ордера',
+  'plat.file.completed orders': 'исполненные ордера',
+  'plat.file.trade performance': 'результаты сделок',
+  'plat.file.trades history': 'история сделок',
+  'plat.file.journal': 'журнал',
+  'plat.file.trade activity log': 'журнал торговой активности',
+  'plat.file.trade list': 'список сделок',
+  'plat.file.order history': 'история ордеров',
+  'plat.file.strategy tester list of trades': 'список сделок тестера стратегий',
+  'plat.file.account history': 'история счёта',
+  'plat.file.trading journal': 'торговый журнал',
+  'plat.file.positions': 'позиции',
+  'plat.file.deals': 'сделки',
+  'plat.file.history': 'история',
+  'plat.file.transaction history': 'история транзакций',
+  'plat.file.activity statement': 'выписка по активности',
+  'plat.file.Flex Query': '{flex}',
+  'plat.file.account statement': 'выписка по счёту',
+  'plat.file.transactions': 'транзакции',
+  'plat.file.account activity': 'активность по счёту',
+  'plat.file.spot trade history': 'история спотовых сделок',
+  'plat.file.futures trade history': 'история фьючерсных сделок',
+  'plat.file.Advanced fills': 'исполнения {advanced}',
+  'plat.file.trade history': 'история сделок',
+
+  'plat.how.ninjaTrader':
+    'В {performance} отобразите {executions} или {trades} и сформируйте отчёт, затем щёлкните список правой кнопкой и экспортируйте его как CSV. Язык интерфейса любой.',
+  'plat.how.tradovate': 'Отчёт {performance} или список {orders}, скачанные как CSV.',
+  'plat.how.topstepX': 'Список {trades} или {orders} вашего счёта, экспортированный как CSV.',
+  'plat.how.rithmic':
+    '{history}: выберите счёт и день, затем экспортируйте {completed} как CSV, по одному дню. Подойдёт и отчёт о результатах сделок.',
+  'plat.how.quantower': 'Панель {panel}, экспортированная как CSV.',
+  'plat.how.atas': 'Журнал в {statistics}, экспортированный в Excel: файл .xlsx импортируется как есть.',
+  'plat.how.sierraChart': '{log} с показом {fills}, сохранённый через {save}.',
+  'plat.how.tradeStation': 'Отчёт {orders}, экспортированный как CSV.',
+  'plat.how.deepcharts': 'Список сделок, экспортированный как CSV.',
+  'plat.how.tradingView':
+    '{paper} или подключённый брокер: в {history} отметьте все столбцы в {setup}, затем {download}. Или {tester}: {list}, затем введите тикер в предпросмотре.',
+  'plat.how.ftmo': 'Торговый журнал вашего счёта в {area}, экспортированный как CSV.',
+  'plat.how.metaTrader':
+    'Вкладка {history}: щёлкните правой кнопкой и сохраните отчёт. Отчёт Excel из {mt5} импортируется как есть; отчёт в виде веб-страницы из {mt4} открывается в Excel, чтобы сохранить его как CSV. Панель проп-фирмы часто экспортирует CSV напрямую.',
+  'plat.how.exported': '{menu}, экспорт в CSV.',
+  'plat.how.downloaded': '{menu}, скачивание в CSV.',
+  'plat.how.ibkr': '{statement} в формате CSV или {flex} по сделкам в CSV.',
+  'plat.how.thinkorswim': '{menu} за нужные даты, экспортированный в файл.',
+  'plat.how.schwab': 'История транзакций по счёту, экспортированная как CSV.',
+  'plat.how.fidelity': 'История {menu}, скачанная как CSV.',
+  'plat.how.webull': 'История ордеров, экспортированная как CSV.',
+  'plat.how.robinhood': '{menu}: сформируйте отчёт об активности по счёту.',
+  'plat.how.tradeZero': 'Сделки за выбранный период, экспортированные как CSV.',
+  'plat.how.binance': '{menu} (спот или фьючерсы) > {export}.',
+  'plat.how.coinbase': '{statements}: история транзакций в CSV; в {advanced} — экспорт исполнений.',
+  'plat.how.kraken': '{menu}, с выбором {trades}.',
+  'plat.how.tradeZella': 'Ваши сделки, экспортированные как CSV.',
+
+  'plat.instead.tradingView':
+    'Это {account} из {platform}: здесь изменения баланса без входов сделок. Экспортируйте вместо этого {history}: в {paper} откройте {tab}, отметьте все столбцы в {setup}, затем {download}.',
+};

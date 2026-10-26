@@ -1,6 +1,7 @@
 import { pad2 } from '../utils';
 import { planColumns } from './columns';
-import { UNPACKED_LIMIT, WORKBOOK_TOO_LARGE } from './size';
+import { tr } from '../i18n';
+import { UNPACKED_LIMIT, workbookTooLarge } from './size';
 import { findTable } from './table';
 
 /**
@@ -34,8 +35,7 @@ const u32 = (b: Uint8Array, at: number) => (b[at] | (b[at + 1] << 8) | (b[at + 2
 
 /** a part unpacked, refused once it passes `limit` bytes, whatever size the zip claims for it */
 async function inflate(data: Uint8Array, limit: number): Promise<Uint8Array> {
-  if (typeof DecompressionStream === 'undefined')
-    throw new WorkbookError('This device cannot open Excel files. Save the sheet as CSV and import that.');
+  if (typeof DecompressionStream === 'undefined') throw new WorkbookError(tr('imp.xlsx.noReader'));
   const reader = new Blob([data.slice()]).stream().pipeThrough(new DecompressionStream('deflate-raw')).getReader();
   const chunks: Uint8Array[] = [];
   let total = 0;
@@ -45,7 +45,7 @@ async function inflate(data: Uint8Array, limit: number): Promise<Uint8Array> {
     total += value.length;
     if (total > limit) {
       await reader.cancel();
-      throw new WorkbookError(WORKBOOK_TOO_LARGE);
+      throw new WorkbookError(workbookTooLarge());
     }
     chunks.push(value);
   }
@@ -68,12 +68,12 @@ function zipFiles(b: Uint8Array, limit: number): Map<string, () => Promise<strin
       break;
     }
   }
-  if (end < 0) throw new WorkbookError('This file is damaged, or not an Excel workbook.');
+  if (end < 0) throw new WorkbookError(tr('imp.xlsx.damaged'));
   const decoder = new TextDecoder();
   const files = new Map<string, () => Promise<string>>();
   let at = u32(b, end + 16);
   for (let n = u16(b, end + 10); n > 0; n--) {
-    if (u32(b, at) !== 0x02014b50) throw new WorkbookError('This file is damaged, or not an Excel workbook.');
+    if (u32(b, at) !== 0x02014b50) throw new WorkbookError(tr('imp.xlsx.damaged'));
     const method = u16(b, at + 10);
     const size = u32(b, at + 20);
     const unpacked = u32(b, at + 24);
@@ -83,12 +83,12 @@ function zipFiles(b: Uint8Array, limit: number): Map<string, () => Promise<strin
     at += 46 + nameLength + u16(b, at + 30) + u16(b, at + 32);
     files.set(name, async () => {
       // what the zip says first, so an honest large part is refused before any of it is unpacked
-      if (unpacked > limit) throw new WorkbookError(WORKBOOK_TOO_LARGE);
+      if (unpacked > limit) throw new WorkbookError(workbookTooLarge());
       const start = local + 30 + u16(b, local + 26) + u16(b, local + 28);
       const data = b.subarray(start, start + size);
       if (method === 0) return decoder.decode(data);
       if (method === 8) return decoder.decode(await inflate(data, limit));
-      throw new WorkbookError('This workbook is packed in a way that cannot be read. Save it as CSV and import that.');
+      throw new WorkbookError(tr('imp.xlsx.packed'));
     });
   }
   return files;
@@ -177,13 +177,12 @@ const columnOf = (ref: string) => {
  * that unpacks to more than `limit` bytes is refused (see size.ts).
  */
 export async function readWorkbook(bytes: Uint8Array, limit = UNPACKED_LIMIT): Promise<WorkbookSheet[]> {
-  if (isOldExcel(bytes))
-    throw new WorkbookError('This is an old Excel file (.xls). Open it in Excel and save it as .xlsx or CSV.');
-  if (!isZip(bytes)) throw new WorkbookError('This file is not an Excel workbook.');
+  if (isOldExcel(bytes)) throw new WorkbookError(tr('imp.xlsx.old'));
+  if (!isZip(bytes)) throw new WorkbookError(tr('imp.xlsx.notWorkbook'));
   const files = zipFiles(bytes, limit);
   const read = (name: string) => files.get(name)?.() ?? Promise.resolve('');
   const workbook = await read('xl/workbook.xml');
-  if (!workbook) throw new WorkbookError('This zip file is not an Excel workbook.');
+  if (!workbook) throw new WorkbookError(tr('imp.xlsx.zipNotWorkbook'));
   const [rels, shared, styles] = await Promise.all([
     read('xl/_rels/workbook.xml.rels'),
     read('xl/sharedStrings.xml'),
@@ -235,11 +234,11 @@ export async function readWorkbook(bytes: Uint8Array, limit = UNPACKED_LIMIT): P
       rows[index] = Array.from(cells, (cell) => cell ?? '');
     }
     sheets.push({
-      name: unescape(attr(m[0], 'name') ?? `Sheet ${sheets.length + 1}`),
+      name: unescape(attr(m[0], 'name') ?? tr('imp.xlsx.sheet', { n: sheets.length + 1 })),
       rows: Array.from(rows, (r) => r ?? []),
     });
   }
-  if (!sheets.length) throw new WorkbookError('This workbook has no sheets.');
+  if (!sheets.length) throw new WorkbookError(tr('imp.xlsx.noSheets'));
   return sheets;
 }
 

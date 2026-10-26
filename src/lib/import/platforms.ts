@@ -1,3 +1,4 @@
+import { tr, type MessageKey } from '../i18n';
 import { headerInfo } from './columns';
 
 /**
@@ -12,6 +13,26 @@ import { headerInfo } from './columns';
 export type PlatformGroup =
   'Futures' | 'TradingView' | 'Forex and CFDs' | 'Stocks and options' | 'Crypto' | 'Other journals';
 
+/** a group's name, in the language on screen */
+export const groupName = (group: PlatformGroup) => tr(`plat.group.${group}`);
+
+/** the kinds of export the importer knows: "executions", "account history" */
+type After<T> = T extends `plat.file.${infer K}` ? K : never;
+export type FileKind = After<MessageKey>;
+/** what the preview calls an export, in the language on screen; two of them are products, named as they are */
+export const fileName = (file: FileKind) => tr(`plat.file.${file}`, { flex: 'Flex Query', advanced: 'Advanced' });
+
+/**
+ * a text about a platform, and the platform's own names for the menus,
+ * reports and products it mentions, which stay as the platform writes them
+ */
+export interface PlatformText {
+  text: MessageKey;
+  names?: Record<string, string>;
+}
+/** the text, in the language on screen */
+export const say = ({ text, names }: PlatformText) => tr(text, names);
+
 /** a file's column names as lookup keys (see headerInfo), and whether it is an IBKR statement */
 interface Columns {
   has(...keys: string[]): boolean;
@@ -22,12 +43,12 @@ export interface Platform {
   name: string;
   group: PlatformGroup;
   /** which export to choose, and where to find it */
-  how: string;
+  how: PlatformText;
   /**
    * the exports it makes that the importer knows, each with a test of its
    * columns; `instead` marks one that holds no trades, and says which to export
    */
-  exports: Array<{ file: string; matches: (c: Columns) => boolean; instead?: string }>;
+  exports: Array<{ file: FileKind; matches: (c: Columns) => boolean; instead?: PlatformText }>;
 }
 
 export const PLATFORMS: Platform[] = [
@@ -35,7 +56,10 @@ export const PLATFORMS: Platform[] = [
   {
     name: 'NinjaTrader 8',
     group: 'Futures',
-    how: 'In Trade Performance, display Executions or Trades and generate, then right-click the list and export it as CSV. Any language.',
+    how: {
+      text: 'plat.how.ninjaTrader',
+      names: { performance: 'Trade Performance', executions: 'Executions', trades: 'Trades' },
+    },
     exports: [
       { file: 'executions', matches: (c) => c.has('instrument', 'action', 'ex') },
       { file: 'trades', matches: (c) => c.has('marketpos') || c.has('posmarche') },
@@ -44,7 +68,7 @@ export const PLATFORMS: Platform[] = [
   {
     name: 'Tradovate',
     group: 'Futures',
-    how: 'The Performance report, or the Orders list, downloaded as CSV.',
+    how: { text: 'plat.how.tradovate', names: { performance: 'Performance', orders: 'Orders' } },
     exports: [
       { file: 'performance report', matches: (c) => c.has('buyfillid', 'sellfillid') },
       { file: 'orders', matches: (c) => c.has('bs', 'contract', 'product') },
@@ -53,7 +77,7 @@ export const PLATFORMS: Platform[] = [
   {
     name: 'TopstepX',
     group: 'Futures',
-    how: 'The Trades or the Orders of your account, exported as CSV.',
+    how: { text: 'plat.how.topstepX', names: { trades: 'Trades', orders: 'Orders' } },
     exports: [
       { file: 'trades', matches: (c) => c.has('contractname', 'enteredat', 'exitedat') },
       { file: 'orders', matches: (c) => c.has('contractname', 'positiondisposition') },
@@ -62,7 +86,7 @@ export const PLATFORMS: Platform[] = [
   {
     name: 'Rithmic R | Trader Pro',
     group: 'Futures',
-    how: 'Orders History: choose the account and the day, then export the Completed Orders as CSV, one day at a time. The trade performance report works too.',
+    how: { text: 'plat.how.rithmic', names: { history: 'Orders History', completed: 'Completed Orders' } },
     exports: [
       { file: 'completed orders', matches: (c) => c.has('buysell', 'qtyfilled', 'avgfillprice') },
       { file: 'trade performance', matches: (c) => c.has('entrybuysell', 'fillsize') },
@@ -71,31 +95,34 @@ export const PLATFORMS: Platform[] = [
   {
     name: 'Quantower',
     group: 'Futures',
-    how: 'The Trades history panel, exported as CSV.',
+    how: { text: 'plat.how.quantower', names: { panel: 'Trades history' } },
     exports: [{ file: 'trades history', matches: (c) => c.has('symboltype', 'grosspl', 'netpl') }],
   },
   {
     name: 'ATAS',
     group: 'Futures',
-    how: 'The journal in Statistics, exported to Excel: the .xlsx file imports as it is.',
+    how: { text: 'plat.how.atas', names: { statistics: 'Statistics' } },
     exports: [{ file: 'journal', matches: (c) => c.has('openvolume', 'closevolume') }],
   },
   {
     name: 'Sierra Chart',
     group: 'Futures',
-    how: 'The Trade Activity Log showing Fills, saved with File > Save Log As.',
+    how: {
+      text: 'plat.how.sierraChart',
+      names: { log: 'Trade Activity Log', fills: 'Fills', save: 'File > Save Log As' },
+    },
     exports: [{ file: 'trade activity log', matches: (c) => c.has('activitytype', 'fillprice') }],
   },
   {
     name: 'TradeStation',
     group: 'Futures',
-    how: 'The Orders report, exported as CSV.',
+    how: { text: 'plat.how.tradeStation', names: { orders: 'Orders' } },
     exports: [{ file: 'orders', matches: (c) => c.has('filledcanceled') || c.has('entered', 'filledprice') }],
   },
   {
     name: 'Deepcharts',
     group: 'Futures',
-    how: 'The trade list, exported as CSV.',
+    how: { text: 'plat.how.deepcharts' },
     exports: [{ file: 'trade list', matches: (c) => c.has('entrydt', 'exitdt') }],
   },
 
@@ -103,15 +130,35 @@ export const PLATFORMS: Platform[] = [
   {
     name: 'TradingView',
     group: 'TradingView',
-    how: 'Paper Trading or a connected broker: in Order History, tick every column under Column setup, then Download data > Order history. Or the Strategy Tester: List of trades > Download, then type the symbol in the preview.',
+    how: {
+      text: 'plat.how.tradingView',
+      names: {
+        paper: 'Paper Trading',
+        history: 'Order History',
+        setup: 'Column setup',
+        download: 'Download data > Order history',
+        tester: 'Strategy Tester',
+        list: 'List of trades > Download',
+      },
+    },
     exports: [
       { file: 'order history', matches: (c) => c.has('placingtime', 'closingtime') },
       { file: 'strategy tester list of trades', matches: (c) => c.has('tradeno', 'signal') },
       {
         file: 'account history',
         matches: (c) => c.has('balancebefore', 'balanceafter'),
-        instead:
-          "This is TradingView's Account History: it lists changes to the balance, without the trades' entries. Export the Order History instead: in Paper Trading, open History, tick every column under Column setup, then Download data > Order history.",
+        instead: {
+          text: 'plat.instead.tradingView',
+          names: {
+            platform: 'TradingView',
+            account: 'Account History',
+            history: 'Order History',
+            paper: 'Paper Trading',
+            tab: 'History',
+            setup: 'Column setup',
+            download: 'Download data > Order history',
+          },
+        },
       },
     ],
   },
@@ -120,13 +167,16 @@ export const PLATFORMS: Platform[] = [
   {
     name: 'FTMO',
     group: 'Forex and CFDs',
-    how: 'The trading journal of your account in the Client Area, exported as CSV.',
+    how: { text: 'plat.how.ftmo', names: { area: 'Client Area' } },
     exports: [{ file: 'trading journal', matches: (c) => c.has('ticket', 'pips') }],
   },
   {
     name: 'MetaTrader 4 and 5',
     group: 'Forex and CFDs',
-    how: 'History tab: right-click and save a report. MetaTrader 5’s Excel report imports as it is; MetaTrader 4’s web-page report opens in Excel, to be saved as CSV. A prop firm’s dashboard often exports CSV directly.',
+    how: {
+      text: 'plat.how.metaTrader',
+      names: { history: 'History', mt5: 'MetaTrader 5', mt4: 'MetaTrader 4' },
+    },
     exports: [
       { file: 'account history', matches: (c) => c.has('ticket', 'item') },
       { file: 'positions', matches: (c) => c.has('position', 'sl', 'tp', 'swap') },
@@ -136,13 +186,13 @@ export const PLATFORMS: Platform[] = [
   {
     name: 'cTrader',
     group: 'Forex and CFDs',
-    how: 'History, exported as CSV.',
+    how: { text: 'plat.how.exported', names: { menu: 'History' } },
     exports: [{ file: 'history', matches: (c) => c.has('openingdirection', 'closingquantity') }],
   },
   {
     name: 'IG',
     group: 'Forex and CFDs',
-    how: 'History > Transactions, downloaded as CSV.',
+    how: { text: 'plat.how.downloaded', names: { menu: 'History > Transactions' } },
     exports: [{ file: 'transaction history', matches: (c) => c.has('marketname', 'openlevel', 'closelevel') }],
   },
 
@@ -150,7 +200,7 @@ export const PLATFORMS: Platform[] = [
   {
     name: 'Interactive Brokers',
     group: 'Stocks and options',
-    how: 'An Activity Statement downloaded as CSV, or a Flex Query of trades in CSV.',
+    how: { text: 'plat.how.ibkr', names: { statement: 'Activity Statement', flex: 'Flex Query' } },
     exports: [
       { file: 'activity statement', matches: (c) => c.statement },
       {
@@ -166,61 +216,61 @@ export const PLATFORMS: Platform[] = [
   {
     name: 'Thinkorswim',
     group: 'Stocks and options',
-    how: 'Monitor > Account Statement for the dates you want, exported to a file.',
+    how: { text: 'plat.how.thinkorswim', names: { menu: 'Monitor > Account Statement' } },
     exports: [{ file: 'account statement', matches: (c) => c.has('exectime', 'poseffect', 'spread') }],
   },
   {
     name: 'Charles Schwab',
     group: 'Stocks and options',
-    how: 'The transaction history of the account, exported as CSV.',
+    how: { text: 'plat.how.schwab' },
     exports: [{ file: 'transactions', matches: (c) => c.has('action', 'feescomm') }],
   },
   {
     name: 'Fidelity',
     group: 'Stocks and options',
-    how: 'Activity & Orders history, downloaded as CSV.',
+    how: { text: 'plat.how.fidelity', names: { menu: 'Activity & Orders' } },
     exports: [{ file: 'account history', matches: (c) => c.has('rundate', 'action') }],
   },
   {
     name: 'E*TRADE',
     group: 'Stocks and options',
-    how: 'Transactions, downloaded as CSV.',
+    how: { text: 'plat.how.downloaded', names: { menu: 'Transactions' } },
     exports: [{ file: 'transactions', matches: (c) => c.has('transactiondate', 'transactiontype', 'securitytype') }],
   },
   {
     name: 'tastytrade',
     group: 'Stocks and options',
-    how: 'History > Transactions, downloaded as CSV.',
+    how: { text: 'plat.how.downloaded', names: { menu: 'History > Transactions' } },
     exports: [{ file: 'transactions', matches: (c) => c.has('subtype', 'instrumenttype', 'rootsymbol') }],
   },
   {
     name: 'Webull',
     group: 'Stocks and options',
-    how: 'The order history, exported as CSV.',
+    how: { text: 'plat.how.webull' },
     exports: [{ file: 'orders', matches: (c) => c.has('placedtime', 'filledtime') }],
   },
   {
     name: 'Robinhood',
     group: 'Stocks and options',
-    how: 'Reports and statements: generate an account activity report.',
+    how: { text: 'plat.how.robinhood', names: { menu: 'Reports and statements' } },
     exports: [{ file: 'account activity', matches: (c) => c.has('activitydate', 'transcode') }],
   },
   {
     name: 'TradeZero',
     group: 'Stocks and options',
-    how: 'The trades for a date range, exported as CSV.',
+    how: { text: 'plat.how.tradeZero' },
     exports: [{ file: 'trades', matches: (c) => c.has('td', 'sd', 'exectime') }],
   },
   {
     name: 'Trading 212',
     group: 'Stocks and options',
-    how: 'History, exported as CSV.',
+    how: { text: 'plat.how.exported', names: { menu: 'History' } },
     exports: [{ file: 'history', matches: (c) => c.has('noofshares') || c.has('priceshare') }],
   },
   {
     name: 'DEGIRO',
     group: 'Stocks and options',
-    how: 'Transactions, exported as CSV.',
+    how: { text: 'plat.how.exported', names: { menu: 'Transactions' } },
     exports: [{ file: 'transactions', matches: (c) => c.has('referenceexchange', 'venue') }],
   },
 
@@ -228,7 +278,7 @@ export const PLATFORMS: Platform[] = [
   {
     name: 'Binance',
     group: 'Crypto',
-    how: 'Orders > Trade History (spot or futures) > Export.',
+    how: { text: 'plat.how.binance', names: { menu: 'Orders > Trade History', export: 'Export' } },
     exports: [
       { file: 'spot trade history', matches: (c) => c.has('pair', 'side', 'executed') },
       { file: 'futures trade history', matches: (c) => c.has('realizedprofit', 'amount', 'fee') },
@@ -237,7 +287,7 @@ export const PLATFORMS: Platform[] = [
   {
     name: 'Coinbase',
     group: 'Crypto',
-    how: 'Statements: the transaction history as CSV; on Advanced, the fills export.',
+    how: { text: 'plat.how.coinbase', names: { statements: 'Statements', advanced: 'Advanced' } },
     exports: [
       { file: 'transaction history', matches: (c) => c.has('quantitytransacted') },
       { file: 'Advanced fills', matches: (c) => c.has('tradeid', 'product', 'sizeunit') },
@@ -246,13 +296,13 @@ export const PLATFORMS: Platform[] = [
   {
     name: 'Kraken',
     group: 'Crypto',
-    how: 'History > Export, choosing Trades.',
+    how: { text: 'plat.how.kraken', names: { menu: 'History > Export', trades: 'Trades' } },
     exports: [{ file: 'trades', matches: (c) => c.has('txid', 'ordertxid') }],
   },
   {
     name: 'Hyperliquid',
     group: 'Crypto',
-    how: 'Trade History, exported as CSV.',
+    how: { text: 'plat.how.exported', names: { menu: 'Trade History' } },
     exports: [{ file: 'trade history', matches: (c) => c.has('coin', 'dir', 'closedpnl') }],
   },
 
@@ -260,7 +310,7 @@ export const PLATFORMS: Platform[] = [
   {
     name: 'TradeZella',
     group: 'Other journals',
-    how: 'Your trades, exported as CSV.',
+    how: { text: 'plat.how.tradeZella' },
     exports: [{ file: 'trades', matches: (c) => c.has('adjustedcost', 'adjustedproceeds') }],
   },
 ];
@@ -274,7 +324,12 @@ export function recognisePlatform(
   const columns: Columns = { has: (...names) => names.every((n) => keys.has(n)), statement };
   for (const platform of PLATFORMS) {
     const found = platform.exports.find((e) => e.matches(columns));
-    if (found) return { name: platform.name, file: found.file, ...(found.instead ? { instead: found.instead } : {}) };
+    if (found)
+      return {
+        name: platform.name,
+        file: fileName(found.file),
+        ...(found.instead ? { instead: say(found.instead) } : {}),
+      };
   }
   return null;
 }

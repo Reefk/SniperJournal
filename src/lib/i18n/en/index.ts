@@ -2,7 +2,10 @@ import { common } from './common';
 import { dashboard } from './dashboard';
 import { format } from './format';
 import { goals } from './goals';
+import { importDialog } from './importDialog';
+import { importer } from './importer';
 import { list } from './list';
+import { platforms } from './platforms';
 import { settings } from './settings';
 import { shell } from './shell';
 import { trade } from './trade';
@@ -17,7 +20,10 @@ export const en = {
   ...dashboard,
   ...format,
   ...goals,
+  ...importDialog,
+  ...importer,
   ...list,
+  ...platforms,
   ...settings,
   ...shell,
   ...trade,

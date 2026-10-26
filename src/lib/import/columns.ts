@@ -1,3 +1,4 @@
+import { tr } from '../i18n';
 import {
   isTimeOfDay,
   parseAction,
@@ -65,51 +66,56 @@ export type Role =
   | 'tick_size'
   | 'duration';
 
-/** what a role is called in the import preview, in the order it is offered */
-export const ROLE_LABELS: Array<[Role, string]> = [
-  ['symbol', 'Symbol'],
-  ['side', 'Direction (buy / sell, long / short)'],
-  ['quantity', 'Quantity'],
-  ['price', 'Fill price'],
-  ['entry_price', 'Entry price'],
-  ['exit_price', 'Exit price'],
-  ['time', 'Date and time'],
-  ['date', 'Date'],
-  ['opened_at', 'Opened: date and time'],
-  ['opened_date', 'Opened: date'],
-  ['closed_at', 'Closed: date and time'],
-  ['closed_date', 'Closed: date'],
-  ['fees', 'Fees or commission (several add up)'],
-  ['fee_rate', 'Fee per contract, each side'],
-  ['pnl', 'P&L before fees'],
-  ['net_pnl', 'P&L after fees'],
-  ['gross_pnl', 'Gross P&L'],
-  ['multiplier', 'Multiplier / point value'],
-  ['notional', 'Amount or proceeds (price × size)'],
-  ['effect', 'Opens or closes a position'],
-  ['status', 'Order status'],
-  ['trade_no', 'Trade number (groups entry and exit rows)'],
-  ['external_id', 'ID (to skip what was already imported)'],
-  ['stop_loss', 'Stop loss'],
-  ['take_profit', 'Take profit'],
-  ['account', 'Account'],
-  ['setup', 'Playbook setup / strategy'],
-  ['tags', 'Tags'],
-  ['notes', 'Notes'],
-  ['session', 'Session'],
-  ['leverage', 'Leverage'],
-  ['asset_class', 'Asset class'],
-  ['put_call', 'Call or put'],
-  ['strike', 'Strike'],
-  ['expiry', 'Expiry'],
-  ['underlying', 'Underlying'],
-  ['buy_price', 'Buy price (paired fills)'],
-  ['sell_price', 'Sell price (paired fills)'],
-  ['bought_at', 'Buy time (paired fills)'],
-  ['sold_at', 'Sell time (paired fills)'],
-  ['buy_fill_id', 'Buy fill ID (paired fills)'],
-  ['sell_fill_id', 'Sell fill ID (paired fills)'],
-];
+/** the roles the import preview offers, in that order */
+const OFFERED = [
+  'symbol',
+  'side',
+  'quantity',
+  'price',
+  'entry_price',
+  'exit_price',
+  'time',
+  'date',
+  'opened_at',
+  'opened_date',
+  'closed_at',
+  'closed_date',
+  'fees',
+  'fee_rate',
+  'pnl',
+  'net_pnl',
+  'gross_pnl',
+  'multiplier',
+  'notional',
+  'effect',
+  'status',
+  'trade_no',
+  'external_id',
+  'stop_loss',
+  'take_profit',
+  'account',
+  'setup',
+  'tags',
+  'notes',
+  'session',
+  'leverage',
+  'asset_class',
+  'put_call',
+  'strike',
+  'expiry',
+  'underlying',
+  'buy_price',
+  'sell_price',
+  'bought_at',
+  'sold_at',
+  'buy_fill_id',
+  'sell_fill_id',
+] as const satisfies readonly Role[];
+
+/** what a role is called in the import preview, in the language on screen, in the order it is offered */
+export function roleLabels(): Array<[Role, string]> {
+  return OFFERED.map((role) => [role, tr(`role.${role}`)]);
+}
 
 /** roles where several columns add up instead of one being chosen */
 export const ADDITIVE: ReadonlySet<Role> = new Set<Role>(['fees']);

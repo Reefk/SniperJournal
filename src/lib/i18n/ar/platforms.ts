@@ -1,0 +1,72 @@
+import type { platforms as en } from '../en/platforms';
+import type { Translation } from '../types';
+
+export const platforms: Translation<typeof en> = {
+  'plat.group.Futures': 'العقود الآجلة',
+  'plat.group.TradingView': 'TradingView',
+  'plat.group.Forex and CFDs': 'الفوركس وعقود الفروقات',
+  'plat.group.Stocks and options': 'الأسهم والخيارات',
+  'plat.group.Crypto': 'العملات المشفرة',
+  'plat.group.Other journals': 'سجلات تداول أخرى',
+
+  'plat.file.executions': 'التنفيذات',
+  'plat.file.trades': 'الصفقات',
+  'plat.file.performance report': 'تقرير الأداء',
+  'plat.file.orders': 'الأوامر',
+  'plat.file.completed orders': 'الأوامر المكتملة',
+  'plat.file.trade performance': 'أداء الصفقات',
+  'plat.file.trades history': 'سجل الصفقات',
+  'plat.file.journal': 'اليومية',
+  'plat.file.trade activity log': 'سجل نشاط التداول',
+  'plat.file.trade list': 'قائمة الصفقات',
+  'plat.file.order history': 'سجل الأوامر',
+  'plat.file.strategy tester list of trades': 'قائمة صفقات مختبر الاستراتيجيات',
+  'plat.file.account history': 'سجل الحساب',
+  'plat.file.trading journal': 'يومية التداول',
+  'plat.file.positions': 'المراكز',
+  'plat.file.deals': 'الصفقات المنفذة',
+  'plat.file.history': 'السجل',
+  'plat.file.transaction history': 'سجل المعاملات',
+  'plat.file.activity statement': 'كشف النشاط',
+  'plat.file.Flex Query': '{flex}',
+  'plat.file.account statement': 'كشف الحساب',
+  'plat.file.transactions': 'المعاملات',
+  'plat.file.account activity': 'نشاط الحساب',
+  'plat.file.spot trade history': 'سجل الصفقات الفورية',
+  'plat.file.futures trade history': 'سجل صفقات العقود الآجلة',
+  'plat.file.Advanced fills': 'تنفيذات {advanced}',
+  'plat.file.trade history': 'سجل الصفقات',
+
+  'plat.how.ninjaTrader':
+    'في {performance}، اعرض {executions} أو {trades} وأنشئ التقرير، ثم انقر بزر الفأرة الأيمن على القائمة وصدّرها بصيغة CSV. بأي لغة.',
+  'plat.how.tradovate': 'تقرير {performance}، أو قائمة {orders}، منزّلًا بصيغة CSV.',
+  'plat.how.topstepX': 'قائمة {trades} أو {orders} في حسابك، مصدّرة بصيغة CSV.',
+  'plat.how.rithmic':
+    '{history}: اختر الحساب واليوم، ثم صدّر {completed} بصيغة CSV، يومًا بيوم. ويصلح تقرير أداء الصفقات أيضًا.',
+  'plat.how.quantower': 'لوحة {panel}، مصدّرة بصيغة CSV.',
+  'plat.how.atas': 'اليومية في {statistics}، مصدّرة إلى Excel: ملف .xlsx يُستورد كما هو.',
+  'plat.how.sierraChart': '{log} معروضًا فيه {fills}، محفوظًا عبر {save}.',
+  'plat.how.tradeStation': 'تقرير {orders}، مصدّرًا بصيغة CSV.',
+  'plat.how.deepcharts': 'قائمة الصفقات، مصدّرة بصيغة CSV.',
+  'plat.how.tradingView':
+    '{paper} أو وسيط متصل: في {history}، حدّد كل الأعمدة ضمن {setup}، ثم {download}. أو {tester}: {list}، ثم اكتب الرمز في المعاينة.',
+  'plat.how.ftmo': 'يومية التداول لحسابك في {area}، مصدّرة بصيغة CSV.',
+  'plat.how.metaTrader':
+    'تبويب {history}: انقر بزر الفأرة الأيمن واحفظ تقريرًا. تقرير Excel من {mt5} يُستورد كما هو؛ وتقرير صفحة الويب من {mt4} يُفتح في Excel ليُحفظ بصيغة CSV. ولوحة شركة التمويل كثيرًا ما تصدّر CSV مباشرة.',
+  'plat.how.exported': '{menu}، مصدّرًا بصيغة CSV.',
+  'plat.how.downloaded': '{menu}، منزّلًا بصيغة CSV.',
+  'plat.how.ibkr': '{statement} منزّلًا بصيغة CSV، أو {flex} للصفقات بصيغة CSV.',
+  'plat.how.thinkorswim': '{menu} للتواريخ التي تريدها، مصدّرًا إلى ملف.',
+  'plat.how.schwab': 'سجل معاملات الحساب، مصدّرًا بصيغة CSV.',
+  'plat.how.fidelity': 'سجل {menu}، منزّلًا بصيغة CSV.',
+  'plat.how.webull': 'سجل الأوامر، مصدّرًا بصيغة CSV.',
+  'plat.how.robinhood': '{menu}: أنشئ تقرير نشاط الحساب.',
+  'plat.how.tradeZero': 'الصفقات لفترة من التواريخ، مصدّرة بصيغة CSV.',
+  'plat.how.binance': '{menu} (فوري أو عقود آجلة) > {export}.',
+  'plat.how.coinbase': '{statements}: سجل المعاملات بصيغة CSV؛ وفي {advanced}، تصدير التنفيذات.',
+  'plat.how.kraken': '{menu}، مع اختيار {trades}.',
+  'plat.how.tradeZella': 'صفقاتك، مصدّرة بصيغة CSV.',
+
+  'plat.instead.tradingView':
+    'هذا {account} من {platform}: يسرد تغيّرات الرصيد، بلا مداخل الصفقات. صدّر {history} بدلًا منه: في {paper}، افتح {tab}، وحدّد كل الأعمدة ضمن {setup}، ثم {download}.',
+};

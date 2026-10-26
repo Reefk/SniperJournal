@@ -1,4 +1,5 @@
-import { ROLE_LABELS, type Role } from './columns';
+import { decimalMark, tr } from '../i18n';
+import { roleLabels, type Role } from './columns';
 import type { ImportLayout } from './layout';
 import type { Findings } from './reader';
 import type { Table } from './table';
@@ -10,16 +11,17 @@ import type { Table } from './table';
  */
 
 /** said when no trade read has a fee (Tradovate's exports have none): the P&L shown is before commissions */
-export const NO_FEES =
-  'There are no fees in this file, so the trades come in without them, and their P&L is before commissions. To add them, select the trades on the Trades page, then Add details > Fees, per trade or per contract.';
+export const noFeesNotice = () => tr('imp.noFees');
 
 /** said instead when the file writes its fees, all 0 (TradingView's paper trading) */
-export const ZERO_FEES =
-  'Every fee in this file is 0, so the trades come in with none. If there were commissions, add them: select the trades on the Trades page, then Add details > Fees, per trade or per contract.';
+export const zeroFeesNotice = () => tr('imp.zeroFees');
+
+/** a value from the file, quoted as the language quotes */
+export const quoted = (text: string) => tr('imp.quoted', { text });
 
 /** "Row 4" or "Row 4 and 6 more" */
 export const rowsLabel = (rows: number[]) =>
-  rows.length === 1 ? `Row ${rows[0]}` : `Row ${rows[0]} and ${rows.length - 1} more`;
+  rows.length === 1 ? tr('imp.row', { row: rows[0] }) : tr('imp.rows', { row: rows[0], count: rows.length - 1 });
 
 /** what a file's columns were read as, for the notice of those guessed from their names */
 export type GuessedColumns = Pick<ImportLayout, 'columns' | 'rowKind' | 'kindFromGuesses'>;
@@ -29,25 +31,32 @@ export type GuessedColumns = Pick<ImportLayout, 'columns' | 'rowKind' | 'kindFro
  * and whether that decided the kind of rows; null for none.
  */
 export function guessedNote({ columns, rowKind, kindFromGuesses }: GuessedColumns): string | null {
-  const labels = new Map<Role | '', string>(ROLE_LABELS);
+  const labels = new Map<Role | '', string>(roleLabels());
+  const role = (r: Role | '') => `${labels.get(r)}`;
   const read = columns.filter((c) => c.guessed);
   if (!read.length) return null;
-  const one = read.length === 1;
-  const which = one
-    ? `"${read[0].header}" was read as ${labels.get(read[0].role)}, from the words in its name.`
-    : `Read from the words in their names: ${read.map((c) => `"${c.header}" as ${labels.get(c.role)}`).join(', ')}.`;
+  const n = read.length === 1 ? 'one' : 'many';
+  const which =
+    n === 'one'
+      ? tr('imp.guessed.one', { header: quoted(read[0].header), role: role(read[0].role) })
+      : tr('imp.guessed.many', {
+          list: read
+            .map((c) => tr('imp.guessed.item', { header: quoted(c.header), role: role(c.role) }))
+            .join(tr('format.comma')),
+        });
   const rows = !kindFromGuesses
     ? ''
-    : rowKind === 'fills'
-      ? ` Because of ${one ? 'it' : 'them'}, each row was read as one fill; if each row is a whole trade, choose that under "Each row is".`
-      : ` Because of ${one ? 'it' : 'them'}, each row was read as a whole trade; if each row is one fill, choose that under "Each row is".`;
-  return `${which}${rows} Check ${one ? 'it' : 'them'} under Columns if that is not right.`;
+    : tr(`imp.guessed.${rowKind === 'fills' ? 'fills' : 'trades'}.${n}`, { eachRowIs: tr('imp.label.eachRowIs') });
+  return `${which}${rows}${tr(`imp.guessed.check.${n}`, { columns: tr('imp.label.columns') })}`;
 }
 
 /** "Row 4: ..." or "Row 4 and 6 more: ..." */
 export function rowsNote(rows: number[], one: string, many: string): string {
-  return `${rowsLabel(rows)}: ${rows.length === 1 ? one : many}`;
+  return tr('imp.rowsNote', { rows: rowsLabel(rows), text: rows.length === 1 ? one : many });
 }
+
+/** what is said of exactly one, or of more than one */
+const oneOrMany = (n: number) => (n > 1 ? 'many' : 'one');
 
 /**
  * Every message of an import, in the order the preview lists them: rows
@@ -67,86 +76,52 @@ export function collectMessages(
   const notices = [...(guessed ? [guessed] : []), ...read.notices];
 
   if (findings.noSymbol.length)
-    errors.unshift(
-      rowsNote(findings.noSymbol, 'no symbol, so the row was skipped.', 'no symbol, so they were skipped.'),
-    );
+    errors.unshift(rowsNote(findings.noSymbol, tr('imp.noSymbol.one'), tr('imp.noSymbol.many')));
   for (const [value, rowsWith] of findings.unknownSides) {
-    const many = rowsWith.length > 1;
     errors.push(
-      `${rowsLabel(rowsWith)}: the direction "${value}" was not recognised, so ${many ? 'they were' : 'it was'} imported as LONG. Check ${many ? 'them' : 'it'}.`,
+      tr(`imp.unknownSide.${oneOrMany(rowsWith.length)}`, { rows: rowsLabel(rowsWith), value, side: tr('side.LONG') }),
     );
   }
   const bad = findings.badMultipliers;
   if (bad.rows.length) {
-    const many = bad.rows.length > 1;
-    errors.push(
-      `${rowsLabel(bad.rows)}: the multiplier "${bad.value}" has to be more than 0, so it was left out. Check ${many ? 'them' : 'it'}.`,
-    );
+    errors.push(tr(`imp.badMultiplier.${oneOrMany(bad.rows.length)}`, { rows: rowsLabel(bad.rows), value: bad.value }));
   }
   if (findings.foreignFees.size) {
-    errors.push(
-      `Fees paid in ${[...findings.foreignFees].join(', ')} were left out: they are not in the currency of the prices.`,
-    );
+    errors.push(tr('imp.foreignFees', { currencies: [...findings.foreignFees].join(tr('format.comma')) }));
   }
   if (findings.rateNoSize.length)
-    errors.push(
-      rowsNote(
-        findings.rateNoSize,
-        'a fee per contract but no size to multiply it by, so no fee was added. Add it with the size.',
-        'a fee per contract but no size to multiply it by, so no fees were added. Add them with the sizes.',
-      ),
-    );
+    errors.push(rowsNote(findings.rateNoSize, tr('imp.rateNoSize.one'), tr('imp.rateNoSize.many')));
   if (findings.netAboveGross.length)
-    errors.push(
-      rowsNote(
-        findings.netAboveGross,
-        'the P&L after fees is more than the one before them, so no fee was worked out from the two. Check its fees.',
-        'the P&L after fees is more than the one before them, so no fees were worked out from the two. Check their fees.',
-      ),
-    );
+    errors.push(rowsNote(findings.netAboveGross, tr('imp.netAboveGross.one'), tr('imp.netAboveGross.many')));
   for (const [symbol, how] of findings.inferred) {
-    notices.push(`${symbol}: one point taken as worth ${how}. Check it if that is not right.`);
+    notices.push(tr('imp.inferred', { symbol, how }));
   }
   if (findings.pnlSetAside.size) {
     const symbols = [...findings.pnlSetAside];
+    const comma = tr('format.comma');
     const named =
-      symbols.length > 3 ? `${symbols.slice(0, 3).join(', ')} and ${symbols.length - 3} more` : symbols.join(', ');
-    notices.push(
-      `${named}: the P&L in the file doesn't follow from the prices at ${symbols.length === 1 ? 'its' : 'their'} point value, so it was worked out from the prices (a broker's P&L can be measured against an earlier entry than the file's). Check it if that is not right.`,
-    );
+      symbols.length > 3
+        ? tr('imp.andMore', { list: symbols.slice(0, 3).join(comma), count: symbols.length - 3 })
+        : symbols.join(comma);
+    notices.push(tr(`imp.pnlSetAside.${oneOrMany(symbols.length)}`, { symbols: named }));
   }
-  if (table.grouped) notices.push("Each block's symbol was taken from the line above its column names.");
-  if (table.cashFees)
-    notices.push(
-      `The fees of ${table.cashFees === 1 ? '1 execution were' : `${table.cashFees} executions were`} taken from the statement's Cash Balance section, matched by time.`,
-    );
+  if (table.grouped) notices.push(tr('imp.grouped'));
+  // the sections are named as the statement names them
+  if (table.cashFees) notices.push(tr('imp.cashFees', { count: table.cashFees, section: 'Cash Balance' }));
   if (table.cashFeesUnmatched) {
     const { lines, fees } = table.cashFeesUnmatched;
     // less than a cent is shown as it is, not as 0.00
-    const amount = fees >= 0.01 ? fees.toFixed(2) : String(fees);
-    errors.push(
-      lines === 1
-        ? `1 fee line in the statement could not be matched to an execution in its Account Trade History (same symbol, side and size, within 2 seconds), so its fees (${amount}) were left out.`
-        : `${lines} fee lines in the statement could not be matched to an execution in its Account Trade History (same symbol, side and size, within 2 seconds), so their fees (${amount} in all) were left out.`,
-    );
+    const amount = decimalMark(fees >= 0.01 ? fees.toFixed(2) : String(fees));
+    errors.push(tr('imp.cashUnmatched', { count: lines, section: 'Account Trade History', amount }));
   }
-  if (table.statement) notices.push('Read the Trades section of this Interactive Brokers statement.');
-  else if (table.preamble)
-    notices.push(`The column names are on line ${table.preamble + 1}; the lines above them were left out.`);
-  if (table.skipped)
-    notices.push(
-      `${table.skipped} total, summary or repeated header ${table.skipped === 1 ? 'line was' : 'lines were'} left out.`,
-    );
+  if (table.statement) notices.push(tr('imp.statement', { section: 'Trades' }));
+  else if (table.preamble) notices.push(tr('imp.preamble', { line: table.preamble + 1 }));
+  if (table.skipped) notices.push(tr('imp.skipped', { count: table.skipped }));
   // a time with no zone is taken as this device's: off by the difference if
   // the platform wrote another zone's (the exchange's, say), so it is said
-  if (findings.zoned && findings.unzoned)
-    notices.push(
-      "Some times in this file carry a time zone, so they were converted to this device's local time; the others carry none and were taken as written.",
-    );
-  else if (findings.zoned)
-    notices.push("Times in this file carry a time zone, so they were converted to this device's local time.");
-  else if (findings.unzoned)
-    notices.push("Times in this file carry no time zone, so they were taken as written, in this device's local time.");
+  if (findings.zoned && findings.unzoned) notices.push(tr('imp.zoned.some'));
+  else if (findings.zoned) notices.push(tr('imp.zoned.all'));
+  else if (findings.unzoned) notices.push(tr('imp.zoned.none'));
 
   return { errors, notices };
 }

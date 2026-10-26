@@ -1,0 +1,72 @@
+import type { platforms as en } from '../en/platforms';
+import type { Translation } from '../types';
+
+export const platforms: Translation<typeof en> = {
+  'plat.group.Futures': 'फ़्यूचर्स',
+  'plat.group.TradingView': 'TradingView',
+  'plat.group.Forex and CFDs': 'फ़ॉरेक्स और CFD',
+  'plat.group.Stocks and options': 'शेयर और ऑप्शन',
+  'plat.group.Crypto': 'क्रिप्टो',
+  'plat.group.Other journals': 'दूसरे जर्नल',
+
+  'plat.file.executions': 'एक्ज़ीक्यूशन',
+  'plat.file.trades': 'ट्रेड',
+  'plat.file.performance report': 'परफ़ॉर्मेंस रिपोर्ट',
+  'plat.file.orders': 'ऑर्डर',
+  'plat.file.completed orders': 'पूरे हुए ऑर्डर',
+  'plat.file.trade performance': 'ट्रेड परफ़ॉर्मेंस',
+  'plat.file.trades history': 'ट्रेड हिस्ट्री',
+  'plat.file.journal': 'जर्नल',
+  'plat.file.trade activity log': 'ट्रेड एक्टिविटी लॉग',
+  'plat.file.trade list': 'ट्रेड सूची',
+  'plat.file.order history': 'ऑर्डर हिस्ट्री',
+  'plat.file.strategy tester list of trades': 'स्ट्रैटेजी टेस्टर की ट्रेड सूची',
+  'plat.file.account history': 'खाता हिस्ट्री',
+  'plat.file.trading journal': 'ट्रेडिंग जर्नल',
+  'plat.file.positions': 'पोज़िशन',
+  'plat.file.deals': 'डील',
+  'plat.file.history': 'हिस्ट्री',
+  'plat.file.transaction history': 'लेन-देन हिस्ट्री',
+  'plat.file.activity statement': 'एक्टिविटी स्टेटमेंट',
+  'plat.file.Flex Query': '{flex}',
+  'plat.file.account statement': 'खाता स्टेटमेंट',
+  'plat.file.transactions': 'लेन-देन',
+  'plat.file.account activity': 'खाता गतिविधि',
+  'plat.file.spot trade history': 'स्पॉट ट्रेड हिस्ट्री',
+  'plat.file.futures trade history': 'फ़्यूचर्स ट्रेड हिस्ट्री',
+  'plat.file.Advanced fills': '{advanced} फ़िल',
+  'plat.file.trade history': 'ट्रेड हिस्ट्री',
+
+  'plat.how.ninjaTrader':
+    '{performance} में {executions} या {trades} दिखाकर रिपोर्ट बनाएँ, फिर सूची पर राइट-क्लिक करके उसे CSV के रूप में एक्सपोर्ट करें। कोई भी भाषा चलेगी।',
+  'plat.how.tradovate': '{performance} रिपोर्ट, या {orders} सूची, CSV के रूप में डाउनलोड की हुई।',
+  'plat.how.topstepX': 'आपके खाते की {trades} या {orders} सूची, CSV के रूप में एक्सपोर्ट की हुई।',
+  'plat.how.rithmic':
+    '{history}: खाता और दिन चुनें, फिर {completed} को CSV के रूप में एक्सपोर्ट करें, एक बार में एक दिन। ट्रेड परफ़ॉर्मेंस रिपोर्ट भी चलती है।',
+  'plat.how.quantower': '{panel} पैनल, CSV के रूप में एक्सपोर्ट किया हुआ।',
+  'plat.how.atas': '{statistics} में जर्नल, Excel में एक्सपोर्ट किया हुआ: .xlsx फ़ाइल जैसी है वैसी इम्पोर्ट होती है।',
+  'plat.how.sierraChart': '{fills} दिखाता {log}, {save} से सेव किया हुआ।',
+  'plat.how.tradeStation': '{orders} रिपोर्ट, CSV के रूप में एक्सपोर्ट की हुई।',
+  'plat.how.deepcharts': 'ट्रेड सूची, CSV के रूप में एक्सपोर्ट की हुई।',
+  'plat.how.tradingView':
+    '{paper} या कनेक्ट किया हुआ ब्रोकर: {history} में, {setup} के नीचे हर कॉलम पर टिक करें, फिर {download}। या {tester}: {list}, फिर प्रीव्यू में सिंबल टाइप करें।',
+  'plat.how.ftmo': '{area} में आपके खाते का ट्रेडिंग जर्नल, CSV के रूप में एक्सपोर्ट किया हुआ।',
+  'plat.how.metaTrader':
+    '{history} टैब: राइट-क्लिक करके रिपोर्ट सेव करें। {mt5} की Excel रिपोर्ट जैसी है वैसी इम्पोर्ट होती है; {mt4} की वेब-पेज रिपोर्ट Excel में खुलती है, जिसे CSV के रूप में सेव करना होता है। प्रॉप फ़र्म का डैशबोर्ड अक्सर सीधे CSV एक्सपोर्ट करता है।',
+  'plat.how.exported': '{menu}, CSV के रूप में एक्सपोर्ट किया हुआ।',
+  'plat.how.downloaded': '{menu}, CSV के रूप में डाउनलोड किया हुआ।',
+  'plat.how.ibkr': 'CSV के रूप में डाउनलोड किया हुआ {statement}, या CSV में ट्रेड की {flex}।',
+  'plat.how.thinkorswim': 'चाही गई तारीखों के लिए {menu}, फ़ाइल में एक्सपोर्ट किया हुआ।',
+  'plat.how.schwab': 'खाते की लेन-देन हिस्ट्री, CSV के रूप में एक्सपोर्ट की हुई।',
+  'plat.how.fidelity': '{menu} हिस्ट्री, CSV के रूप में डाउनलोड की हुई।',
+  'plat.how.webull': 'ऑर्डर हिस्ट्री, CSV के रूप में एक्सपोर्ट की हुई।',
+  'plat.how.robinhood': '{menu}: खाता गतिविधि रिपोर्ट बनाएँ।',
+  'plat.how.tradeZero': 'किसी तारीख सीमा के ट्रेड, CSV के रूप में एक्सपोर्ट किए हुए।',
+  'plat.how.binance': '{menu} (स्पॉट या फ़्यूचर्स) > {export}।',
+  'plat.how.coinbase': '{statements}: लेन-देन हिस्ट्री CSV के रूप में; {advanced} पर, फ़िल का एक्सपोर्ट।',
+  'plat.how.kraken': '{menu}, {trades} चुनकर।',
+  'plat.how.tradeZella': 'आपके ट्रेड, CSV के रूप में एक्सपोर्ट किए हुए।',
+
+  'plat.instead.tradingView':
+    'यह {platform} की {account} है: इसमें बैलेंस के बदलाव हैं, ट्रेड की एंट्री नहीं। इसकी जगह {history} एक्सपोर्ट करें: {paper} में {tab} खोलें, {setup} के नीचे हर कॉलम पर टिक करें, फिर {download}।',
+};

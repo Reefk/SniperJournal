@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { fileTooLarge, importTradesFromCsv, parseCsv, sheetTooLarge, tradesToCsv } from '@/lib/csv';
-import { NO_FEES, ZERO_FEES } from '@/lib/import/report';
+import { noFeesNotice, zeroFeesNotice } from '@/lib/import/report';
 import { IMPORT_LIMIT } from '@/lib/import/size';
+
+const NO_FEES = noFeesNotice();
+const ZERO_FEES = zeroFeesNotice();
 import { grossPnl, isClosed, netPnl } from '@/lib/trade-math';
 import type { Account, Setup, Trade } from '@/lib/types';
 import { trade } from './helpers';

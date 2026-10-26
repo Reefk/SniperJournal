@@ -7,7 +7,8 @@ import { fillsToPositions, summarise, type Carry, type Fill, type Summary } from
 import { finishOpen, openRest, type Unsaid } from './finish';
 import { headerInfo } from './columns';
 import { believable, fitReported, type Reader, type RowsRead } from './reader';
-import { rowsNote } from './report';
+import { quoted, rowsNote } from './report';
+import { decimalMark, tr } from '../i18n';
 import { parseAction, parseEffect, parseMoment, parseMoney, parseStatus, type Moment } from './values';
 
 /**
@@ -174,7 +175,8 @@ export function assemblePosition(
     if (worth.length === 1 && worth[0] != null) {
       multiplier = worth[0];
       given = true;
-      if (multiplier !== 1) r.findings.inferred.set(first.symbol, `${multiplier} (from the amount against the price)`);
+      if (multiplier !== 1)
+        r.findings.inferred.set(first.symbol, tr('imp.how.amount', { value: decimalMark(String(multiplier)) }));
     }
   }
   let manualPnl: number | null = null;
@@ -459,47 +461,28 @@ export function tradesFromFills(r: Reader, journal?: readonly Trade[]): RowsRead
   const fillCount = fills.length + known.size;
   const made = trades.length + finished.length;
   notices.push(
-    `Each row is one fill: ${fillCount} ${fillCount === 1 ? 'fill was' : 'fills were'} put back together into ${made} ${made === 1 ? 'trade' : 'trades'}, following the position in each symbol.`,
+    tr('imp.fills.combined', {
+      fills: tr('imp.fills.count', { count: fillCount }),
+      trades: tr('imp.fills.into', { count: made }),
+    }),
   );
-  if (unfilled)
-    notices.push(
-      `${unfilled} ${unfilled === 1 ? 'order that was' : 'orders that were'} cancelled or never filled ${unfilled === 1 ? 'was' : 'were'} left out.`,
-    );
+  if (unfilled) notices.push(tr('imp.unfilled', { count: unfilled }));
   if (notTrades.size) {
     const total = [...notTrades.values()].reduce((a, b) => a + b, 0);
     const examples = [...notTrades.keys()]
       .slice(0, 3)
-      .map((v) => `"${v}"`)
-      .join(', ');
-    notices.push(
-      `${total} ${total === 1 ? 'row is' : 'rows are'} not a buy or a sell (${examples}), so ${total === 1 ? 'it was' : 'they were'} left out.`,
-    );
+      .map((v) => quoted(v))
+      .join(tr('format.comma'));
+    notices.push(tr('imp.notBuySell', { count: total, examples }));
   }
-  if (noQuantity.length)
-    errors.push(rowsNote(noQuantity, 'no quantity, so the fill was left out.', 'no quantity, so they were left out.'));
-  if (noPrice.length)
-    errors.push(rowsNote(noPrice, 'no price, so the fill was left out.', 'no price, so they were left out.'));
+  if (noQuantity.length) errors.push(rowsNote(noQuantity, tr('imp.noQuantity.one'), tr('imp.noQuantity.many')));
+  if (noPrice.length) errors.push(rowsNote(noPrice, tr('imp.noPrice.one'), tr('imp.noPrice.many')));
   // with no direction column, a size below zero is a sell and any other a buy:
   // when no fill read has one, nothing in the file said any fill was a sell
-  if (!sheet.has('side') && fills.length && !sold)
-    errors.push(
-      'There is no direction column and no fill has a size below zero, so every fill was read as a buy. Check any sells.',
-    );
-  if (open) {
-    notices.push(
-      `${open} ${open === 1 ? 'position was' : 'positions were'} still open at the end of the file, so ${open === 1 ? 'it was' : 'they were'} imported as open ${open === 1 ? 'trade' : 'trades'}.`,
-    );
-  }
-  if (orphans) {
-    errors.push(
-      `${orphans} ${orphans === 1 ? 'trade closes a position' : 'trades close positions'} opened before this file starts, so the entry is unknown and ${orphans === 1 ? 'it is' : 'they are'} marked needs details.`,
-    );
-  }
-  if (overlapping) {
-    errors.push(
-      `${overlapping} ${overlapping === 1 ? 'trade shares' : 'trades share'} fills with trades already in your journal (a position that runs across two exports). Check for doubles.`,
-    );
-  }
+  if (!sheet.has('side') && fills.length && !sold) errors.push(tr('imp.noSideFills'));
+  if (open) notices.push(tr('imp.stillOpen', { count: open }));
+  if (orphans) errors.push(tr('imp.orphans', { count: orphans }));
+  if (overlapping) errors.push(tr('imp.overlapping', { count: overlapping }));
   // ids that number orders keep two rows alike (an order filled in equal lots
   // in one second), but a file that lists its fills twice would count them twice
   if (!seen) {
@@ -510,10 +493,7 @@ export function tradesFromFills(r: Reader, journal?: readonly Trade[]): RowsRead
       if (rows.has(same)) alike++;
       else rows.add(same);
     }
-    if (alike)
-      errors.push(
-        `${alike} ${alike === 1 ? 'fill is' : 'fills are'} the same as another of the same order (time, size and price), so ${alike === 1 ? 'it was' : 'they were'} kept as more of that order. If the file lists fills twice, check those trades' sizes.`,
-      );
+    if (alike) errors.push(tr('imp.alike', { count: alike }));
   }
   return { trades, errors, notices, finished, unsaid };
 }

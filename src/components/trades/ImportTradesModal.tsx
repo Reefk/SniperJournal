@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import {
   CheckCheck,
   CircleAlert,
@@ -16,21 +16,24 @@ import {
 import { useJournal } from '@/store/JournalProvider';
 import { useUI } from '@/store/UIProvider';
 import {
-  NO_FEES,
   PLATFORMS,
-  ROLE_LABELS,
   WorkbookError,
-  ZERO_FEES,
   csvTemplate,
   describeGaps,
   fileTooLarge,
+  groupName,
   importTradesFromCsv,
   isOldExcel,
   isZip,
   likeliestSheet,
+  noFeesNotice,
+  quoted,
   readWorkbook,
+  roleLabels,
+  say,
   sheetToCsv,
   sheetTooLarge,
+  zeroFeesNotice,
   type DateOrder,
   type FeeRate,
   type PlatformGroup,
@@ -38,22 +41,18 @@ import {
   type WorkbookSheet,
 } from '@/lib/csv';
 import { formatMoney, formatPrice, formatShortDate, formatTime } from '@/lib/format';
+import { decimalMark, tr } from '@/lib/i18n';
 import { isClosed, netPnl } from '@/lib/trade-math';
 import { cn, downloadFile, toNumberOrNull } from '@/lib/utils';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Field, Input, Select } from '@/components/ui/Field';
 import { PnlValue, SideBadge, StatusBadge } from '@/components/ui/StatusBadge';
+import { rich } from '@/components/ui/Rich';
 
 export function ImportTradesModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      size="xl"
-      title="Import trades from a file"
-      description="Drop in an export from your broker or trading platform: whole trades or individual fills. Anything missing can be filled in afterwards."
-    >
+    <Modal open={open} onClose={onClose} size="xl" title={tr('impw.title')} description={tr('impw.description')}>
       <ImportBody onClose={onClose} />
     </Modal>
   );
@@ -80,15 +79,30 @@ const ACCEPTED = [
   'text/tab-separated-values',
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
 ].join(',');
-const tradesWord = (n: number) => `${n} ${n === 1 ? 'trade' : 'trades'}`;
-const openWord = (n: number) => `${n} open ${n === 1 ? 'trade' : 'trades'}`;
 /** what the Import button does, in words: "Import 3 trades and finish 1 open trade" */
 const importLabel = (added: number, finished: number) =>
   !finished
-    ? `Import ${added ? tradesWord(added) : 'trades'}`
+    ? added
+      ? tr('impw.button.importN', { count: added })
+      : tr('impw.button.import')
     : added
-      ? `Import ${tradesWord(added)} and finish ${openWord(finished)}`
-      : `Finish ${openWord(finished)}`;
+      ? tr('impw.button.importAndFinish', {
+          count: added,
+          open: tr('impw.button.open', { count: finished }),
+        })
+      : tr('impw.button.finish', { count: finished });
+/** what the Import button did: "Imported 3 trades, finished 1 open trade" */
+const doneLabel = (added: number, finished: number) =>
+  !finished
+    ? tr('impw.done.imported', { count: added })
+    : added
+      ? tr('impw.done.importedAndFinished', { count: added, open: tr('impw.done.open', { count: finished }) })
+      : tr('impw.done.finished', { count: finished });
+/** a tag's text in a sentence, drawn in a span: a count, or a word to stand out */
+const span = (className: string, chunk: string) => <span className={className}>{chunk}</span>;
+const sideWord = (side: 'LONG' | 'SHORT') => tr(`side.${side}`).toLowerCase();
+/** the column names in "Which columns are understood", as brokers write them */
+const NAME_EXAMPLES = ['Qty', 'Filled', 'Market pos.', 'Comm/Fee', 'Net P&L (USD)', 'Date/Time'];
 /** the platforms whose exports import as they come, grouped for the list in the import window */
 const PLATFORM_GROUPS = [...new Set(PLATFORMS.map((p) => p.group))].map((group: PlatformGroup) => ({
   group,
@@ -271,11 +285,7 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
     } catch (e) {
       setSheets(null);
       startOver('');
-      setFileError(
-        e instanceof WorkbookError
-          ? e.message
-          : 'This workbook could not be read. Open it in Excel, save the sheet as CSV, and import that.',
-      );
+      setFileError(e instanceof WorkbookError ? e.message : tr('impw.unreadable'));
     }
   };
 
@@ -303,11 +313,13 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
   // place of the notice; or for a file with fees, your own in their place
   const feeBox = toImport.length + likely.length + finished.length > 0;
   const missing = Boolean(result?.feesMissing);
-  const notices = feeBox ? (result?.notices ?? []).filter((n) => n !== NO_FEES && n !== ZERO_FEES) : result?.notices;
+  const notices = feeBox
+    ? (result?.notices ?? []).filter((n) => n !== noFeesNotice() && n !== zeroFeesNotice())
+    : result?.notices;
   const choice = missing ? fee : replace;
   const setChoice = missing ? setFee : setReplace;
   const feeTyped = choice.per !== 'none' && choice.amount.trim() !== '';
-  const feeError = feeTyped && !rateOf(choice) ? 'Enter an amount above 0' : undefined;
+  const feeError = feeTyped && !rateOf(choice) ? tr('impw.fee.aboveZero') : undefined;
   const charged = [...toImport, ...finished];
   const feesTotal = charged.reduce((sum, t) => sum + t.fees, 0);
   const netTotal = charged.filter((t) => isClosed(t) && !t.needsReview).reduce((sum, t) => sum + netPnl(t), 0);
@@ -315,7 +327,7 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 items-end gap-3 md:grid-cols-[1fr_auto]">
-        <Field label="Import into account" hint="a matching account column overrides this">
+        <Field label={tr('impw.account')} hint={tr('impw.account.hint')}>
           <Select
             value={accountId}
             onChange={(e) => {
@@ -331,7 +343,7 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
           </Select>
         </Field>
         <Button onClick={() => downloadFile('sniper-journal-template.csv', csvTemplate(), 'text/csv')}>
-          <FileSpreadsheet className="size-4" /> Download template
+          <FileSpreadsheet className="size-4" /> {tr('impw.template')}
         </Button>
       </div>
 
@@ -355,20 +367,17 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
         <span className="mt-2 text-sm text-fg">
           {fileName || (
             <>
-              <span className="md:hidden">Tap to choose a CSV or Excel file</span>
-              <span className="max-md:hidden">Drop a CSV or Excel file here, or click to choose one</span>
+              <span className="md:hidden">{tr('impw.drop.tap')}</span>
+              <span className="max-md:hidden">{tr('impw.drop.click')}</span>
             </>
           )}
         </span>
-        <span className="mt-1 text-xs text-faint">
-          Works with the exports of the {PLATFORMS.length} platforms listed below, most other brokers&apos; files, whole
-          trades or individual fills, and the template above.
-        </span>
+        <span className="mt-1 text-xs text-faint">{tr('impw.drop.works', { count: PLATFORMS.length })}</span>
         <input type="file" accept={ACCEPTED} className="sr-only" onChange={(e) => void readFile(e.target.files?.[0])} />
       </label>
 
       {sheets && sheets.length > 1 && (
-        <Field label="Sheet" hint={`${sheets.length} in this workbook`}>
+        <Field label={tr('impw.sheet')} hint={tr('impw.sheet.hint', { count: sheets.length })}>
           <Select value={sheetIndex} onChange={(e) => chooseSheet(Number(e.target.value))}>
             {sheets.map((sheet, i) => (
               <option key={i} value={i}>
@@ -381,7 +390,7 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
 
       {(fileError || (sheets && !text.trim())) && (
         <p className="flex items-start gap-1.5 text-xs text-loss">
-          <CircleAlert className="mt-px size-3.5 shrink-0" /> {fileError || 'This sheet is empty.'}
+          <CircleAlert className="mt-px size-3.5 shrink-0" /> {fileError || tr('impw.sheet.empty')}
         </p>
       )}
 
@@ -391,40 +400,41 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
             {result.platform && (
               <span className="flex items-center gap-2 text-muted">
                 <FileSpreadsheet className="size-4 text-accent" />
-                Recognised: {result.platform.name}, {result.platform.file}
+                {tr('impw.recognised', { name: result.platform.name, file: result.platform.file })}
               </span>
             )}
             <span className="flex items-center gap-2 text-fg">
               <CircleCheck className="size-4 text-profit" />
-              <span className="num font-semibold">{toImport.length}</span> ready to import
+              {rich(tr('impw.ready', { count: toImport.length }), { num: (chunk) => span('num font-semibold', chunk) })}
             </span>
             {finished.length > 0 && (
               <span className="flex items-center gap-2 text-fg">
                 <CheckCheck className="size-4 text-profit" />
-                <span className="num font-semibold">{finished.length}</span> open{' '}
-                {finished.length === 1 ? 'trade' : 'trades'} finished
+                {rich(tr('impw.finished', { count: finished.length }), {
+                  num: (chunk) => span('num font-semibold', chunk),
+                })}
               </span>
             )}
             {result.duplicates > 0 && (
               <span className="flex items-center gap-2 text-muted">
                 <Info className="size-4 text-accent" />
-                <span className="num">{result.duplicates}</span> already in your journal, skipped
+                {rich(tr('impw.duplicates', { count: result.duplicates }), { num: (chunk) => span('num', chunk) })}
               </span>
             )}
             {incomplete > 0 && (
               <span className="flex items-center gap-2 text-warn">
                 <TriangleAlert className="size-4" />
-                <span className="num">{incomplete}</span> need details before they count
+                {rich(tr('impw.incomplete', { count: incomplete }), { num: (chunk) => span('num', chunk) })}
               </span>
             )}
             {result.combined > 0 && (
               <span className="flex items-center gap-2 text-muted">
                 <Merge className="size-4 text-accent" />
-                <span className="num">{result.combined}</span> partial fills folded into whole positions
+                {rich(tr('impw.combined', { count: result.combined }), { num: (chunk) => span('num', chunk) })}
               </span>
             )}
             {newSetups.length > 0 && (
-              <span className="text-muted">{newSetups.length} new playbook setups will be created</span>
+              <span className="text-muted">{tr('impw.newSetups', { count: newSetups.length })}</span>
             )}
           </div>
 
@@ -433,22 +443,22 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
               <p className="flex items-start gap-2 text-fg">
                 <CopyCheck className="mt-0.5 size-4 shrink-0 text-accent" />
                 <span>
-                  <span className="num font-semibold">{likely.length}</span>{' '}
-                  {likely.length === 1 ? 'looks like a trade' : 'look like trades'} already in your journal: same
-                  account, symbol, side, entry time and size.{' '}
+                  {rich(tr('impw.likely', { count: likely.length }), {
+                    num: (chunk) => span('num font-semibold', chunk),
+                  })}{' '}
                   {importLikely
-                    ? `${likely.length === 1 ? 'It' : 'They'} will be imported as well.`
-                    : 'Left out, so nothing is added twice.'}
+                    ? tr(likely.length === 1 ? 'impw.likely.imported.one' : 'impw.likely.imported.many')
+                    : tr(likely.length === 1 ? 'impw.likely.leftOut.one' : 'impw.likely.leftOut.many')}
                 </span>
               </p>
               <ul className="mt-2 space-y-0.5 pl-6 text-xs text-muted">
                 {likely.slice(0, 4).map((t) => (
                   <li key={t.id} className="num">
-                    {t.symbol} {t.side === 'LONG' ? 'long' : 'short'} · {formatShortDate(t.openedAt)}{' '}
-                    {formatTime(t.openedAt)} · {t.quantity}
+                    {t.symbol} {sideWord(t.side)} · {formatShortDate(t.openedAt)} {formatTime(t.openedAt)} ·{' '}
+                    {t.quantity}
                   </li>
                 ))}
-                {likely.length > 4 && <li>…and {likely.length - 4} more</li>}
+                {likely.length > 4 && <li>{tr('impw.more', { count: likely.length - 4 })}</li>}
               </ul>
               <label className="mt-2 flex cursor-pointer items-center gap-2 pl-6 text-xs text-muted">
                 <input
@@ -457,9 +467,7 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
                   checked={importLikely}
                   onChange={(e) => setImportLikely(e.target.checked)}
                 />
-                {likely.length === 1
-                  ? 'Import it anyway: it is a different trade'
-                  : 'Import them anyway: they are different trades'}
+                {tr(likely.length === 1 ? 'impw.likely.anyway.one' : 'impw.likely.anyway.many')}
               </label>
             </div>
           )}
@@ -469,18 +477,20 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
               <p className="flex items-start gap-2 text-fg">
                 <CheckCheck className="mt-0.5 size-4 shrink-0 text-accent" />
                 <span>
-                  This file closes{' '}
-                  {finishable.length === 1 ? (
-                    'a trade'
-                  ) : (
-                    <>
-                      <span className="num font-semibold">{finishable.length}</span> trades
-                    </>
-                  )}{' '}
-                  your journal has open.{' '}
-                  {finishOpen
-                    ? `${finishable.length === 1 ? 'It is' : 'They are'} finished with the file's exit: your notes, setup and tags stay.`
-                    : `${finishable.length === 1 ? 'It stays' : 'They stay'} open, and the file's closing fills come in as trades of their own.`}
+                  {finishable.length === 1
+                    ? tr('impw.closes.one')
+                    : rich(tr('impw.closes', { count: finishable.length }), {
+                        num: (chunk) => span('num font-semibold', chunk),
+                      })}{' '}
+                  {tr(
+                    finishOpen
+                      ? finishable.length === 1
+                        ? 'impw.closes.finish.one'
+                        : 'impw.closes.finish.many'
+                      : finishable.length === 1
+                        ? 'impw.closes.stay.one'
+                        : 'impw.closes.stay.many',
+                  )}
                 </span>
               </p>
               <ul className="mt-2 space-y-0.5 pl-6 text-xs text-muted">
@@ -489,21 +499,24 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
                   const part = was != null && was.quantity > t.quantity + 1e-9;
                   return (
                     <li key={t.id} className="num">
-                      {t.symbol} {t.side === 'LONG' ? 'long' : 'short'} · opened {formatShortDate(t.openedAt)}{' '}
-                      {formatTime(t.openedAt)} · {part ? `${t.quantity} of ${was.quantity}` : t.quantity}
-                      {t.closedAt ? ` · closed ${formatShortDate(t.closedAt)} ${formatTime(t.closedAt)}` : ''}
-                      {t.exitPrice != null ? ` at ${formatPrice(t.exitPrice)}` : ''}
+                      {t.symbol} {sideWord(t.side)} ·{' '}
+                      {tr('impw.closes.opened', { when: `${formatShortDate(t.openedAt)} ${formatTime(t.openedAt)}` })} ·{' '}
+                      {part ? tr('impw.closes.part', { part: t.quantity, whole: was.quantity }) : t.quantity}
+                      {t.closedAt
+                        ? ` · ${tr('impw.closes.closed', { when: `${formatShortDate(t.closedAt)} ${formatTime(t.closedAt)}` })}`
+                        : ''}
+                      {t.exitPrice != null ? ` ${tr('impw.closes.at', { price: formatPrice(t.exitPrice) })}` : ''}
                       {!t.needsReview && (
                         <>
                           {' · '}
                           <PnlValue value={netPnl(t)} currency={currency} />
                         </>
                       )}
-                      {part && ', the rest stays open'}
+                      {part && tr('impw.closes.rest')}
                     </li>
                   );
                 })}
-                {finishable.length > 4 && <li>…and {finishable.length - 4} more</li>}
+                {finishable.length > 4 && <li>{tr('impw.more', { count: finishable.length - 4 })}</li>}
               </ul>
               <label className="mt-2 flex cursor-pointer items-center gap-2 pl-6 text-xs text-muted">
                 <input
@@ -512,8 +525,7 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
                   checked={!finishOpen}
                   onChange={(e) => setFinishOpen(!e.target.checked)}
                 />
-                {finishable.length === 1 ? 'Leave it open' : 'Leave them open'}, and import the closing fills as trades
-                of their own
+                {tr(finishable.length === 1 ? 'impw.closes.leave.one' : 'impw.closes.leave.many')}
               </label>
             </div>
           )}
@@ -523,35 +535,28 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
               <p className="flex items-start gap-2 text-fg">
                 <Receipt className="mt-0.5 size-4 shrink-0 text-accent" />
                 {missing ? (
-                  <span>
-                    {result.feesMissing === 'zero' ? 'Every fee in this file is 0' : 'There are no fees in this file'},
-                    so the trades come in without them and their P&amp;L is before commissions. If your broker charges a
-                    fee, add it here.
-                  </span>
+                  <span>{tr(result.feesMissing === 'zero' ? 'impw.fee.zero' : 'impw.fee.none')}</span>
                 ) : (
-                  <span>
-                    The fees come from this file. If they are wrong, or you pay something else, charge your own instead,
-                    for this import.
-                  </span>
+                  <span>{tr('impw.fee.fromFile')}</span>
                 )}
               </p>
               <div className="mt-3 grid grid-cols-1 gap-3 pl-6 md:grid-cols-2">
-                <Field label={missing ? 'Fee to add' : 'Fees'}>
+                <Field label={tr(missing ? 'impw.fee.toAdd' : 'impw.fee.fees')}>
                   <Select
                     value={choice.per}
                     onChange={(e) => setChoice((f) => ({ ...f, per: e.target.value as FeeChoice['per'] }))}
                   >
-                    <option value="none">{missing ? 'None' : 'From the file'}</option>
-                    <option value="trade">{missing ? 'Per trade' : 'Your own, per trade'}</option>
+                    <option value="none">{tr(missing ? 'impw.fee.opt.none' : 'impw.fee.opt.fromFile')}</option>
+                    <option value="trade">{tr(missing ? 'impw.fee.opt.trade' : 'impw.fee.opt.ownTrade')}</option>
                     <option value="contract">
-                      {missing ? 'Per contract, each side' : 'Your own, per contract, each side'}
+                      {tr(missing ? 'impw.fee.opt.contract' : 'impw.fee.opt.ownContract')}
                     </option>
                   </Select>
                 </Field>
                 {choice.per !== 'none' && (
                   <Field
-                    label="Amount"
-                    hint={choice.per === 'contract' ? 'charged in, and again out' : 'once for every trade'}
+                    label={tr('impw.fee.amount')}
+                    hint={tr(choice.per === 'contract' ? 'impw.fee.hint.contract' : 'impw.fee.hint.trade')}
                     error={feeError}
                   >
                     <Input
@@ -560,17 +565,17 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
                       value={choice.amount}
                       invalid={Boolean(feeError)}
                       onChange={(e) => setChoice((f) => ({ ...f, amount: e.target.value }))}
-                      placeholder={choice.per === 'contract' ? 'e.g. 0.95' : 'e.g. 1.90'}
+                      placeholder={tr('goals.example', { n: decimalMark(choice.per === 'contract' ? '0.95' : '1.90') })}
                     />
                   </Field>
                 )}
               </div>
               <p className="mt-2 pl-6 text-xs leading-relaxed text-muted">
-                Fees on these trades <span className="num text-fg">{formatMoney(feesTotal, currency)}</span> · net
-                P&amp;L after them <PnlValue value={netTotal} currency={currency} />
-                {rateOf(choice) &&
-                  finished.length > 0 &&
-                  '. Open trades this file finishes are charged for the whole trade.'}
+                {rich(tr('impw.fee.totals'), {
+                  money: () => <span className="num text-fg">{formatMoney(feesTotal, currency)}</span>,
+                  pnl: () => <PnlValue value={netTotal} currency={currency} />,
+                })}
+                {rateOf(choice) && finished.length > 0 && tr('impw.fee.whole')}
               </p>
             </div>
           )}
@@ -589,33 +594,33 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
           {layout && (
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
               {(layout.canBeFills || layout.rowKind === 'fills') && (
-                <Field label="Each row is">
+                <Field label={tr('imp.label.eachRowIs')}>
                   <Select
                     value={layout.rowKind === 'fills' ? 'fills' : 'trades'}
                     onChange={(e) => setChoices((c) => ({ ...c, rowKind: e.target.value as 'trades' | 'fills' }))}
                   >
-                    <option value="trades">A whole trade</option>
-                    <option value="fills">One fill (put together into trades)</option>
+                    <option value="trades">{tr('impw.rowKind.trades')}</option>
+                    <option value="fills">{tr('impw.rowKind.fills')}</option>
                   </Select>
                 </Field>
               )}
               {(layout.ambiguousDates || choices.dateOrder) && (
-                <Field label="Dates like 03/04/2026 are">
+                <Field label={tr('impw.dates')}>
                   <Select
                     value={layout.dateOrder ?? 'mdy'}
                     onChange={(e) => setChoices((c) => ({ ...c, dateOrder: e.target.value as DateOrder }))}
                   >
-                    <option value="mdy">Month first: March 4</option>
-                    <option value="dmy">Day first: 3 April</option>
+                    <option value="mdy">{tr('impw.dates.mdy')}</option>
+                    <option value="dmy">{tr('impw.dates.dmy')}</option>
                   </Select>
                 </Field>
               )}
               {noSymbolColumn && (
-                <Field label="Symbol for every row" hint="this file has none">
+                <Field label={tr('impw.symbolForAll')} hint={tr('impw.symbolForAll.hint')}>
                   <Input
                     value={choices.defaultSymbol}
                     onChange={(e) => setChoices((c) => ({ ...c, defaultSymbol: e.target.value }))}
-                    placeholder="e.g. ES"
+                    placeholder={tr('goals.example', { n: 'ES' })}
                   />
                 </Field>
               )}
@@ -629,29 +634,30 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
               className="rounded-lg border border-line"
             >
               <summary className="cursor-pointer select-none px-4 py-2.5 text-sm text-muted hover:text-fg">
-                Columns: {used} of {layout.columns.length} used
-                {guessed > 0 ? `, ${guessed} guessed from ${guessed === 1 ? 'its name' : 'their names'}` : ''}
-                {restored ? ', as you set them for this layout last time' : ''}
+                {tr('impw.columns.used', { columns: tr('imp.label.columns'), used, total: layout.columns.length })}
+                {guessed > 0 ? tr('impw.columns.guessed', { count: guessed }) : ''}
+                {restored ? tr('impw.columns.restored') : ''}
               </summary>
               <div className="max-h-72 space-y-2 overflow-y-auto border-t border-line px-4 py-3">
-                <p className="text-xs leading-relaxed text-faint">
-                  Change what a column is read as if the importer got it wrong. Your choices are remembered on this
-                  device for files with the same columns.
-                </p>
+                <p className="text-xs leading-relaxed text-faint">{tr('impw.columns.explain')}</p>
                 {layout.columns.map((column) => (
                   <div key={column.index} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] items-center gap-3">
                     <div className="min-w-0">
-                      <div className="truncate text-sm text-fg">{column.header || `Column ${column.index + 1}`}</div>
+                      <div className="truncate text-sm text-fg">
+                        {column.header || tr('impw.columns.unnamed', { n: column.index + 1 })}
+                      </div>
                       <div className="num truncate text-[11px] text-faint">{column.sample || '—'}</div>
-                      {column.guessed && <div className="text-[11px] text-warn">guessed from its name</div>}
+                      {column.guessed && <div className="text-[11px] text-warn">{tr('impw.columns.guessedOne')}</div>}
                     </div>
                     <Select
-                      aria-label={`What "${column.header || `column ${column.index + 1}`}" is`}
+                      aria-label={tr('impw.columns.what', {
+                        name: quoted(column.header || tr('impw.columns.unnamedLower', { n: column.index + 1 })),
+                      })}
                       value={column.role}
                       onChange={(e) => setRole(column.index, e.target.value as Role | '')}
                     >
-                      <option value="">Not used</option>
-                      {ROLE_LABELS.map(([role, label]) => (
+                      <option value="">{tr('impw.columns.notUsed')}</option>
+                      {roleLabels().map(([role, label]) => (
                         <option key={role} value={role}>
                           {label}
                         </option>
@@ -669,7 +675,7 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
                       if (layout) rememberChoices(layout.signature, AUTOMATIC);
                     }}
                   >
-                    Back to automatic
+                    {tr('impw.columns.automatic')}
                   </Button>
                 )}
               </div>
@@ -685,12 +691,8 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
                 onChange={(e) => setCombinePartials(e.target.checked)}
               />
               <span>
-                <span className="text-fg">Combine partial exits into one trade</span>
-                <span className="mt-0.5 block text-xs leading-relaxed text-muted">
-                  When you scale out, the broker writes one row per exit. With this on, rows that share an entry fill
-                  become a single position: the sizes add up, the prices become size-weighted averages, and the P&amp;L
-                  stays exactly the sum of the parts.
-                </span>
+                <span className="text-fg">{tr('impw.combine')}</span>
+                <span className="mt-0.5 block text-xs leading-relaxed text-muted">{tr('impw.combine.explain')}</span>
               </span>
             </label>
           )}
@@ -698,12 +700,7 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
           {result.pairedFills && result.trades.length > 0 && (
             <p className="flex items-start gap-2 rounded-lg border border-accent/25 bg-accent/5 px-4 py-2.5 text-xs leading-relaxed text-muted">
               <Info className="mt-px size-3.5 shrink-0 text-accent" />
-              <span>
-                This export pairs a buy fill with a sell fill instead of naming a direction, so the fill that happened
-                first is treated as the entry. Where the file reports a P&amp;L, the contract multiplier is worked out
-                from it, which is how a 2-lot MNQ trade comes out at $2 a point. Check a row or two below before
-                importing.
-              </span>
+              <span>{tr('impw.paired')}</span>
             </p>
           )}
 
@@ -712,13 +709,13 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
               <table className="w-full whitespace-nowrap text-sm md:whitespace-normal">
                 <thead className="border-b border-line bg-app/50 text-xs text-muted">
                   <tr>
-                    <th className="px-3 py-2 text-left font-medium">Date</th>
-                    <th className="px-3 py-2 text-left font-medium">Symbol</th>
-                    <th className="px-3 py-2 text-left font-medium">Side</th>
-                    <th className="px-3 py-2 text-right font-medium">Qty</th>
-                    <th className="px-3 py-2 text-right font-medium">Entry</th>
-                    <th className="px-3 py-2 text-right font-medium">Exit</th>
-                    <th className="px-3 py-2 text-right font-medium">P&amp;L</th>
+                    <th className="px-3 py-2 text-left font-medium">{tr('impw.col.date')}</th>
+                    <th className="px-3 py-2 text-left font-medium">{tr('form.symbol')}</th>
+                    <th className="px-3 py-2 text-left font-medium">{tr('form.side')}</th>
+                    <th className="px-3 py-2 text-right font-medium">{tr('list.col.qty')}</th>
+                    <th className="px-3 py-2 text-right font-medium">{tr('list.col.entry')}</th>
+                    <th className="px-3 py-2 text-right font-medium">{tr('list.col.exit')}</th>
+                    <th className="px-3 py-2 text-right font-medium">{tr('list.col.pnl')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-line">
@@ -731,13 +728,15 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
                             <span className="num text-xs text-faint">{formatTime(t.openedAt)}</span>
                           </>
                         ) : (
-                          <StatusBadge tone="warn">no date</StatusBadge>
+                          <StatusBadge tone="warn">{tr('impw.noDate')}</StatusBadge>
                         )}
                       </td>
                       <td className="px-3 py-2 font-semibold text-fg">
                         {t.symbol}
                         {(t.fillCount ?? 1) > 1 && (
-                          <span className="ml-1.5 text-[11px] font-normal text-accent">{t.fillCount} fills</span>
+                          <span className="ml-1.5 text-[11px] font-normal text-accent">
+                            {tr('list.fills', { count: t.fillCount ?? 1 })}
+                          </span>
                         )}
                       </td>
                       <td className="px-3 py-2">
@@ -761,7 +760,7 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
               </table>
               {toImport.length > preview.length && (
                 <div className="border-t border-line px-3 py-2 text-xs text-faint">
-                  …and {toImport.length - preview.length} more rows.
+                  {tr('impw.moreRows', { count: toImport.length - preview.length })}
                 </div>
               )}
             </div>
@@ -769,8 +768,9 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
 
           {result.ignored.length > 0 && (
             <p className="text-xs text-faint">
-              Columns not used: <span className="num">{result.ignored.join(', ')}</span>. Nothing was lost — those
-              simply have no place in the journal.
+              {rich(tr('impw.ignored'), {
+                num: () => <span className="num">{result.ignored.join(tr('format.comma'))}</span>,
+              })}
             </p>
           )}
 
@@ -782,7 +782,7 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
                 </p>
               ))}
               {result.errors.length > 30 && (
-                <p className="text-xs text-muted">…and {result.errors.length - 30} more.</p>
+                <p className="text-xs text-muted">{tr('impw.moreErrors', { count: result.errors.length - 30 })}</p>
               )}
             </div>
           )}
@@ -791,20 +791,17 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
 
       <details className="text-xs text-muted">
         <summary className="cursor-pointer select-none text-sm text-muted hover:text-fg">
-          Which file to export from your platform
+          {tr('impw.help.platforms')}
         </summary>
         <div className="mt-2 space-y-3 leading-relaxed">
-          <p>
-            These platforms&apos; exports import as they come, and the preview names the platform when it recognises the
-            file. Any other CSV with a symbol column works too: check the columns in the preview.
-          </p>
+          <p>{tr('impw.help.platformsIntro')}</p>
           {PLATFORM_GROUPS.map(({ group, platforms }) => (
             <div key={group}>
-              <h3 className="text-[11px] font-semibold uppercase tracking-wide text-faint">{group}</h3>
+              <h3 className="text-[11px] font-semibold uppercase tracking-wide text-faint">{groupName(group)}</h3>
               <ul className="mt-1 space-y-1">
                 {platforms.map((p) => (
                   <li key={p.name}>
-                    <span className="text-fg">{p.name}</span>: {p.how}
+                    <span className="text-fg">{p.name}</span>: {say(p.how)}
                   </li>
                 ))}
               </ul>
@@ -815,64 +812,35 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
 
       <details className="text-xs text-muted">
         <summary className="cursor-pointer select-none text-sm text-muted hover:text-fg">
-          Which columns are understood
+          {tr('impw.help.columns')}
         </summary>
         <div className="mt-2 space-y-2 leading-relaxed">
+          <p>{tr('impw.help.files')}</p>
+          <p>{rich(tr('impw.help.symbol'), { fg: (chunk) => span('text-fg', chunk) })}</p>
+          <p>{rich(tr('impw.help.rows'), { fg: (chunk) => span('text-fg', chunk) })}</p>
           <p>
-            CSV files and Excel workbooks (.xlsx) are both read. In a workbook, the sheet that looks most like a list of
-            trades is used, and you can choose another. An old .xls file needs saving as .xlsx or CSV first.
+            {rich(tr('impw.help.names', { columns: tr('imp.label.columns') }), {
+              names: () =>
+                NAME_EXAMPLES.map((name, i) => (
+                  <Fragment key={name}>
+                    {i > 0 && tr('format.comma')}
+                    <span className="num">{name}</span>
+                  </Fragment>
+                )),
+              start: () => <span className="num">Start Price</span>,
+              lots: () => <span className="num">Lots Traded</span>,
+            })}
           </p>
-          <p>
-            Only a <span className="text-fg">symbol</span> is required, and for a file without one (TradingView&apos;s
-            list of trades) you can type it in. Everything else is optional.
-          </p>
-          <p>
-            A file can list <span className="text-fg">whole trades</span>, with the entry and the exit on one row, or{' '}
-            <span className="text-fg">individual fills</span>, one buy or sell per row. Fills are put back together by
-            following the position in each symbol: scaling in and out stays one trade, and a position still open at the
-            end of the file is imported as open.
-          </p>
-          <p>
-            Column names are recognised in the many forms brokers use — <span className="num">Qty</span>,{' '}
-            <span className="num">Filled</span>, <span className="num">Market pos.</span>,{' '}
-            <span className="num">Comm/Fee</span>, <span className="num">Net P&amp;L (USD)</span>,{' '}
-            <span className="num">Date/Time</span>, separate date and time columns — and several fee columns add up; a
-            commission per contract is multiplied by the size. A file with no fees at all comes in with none, unless you
-            add a fee per trade or per contract in the preview; it is remembered for the account on this device. A file
-            with fees keeps its own, unless you charge yours in their place, for that file only. A name it doesn&apos;t
-            know as a whole is read by its words when it knows every one of them, so{' '}
-            <span className="num">Start Price</span> is the entry price and <span className="num">Lots Traded</span> the
-            quantity; the preview says which columns it read that way. Title lines above the table and total lines below
-            it are skipped. Anything read wrongly can be changed under Columns. Separate several tags with a |
-            character.
-          </p>
-          <p>
-            What one point is worth comes from a multiplier column, the amount against the price, or the file&apos;s
-            P&amp;L. Failing those, futures are recognised from a full contract code such as ESH6 or MNQ 03-26, and
-            options count 100 shares. The preview says whenever it worked one out this way.
-          </p>
-          <p>
-            Rows that are missing a date, quantity or entry price still import. They are marked{' '}
-            <span className="text-warn">needs details</span>, kept out of every statistic, and listed at the top of the
-            Trades page so you can complete them by hand.
-          </p>
-          <p>
-            Importing the same trades again adds nothing, so a daily export that overlaps the last one is safe. Where
-            the broker numbers its trades or fills, those numbers decide. Otherwise a trade with the same account,
-            symbol, side, entry time and size as one already in your journal is left out, and the preview lists it in
-            case it really is a second trade.
-          </p>
-          <p>
-            A position that an earlier export left open is finished by the export that closes it: the trade in your
-            journal gets the exit, and your notes, setup and tags stay. The preview lists those trades, with a way to
-            leave them open.
-          </p>
+          <p>{tr('impw.help.points', { first: 'ESH6', second: 'MNQ 03-26' })}</p>
+          <p>{rich(tr('impw.help.needs'), { warn: (chunk) => span('text-warn', chunk) })}</p>
+          <p>{tr('impw.help.again')}</p>
+          <p>{tr('impw.help.finish')}</p>
         </div>
       </details>
 
       <div className="-mx-5 -mb-4 flex justify-end gap-2 border-t border-line px-5 py-3">
         <Button variant="ghost" onClick={onClose}>
-          Cancel
+          {tr('common.cancel')}
         </Button>
         <Button
           variant="primary"
@@ -883,12 +851,11 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
             // only a file with no fees of its own changes the one remembered
             if (feeBox && missing) rememberFee(accountId, fee);
             actions.importTrades(toImport, newSetups, finished);
-            const done = !finished.length
-              ? `Imported ${tradesWord(toImport.length)}`
-              : toImport.length
-                ? `Imported ${tradesWord(toImport.length)}, finished ${openWord(finished.length)}`
-                : `Finished ${openWord(finished.length)}`;
-            toast(incomplete > 0 ? `${done} — ${incomplete} need details` : done, incomplete > 0 ? 'info' : 'success');
+            const done = doneLabel(toImport.length, finished.length);
+            toast(
+              incomplete > 0 ? tr('impw.done.needDetails', { done, count: incomplete }) : done,
+              incomplete > 0 ? 'info' : 'success',
+            );
             onClose();
           }}
         >
