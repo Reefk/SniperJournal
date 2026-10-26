@@ -7,6 +7,7 @@ import { cn, uid } from '@/lib/utils';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { createConfirmGate } from './confirm';
+import { tr } from '@/lib/i18n';
 
 interface ConfirmOptions {
   title: string;
@@ -95,14 +96,14 @@ export function UIProvider({ children }: { children: ReactNode }) {
         footer={
           <>
             <Button variant="ghost" onClick={() => settle(false)}>
-              {confirmState?.cancelLabel ?? 'Cancel'}
+              {confirmState?.cancelLabel ?? tr('common.cancel')}
             </Button>
             <Button
               variant={confirmState?.tone === 'danger' ? 'danger' : 'primary'}
               onClick={() => settle(true)}
               autoFocus
             >
-              {confirmState?.confirmLabel ?? 'Confirm'}
+              {confirmState?.confirmLabel ?? tr('common.confirm')}
             </Button>
           </>
         }

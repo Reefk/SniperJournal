@@ -154,6 +154,14 @@ describe('sanitize: individual rules', () => {
     expect(cleanSettings({ timezone: 'Asia/Jerusalem' }, base).timezone).toBe('Asia/Jerusalem');
   });
 
+  it('the language is kept if it is one the app speaks; absent, damaged or unknown reads as English', () => {
+    expect(normalize(journal({ settings: { ...base, language: 'ru' } })).settings.language).toBe('ru');
+    expect(normalize(journal()).settings.language).toBeUndefined();
+    for (const bad of ['de', 'RU', '', 7, null, { code: 'ar' }]) {
+      expect(cleanSettings({ language: bad }, base).language).toBeUndefined();
+    }
+  });
+
   it('trade numbers that are not finite become safe values', () => {
     const [t] = cleanTrades([{ id: 'n', quantity: 'ten', entryPrice: Number.NaN, exitPrice: 'x', manualPnl: {} }]);
     expect(t.quantity).toBe(0);

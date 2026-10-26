@@ -4,13 +4,15 @@ import { useState } from 'react';
 import type { Trade } from '@/lib/types';
 import { useJournal } from '@/store/JournalProvider';
 import { useUI } from '@/store/UIProvider';
-import { SESSIONS } from '@/lib/sessions';
+import { SESSIONS, sessionName } from '@/lib/sessions';
+import { decimalMark, tr } from '@/lib/i18n';
 import { toNumberOrNull } from '@/lib/utils';
 import { feeAtRate, type FeeRate } from '@/lib/fee-rate';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Field, Input, Select, Textarea } from '@/components/ui/Field';
 import { TagInput } from '@/components/ui/TagInput';
+import { rich } from '@/components/ui/Rich';
 
 const KEEP = '__keep__';
 
@@ -65,7 +67,7 @@ export function BulkDetailsModal({ ids, onClose }: { ids: string[]; onClose: () 
       }
     }
 
-    toast(`Updated ${count} ${count === 1 ? 'trade' : 'trades'}`);
+    toast(tr('bulk.updated', { count }));
     onClose();
   };
 
@@ -75,25 +77,25 @@ export function BulkDetailsModal({ ids, onClose }: { ids: string[]; onClose: () 
       onClose={onClose}
       closeOnBackdrop={false}
       size="md"
-      title={`Add details to ${count} ${count === 1 ? 'trade' : 'trades'}`}
-      description="Anything you leave untouched stays as it is on each trade."
+      title={tr('bulk.title', { count })}
+      description={tr('bulk.hint')}
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>
-            Cancel
+            {tr('common.cancel')}
           </Button>
           <Button variant="primary" onClick={apply}>
-            Apply to {count}
+            {tr('bulk.apply', { count })}
           </Button>
         </>
       }
     >
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Setup" hint={data.setups.length ? undefined : 'none in your playbook yet'}>
+          <Field label={tr('form.setup')} hint={data.setups.length ? undefined : tr('bulk.noSetups')}>
             <Select value={setupId} onChange={(e) => setSetupId(e.target.value)}>
-              <option value={KEEP}>Leave unchanged</option>
-              <option value="">No setup</option>
+              <option value={KEEP}>{tr('bulk.unchanged')}</option>
+              <option value="">{tr('form.noSetup')}</option>
               {data.setups.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name}
@@ -101,13 +103,13 @@ export function BulkDetailsModal({ ids, onClose }: { ids: string[]; onClose: () 
               ))}
             </Select>
           </Field>
-          <Field label="Session">
+          <Field label={tr('form.session')}>
             <Select value={session} onChange={(e) => setSession(e.target.value)}>
-              <option value={KEEP}>Leave unchanged</option>
-              <option value="">None</option>
+              <option value={KEEP}>{tr('bulk.unchanged')}</option>
+              <option value="">{tr('form.none')}</option>
               {SESSIONS.map((s) => (
                 <option key={s} value={s}>
-                  {s}
+                  {sessionName(s)}
                 </option>
               ))}
             </Select>
@@ -115,36 +117,36 @@ export function BulkDetailsModal({ ids, onClose }: { ids: string[]; onClose: () 
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Fees" hint="leave blank to keep">
+          <Field label={tr('form.fees')} hint={tr('bulk.blankKeeps')}>
             <Input
               inputMode="decimal"
               className="num"
               value={fees}
               onChange={(e) => setFees(e.target.value)}
-              placeholder={feesPer === 'contract' ? 'e.g. 0.95' : 'e.g. 1.24'}
+              placeholder={tr('goals.example', { n: decimalMark(feesPer === 'contract' ? '0.95' : '1.24') })}
             />
           </Field>
-          <Field label="Charged" hint={feesPer === 'contract' ? 'in, and again out' : undefined}>
+          <Field label={tr('bulk.charged')} hint={feesPer === 'contract' ? tr('bulk.inAndOut') : undefined}>
             <Select value={feesPer} onChange={(e) => setFeesPer(e.target.value as FeeRate['per'])}>
-              <option value="trade">Per trade</option>
-              <option value="contract">Per contract</option>
+              <option value="trade">{tr('bulk.perTrade')}</option>
+              <option value="contract">{tr('bulk.perContract')}</option>
             </Select>
           </Field>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Leverage" hint="leave blank to keep">
+          <Field label={tr('form.leverage')} hint={tr('bulk.blankKeeps')}>
             <Input
               inputMode="decimal"
               className="num"
               value={leverage}
               onChange={(e) => setLeverage(e.target.value)}
-              placeholder="e.g. 10"
+              placeholder={tr('goals.example', { n: '10' })}
             />
           </Field>
         </div>
 
-        <Field label="Tags" hint={replaceTags ? 'replaces existing tags' : 'added to existing tags'}>
+        <Field label={tr('form.tags')} hint={replaceTags ? tr('bulk.tagsReplace') : tr('bulk.tagsAdd')}>
           <TagInput value={tags} onChange={setTags} suggestions={tagSuggestions} />
         </Field>
         <label className="flex items-center gap-2 text-xs text-muted">
@@ -154,21 +156,22 @@ export function BulkDetailsModal({ ids, onClose }: { ids: string[]; onClose: () 
             checked={replaceTags}
             onChange={(e) => setReplaceTags(e.target.checked)}
           />
-          Replace existing tags instead of adding to them
+          {tr('bulk.replaceTags')}
         </label>
 
-        <Field label="Notes" hint="leave blank to keep each trade's own note">
+        <Field label={tr('form.notes')} hint={tr('bulk.notesHint')}>
           <Textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Applied to every selected trade"
+            placeholder={tr('bulk.notesPlaceholder')}
           />
         </Field>
 
         <p className="text-xs leading-relaxed text-faint">
-          Prices, quantities and times are different on every trade, so those are edited one at a time:{' '}
-          <span className="md:hidden">tap a trade</span>
-          <span className="max-md:hidden">click a row</span> to open it.
+          {rich(tr('bulk.oneAtATime'), {
+            phone: (text) => <span className="md:hidden">{text}</span>,
+            pc: (text) => <span className="max-md:hidden">{text}</span>,
+          })}
         </p>
       </div>
     </Modal>

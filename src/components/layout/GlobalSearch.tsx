@@ -10,6 +10,7 @@ import { isClosed, matchesSearch, netPnl, tradeTimestamp } from '@/lib/trade-mat
 import { PnlValue, SideBadge } from '@/components/ui/StatusBadge';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
+import { tr } from '@/lib/i18n';
 
 export function GlobalSearch() {
   const { accountTrades, data } = useJournal();
@@ -56,7 +57,7 @@ export function GlobalSearch() {
         size="icon"
         variant="ghost"
         className="ml-auto md:hidden"
-        aria-label="Open search"
+        aria-label={tr('search.open')}
         aria-expanded={phoneOpen}
         onClick={() => {
           setPhoneOpen(true);
@@ -86,8 +87,8 @@ export function GlobalSearch() {
               if (e.key === 'Enter' && query.trim()) showAll();
               if (e.key === 'Escape') inputRef.current?.blur();
             }}
-            placeholder="Search symbols, tags, notes, setups"
-            aria-label="Search all trades"
+            placeholder={tr('search.placeholder')}
+            aria-label={tr('search.label')}
             enterKeyHint="search"
             className="h-10 w-full rounded-md border border-line bg-app pl-9 pr-3 text-sm text-fg placeholder:text-placeholder transition focus:border-accent/70 focus:outline-none focus:ring-2 focus:ring-accent/20 md:h-9 md:pr-16"
           />
@@ -101,7 +102,7 @@ export function GlobalSearch() {
               onMouseDown={(e) => e.preventDefault()}
             >
               {results.length === 0 ? (
-                <div className="px-4 py-6 text-center text-sm text-muted">No trades match that search.</div>
+                <div className="px-4 py-6 text-center text-sm text-muted">{tr('search.none')}</div>
               ) : (
                 <ul className="p-1">
                   {results.map((t) => (
@@ -133,7 +134,7 @@ export function GlobalSearch() {
                 onClick={showAll}
                 className="flex w-full items-center justify-between border-t border-line px-4 py-2.5 text-xs text-muted transition hover:bg-raised hover:text-fg"
               >
-                Show all matches in Trades
+                {tr('search.showAll')}
                 <CornerDownLeft className="size-3.5" />
               </button>
             </div>
@@ -141,7 +142,7 @@ export function GlobalSearch() {
         </div>
         {/* blurring the box closes it; the button is there to be seen */}
         <Button size="sm" variant="ghost" className="md:hidden" onClick={() => setPhoneOpen(false)}>
-          Cancel
+          {tr('common.cancel')}
         </Button>
       </div>
     </>

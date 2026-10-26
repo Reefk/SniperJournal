@@ -3,6 +3,9 @@ import type { EditedRule } from './rules';
 import { wholePct } from './format';
 import { netPnl, statTrades, tradeDay } from './trade-math';
 import { dateKey } from './utils';
+import { mistakeName, STARTING_MISTAKES } from './starting-mistakes';
+
+export { mistakeName, STARTING_MISTAKES };
 
 /**
  * Mistakes, kept apart from tags. A trade carries the mistakes it made, picked
@@ -14,19 +17,6 @@ import { dateKey } from './utils';
  * side. Before that no mistake was logged on any trade, so every one of them
  * would pass for a clean trade.
  */
-
-/** the list a journal starts with, until it is changed in Settings */
-export const STARTING_MISTAKES: readonly string[] = [
-  'Entered early (FOMO)',
-  'Chased the entry',
-  'Moved my stop',
-  'No stop',
-  'Oversized',
-  'Revenge trade',
-  'Exited too early',
-  'Held a loser too long',
-  'Outside my plan',
-];
 
 /** below this many trades with a mistake, or clean ones, what it cost is not worked out */
 export const MIN_MISTAKE_SIDE = 4;
@@ -41,14 +31,16 @@ const sameName = (a: string, b: string) => spaced(a).toLowerCase() === spaced(b)
 
 /**
  * A mistake typed in: the one of `known` it already is, whatever its capitals
- * or spaces ("oversized " is "Oversized"), or else the name trimmed. Null when
- * nothing but spaces was typed.
+ * or spaces ("oversized " is "Oversized"), or else the one a screen names so
+ * in the current language, or else the name trimmed. Null when nothing but
+ * spaces was typed. Of one of the person's own and a starting one that the
+ * language names the same, theirs is picked, so it can still be.
  */
 export function matchMistake(typed: string, known: Iterable<string>): string | null {
   const name = spaced(typed);
   if (!name) return null;
-  for (const k of known) if (sameName(k, name)) return k;
-  return name;
+  const list = [...known];
+  return list.find((k) => sameName(k, name)) ?? list.find((k) => sameName(mistakeName(k), name)) ?? name;
 }
 
 /**
@@ -59,8 +51,20 @@ export function matchMistake(typed: string, known: Iterable<string>): string | n
  * and two rows swapping names swap their trades. Of two rows with one name,
  * the spelling of a row left as it was is kept, or else the first.
  */
-export function editedMistakes(rows: EditedRule[]): { list: string[]; renamed: Map<string, string> } {
-  const unchanged = rows.filter((r) => r.was != null && spaced(r.text) === r.was).map((r) => r.was as string);
+export function editedMistakes(edited: EditedRule[]): { list: string[]; renamed: Map<string, string> } {
+  // A starting mistake is edited under its name in the language: left so, it
+  // keeps the name it is saved under, and another row given that name is it,
+  // as a row given its English name would be (unless a row left as it was
+  // has that name, which the row then is, as it is for any name).
+  const kept = edited.map((r) => (r.was != null && spaced(r.text) === mistakeName(r.was) ? { ...r, text: r.was } : r));
+  const unchanged = kept.filter((r) => r.was != null && spaced(r.text) === r.was).map((r) => r.was as string);
+  const starting = edited.flatMap((r) => (r.was != null && mistakeName(r.was) !== r.was ? [r.was] : []));
+  const rows = kept.map((r) => {
+    const name = spaced(r.text);
+    if (name === r.was || unchanged.some((m) => sameName(m, name))) return r;
+    const named = starting.find((s) => s !== r.was && sameName(mistakeName(s), name));
+    return named ? { ...r, text: named } : r;
+  });
   const list: string[] = [];
   for (const { text } of rows) {
     const name = spaced(text);

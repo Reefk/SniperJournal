@@ -1,16 +1,16 @@
 import type { Trade } from './types';
 import { dateKey } from './utils';
 import { tradeDay } from './trade-math';
+import { tr } from './i18n';
 
 export type RangeKey = '7D' | '30D' | '90D' | 'YTD' | 'ALL';
 
-export const RANGE_OPTIONS: ReadonlyArray<{ value: RangeKey; label: string }> = [
-  { value: '7D', label: '7D' },
-  { value: '30D', label: '30D' },
-  { value: '90D', label: '90D' },
-  { value: 'YTD', label: 'YTD' },
-  { value: 'ALL', label: 'All' },
-];
+const RANGES: readonly RangeKey[] = ['7D', '30D', '90D', 'YTD', 'ALL'];
+
+/** the range buttons, in the current language */
+export function rangeOptions(): ReadonlyArray<{ value: RangeKey; label: string }> {
+  return RANGES.map((value) => ({ value, label: tr(`range.${value}`) }));
+}
 
 /** inclusive first day of the range, or null for ALL */
 export function rangeStart(range: RangeKey, now = new Date()): string | null {

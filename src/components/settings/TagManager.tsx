@@ -5,7 +5,8 @@ import { CircleAlert, Ellipsis, Merge, Pencil, Plus, Trash2 } from 'lucide-react
 import { useJournal } from '@/store/JournalProvider';
 import { useUI } from '@/store/UIProvider';
 import { formatMoney } from '@/lib/format';
-import { matchMistake, mistakeList } from '@/lib/mistakes';
+import { tr } from '@/lib/i18n';
+import { matchMistake, mistakeList, mistakeName } from '@/lib/mistakes';
 import {
   keepApart,
   likelyMistake,
@@ -26,8 +27,6 @@ import { MenuDivider, MenuItem, Popover } from '@/components/ui/Popover';
 
 /** below this many tags the list shows them all; above it, a search box and "Show all" */
 const SHORT_LIST = 12;
-
-const trades = (n: number) => `${n} ${n === 1 ? 'trade' : 'trades'}`;
 
 type Asking = { kind: 'rename' | 'merge' | 'move'; tags: string[] };
 
@@ -70,23 +69,23 @@ export function TagManager() {
   const remove = async (tag: string) => {
     const n = tradesWith(data.trades, [tag]);
     const ok = await confirm({
-      title: `Delete “${tag}”?`,
-      message: `It comes off ${trades(n)}, in every account. The trades stay.`,
-      confirmLabel: 'Delete tag',
+      title: tr('tags.delete.title', { tag }),
+      message: tr('tags.delete.message', { count: n }),
+      confirmLabel: tr('tags.delete.confirm'),
       tone: 'danger',
     });
-    if (ok) apply({ from: [tag], into: null }, `“${tag}” deleted from ${trades(n)}`);
+    if (ok) apply({ from: [tag], into: null }, tr('tags.deleted', { tag, count: n }));
   };
 
   if (!lines.length && !groups.length) {
-    return <p className="text-sm text-muted">No tags yet. The ones you type in a trade&apos;s form show up here.</p>;
+    return <p className="text-sm text-muted">{tr('tags.none')}</p>;
   }
 
   return (
     <div className="space-y-4">
       {alike.length > 0 && (
         <div className="rounded-lg border border-accent/30 bg-accent/5 px-3 py-2">
-          <div className="pt-1 text-sm font-medium text-fg">These look like one tag</div>
+          <div className="pt-1 text-sm font-medium text-fg">{tr('tags.alike')}</div>
           <ul className="divide-y divide-line">
             {alike.map((set) => (
               <li key={set.join('\n')} className="flex flex-wrap items-center gap-2 py-2.5">
@@ -102,20 +101,20 @@ export function TagManager() {
                 </span>
                 <span className="ml-auto flex flex-wrap gap-1.5">
                   <Button size="sm" onClick={() => setAsking({ kind: 'merge', tags: set })}>
-                    <Merge className="size-3.5" /> Merge…
+                    <Merge className="size-3.5" /> {tr('tags.merge')}
                   </Button>
                   <Button size="sm" variant="ghost" onClick={() => setAsking({ kind: 'move', tags: set })}>
-                    Move to mistakes…
+                    {tr('tags.moveToMistakes')}
                   </Button>
                   <Button
                     size="sm"
                     variant="ghost"
                     onClick={() => {
                       actions.updateSettings({ tagsKeptApart: keepApart(data.settings, set) });
-                      toast('Kept apart');
+                      toast(tr('tags.keptApart'));
                     }}
                   >
-                    Keep apart
+                    {tr('tags.keepApart')}
                   </Button>
                 </span>
               </li>
@@ -128,14 +127,14 @@ export function TagManager() {
         <div>
           {lines.length > SHORT_LIST && (
             <Input
-              aria-label="Find a tag"
-              placeholder="Find a tag"
+              aria-label={tr('tags.find')}
+              placeholder={tr('tags.find')}
               value={find}
               onChange={(e) => setFind(e.target.value)}
               className="mb-2 md:max-w-xs"
             />
           )}
-          <ul className="divide-y divide-line" aria-label="Your tags">
+          <ul className="divide-y divide-line" aria-label={tr('tags.yours')}>
             {shown.map((line) => (
               <TagRow
                 key={line.tag}
@@ -146,10 +145,12 @@ export function TagManager() {
               />
             ))}
           </ul>
-          {term && !found.length && <p className="py-2 text-sm text-muted">No tag has “{find.trim()}” in it.</p>}
+          {term && !found.length && (
+            <p className="py-2 text-sm text-muted">{tr('tags.noMatch', { text: find.trim() })}</p>
+          )}
           {!term && found.length > SHORT_LIST && (
             <Button size="sm" variant="ghost" className="mt-1" onClick={() => setShowAll((s) => !s)}>
-              {showAll ? 'Show fewer' : `Show all ${found.length} tags`}
+              {showAll ? tr('tags.showFewer') : tr('tags.showAll', { count: found.length })}
             </Button>
           )}
         </div>
@@ -157,14 +158,12 @@ export function TagManager() {
 
       <div className="border-t border-line pt-4">
         <div className="flex items-center justify-between gap-3">
-          <h3 className="text-sm font-medium text-fg">Groups</h3>
+          <h3 className="text-sm font-medium text-fg">{tr('tags.groups')}</h3>
           <Button size="sm" onClick={() => setEditing(null)}>
-            <Plus className="size-3.5" /> New group
+            <Plus className="size-3.5" /> {tr('tags.newGroup')}
           </Button>
         </div>
-        <p className="mt-0.5 text-xs leading-relaxed text-muted">
-          Put tags in groups of your own, such as Emotion or Source of the idea. Reports shows a table for each group.
-        </p>
+        <p className="mt-0.5 text-xs leading-relaxed text-muted">{tr('tags.groupsHint')}</p>
         {groups.length > 0 && (
           <ul className="mt-2 divide-y divide-line">
             {groups.map((g) => (
@@ -182,7 +181,7 @@ export function TagManager() {
                         </span>
                       ))
                     ) : (
-                      <span className="text-xs text-faint">No tags in it yet</span>
+                      <span className="text-xs text-faint">{tr('tags.groupEmpty')}</span>
                     )}
                   </div>
                 </div>
@@ -190,9 +189,9 @@ export function TagManager() {
                   size="sm"
                   variant="ghost"
                   onClick={() => setEditing(g.name)}
-                  aria-label={`Edit the group ${g.name}`}
+                  aria-label={tr('tags.editGroup', { name: g.name })}
                 >
-                  <Pencil className="size-3.5" /> Edit
+                  <Pencil className="size-3.5" /> {tr('common.edit')}
                 </Button>
               </li>
             ))}
@@ -223,15 +222,15 @@ export function TagManager() {
           }}
           onDelete={async (name) => {
             const ok = await confirm({
-              title: `Delete the group “${name}”?`,
-              message: 'Its tags stay on your trades; only the group goes, and its table in Reports.',
-              confirmLabel: 'Delete group',
+              title: tr('tags.group.delete.title', { name }),
+              message: tr('tags.group.delete.message'),
+              confirmLabel: tr('tags.group.delete'),
               tone: 'danger',
             });
             if (!ok) return;
             actions.updateSettings({ tagGroups: groups.filter((g) => g.name !== name) });
             setEditing(undefined);
-            toast('Group deleted');
+            toast(tr('tags.group.deleted'));
           }}
         />
       )}
@@ -255,7 +254,7 @@ function TagRow({
       <div className="min-w-0 flex-1">
         <div className="truncate whitespace-pre text-sm text-fg">{line.tag}</div>
         <div className="text-xs text-muted">
-          {trades(line.trades)}
+          {tr('common.trades', { count: line.trades })}
           {line.group && <> · {line.group}</>}
         </div>
       </div>
@@ -270,7 +269,13 @@ function TagRow({
       <Popover
         className="w-56"
         trigger={({ toggle, open }) => (
-          <Button size="icon" variant="ghost" onClick={toggle} aria-expanded={open} aria-label={`Change “${line.tag}”`}>
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={toggle}
+            aria-expanded={open}
+            aria-label={tr('tags.change', { tag: line.tag })}
+          >
             <Ellipsis className="size-4" />
           </Button>
         )}
@@ -279,9 +284,9 @@ function TagRow({
           <div>
             {(
               [
-                ['rename', Pencil, 'Rename…'],
-                ['merge', Merge, 'Merge into…'],
-                ['move', CircleAlert, 'Move to mistakes…'],
+                ['rename', Pencil, 'tags.rename'],
+                ['merge', Merge, 'tags.mergeInto'],
+                ['move', CircleAlert, 'tags.moveToMistakes'],
               ] as const
             ).map(([kind, icon, label]) => (
               <MenuItem
@@ -292,7 +297,7 @@ function TagRow({
                   onAsk(kind);
                 }}
               >
-                {label}
+                {tr(label)}
               </MenuItem>
             ))}
             <MenuDivider />
@@ -304,7 +309,7 @@ function TagRow({
                 onDelete();
               }}
             >
-              Delete…
+              {tr('tags.delete')}
             </MenuItem>
           </div>
         )}
@@ -337,8 +342,6 @@ function TagDialog({
   // the mistake picked, by its place in the list; -1 for a new one
   const [pick, setPick] = useState(() => mistakes.indexOf(likelyMistake(tags, mistakes) ?? ''));
   const [newMistake, setNewMistake] = useState(() => spacedTag(first));
-  const where = `on ${trades(count)}, in every account`;
-  const what = tags.length > 1 ? 'these tags' : `“${first}”`;
 
   let title: string;
   let body: React.ReactNode;
@@ -349,29 +352,27 @@ function TagDialog({
   if (kind === 'rename') {
     const to = spacedTag(name);
     const merging = to !== first && lines.some((l) => l.tag === to);
-    title = `Rename “${first}”`;
-    action = merging ? 'Merge' : 'Rename';
+    title = tr('tags.rename.title', { tag: first });
+    action = merging ? tr('tags.merge.action') : tr('tags.rename.action');
     change = to && to !== first ? { from: [first], into: to } : null;
-    message = merging ? `Merged into “${to}” ${where}` : `Renamed ${where}`;
+    message = merging ? tr('tags.merge.done', { tag: to, count }) : tr('tags.rename.done', { count });
     body = (
-      <Field label="New name">
+      <Field label={tr('tags.rename.newName')}>
         <Input value={name} onChange={(e) => setName(e.target.value)} autoFocus />
         <p className="mt-2 text-xs leading-relaxed text-muted">
-          {merging
-            ? `“${to}” is a tag already: the two become one, ${where}. A trade with both keeps it once.`
-            : `It changes ${where}.`}
+          {merging ? tr('tags.rename.mergeHint', { tag: to, count }) : tr('tags.rename.hint', { count })}
         </p>
       </Field>
     );
   } else if (kind === 'merge') {
-    title = tags.length > 1 ? 'Merge these tags' : `Merge “${first}”`;
-    action = 'Merge';
+    title = tags.length > 1 ? tr('tags.merge.titleMany') : tr('tags.merge.title', { tag: first });
+    action = tr('tags.merge.action');
     change = into ? { from: tags, into } : null;
-    message = `Merged into “${into}” ${where}`;
+    message = tr('tags.merge.done', { tag: into, count });
     body =
       tags.length > 1 ? (
         <fieldset>
-          <legend className="mb-2 text-xs font-medium text-muted">Keep which spelling</legend>
+          <legend className="mb-2 text-xs font-medium text-muted">{tr('tags.merge.keep')}</legend>
           <div className="space-y-1.5">
             {tags.map((tag) => (
               <label key={tag} className="flex cursor-pointer items-center gap-2.5 text-sm text-fg">
@@ -387,10 +388,10 @@ function TagDialog({
               </label>
             ))}
           </div>
-          <p className="mt-3 text-xs leading-relaxed text-muted">They become one tag {where}.</p>
+          <p className="mt-3 text-xs leading-relaxed text-muted">{tr('tags.merge.become', { count })}</p>
         </fieldset>
       ) : others.length ? (
-        <Field label="Into">
+        <Field label={tr('tags.merge.into')}>
           <Select value={into} onChange={(e) => setInto(e.target.value)}>
             {others.map((l) => (
               <option key={l.tag} value={l.tag}>
@@ -398,38 +399,34 @@ function TagDialog({
               </option>
             ))}
           </Select>
-          <p className="mt-2 text-xs leading-relaxed text-muted">
-            “{first}” comes off {trades(count)} and the tag you pick goes on in its place. A trade with both keeps it
-            once.
-          </p>
+          <p className="mt-2 text-xs leading-relaxed text-muted">{tr('tags.merge.intoHint', { tag: first, count })}</p>
         </Field>
       ) : (
-        <p className="text-sm text-muted">There is no other tag to merge it into.</p>
+        <p className="text-sm text-muted">{tr('tags.merge.noOther')}</p>
       );
   } else {
     const typed = pick < 0 ? matchMistake(newMistake, mistakes) : mistakes[pick];
-    title = 'Move to mistakes';
-    action = 'Move to mistakes';
+    title = tr('tags.move.title');
+    action = tr('tags.move.title');
     change = typed ? { from: tags, into: null, mistake: typed } : null;
-    message = `Moved to the mistakes as “${typed}” ${where}`;
+    message = tr('tags.move.done', { mistake: mistakeName(typed ?? ''), count });
     body = (
       <div className="space-y-3">
         <p className="text-sm leading-relaxed text-muted">
-          {what === 'these tags' ? 'These tags come' : `${what} comes`} off {trades(count)}, in every account, and each
-          of them gets the mistake instead. Reports then count those trades in what the mistake cost.
+          {tags.length > 1 ? tr('tags.move.bodyMany', { count }) : tr('tags.move.body', { tag: first, count })}
         </p>
-        <Field label="The mistake">
+        <Field label={tr('tags.move.mistake')}>
           <Select value={pick} onChange={(e) => setPick(Number(e.target.value))}>
             {mistakes.map((m, i) => (
               <option key={m} value={i}>
-                {m}
+                {mistakeName(m)}
               </option>
             ))}
-            <option value={-1}>A new mistake…</option>
+            <option value={-1}>{tr('tags.move.newMistake')}</option>
           </Select>
         </Field>
         {pick < 0 && (
-          <Field label="Its name" hint="joins your list">
+          <Field label={tr('tags.move.name')} hint={tr('tags.move.nameHint')}>
             <Input value={newMistake} onChange={(e) => setNewMistake(e.target.value)} />
           </Field>
         )}
@@ -447,7 +444,7 @@ function TagDialog({
       footer={
         <div className="flex justify-end gap-2">
           <Button variant="ghost" onClick={onClose}>
-            Cancel
+            {tr('common.cancel')}
           </Button>
           <Button variant="primary" disabled={!change} onClick={() => change && onApply(change, message)}>
             {action}
@@ -487,10 +484,13 @@ function GroupEditor({
 
   const save = () => {
     const trimmed = name.trim();
-    if (!trimmed) return setError('Name the group');
+    if (!trimmed) return setError(tr('tags.group.nameIt'));
     if (groups.some((g) => g.name !== was && g.name.toLowerCase() === trimmed.toLowerCase()))
-      return setError('There is a group with that name');
-    onSave(saveGroup(groups, was, { name: trimmed, tags: chosen }), was == null ? 'Group made' : 'Group saved');
+      return setError(tr('tags.group.taken'));
+    onSave(
+      saveGroup(groups, was, { name: trimmed, tags: chosen }),
+      was == null ? tr('tags.group.made') : tr('tags.group.saved'),
+    );
   };
 
   return (
@@ -499,21 +499,21 @@ function GroupEditor({
       onClose={onClose}
       closeOnBackdrop={false}
       size="md"
-      title={was == null ? 'New group' : `Edit “${was}”`}
-      description="A tag is in one group at most. Reports shows a table for each group."
+      title={was == null ? tr('tags.newGroup') : tr('tags.group.edit', { name: was })}
+      description={tr('tags.group.hint')}
       footer={
         <div className="flex items-center gap-2">
           {was != null && (
             <Button variant="danger" onClick={() => onDelete(was)}>
-              <Trash2 className="size-3.5" /> Delete group
+              <Trash2 className="size-3.5" /> {tr('tags.group.delete')}
             </Button>
           )}
           <div className="ml-auto flex gap-2">
             <Button variant="ghost" onClick={onClose}>
-              Cancel
+              {tr('common.cancel')}
             </Button>
             <Button variant="primary" onClick={save}>
-              Save group
+              {tr('tags.group.save')}
             </Button>
           </div>
         </div>
@@ -526,19 +526,19 @@ function GroupEditor({
         }}
         className="space-y-4"
       >
-        <Field label="Name" error={error}>
+        <Field label={tr('tags.group.name')} error={error}>
           <Input
             value={name}
             onChange={(e) => {
               setName(e.target.value);
               setError(undefined);
             }}
-            placeholder="e.g. Emotion"
+            placeholder={tr('tags.group.namePlaceholder')}
             autoFocus={was == null}
           />
         </Field>
         <fieldset>
-          <legend className="mb-2 text-xs font-medium text-muted">Its tags</legend>
+          <legend className="mb-2 text-xs font-medium text-muted">{tr('tags.group.tags')}</legend>
           {listed.length ? (
             <div className="grid gap-1 sm:grid-cols-2">
               {listed.map((tag) => (
@@ -553,13 +553,17 @@ function GroupEditor({
                     onChange={(e) => setChosen((c) => (e.target.checked ? [...c, tag] : c.filter((t) => t !== tag)))}
                   />
                   <span className="min-w-0 truncate whitespace-pre">{tag}</span>
-                  {elsewhere(tag) && <span className="shrink-0 text-xs text-faint">in {elsewhere(tag)}</span>}
-                  {unused(tag) && <span className="shrink-0 text-xs text-faint">no trades</span>}
+                  {elsewhere(tag) && (
+                    <span className="shrink-0 text-xs text-faint">
+                      {tr('tags.group.inOther', { name: elsewhere(tag) ?? '' })}
+                    </span>
+                  )}
+                  {unused(tag) && <span className="shrink-0 text-xs text-faint">{tr('tags.group.unused')}</span>}
                 </label>
               ))}
             </div>
           ) : (
-            <p className="text-sm text-muted">No tags yet. Tag a trade first, then put its tags here.</p>
+            <p className="text-sm text-muted">{tr('tags.group.noTags')}</p>
           )}
         </fieldset>
       </form>

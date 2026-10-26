@@ -3,6 +3,7 @@ import { ArrowDownRight, ArrowUpRight } from 'lucide-react';
 import type { Side } from '@/lib/types';
 import { formatMoney } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import { tr } from '@/lib/i18n';
 
 export function SideBadge({ side }: { side: Side }) {
   const long = side === 'LONG';
@@ -14,7 +15,7 @@ export function SideBadge({ side }: { side: Side }) {
       )}
     >
       {long ? <ArrowUpRight className="size-3.5" /> : <ArrowDownRight className="size-3.5" />}
-      {side}
+      {tr(long ? 'side.LONG' : 'side.SHORT')}
     </span>
   );
 }
@@ -64,7 +65,7 @@ export function PnlValue({
   className?: string;
   compact?: boolean;
 }) {
-  if (open) return <StatusBadge tone="accent">Open</StatusBadge>;
+  if (open) return <StatusBadge tone="accent">{tr('common.open')}</StatusBadge>;
   return (
     <span
       className={cn('num font-medium', value > 0 ? 'text-profit' : value < 0 ? 'text-loss' : 'text-muted', className)}

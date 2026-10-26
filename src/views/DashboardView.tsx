@@ -22,9 +22,19 @@ import { useJournal } from '@/store/JournalProvider';
 import { useUI } from '@/store/UIProvider';
 import { computeStats, sniperScore, sqnLabel } from '@/lib/stats';
 import { dailySummary, equitySummary, scoreSummary } from '@/lib/chart-summary';
-import { RANGE_OPTIONS, splitByRange, type RangeKey } from '@/lib/ranges';
+import { rangeOptions, splitByRange, type RangeKey } from '@/lib/ranges';
 import { goalReport } from '@/lib/goals';
-import { formatDate, formatDuration, formatMoney, formatPct, formatRatio, wholePct } from '@/lib/format';
+import {
+  formatDate,
+  formatDuration,
+  formatMoney,
+  formatPct,
+  formatR,
+  formatRatio,
+  pctText,
+  wholePct,
+} from '@/lib/format';
+import { decimalMark, isolate, tr } from '@/lib/i18n';
 import { isClosed, tradeTimestamp } from '@/lib/trade-math';
 import { excludedRealised, openingBalance } from '@/store/selectors';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -41,24 +51,13 @@ import { SniperScoreChart } from '@/components/dashboard/SniperScoreChart';
 import { RecentTrades } from '@/components/dashboard/RecentTrades';
 import { GoalsCard } from '@/components/dashboard/GoalsCard';
 import { ImportTradesModal } from '@/components/trades/ImportTradesModal';
-
-/** the range picked, in words: "No closed trades in the last 7 days" */
-const RANGE_WORDS: Record<RangeKey, string> = {
-  '7D': 'in the last 7 days',
-  '30D': 'in the last 30 days',
-  '90D': 'in the last 90 days',
-  YTD: 'this year',
-  ALL: 'yet',
-};
+import { rich } from '@/components/ui/Rich';
 
 /** the period the goals' arrows compare with: as long as the range, just before it */
-const BEFORE_WORDS: Record<RangeKey, string | null> = {
-  '7D': 'the 7 days before',
-  '30D': 'the 30 days before',
-  '90D': 'the 90 days before',
-  YTD: 'as many days before',
-  ALL: null,
-};
+const beforeWords = (range: RangeKey): string | null => (range === 'ALL' ? null : tr(`range.before.${range}`));
+
+const wins = (n: number) => tr('stat.wins', { n });
+const losses = (n: number) => tr('stat.losses', { n });
 
 export function DashboardView() {
   const { accountTrades, data, startingBalance, activeLabel, actions } = useJournal();
@@ -92,21 +91,21 @@ export function DashboardView() {
   if (accountTrades.length === 0) {
     return (
       <>
-        <PageHeader title="Dashboard" description={activeLabel} />
+        <PageHeader title={tr('nav.dashboard')} description={activeLabel} />
         <EmptyState
           icon={Target}
-          title="Your dashboard builds itself from your trades"
-          description="Nothing here is pre-filled. Log your first trade and the equity curve, win rate, profit factor and Sniper Score all start calculating from your own numbers."
+          title={tr('dash.empty.title')}
+          description={tr('dash.empty.body')}
           actions={
             <>
               <Button variant="primary" onClick={() => openTradeForm()}>
-                <Plus className="size-4" /> Log your first trade
+                <Plus className="size-4" /> {tr('dash.empty.first')}
               </Button>
               <Button onClick={() => setImporting(true)}>
-                <Upload className="size-4" /> Import a CSV
+                <Upload className="size-4" /> {tr('dash.empty.import')}
               </Button>
               <Button variant="ghost" onClick={() => actions.loadSampleData()}>
-                <FlaskConical className="size-4" /> Load test data to explore
+                <FlaskConical className="size-4" /> {tr('dash.empty.sample')}
               </Button>
             </>
           }
@@ -123,25 +122,28 @@ export function DashboardView() {
   const rrRing = stats.payoff == null ? 0 : Math.min(Number.isFinite(stats.payoff) ? stats.payoff / 3 : 1, 1);
   const balanceNow = opening + stats.net + excludedNet;
   const { greenDays } = stats;
+  const openCount = accountTrades.filter((t) => !isClosed(t)).length;
 
   return (
     <>
       <PageHeader
-        title="Dashboard"
+        title={tr('nav.dashboard')}
         description={
           <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
             {activeLabel}
             <span className="text-faint">·</span>
-            <span className="num">{closedInRange}</span> closed {closedInRange === 1 ? 'trade' : 'trades'} in range
-            {stats.open > 0 && <StatusBadge tone="accent">{stats.open} open</StatusBadge>}
+            {rich(tr('dash.closedInRange', { count: closedInRange }), {
+              num: (text) => <span className="num">{text}</span>,
+            })}
+            {stats.open > 0 && <StatusBadge tone="accent">{tr('dash.open', { count: stats.open })}</StatusBadge>}
           </span>
         }
         actions={
           <>
-            <SegmentedControl value={range} onChange={setRange} options={RANGE_OPTIONS} />
+            <SegmentedControl value={range} onChange={setRange} options={rangeOptions()} />
             {/* a phone already has Log trade in the header */}
             <Button variant="primary" className="max-md:hidden" onClick={() => openTradeForm()}>
-              <Plus className="size-4" /> Log trade
+              <Plus className="size-4" /> {tr('header.logTrade')}
             </Button>
           </>
         }
@@ -150,45 +152,54 @@ export function DashboardView() {
       {noClosedTrades ? (
         <EmptyState
           icon={CalendarRange}
-          title={`No closed trades ${RANGE_WORDS[range]}`}
-          description="Your statistics are calculated from closed trades only. Widen the range, or close out a position to see it counted."
-          actions={<Button onClick={() => setRange('ALL')}>Show all time</Button>}
+          title={tr(`range.none.${range}`)}
+          description={tr('dash.noClosedHint')}
+          actions={<Button onClick={() => setRange('ALL')}>{tr('dash.showAllTime')}</Button>}
         />
       ) : (
         <>
           {/* ---------- headline metrics ---------- */}
           <div className="grid grid-cols-1 gap-3 md:grid-cols-4 md:gap-4">
             <MetricCard
-              label="Net profit"
+              label={tr('stat.netProfit')}
               value={formatMoney(stats.net, currency, { sign: true })}
               tone={toneFor(stats.net)}
               icon={TrendingUp}
-              sub={`Balance ${formatMoney(balanceNow, currency)}`}
-              info="Total profit after fees and commissions, across every closed trade in the selected range."
+              sub={tr('dash.balance', { money: formatMoney(balanceNow, currency) })}
+              info={tr('dash.netInfo')}
             />
             <MetricCard
-              label="Win rate"
+              label={tr('goal.winRate.label')}
               value={formatPct(stats.winRate)}
               icon={Target}
-              sub={`${stats.wins}W · ${stats.losses}L${stats.breakeven ? ` · ${stats.breakeven}BE` : ''}`}
-              info="The share of closed trades that finished above break-even after fees."
+              sub={[
+                wins(stats.wins),
+                losses(stats.losses),
+                stats.breakeven ? tr('stat.breakeven', { n: stats.breakeven }) : '',
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+              info={tr('dash.winRateInfo')}
               aside={
                 <RingProgress
                   value={stats.winRate / 100}
                   color="var(--profit)"
                   track="color-mix(in srgb, var(--loss) 35%, transparent)"
                 >
-                  <span className="num text-[11px] font-semibold text-fg">{Math.round(stats.winRate)}%</span>
+                  <span className="num text-[11px] font-semibold text-fg">{pctText(Math.round(stats.winRate))}</span>
                 </RingProgress>
               }
             />
             <MetricCard
-              label="Profit factor"
+              label={tr('stat.profitFactor')}
               value={formatRatio(pf)}
               tone={pf != null && pf >= 1 ? 'profit' : pf != null ? 'loss' : 'neutral'}
               icon={Scale}
-              sub={`${formatMoney(stats.grossProfit, currency, { compact: true })} won vs ${formatMoney(stats.grossLoss, currency, { compact: true })} lost`}
-              info="Gross profit divided by gross loss. Above 1 means you make more than you give back; 2 or more is strong."
+              sub={tr('dash.wonLost', {
+                won: formatMoney(stats.grossProfit, currency, { compact: true }),
+                lost: formatMoney(stats.grossLoss, currency, { compact: true }),
+              })}
+              info={tr('dash.pfInfo')}
               aside={
                 <RingProgress value={pfRing} color={pf != null && pf >= 1 ? 'var(--profit)' : 'var(--loss)'}>
                   <Scale className="size-4 text-muted" />
@@ -196,16 +207,12 @@ export function DashboardView() {
               }
             />
             <MetricCard
-              label="Avg R:R"
-              value={stats.payoff == null ? '—' : `1:${formatRatio(stats.payoff)}`}
+              label={tr('stat.avgRR')}
+              value={stats.payoff == null ? '—' : isolate(`1:${formatRatio(stats.payoff)}`)}
               tone={stats.payoff != null && stats.payoff >= 1 ? 'profit' : stats.payoff != null ? 'loss' : 'neutral'}
               icon={Activity}
-              sub={
-                stats.avgR == null
-                  ? 'Your average winner against your average loser'
-                  : `${stats.avgR >= 0 ? '+' : ''}${stats.avgR.toFixed(2)}R average result`
-              }
-              info="Your average winner measured against your average loser. The sub-line shows the average result in units of the risk your stop loss defined."
+              sub={stats.avgR == null ? tr('dash.rrSub') : tr('dash.avgResult', { r: formatR(stats.avgR) })}
+              info={tr('dash.rrInfo')}
               aside={
                 <RingProgress value={rrRing} color="var(--accent)">
                   <Activity className="size-4 text-muted" />
@@ -217,61 +224,68 @@ export function DashboardView() {
           {/* ---------- secondary metrics ---------- */}
           <MetricStrip className="mt-4">
             <MetricCell
-              label="Expectancy"
+              label={tr('stat.expectancy')}
               value={formatMoney(stats.expectancy, currency, { sign: true })}
               tone={toneFor(stats.expectancy)}
-              sub="per trade"
-              info="What you earn on an average trade. Positive expectancy is the whole game."
+              sub={tr('dash.perTrade')}
+              info={tr('dash.expectancyInfo')}
             />
             <MetricCell
-              label="System quality"
-              value={stats.sqn == null ? '—' : stats.sqn.toFixed(2)}
+              label={tr('stat.sqn')}
+              value={stats.sqn == null ? '—' : isolate(decimalMark(stats.sqn.toFixed(2)))}
               sub={sqnLabel(stats.sqn)}
-              info="Van Tharp's SQN: how strong your edge is relative to how erratic your results are."
+              info={tr('dash.sqnInfo')}
             />
             <MetricCell
-              label="Commissions"
+              label={tr('stat.commissions')}
               value={formatMoney(stats.fees, currency)}
               tone={stats.fees > 0 ? 'loss' : 'neutral'}
               sub={
                 stats.grossProfit > 0
-                  ? `${((stats.fees / stats.grossProfit) * 100).toFixed(0)}% of gross profit`
-                  : 'paid in fees'
+                  ? tr('dash.feesShare', { pct: formatPct((stats.fees / stats.grossProfit) * 100, 0) })
+                  : tr('dash.paidInFees')
               }
-              info="Everything you paid your broker across these trades."
+              info={tr('dash.feesInfo')}
             />
             <MetricCell
-              label="Total trades"
+              label={tr('stat.totalTrades')}
               value={stats.total}
-              sub={`${stats.activeDays} trading ${stats.activeDays === 1 ? 'day' : 'days'}`}
+              sub={tr('stat.tradingDays', { count: stats.activeDays })}
             />
             <MetricCell
-              label="Max streak"
-              value={`${stats.maxWinStreak}W / ${stats.maxLossStreak}L`}
+              label={tr('stat.maxStreak')}
+              value={`${wins(stats.maxWinStreak)} / ${losses(stats.maxLossStreak)}`}
               sub={
                 stats.currentStreak === 0
-                  ? 'no active streak'
-                  : `currently ${Math.abs(stats.currentStreak)}${stats.currentStreak > 0 ? 'W' : 'L'}`
+                  ? tr('dash.noStreak')
+                  : tr('dash.currently', {
+                      streak:
+                        stats.currentStreak > 0 ? wins(stats.currentStreak) : losses(Math.abs(stats.currentStreak)),
+                    })
               }
-              info="The longest run of consecutive wins and consecutive losses."
+              info={tr('dash.streakInfo')}
             />
             <MetricCell
-              label="Best day"
+              label={tr('stat.bestDay')}
               value={stats.bestDay ? formatMoney(stats.bestDay.net, currency, { sign: true, compact: true }) : '—'}
               tone={toneFor(stats.bestDay?.net ?? 0)}
               sub={stats.bestDay ? formatDate(stats.bestDay.day) : undefined}
             />
             <MetricCell
-              label="Worst day"
+              label={tr('stat.worstDay')}
               value={stats.worstDay ? formatMoney(stats.worstDay.net, currency, { sign: true, compact: true }) : '—'}
               tone={toneFor(stats.worstDay?.net ?? 0)}
               sub={stats.worstDay ? formatDate(stats.worstDay.day) : undefined}
             />
             <MetricCell
-              label="Avg win / loss"
+              label={tr('stat.avgWinLoss')}
               value={`${formatMoney(stats.avgWin, currency, { compact: true, decimals: 0 })} / ${formatMoney(-stats.avgLoss, currency, { compact: true, decimals: 0 })}`}
-              sub={stats.avgHoldMinutes != null ? `held ${formatDuration(stats.avgHoldMinutes)} on average` : undefined}
-              info="The size of your average winner against your average loser."
+              sub={
+                stats.avgHoldMinutes != null
+                  ? tr('dash.held', { duration: formatDuration(stats.avgHoldMinutes) })
+                  : undefined
+              }
+              info={tr('dash.avgWinLossInfo')}
             />
           </MetricStrip>
 
@@ -279,12 +293,17 @@ export function DashboardView() {
           <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
             <ChartContainer
               className="h-[280px] md:col-span-2 md:h-[340px]"
-              title="Equity curve"
+              title={tr('dash.equity')}
               summary={equitySummary(stats.equity, currency)}
               subtitle={
                 stats.maxDrawdown > 0
-                  ? `Max drawdown ${formatMoney(stats.maxDrawdown, currency)}${stats.maxDrawdownPct != null ? ` (${stats.maxDrawdownPct.toFixed(1)}%)` : ''}`
-                  : 'Account balance after every closed trade'
+                  ? stats.maxDrawdownPct != null
+                    ? tr('dash.drawdownPct', {
+                        money: formatMoney(stats.maxDrawdown, currency),
+                        pct: formatPct(stats.maxDrawdownPct),
+                      })
+                    : tr('dash.drawdown', { money: formatMoney(stats.maxDrawdown, currency) })
+                  : tr('dash.equityHint')
               }
               actions={
                 <div className="text-right">
@@ -294,7 +313,7 @@ export function DashboardView() {
                     {formatMoney(balanceNow, currency)}
                   </div>
                   <div className="text-[11px] text-faint">
-                    {excludedNet !== 0 ? 'current balance, incl. excluded trades' : 'current balance'}
+                    {excludedNet !== 0 ? tr('dash.currentBalanceExcluded') : tr('dash.currentBalance')}
                   </div>
                 </div>
               }
@@ -304,9 +323,11 @@ export function DashboardView() {
 
             <ChartContainer
               className="h-[320px] md:h-[340px]"
-              title="Sniper Score"
+              title={tr('dash.score')}
               summary={scoreSummary(score)}
-              subtitle={score.overall == null ? 'Rate your trades to build this' : `${score.overall} / 100 overall`}
+              subtitle={
+                score.overall == null ? tr('dash.scoreHint') : tr('dash.scoreOverall', { score: score.overall })
+              }
               actions={
                 score.overall != null && <div className="num text-lg font-semibold text-accent">{score.overall}</div>
               }
@@ -318,7 +339,7 @@ export function DashboardView() {
                 </div>
                 {score.unrated.length > 0 && (
                   <p className="shrink-0 px-3 text-center text-[11px] leading-relaxed text-faint">
-                    Not yet rated: {score.unrated.join(', ')}. Add stops and self-ratings when you log a trade.
+                    {tr('dash.notRated', { axes: score.unrated.join(tr('format.comma')) })}
                   </p>
                 )}
               </div>
@@ -327,11 +348,15 @@ export function DashboardView() {
 
           <ChartContainer
             className="mt-4 h-[240px] md:h-[300px]"
-            title="Daily P&L"
+            title={tr('dash.daily')}
             summary={dailySummary(stats.days, currency)}
-            subtitle={`${greenDays} green ${greenDays === 1 ? 'day' : 'days'}, ${stats.days.filter((d) => d.net < 0).length} red · ${wholePct(stats.greenDayRate)}% green`}
+            subtitle={tr('dash.dailyHint', {
+              count: greenDays,
+              red: stats.days.filter((d) => d.net < 0).length,
+              pct: pctText(wholePct(stats.greenDayRate)),
+            })}
             empty={stats.days.length === 0}
-            emptyText="No closed trades in this range yet."
+            emptyText={tr('dash.dailyEmpty')}
           >
             <DailyPnlChart days={stats.days} currency={currency} />
           </ChartContainer>
@@ -339,48 +364,48 @@ export function DashboardView() {
           {/* ---------- the extremes and the average day, under the days they come from ---------- */}
           <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
             <MetricCard
-              label="Largest win"
+              label={tr('stat.largestWin')}
               value={formatMoney(stats.largestWin, currency, { sign: true })}
               tone="profit"
               icon={Trophy}
-              sub={`Avg winner ${formatMoney(stats.avgWin, currency)}`}
+              sub={tr('dash.avgWinner', { money: formatMoney(stats.avgWin, currency) })}
             />
             <MetricCard
-              label="Largest loss"
+              label={tr('stat.largestLoss')}
               value={formatMoney(stats.largestLoss, currency, { sign: true })}
               tone="loss"
               icon={Flame}
-              sub={`Avg loser ${formatMoney(-stats.avgLoss, currency)}`}
+              sub={tr('dash.avgLoser', { money: formatMoney(-stats.avgLoss, currency) })}
             />
             <MetricCard
-              label="Max drawdown"
+              label={tr('stat.maxDrawdown')}
               value={formatMoney(-stats.maxDrawdown, currency)}
               tone={stats.maxDrawdown > 0 ? 'loss' : 'neutral'}
               icon={Gauge}
               sub={
                 stats.maxDrawdownPct != null
-                  ? `${stats.maxDrawdownPct.toFixed(1)}% from peak`
-                  : 'Set a starting balance for %'
+                  ? tr('dash.fromPeak', { pct: formatPct(stats.maxDrawdownPct) })
+                  : tr('dash.setBalance')
               }
-              info="The deepest fall from a peak in your equity curve."
+              info={tr('dash.drawdownInfo')}
             />
             <MetricCard
-              label="Average day"
+              label={tr('stat.averageDay')}
               value={formatMoney(stats.avgDaily, currency, { sign: true })}
               tone={toneFor(stats.avgDaily)}
               icon={Sigma}
-              sub={`Across ${stats.activeDays} trading ${stats.activeDays === 1 ? 'day' : 'days'}`}
+              sub={tr('dash.across', { count: stats.activeDays })}
             />
           </div>
 
           <ChartContainer
             className="mt-4"
-            title="Recent trades"
-            subtitle="Your last five, newest first"
+            title={tr('dash.recent')}
+            subtitle={tr('dash.recentHint')}
             bodyClassName="px-0 pt-1"
             actions={
               <Link href="/trades" className="text-xs text-accent underline-offset-4 transition hover:underline">
-                View all
+                {tr('dash.viewAll')}
               </Link>
             }
           >
@@ -389,32 +414,28 @@ export function DashboardView() {
 
           {/* last, as the targets for these numbers */}
           {goals.length > 0 && (
-            <GoalsCard className="mt-4" lines={goals} currency={currency} before={BEFORE_WORDS[range]} />
+            <GoalsCard className="mt-4" lines={goals} currency={currency} before={beforeWords(range)} />
           )}
         </>
       )}
 
       {/* open positions reminder */}
-      {accountTrades.some((t) => !isClosed(t)) && (
+      {openCount > 0 && (
         <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-accent/25 bg-accent/5 px-4 py-3 text-sm md:flex-nowrap md:px-5">
           <Wallet className="size-4 shrink-0 text-accent" />
           <span className="text-fg">
-            You have {accountTrades.filter((t) => !isClosed(t)).length} open{' '}
-            {accountTrades.filter((t) => !isClosed(t)).length === 1 ? 'position' : 'positions'}.
-            <span className="text-muted">
-              {accountTrades.filter((t) => !isClosed(t)).length === 1 ? ' It is' : ' They are'} excluded from statistics
-              until you add an exit price.
-            </span>
+            {tr('dash.openPositions', { count: openCount })}
+            <span className="text-muted">{tr('dash.openExcluded', { count: openCount })}</span>
           </span>
           <Link href="/trades" className="ml-auto text-xs text-accent underline-offset-4 hover:underline">
-            Open the trades table
+            {tr('dash.openTable')}
           </Link>
         </div>
       )}
 
       <p className="mt-6 flex items-center gap-1.5 text-xs text-faint">
         <Receipt className="size-3.5" />
-        Every figure above is calculated from the trades you entered. Nothing is estimated or filled in for you.
+        {tr('dash.footer')}
       </p>
     </>
   );

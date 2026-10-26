@@ -4,14 +4,18 @@ import { Clock } from 'lucide-react';
 import { useJournal } from '@/store/JournalProvider';
 import { useNow } from '@/hooks/useNow';
 import { MenuItem, Popover } from '@/components/ui/Popover';
+import { tr, type MessageKey } from '@/lib/i18n';
 
-const ZONES = [
-  { id: 'local', label: 'Local time', short: 'Local' },
-  { id: 'America/New_York', label: 'New York', short: 'NY' },
-  { id: 'Europe/London', label: 'London', short: 'LDN' },
-  { id: 'Asia/Tokyo', label: 'Tokyo', short: 'TYO' },
+/** a zone's name, and its short name: a key to translate, or one that reads the same in every language */
+const ZONES: Array<{ id: string; label: MessageKey | 'UTC'; short: MessageKey | 'NY' | 'LDN' | 'TYO' | 'UTC' }> = [
+  { id: 'local', label: 'clock.local', short: 'clock.localShort' },
+  { id: 'America/New_York', label: 'clock.newYork', short: 'NY' },
+  { id: 'Europe/London', label: 'clock.london', short: 'LDN' },
+  { id: 'Asia/Tokyo', label: 'clock.tokyo', short: 'TYO' },
   { id: 'UTC', label: 'UTC', short: 'UTC' },
 ];
+
+const named = (name: string) => (name.startsWith('clock.') ? tr(name as MessageKey) : name);
 
 function timeIn(zone: string, date: Date, seconds = true): string {
   if (date.getTime() === 0) return seconds ? '--:--:--' : '--:--';
@@ -37,18 +41,20 @@ export function ClockDisplay() {
           type="button"
           onClick={toggle}
           aria-expanded={open}
-          title={zone.label}
+          title={named(zone.label)}
           className="flex h-9 items-center gap-2 rounded-md border border-line bg-app px-2.5 transition hover:border-line-strong"
         >
           <Clock className="size-3.5 text-faint" />
           <span className="num text-sm text-fg">{timeIn(zone.id, now)}</span>
-          <span className="rounded bg-raised px-1.5 py-px text-[10px] font-semibold text-muted">{zone.short}</span>
+          <span className="rounded bg-raised px-1.5 py-px text-[10px] font-semibold text-muted">
+            {named(zone.short)}
+          </span>
         </button>
       )}
     >
       {(close) => (
         <div>
-          <div className="px-2.5 pb-1 pt-1.5 text-xs text-faint">Clock timezone</div>
+          <div className="px-2.5 pb-1 pt-1.5 text-xs text-faint">{tr('clock.heading')}</div>
           {ZONES.map((z) => (
             <MenuItem
               key={z.id}
@@ -59,7 +65,7 @@ export function ClockDisplay() {
               }}
               trailing={<span className="num text-xs text-muted">{timeIn(z.id, now, false)}</span>}
             >
-              {z.label}
+              {named(z.label)}
             </MenuItem>
           ))}
         </div>

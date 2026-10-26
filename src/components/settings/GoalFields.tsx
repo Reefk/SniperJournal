@@ -7,31 +7,33 @@ import { breakEvenWinRate, computeStats } from '@/lib/stats';
 import type { GoalKey } from '@/lib/types';
 import { toNumberOrNull } from '@/lib/utils';
 import { Field, Input } from '@/components/ui/Field';
+import { formatPct } from '@/lib/format';
+import { decimalMark, tr } from '@/lib/i18n';
 
 /** example text only: no goal has a target until one is typed */
 const EXAMPLE: Record<GoalKey, string> = {
-  rulesKept: 'e.g. 90',
-  cleanTrades: 'e.g. 80',
-  daysInLimits: 'e.g. 95',
-  withStop: 'e.g. 100',
-  winRate: 'e.g. 50',
-  profitFactor: 'e.g. 1.5',
-  avgR: 'e.g. 0.3',
-  expectancy: 'e.g. 25',
-  winLossRatio: 'e.g. 1.5',
-  greenDayRate: 'e.g. 60',
+  rulesKept: '90',
+  cleanTrades: '80',
+  daysInLimits: '95',
+  withStop: '100',
+  winRate: '50',
+  profitFactor: '1.5',
+  avgR: '0.3',
+  expectancy: '25',
+  winLossRatio: '1.5',
+  greenDayRate: '60',
 };
 
 function hintFor(def: GoalDef, currency: string): string {
   switch (def.unit) {
     case 'pct':
-      return '% at least';
+      return tr('goals.hint.pct');
     case 'ratio':
-      return 'at least';
+      return tr('goals.hint.ratio');
     case 'r':
-      return 'R at least';
+      return tr('goals.hint.r');
     case 'money':
-      return `${currency} a trade, at least`;
+      return tr('goals.hint.money', { currency });
   }
 }
 
@@ -41,11 +43,11 @@ const shownTarget = (target: number | undefined) => (target == null ? '' : Strin
 function refusal(def: GoalDef, n: number | null): string | undefined {
   const target = goalTarget(def, n);
   if (target == null) {
-    if (def.unit === 'pct') return 'A number from 0 to 100';
+    if (def.unit === 'pct') return tr('goals.refuse.pct');
     // 0.004 is above 0, but under the hundredth a target has to be
-    return n != null && n > 0 ? 'Two decimals at most' : 'A number above 0';
+    return n != null && n > 0 ? tr('goals.refuse.twoDecimals') : tr('goals.refuse.aboveZero');
   }
-  if (target !== n) return def.unit === 'pct' ? 'One decimal at most' : 'Two decimals at most';
+  if (target !== n) return def.unit === 'pct' ? tr('goals.refuse.oneDecimal') : tr('goals.refuse.twoDecimals');
   return undefined;
 }
 
@@ -83,7 +85,11 @@ function GoalField({
     const why = raw.trim() ? refusal(def, target) : undefined;
     if (why) {
       // typing 150 saved 1 and then 15 on the way, so say which target counts
-      setError(saved == null ? why : `${why}. Still using ${goalTargetText(def, saved, data.settings.currency)}`);
+      setError(
+        saved == null
+          ? why
+          : tr('goals.stillUsing', { why, target: goalTargetText(def, saved, data.settings.currency) }),
+      );
       return;
     }
     setError(undefined);
@@ -107,7 +113,7 @@ function GoalField({
         value={text}
         onChange={(e) => change(e.target.value)}
         onBlur={leave}
-        placeholder={EXAMPLE[def.key]}
+        placeholder={tr('goals.example', { n: decimalMark(EXAMPLE[def.key]) })}
         disabled={disabled}
       />
       {children}
@@ -131,15 +137,15 @@ export function GoalFields() {
     if (def.key === 'daysInLimits') {
       // nothing to keep inside without a limit; a target already set can still be cleared
       const off = noLimit && goals?.daysInLimits == null;
-      return <GoalField key={def.key} def={def} disabled={off} hint={off ? 'set a limit above first' : undefined} />;
+      return <GoalField key={def.key} def={def} disabled={off} hint={off ? tr('goals.setLimitFirst') : undefined} />;
     }
     if (def.key === 'winRate') {
       return (
         <GoalField key={def.key} def={def}>
           <p className="mt-1 text-xs text-faint">
             {breakEven == null
-              ? 'Once you have a win and a loss, the win rate you break even at shows here.'
-              : `You break even at ${breakEven.toFixed(1)}% with your average win and loss (${activeLabel}, all time).`}
+              ? tr('goals.breakEvenNone')
+              : tr('goals.breakEven', { pct: formatPct(breakEven), account: activeLabel })}
           </p>
         </GoalField>
       );
@@ -149,13 +155,13 @@ export function GoalFields() {
 
   return (
     <>
-      <h3 className="mt-6 text-xs font-semibold text-fg">Process goals</h3>
-      <p className="mt-0.5 text-xs text-muted">What you control on the day.</p>
+      <h3 className="mt-6 text-xs font-semibold text-fg">{tr('goals.process')}</h3>
+      <p className="mt-0.5 text-xs text-muted">{tr('goals.processHint')}</p>
       <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2">
         {GOALS.filter((def) => def.kind === 'process').map(field)}
       </div>
-      <h3 className="mt-6 text-xs font-semibold text-fg">Result goals</h3>
-      <p className="mt-0.5 text-xs text-muted">What the trades add up to.</p>
+      <h3 className="mt-6 text-xs font-semibold text-fg">{tr('goals.result')}</h3>
+      <p className="mt-0.5 text-xs text-muted">{tr('goals.resultHint')}</p>
       <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2">
         {GOALS.filter((def) => def.kind === 'result').map(field)}
       </div>

@@ -18,7 +18,7 @@ import { useJournal } from '@/store/JournalProvider';
 import { useUI } from '@/store/UIProvider';
 import { exportBackup, parseBackup } from '@/lib/backup';
 import { CURRENCIES, formatBytes, formatMoney } from '@/lib/format';
-import { editedMistakes, mistakeList } from '@/lib/mistakes';
+import { editedMistakes, mistakeList, mistakeName } from '@/lib/mistakes';
 import type { EditedRule } from '@/lib/rules';
 import { findUnusedCharts, removeUnusedCharts } from '@/lib/screenshots';
 import { toNumberOrNull } from '@/lib/utils';
@@ -30,6 +30,8 @@ import { Field, Input, Select } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
 import { TagManager } from '@/components/settings/TagManager';
 import { GoalFields } from '@/components/settings/GoalFields';
+import { LanguageSelect } from '@/components/settings/LanguageSelect';
+import { tr } from '@/lib/i18n';
 
 function Section({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
   return (
@@ -61,20 +63,20 @@ export function SettingsView() {
     if (!file) return;
     const { data: parsed, error } = parseBackup(await file.text());
     if (!parsed) {
-      toast(error ?? 'Could not read that file', 'error');
+      toast(error ?? tr('settings.unreadable'), 'error');
       return;
     }
     const ok = await confirm({
-      title: 'Restore this backup?',
-      message: `The backup holds ${parsed.trades.length} ${parsed.trades.length === 1 ? 'trade' : 'trades'}. Restoring replaces everything currently in your journal, and deletes the chart images that the backup's trades don't use.`,
-      confirmLabel: 'Replace my journal',
+      title: tr('settings.restore.title'),
+      message: tr('settings.restore.message', { count: parsed.trades.length }),
+      confirmLabel: tr('settings.restore.confirm'),
       tone: 'danger',
     });
     if (ok) {
       // the journal being replaced must stay recoverable, so no copy, no restore
       if (!(await keepCurrent('before-restore'))) return;
       actions.replaceAll(parsed);
-      toast('Journal restored. The one it replaced was kept in your backups, without its chart images.');
+      toast(tr('settings.restored'));
     }
   };
 
@@ -84,7 +86,7 @@ export function SettingsView() {
       await storage.keepCopy(data, reason);
       return true;
     } catch {
-      toast('Could not keep a copy of your current journal first, so nothing was changed.', 'error');
+      toast(tr('settings.noCopy'), 'error');
       return false;
     }
   };
@@ -94,14 +96,14 @@ export function SettingsView() {
     try {
       const unused = await findUnusedCharts(data.trades);
       if (!unused.length) {
-        toast('Every chart image is still in use. There is nothing to reclaim.');
+        toast(tr('settings.reclaim.none'));
         return;
       }
-      const one = unused.length === 1;
+      const count = unused.length;
       const ok = await confirm({
-        title: `Delete ${unused.length} unused chart ${one ? 'image' : 'images'}?`,
-        message: `No trade in your journal and no copy in your backups uses ${one ? 'it' : 'them'}. Deleting ${one ? 'it' : 'them'} frees ${formatBytes(unused.reduce((a, i) => a + i.bytes, 0))}.`,
-        confirmLabel: one ? 'Delete it' : 'Delete them',
+        title: tr('settings.reclaim.title', { count }),
+        message: tr('settings.reclaim.message', { count, size: formatBytes(unused.reduce((a, i) => a + i.bytes, 0)) }),
+        confirmLabel: tr('settings.reclaim.confirm', { count }),
         tone: 'danger',
       });
       if (!ok) return;
@@ -112,17 +114,18 @@ export function SettingsView() {
       );
       toast(
         removed.length
-          ? `${formatBytes(removed.reduce((a, i) => a + i.bytes, 0))} freed: ${removed.length} unused chart ${removed.length === 1 ? 'image' : 'images'} deleted.`
-          : 'Nothing was deleted: the images are in use again, or could not be removed.',
+          ? tr('settings.reclaim.done', {
+              count: removed.length,
+              size: formatBytes(removed.reduce((a, i) => a + i.bytes, 0)),
+            })
+          : tr('settings.reclaim.nothing'),
       );
     } catch (err) {
       // a plain Error carries the storage's own explanation (a damaged journal,
       // a backup it could not read); anything else (a failed fetch, an
       // unreadable reply) means the data folder was out of reach
       toast(
-        err instanceof Error && err.name === 'Error' && err.message
-          ? err.message
-          : 'The app could not reach its data folder, so no chart image was deleted.',
+        err instanceof Error && err.name === 'Error' && err.message ? err.message : tr('settings.reclaim.unreachable'),
         'error',
       );
     } finally {
@@ -133,34 +136,35 @@ export function SettingsView() {
   const deleteAccount = async (id: string, name: string) => {
     const count = data.trades.filter((t) => t.accountId === id).length;
     const ok = await confirm({
-      title: `Delete "${name}"?`,
-      message: count
-        ? `This permanently deletes the account and its ${count} ${count === 1 ? 'trade' : 'trades'}.`
-        : 'This account has no trades.',
-      confirmLabel: 'Delete account',
+      title: tr('settings.deleteAccount.title', { name }),
+      message: count ? tr('settings.deleteAccount.message', { count }) : tr('settings.deleteAccount.empty'),
+      confirmLabel: tr('settings.deleteAccount.confirm'),
       tone: 'danger',
     });
     if (ok) {
       actions.deleteAccount(id);
-      toast('Account deleted');
+      toast(tr('settings.accountDeleted'));
     }
   };
 
   return (
     <>
-      <PageHeader title="Settings" description="Accounts, currency and your data." />
+      <PageHeader title={tr('settings.title')} description={tr('settings.description')} />
 
       <div className="grid max-w-5xl gap-4">
-        <Section title="Profile and display">
+        <Section title={tr('settings.profile')}>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <Field label="Your name">
+            <Field label={tr('common.yourName')}>
               <Input
                 value={data.profile.name}
                 onChange={(e) => actions.updateProfile({ name: e.target.value })}
-                placeholder="Shown in the header"
+                placeholder={tr('common.namePlaceholder')}
               />
             </Field>
-            <Field label="Currency" hint="used for every figure">
+            <Field label={tr('common.language')}>
+              <LanguageSelect />
+            </Field>
+            <Field label={tr('common.currency')} hint={tr('settings.currencyHint')}>
               <Select value={currency} onChange={(e) => actions.updateSettings({ currency: e.target.value })}>
                 {CURRENCIES.map((c) => (
                   <option key={c} value={c}>
@@ -169,83 +173,74 @@ export function SettingsView() {
                 ))}
               </Select>
             </Field>
-            <Field label="Theme">
+            <Field label={tr('settings.theme')}>
               <Select
                 value={data.settings.theme}
                 onChange={(e) => actions.updateSettings({ theme: e.target.value as 'dark' | 'light' })}
               >
-                <option value="dark">Dark</option>
-                <option value="light">Light</option>
+                <option value="dark">{tr('settings.theme.dark')}</option>
+                <option value="light">{tr('settings.theme.light')}</option>
               </Select>
             </Field>
-            <Field label="Example text in empty fields">
+            <Field label={tr('settings.placeholders')}>
               <Select
                 value={data.settings.fadedPlaceholders === true ? 'faded' : 'clear'}
                 onChange={(e) => actions.updateSettings({ fadedPlaceholders: e.target.value === 'faded' })}
               >
-                <option value="clear">Clear, easy to read</option>
-                <option value="faded">Faded, never looks filled in</option>
+                <option value="clear">{tr('settings.placeholders.clear')}</option>
+                <option value="faded">{tr('settings.placeholders.faded')}</option>
               </Select>
             </Field>
           </div>
         </Section>
 
-        <Section
-          title="Limits and goals"
-          description="The daily limits drive the signals on the Insights page. A goal shows on the Dashboard once you give it a target. Leave a box blank to turn it off."
-        >
-          <h3 className="text-xs font-semibold text-fg">Daily limits</h3>
+        <Section title={tr('settings.limits')} description={tr('settings.limitsHint')}>
+          <h3 className="text-xs font-semibold text-fg">{tr('settings.dailyLimits')}</h3>
           <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2">
-            <Field label="Maximum loss in a day" hint={currency}>
+            <Field label={tr('settings.maxLoss')} hint={currency}>
               <Input
                 inputMode="decimal"
                 className="num"
                 value={data.settings.maxDailyLoss ?? ''}
                 onChange={(e) => actions.updateSettings({ maxDailyLoss: toNumberOrNull(e.target.value) })}
-                placeholder="e.g. 500"
+                placeholder={tr('goals.example', { n: '500' })}
               />
             </Field>
-            <Field label="Maximum trades in a day">
+            <Field label={tr('settings.maxTrades')}>
               <Input
                 inputMode="numeric"
                 className="num"
                 value={data.settings.maxTradesPerDay ?? ''}
                 onChange={(e) => actions.updateSettings({ maxTradesPerDay: toNumberOrNull(e.target.value) })}
-                placeholder="e.g. 3"
+                placeholder={tr('goals.example', { n: '3' })}
               />
             </Field>
           </div>
           <GoalFields />
         </Section>
 
-        <Section
-          title="Mistakes"
-          description="The ones the trade form offers to tap. Reports work out what each one cost you."
-        >
+        <Section title={tr('settings.mistakes')} description={tr('settings.mistakesHint')}>
           {mistakes.length ? (
-            <ul className="flex flex-wrap gap-1.5" aria-label="Your mistakes">
+            <ul className="flex flex-wrap gap-1.5" aria-label={tr('settings.yourMistakes')}>
               {mistakes.map((mistake) => (
                 <li key={mistake} className="rounded-md border border-line bg-app px-2.5 py-1 text-xs text-muted">
-                  {mistake}
+                  {mistakeName(mistake)}
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-muted">The list is empty, so the trade form offers none.</p>
+            <p className="text-sm text-muted">{tr('settings.mistakesEmpty')}</p>
           )}
           <Button className="mt-3" onClick={() => setEditingMistakes(true)}>
-            <Pencil className="size-4" /> Edit the list
+            <Pencil className="size-4" /> {tr('settings.editList')}
           </Button>
         </Section>
 
-        <Section
-          title="Tags"
-          description="Every tag on your trades, in every account. Renaming, merging or deleting one changes every trade that has it."
-        >
+        <Section title={tr('settings.tags')} description={tr('settings.tagsHint')}>
           <TagManager />
         </Section>
 
-        <Section title="Accounts" description="Each account keeps its own trades, balance and statistics.">
+        <Section title={tr('settings.accounts')} description={tr('settings.accountsHint')}>
           <ul className="divide-y divide-line">
             {data.accounts.map((account) => (
               // phone: name and balance on the first line, the starting balance below
@@ -255,10 +250,10 @@ export function SettingsView() {
                   className="min-w-0 flex-1 md:max-w-[220px]"
                   value={account.name}
                   onChange={(e) => actions.updateAccount(account.id, { name: e.target.value })}
-                  aria-label="Account name"
+                  aria-label={tr('common.accountName')}
                 />
                 <div className="flex items-center gap-2 max-md:order-last max-md:w-full max-md:pl-7">
-                  <span className="text-xs text-muted max-md:whitespace-nowrap">Starting balance</span>
+                  <span className="text-xs text-muted max-md:whitespace-nowrap">{tr('common.startingBalance')}</span>
                   <Input
                     className="num w-32"
                     inputMode="decimal"
@@ -266,7 +261,7 @@ export function SettingsView() {
                     onChange={(e) =>
                       actions.updateAccount(account.id, { startingBalance: toNumberOrNull(e.target.value) ?? 0 })
                     }
-                    aria-label="Starting balance"
+                    aria-label={tr('common.startingBalance')}
                   />
                 </div>
                 <div className="ml-auto flex items-center gap-4">
@@ -275,7 +270,9 @@ export function SettingsView() {
                       {formatMoney(balances[account.id] ?? 0, currency)}
                     </div>
                     <div className="text-[11px] text-faint">
-                      {data.trades.filter((t) => t.accountId === account.id).length} trades
+                      {tr('settings.accountTrades', {
+                        count: data.trades.filter((t) => t.accountId === account.id).length,
+                      })}
                     </div>
                   </div>
                   <Button
@@ -283,9 +280,11 @@ export function SettingsView() {
                     variant="ghost"
                     className="hover:bg-loss/10 hover:text-loss"
                     disabled={data.accounts.length === 1}
-                    title={data.accounts.length === 1 ? 'You need at least one account' : 'Delete this account'}
+                    title={
+                      data.accounts.length === 1 ? tr('settings.oneAccountNeeded') : tr('settings.deleteThisAccount')
+                    }
                     onClick={() => deleteAccount(account.id, account.name)}
-                    aria-label={`Delete ${account.name}`}
+                    aria-label={tr('settings.deleteNamed', { name: account.name })}
                   >
                     <Trash2 className="size-3.5" />
                   </Button>
@@ -299,19 +298,19 @@ export function SettingsView() {
               e.preventDefault();
               if (!newAccount.trim()) return;
               actions.addAccount(newAccount.trim(), 0);
-              toast(`Account "${newAccount.trim()}" created`);
+              toast(tr('common.accountCreated', { name: newAccount.trim() }));
               setNewAccount('');
             }}
           >
-            <Field label="Add an account" className="max-w-xs flex-1">
+            <Field label={tr('settings.addAccount')} className="max-w-xs flex-1">
               <Input
                 value={newAccount}
                 onChange={(e) => setNewAccount(e.target.value)}
-                placeholder="e.g. Prop firm challenge"
+                placeholder={tr('common.accountPlaceholder')}
               />
             </Field>
             <Button type="submit">
-              <Plus className="size-4" /> Add
+              <Plus className="size-4" /> {tr('common.add')}
             </Button>
           </form>
           <label className="mt-4 flex cursor-pointer items-start gap-2.5 rounded-lg border border-line px-4 py-3 text-sm">
@@ -322,36 +321,31 @@ export function SettingsView() {
               onChange={(e) => actions.updateSettings({ countExcludedInBalance: e.target.checked })}
             />
             <span>
-              <span className="text-fg">Count excluded trades in the balance</span>
+              <span className="text-fg">{tr('settings.countExcluded')}</span>
               <span className="mt-0.5 block text-xs leading-relaxed text-muted">
-                Off: a trade you exclude with the eye icon is left out of the balance as well as the statistics. On: the
-                balance counts it, so it matches your broker&apos;s statement. Win rate, net profit, the equity curve
-                and drawdown always leave excluded trades out.
+                {tr('settings.countExcludedHint')}
               </span>
             </span>
           </label>
         </Section>
 
-        <Section
-          title="Backups"
-          description="Your journal already saves to disk automatically. These are for moving it, or keeping a copy elsewhere."
-        >
+        <Section title={tr('settings.backups')} description={tr('settings.backupsHint')}>
           <div className="flex flex-wrap gap-2">
             <Button
               onClick={() => {
                 exportBackup(data);
                 // a phone opens its share sheet instead, which speaks for itself
-                if (!native) toast('Backup downloaded');
+                if (!native) toast(tr('common.backupDownloaded'));
               }}
             >
-              <Download className="size-4" /> {native ? 'Back up your journal' : 'Download a backup'}
+              <Download className="size-4" /> {native ? tr('common.backUpJournal') : tr('common.downloadBackup')}
             </Button>
             <Button onClick={() => fileInput.current?.click()}>
-              <Upload className="size-4" /> Restore from a backup
+              <Upload className="size-4" /> {tr('settings.restore')}
             </Button>
             {CAN_BRING_OVER && (
               <Button onClick={() => void bringOver()}>
-                <FolderInput className="size-4" /> Bring over from the earlier version
+                <FolderInput className="size-4" /> {tr('settings.bringOver')}
               </Button>
             )}
             <input
@@ -366,99 +360,75 @@ export function SettingsView() {
             />
           </div>
           {phone ? (
-            <p className="mt-3 text-xs leading-relaxed text-faint">
-              A dated copy is also kept inside the app automatically, once on each day you make changes, and the last 30
-              are kept. Those copies are deleted along with the app, though, so save a backup to Drive, email or your
-              files now and then. Chart images are not included in the backup.
-            </p>
+            <p className="mt-3 text-xs leading-relaxed text-faint">{tr('settings.backups.phone')}</p>
           ) : native ? (
-            <p className="mt-3 text-xs leading-relaxed text-faint">
-              Your journal is in the Sniper Journal folder in your Documents, and stays there if you uninstall the app.
-              A dated copy is also written into the backups folder next to it automatically, once on each day you make
-              changes. The last 30 are kept. Chart images are saved as files in the screenshots folder rather than
-              inside the backup, so copy that folder too if you are moving to another computer.
-            </p>
+            <p className="mt-3 text-xs leading-relaxed text-faint">{tr('settings.backups.app')}</p>
           ) : (
-            <p className="mt-3 text-xs leading-relaxed text-faint">
-              A dated copy is also written into the data/backups folder automatically, once on each day you make
-              changes. The last 30 are kept. Chart images are saved as files in data/screenshots rather than inside the
-              backup, so copy that folder too if you are moving to another computer.
-            </p>
+            <p className="mt-3 text-xs leading-relaxed text-faint">{tr('settings.backups.server')}</p>
           )}
         </Section>
 
-        <Section
-          title="Chart images"
-          description="Images no trade uses any more, such as one pasted into a trade form that was never saved."
-        >
+        <Section title={tr('settings.charts')} description={tr('settings.chartsHint')}>
           <Button disabled={reclaiming} onClick={() => void reclaimCharts()}>
-            <ImageMinus className="size-4" /> Reclaim unused chart images
+            <ImageMinus className="size-4" /> {tr('settings.reclaim')}
           </Button>
-          <p className="mt-3 text-xs leading-relaxed text-faint">
-            You see how many there are, and how much space they take, before anything is deleted. An image is kept while
-            your journal or any copy in your backups still uses it, and for a day after it was added, in case a trade
-            form open in another window is about to save it.
-          </p>
+          <p className="mt-3 text-xs leading-relaxed text-faint">{tr('settings.reclaimHint')}</p>
         </Section>
 
-        <Section
-          title="Test data"
-          description="Generated trades for trying the app out. They are flagged separately and never mix into your own records."
-        >
+        <Section title={tr('settings.testData')} description={tr('settings.testDataHint')}>
           <div className="flex flex-wrap items-center gap-2">
             <Button
               onClick={() => {
                 actions.loadSampleData();
-                toast('Test data loaded');
+                toast(tr('settings.testDataLoaded'));
               }}
             >
-              <FlaskConical className="size-4" /> {sampleCount > 0 ? 'Regenerate test data' : 'Load test data'}
+              <FlaskConical className="size-4" />{' '}
+              {sampleCount > 0 ? tr('settings.regenerateTestData') : tr('settings.loadTestData')}
             </Button>
             <Button
               variant="danger"
               disabled={sampleCount === 0}
               onClick={async () => {
                 const ok = await confirm({
-                  title: 'Remove test data?',
-                  message: `This deletes the ${sampleCount} generated test trades, any chart images you attached to them, and the test playbook setups. Trades you entered yourself are kept.`,
-                  confirmLabel: 'Remove test data',
+                  title: tr('common.removeTestData.title'),
+                  message: tr('common.removeTestData.message', { count: sampleCount }),
+                  confirmLabel: tr('common.removeTestData.confirm'),
                   tone: 'danger',
                 });
                 if (ok) {
                   actions.clearSampleData();
-                  toast('Test data removed');
+                  toast(tr('common.testDataRemoved'));
                 }
               }}
             >
-              <Trash2 className="size-4" /> Remove test data
+              <Trash2 className="size-4" /> {tr('common.removeTestData.confirm')}
             </Button>
-            {sampleCount > 0 && <span className="text-xs text-warn">{sampleCount} test trades currently loaded</span>}
+            {sampleCount > 0 && (
+              <span className="text-xs text-warn">{tr('settings.testTradesLoaded', { count: sampleCount })}</span>
+            )}
           </div>
         </Section>
 
-        <Section title="Danger zone" description="There is no undo for this.">
+        <Section title={tr('settings.danger')} description={tr('settings.dangerHint')}>
           <Button
             variant="danger"
             onClick={async () => {
               const ok = await confirm({
-                title: 'Erase everything?',
-                message: `This permanently deletes ${
-                  data.trades.length === 0
-                    ? ''
-                    : data.trades.length === 1
-                      ? 'your 1 trade and its chart image, '
-                      : `all ${data.trades.length} trades and their chart images, `
-                }your setups, resources and accounts. Download a backup first if you are not certain; backups don't include chart images.`,
-                confirmLabel: 'Erase my journal',
+                title: tr('settings.erase.title'),
+                message: data.trades.length
+                  ? tr('settings.erase.message', { count: data.trades.length })
+                  : tr('settings.erase.empty'),
+                confirmLabel: tr('settings.erase.confirm'),
                 tone: 'danger',
               });
               if (ok && (await keepCurrent('before-erase'))) {
                 actions.resetAll();
-                toast('Journal erased. A copy of it, without chart images, was kept in your backups.');
+                toast(tr('settings.erased'));
               }
             }}
           >
-            <RotateCcw className="size-4" /> Erase all data
+            <RotateCcw className="size-4" /> {tr('settings.erase')}
           </Button>
         </Section>
       </div>
@@ -471,9 +441,7 @@ export function SettingsView() {
             const moved = data.trades.filter((t) => t.mistakes?.some((m) => renamed.has(m))).length;
             actions.saveMistakes(list, renamed);
             setEditingMistakes(false);
-            toast(
-              moved ? `Mistakes saved, and renamed on ${moved} ${moved === 1 ? 'trade' : 'trades'}` : 'Mistakes saved',
-            );
+            toast(moved ? tr('settings.mistakesRenamed', { count: moved }) : tr('settings.mistakesSaved'));
           }}
         />
       )}
@@ -493,7 +461,7 @@ function MistakeListEditor({
   onClose: () => void;
 }) {
   const [rows, setRows] = useState<EditedRule[]>(() =>
-    list.length ? list.map((text) => ({ text, was: text })) : [{ text: '', was: null }],
+    list.length ? list.map((text) => ({ text: mistakeName(text), was: text })) : [{ text: '', was: null }],
   );
   const setRow = (index: number, value: string) =>
     setRows((rs) => rs.map((r, i) => (i === index ? { ...r, text: value } : r)));
@@ -505,8 +473,8 @@ function MistakeListEditor({
       onClose={onClose}
       closeOnBackdrop={false}
       size="md"
-      title="Your mistakes"
-      description="Renaming one renames it on every trade that has it. Taking one off the list leaves those trades as they are, and Reports still count it."
+      title={tr('settings.yourMistakes')}
+      description={tr('settings.mistakesEditorHint')}
     >
       <form
         onSubmit={(e) => {
@@ -520,10 +488,10 @@ function MistakeListEditor({
           {rows.map((row, i) => (
             <div key={i} className="flex items-center gap-2">
               <Input
-                aria-label={`Mistake ${i + 1}`}
+                aria-label={tr('settings.mistakeN', { n: i + 1 })}
                 value={row.text}
                 onChange={(e) => setRow(i, e.target.value)}
-                placeholder="e.g. Traded the first minute"
+                placeholder={tr('settings.mistakePlaceholder')}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
@@ -534,7 +502,7 @@ function MistakeListEditor({
               <Button
                 size="icon"
                 variant="ghost"
-                aria-label={`Remove mistake ${i + 1}`}
+                aria-label={tr('settings.removeMistakeN', { n: i + 1 })}
                 onClick={() => setRows((rs) => rs.filter((_, idx) => idx !== i))}
               >
                 <X className="size-4" />
@@ -543,15 +511,15 @@ function MistakeListEditor({
           ))}
         </div>
         <Button size="sm" variant="ghost" onClick={addRow}>
-          <Plus className="size-3.5" /> Add a mistake
+          <Plus className="size-3.5" /> {tr('settings.addMistake')}
         </Button>
 
         <div className="-mx-5 -mb-4 flex justify-end gap-2 border-t border-line px-5 py-3">
           <Button variant="ghost" onClick={onClose}>
-            Cancel
+            {tr('common.cancel')}
           </Button>
           <Button variant="primary" type="submit">
-            Save mistakes
+            {tr('settings.saveMistakes')}
           </Button>
         </div>
       </form>

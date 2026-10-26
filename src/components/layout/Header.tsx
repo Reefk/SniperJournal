@@ -8,6 +8,7 @@ import { GlobalSearch } from './GlobalSearch';
 import { AccountSwitcher } from './AccountSwitcher';
 import { ClockDisplay } from './ClockDisplay';
 import { ProfileMenu } from './ProfileMenu';
+import { tr } from '@/lib/i18n';
 
 /**
  * PC:    [search box]                 [Log trade] | [account] [clock] [profile]
@@ -26,12 +27,12 @@ export function Header() {
         <Button
           variant="primary"
           onClick={() => openTradeForm()}
-          title="Log a trade (N)"
-          aria-label="Log a trade"
+          title={tr('header.logTradeTitle')}
+          aria-label={tr('header.logTradeLabel')}
           className="max-md:size-10 max-md:px-0"
         >
           <Plus className="size-4" />
-          <span className="max-md:hidden">Log trade</span>
+          <span className="max-md:hidden">{tr('header.logTrade')}</span>
           <kbd className="num ml-0.5 rounded bg-white/15 px-1.5 py-px text-[10px] font-medium max-md:hidden">N</kbd>
         </Button>
         <div className="mx-2 h-6 w-px bg-line max-md:hidden" />

@@ -4,6 +4,8 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { JournalData, Setup, Trade } from '@/lib/types';
 import { JournalProvider, useJournal, useSaveState } from '@/store/JournalProvider';
+import { language, setLanguage, tr, type Language } from '@/lib/i18n';
+import { LANGUAGE_KEY } from '@/store/language';
 import { trade } from './helpers';
 
 /**
@@ -209,6 +211,42 @@ describe("rule ticks follow their setup's rules", () => {
     );
     expect(seen.journal!.accountTrades.find((t) => t.id === first.id)?.ruleChecksSetupId).toBeUndefined();
     expect(madeFor().filter((id) => id === orb.id)).toHaveLength(2);
+  });
+});
+
+describe('the language', () => {
+  afterEach(() => setLanguage('en'));
+  const speak = async (code: Language) => {
+    await act(async () => seen.journal!.actions.updateSettings({ language: code }));
+    await until(() => language().code === code && seen.journal!.data.settings.language === code);
+  };
+  const backup = (settings: Partial<JournalData['settings']>): JournalData => ({
+    ...seen.journal!.data,
+    settings: { ...seen.journal!.data.settings, language: undefined, ...settings },
+  });
+
+  it('chosen, is spoken and saved, and remembered for the next opening', async () => {
+    await speak('ru');
+    expect(localStorage.getItem(LANGUAGE_KEY)).toBe('ru');
+    await speak('en');
+    expect(localStorage.getItem(LANGUAGE_KEY)).toBeNull();
+  });
+
+  it('stays when a backup saved without one is restored, and is the one a backup has', async () => {
+    await speak('es');
+    await act(async () => seen.journal!.actions.replaceAll(backup({})));
+    expect(seen.journal!.data.settings.language).toBe('es');
+    await act(async () => seen.journal!.actions.replaceAll(backup({ language: 'hi' })));
+    await until(() => language().code === 'hi');
+  });
+
+  it('stays when everything is erased, and the new account is named in it', async () => {
+    await speak('ru');
+    await act(async () => seen.journal!.actions.resetAll());
+    await until(() => seen.journal!.data.accounts.length === 1);
+    expect(seen.journal!.data.settings.language).toBe('ru');
+    expect(seen.journal!.data.accounts[0].name).toBe(tr('welcome.defaultAccount'));
+    expect(seen.journal!.data.accounts[0].name).not.toBe('Main');
   });
 });
 

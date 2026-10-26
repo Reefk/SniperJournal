@@ -6,7 +6,7 @@ import { useJournal } from '@/store/JournalProvider';
 import { useUI } from '@/store/UIProvider';
 import { buildInsights, buildSignals, MIN_TRADES_FOR_INSIGHTS, type Tone } from '@/lib/insights';
 import { computeStats, groupTrades, sniperScore } from '@/lib/stats';
-import { formatMoney, formatPct, WEEKDAYS } from '@/lib/format';
+import { formatMoney, formatPct, weekdayName } from '@/lib/format';
 import { statTrades } from '@/lib/trade-math';
 import { cn, parseLocal } from '@/lib/utils';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -45,7 +45,7 @@ export function InsightsView() {
         rows: groupTrades(
           closed,
           (t) => String(parseLocal(t.openedAt).getDay()),
-          (k) => WEEKDAYS[(Number(k) + 6) % 7],
+          (k) => weekdayName((Number(k) + 6) % 7),
         ).slice(0, 7),
       },
       { title: 'By tag', rows: groupTrades(closed, (t) => t.tags).slice(0, 6) },

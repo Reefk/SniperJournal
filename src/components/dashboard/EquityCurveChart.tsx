@@ -3,6 +3,7 @@
 import { Area, AreaChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { EquityPoint } from '@/lib/stats';
 import { formatAxisMoney, formatShortDate } from '@/lib/format';
+import { tr } from '@/lib/i18n';
 import { useChartTheme } from '@/hooks/useChartTheme';
 import { EquityTooltip } from './ChartTooltip';
 
@@ -44,7 +45,7 @@ export function EquityCurveChart({
           tickLine={false}
           axisLine={{ stroke: theme.grid }}
           minTickGap={48}
-          tickFormatter={(v: string) => (v === 'Start' ? 'Start' : formatShortDate(v))}
+          tickFormatter={(v: string) => (v === 'Start' ? tr('dash.start') : formatShortDate(v))}
         />
         <YAxis
           tick={{ fill: theme.axis }}

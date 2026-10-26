@@ -7,6 +7,7 @@ import { useUI } from '@/store/UIProvider';
 import { exportBackup } from '@/lib/backup';
 import { storage } from '@/lib/storage';
 import { MenuDivider, MenuItem, Popover } from '@/components/ui/Popover';
+import { tr } from '@/lib/i18n';
 
 export function ProfileMenu() {
   const { data } = useJournal();
@@ -28,7 +29,7 @@ export function ProfileMenu() {
           type="button"
           onClick={toggle}
           aria-expanded={open}
-          aria-label="Profile menu"
+          aria-label={tr('profile.menu')}
           className="ml-1 grid size-10 place-items-center rounded-full md:size-9 border border-line bg-raised text-xs font-semibold text-fg transition hover:border-line-strong"
         >
           {initials || <User className="size-4 text-muted" />}
@@ -38,9 +39,9 @@ export function ProfileMenu() {
       {(close) => (
         <div>
           <div className="px-2.5 py-2">
-            <div className="truncate text-sm font-medium text-fg">{name || 'Trader'}</div>
+            <div className="truncate text-sm font-medium text-fg">{name || tr('profile.trader')}</div>
             <div className="text-xs text-muted">
-              Journal stored on this {storage.device === 'phone' ? 'device' : 'PC'}
+              {storage.device === 'phone' ? tr('profile.storedPhone') : tr('profile.storedPc')}
             </div>
           </div>
           <MenuDivider />
@@ -51,7 +52,7 @@ export function ProfileMenu() {
               router.push('/settings');
             }}
           >
-            Settings
+            {tr('nav.settings')}
           </MenuItem>
           <MenuItem
             icon={Download}
@@ -59,10 +60,10 @@ export function ProfileMenu() {
               exportBackup(data);
               close();
               // a phone opens its share sheet instead, which speaks for itself
-              if (storage.kind === 'web') toast('Backup downloaded');
+              if (storage.kind === 'web') toast(tr('common.backupDownloaded'));
             }}
           >
-            {storage.kind === 'native' ? 'Back up your journal' : 'Download backup'}
+            {storage.kind === 'native' ? tr('common.backUpJournal') : tr('profile.downloadBackup')}
           </MenuItem>
           <MenuItem
             icon={LifeBuoy}
@@ -71,7 +72,7 @@ export function ProfileMenu() {
               router.push('/support');
             }}
           >
-            Help & shortcuts
+            {tr('profile.help')}
           </MenuItem>
         </div>
       )}

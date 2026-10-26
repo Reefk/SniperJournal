@@ -4,6 +4,7 @@ import { Check, X } from 'lucide-react';
 import type { RuleChecks, RuleTick } from '@/lib/types';
 import { tickOf } from '@/lib/rules';
 import { cn } from '@/lib/utils';
+import { tr } from '@/lib/i18n';
 import { Button } from '@/components/ui/Button';
 
 /**
@@ -30,15 +31,15 @@ export function RuleChecklist({
     <div className="rounded-lg border border-line p-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-sm font-medium text-fg">Rules of {setupName}</div>
-          <p className="mt-0.5 text-xs text-muted">Did this trade keep them? The Playbook adds them up.</p>
+          <div className="text-sm font-medium text-fg">{tr('rules.of', { setup: setupName })}</div>
+          <p className="mt-0.5 text-xs text-muted">{tr('rules.hint')}</p>
         </div>
         <Button
           size="sm"
           variant="ghost"
           onClick={() => onChange({ ...value, ...Object.fromEntries(rules.map((rule) => [rule, true])) })}
         >
-          <Check className="size-3.5" /> All kept
+          <Check className="size-3.5" /> {tr('rules.allKept')}
         </Button>
       </div>
       <ul className="mt-2 divide-y divide-line">
@@ -48,17 +49,17 @@ export function RuleChecklist({
             <li key={rule} className="flex flex-col gap-2 py-2 md:flex-row md:items-center md:gap-3">
               <span className="min-w-0 flex-1 text-sm leading-relaxed text-fg">
                 {rule}
-                {!setupRules.includes(rule) && <span className="text-xs text-faint"> (no longer in the setup)</span>}
+                {!setupRules.includes(rule) && <span className="text-xs text-faint">{tr('rules.removed')}</span>}
               </span>
               <div role="group" aria-label={rule} className="flex shrink-0 gap-1.5">
                 <TickButton
-                  label="Kept"
+                  label={tr('rules.kept')}
                   pressed={tick === true}
                   tone="profit"
                   onClick={() => set(rule, tick === true ? null : true)}
                 />
                 <TickButton
-                  label="Broken"
+                  label={tr('rules.broken')}
                   pressed={tick === false}
                   tone="loss"
                   onClick={() => set(rule, tick === false ? null : false)}

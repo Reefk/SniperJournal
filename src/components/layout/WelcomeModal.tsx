@@ -11,13 +11,17 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Field, Input, Select } from '@/components/ui/Field';
 import { LogoMark } from '@/components/ui/Logo';
+import { rich } from '@/components/ui/Rich';
+import { LanguageSelect } from '@/components/settings/LanguageSelect';
+import { tr } from '@/lib/i18n';
 
 /** First run. Nothing is assumed: the journal starts empty. */
 export function WelcomeModal() {
   const { data, actions } = useJournal();
   const { toast } = useUI();
   const [name, setName] = useState('');
-  const [accountName, setAccountName] = useState('Main Portfolio');
+  // a language chosen here draws the dialog again, in it, with this name in it too
+  const [accountName, setAccountName] = useState(() => tr('welcome.defaultAccount'));
   const [balance, setBalance] = useState('');
   const [currency, setCurrency] = useState('USD');
   const bringOver = useBringOver();
@@ -27,13 +31,13 @@ export function WelcomeModal() {
   const finish = (withSample: boolean) => {
     actions.completeOnboarding({
       name: name.trim(),
-      accountName: accountName.trim() || 'Main Portfolio',
+      accountName: accountName.trim() || tr('welcome.defaultAccount'),
       startingBalance: toNumberOrNull(balance) ?? 0,
       currency,
     });
     if (withSample) {
       actions.loadSampleData();
-      toast('Test data loaded. Remove it any time from the banner at the top.', 'info');
+      toast(tr('welcome.sampleLoaded'), 'info');
     }
   };
 
@@ -48,9 +52,9 @@ export function WelcomeModal() {
         <div className="flex items-center gap-3 pb-1 pt-2">
           <LogoMark size={40} />
           <div>
-            <h2 className="text-lg font-semibold text-fg">Set up your journal</h2>
+            <h2 className="text-lg font-semibold text-fg">{tr('welcome.title')}</h2>
             <p className="text-sm text-muted">
-              Everything you enter is saved on this {storage.device === 'phone' ? 'phone' : 'computer'}.
+              {storage.device === 'phone' ? tr('welcome.savedPhone') : tr('welcome.savedPc')}
             </p>
           </div>
         </div>
@@ -58,38 +62,42 @@ export function WelcomeModal() {
         {storage.device === 'phone' && (
           // the one thing a phone does differently that can cost you your journal
           <p className="mt-4 rounded-lg border border-warn/30 bg-warn/10 px-3 py-2.5 text-xs leading-relaxed text-fg">
-            Your journal lives only inside this app. Uninstalling it deletes your trades, so back it up now and then
-            from <span className="font-medium">More → Back up your journal</span>.
+            {rich(tr('welcome.phoneWarning'), { b: (text) => <span className="font-medium">{text}</span> })}
           </p>
         )}
 
         {CAN_BRING_OVER && (
           <p className="mt-4 rounded-lg border border-line bg-app px-3 py-2.5 text-xs leading-relaxed text-muted">
-            Used Sniper Journal before, from its own folder with INSTALLER.bat?{' '}
-            <button
-              type="button"
-              onClick={() => void bringOver()}
-              className="font-medium text-accent underline-offset-4 hover:underline"
-            >
-              Bring your journal over
-            </button>{' '}
-            and carry on where you left off.
+            {rich(tr('welcome.bringOver'), {
+              link: (text) => (
+                <button
+                  type="button"
+                  onClick={() => void bringOver()}
+                  className="font-medium text-accent underline-offset-4 hover:underline"
+                >
+                  {text}
+                </button>
+              ),
+            })}
           </p>
         )}
 
         <div className="mt-5 grid grid-cols-2 gap-4">
-          <Field label="Your name" hint="optional" className="col-span-2">
+          <Field label={tr('common.language')} className="col-span-2">
+            <LanguageSelect />
+          </Field>
+          <Field label={tr('common.yourName')} hint={tr('common.optional')} className="col-span-2">
             <Input
               autoFocus={storage.device === 'pc'}
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Shown in the header"
+              placeholder={tr('common.namePlaceholder')}
             />
           </Field>
-          <Field label="Account name">
+          <Field label={tr('common.accountName')}>
             <Input value={accountName} onChange={(e) => setAccountName(e.target.value)} />
           </Field>
-          <Field label="Currency">
+          <Field label={tr('common.currency')}>
             <Select value={currency} onChange={(e) => setCurrency(e.target.value)}>
               {CURRENCIES.map((c) => (
                 <option key={c} value={c}>
@@ -98,7 +106,7 @@ export function WelcomeModal() {
               ))}
             </Select>
           </Field>
-          <Field label="Starting balance" hint="used for the equity curve and drawdown" className="col-span-2">
+          <Field label={tr('common.startingBalance')} hint={tr('welcome.balanceHint')} className="col-span-2">
             <Input
               inputMode="decimal"
               className="num"
@@ -115,10 +123,10 @@ export function WelcomeModal() {
             onClick={() => finish(true)}
             className="text-sm text-muted underline-offset-4 transition hover:text-fg hover:underline"
           >
-            Explore with test data first
+            {tr('welcome.explore')}
           </button>
           <Button variant="primary" type="submit">
-            Start journalling
+            {tr('welcome.start')}
           </Button>
         </div>
       </form>

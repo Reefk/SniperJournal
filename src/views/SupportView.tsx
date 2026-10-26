@@ -7,6 +7,7 @@ import { WHY_NO_COPY } from '@/components/layout/SaveConflict';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { storage } from '@/lib/storage';
 import { cn } from '@/lib/utils';
+import { tr } from '@/lib/i18n';
 
 const SHORTCUTS = [
   ['N', 'Log a new trade'],
@@ -110,7 +111,7 @@ const QUESTIONS = phone
 
 /** what happened to the latest changes, in words */
 function fileStatus(status: SaveStatus, copyMiss: CopyMiss | null): string {
-  const why = copyMiss ? WHY_NO_COPY[copyMiss] : '';
+  const why = copyMiss ? tr(WHY_NO_COPY[copyMiss]) : '';
   switch (status) {
     case 'error':
       return copyMiss

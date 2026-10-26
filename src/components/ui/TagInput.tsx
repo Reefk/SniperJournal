@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import { useFieldLink } from './Field';
+import { tr } from '@/lib/i18n';
 
 export function TagInput({
   value,
@@ -42,7 +43,7 @@ export function TagInput({
             <button
               type="button"
               onClick={() => onChange(value.filter((t) => t !== tag))}
-              aria-label={`Remove tag ${tag}`}
+              aria-label={tr('common.removeTag', { tag })}
               className="rounded hover:bg-accent/20 max-md:-my-1 max-md:p-1"
             >
               <X className="size-3" />
@@ -65,7 +66,7 @@ export function TagInput({
             } else if (e.key === 'Backspace' && !draft && value.length) onChange(value.slice(0, -1));
           }}
           onBlur={() => add(draft)}
-          placeholder={value.length ? '' : 'Type a tag and press Enter'}
+          placeholder={value.length ? '' : tr('common.tagPlaceholder')}
           className="h-6 min-w-[140px] flex-1 bg-transparent text-sm text-fg outline-none placeholder:text-placeholder"
         />
       </div>

@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import type { DayAgg, EquityPoint, ScoreAxis } from '@/lib/stats';
 import { formatMoney, formatShortDate } from '@/lib/format';
+import { tr } from '@/lib/i18n';
 
 /** Minimal shape of what Recharts hands a custom tooltip */
 export interface TooltipProps<T> {
@@ -23,11 +24,11 @@ export function EquityTooltip({ active, payload, currency }: TooltipProps<Equity
   const point = active ? payload?.[0]?.payload : undefined;
   if (!point) return null;
   return (
-    <Card title={point.label === 'Start' ? 'Starting balance' : formatShortDate(point.label)}>
+    <Card title={point.label === 'Start' ? tr('common.startingBalance') : formatShortDate(point.label)}>
       <div className="num text-sm text-fg">{formatMoney(point.equity, currency)}</div>
       {point.index > 0 && (
         <div className={point.net > 0 ? 'text-profit' : point.net < 0 ? 'text-loss' : undefined}>
-          {formatMoney(point.net, currency, { sign: true })} on this trade
+          {tr('dash.onThisTrade', { money: formatMoney(point.net, currency, { sign: true }) })}
         </div>
       )}
     </Card>
@@ -43,7 +44,10 @@ export function DayTooltip({ active, payload, currency }: TooltipProps<DayAgg> &
         {formatMoney(day.net, currency, { sign: true })}
       </div>
       <div>
-        {day.trades} {day.trades === 1 ? 'trade' : 'trades'} · {day.wins}W / {day.losses}L
+        {tr('dash.dayTrades', {
+          count: day.trades,
+          wl: `${tr('stat.wins', { n: day.wins })} / ${tr('stat.losses', { n: day.losses })}`,
+        })}
       </div>
     </Card>
   );

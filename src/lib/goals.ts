@@ -2,7 +2,8 @@ import type { GoalKey, Goals, Settings, Setup, Trade } from './types';
 import { computeStats } from './stats';
 import { ruleVerdict } from './rules';
 import { mistakesSince } from './mistakes';
-import { formatMoney, formatRatio, wholePct } from './format';
+import { formatMoney, formatRatio, pctText, wholePct } from './format';
+import { isolate, tr } from './i18n';
 import { rMultiple, statTrades, tradeDay } from './trade-math';
 import { dateKey, parseDateKey } from './utils';
 
@@ -27,87 +28,31 @@ export interface GoalDef {
   info: string;
 }
 
+/** a goal whose name and ⓘ are read in the language spoken when they are shown */
+const goal = (key: GoalKey, kind: GoalDef['kind'], unit: GoalUnit, basis: GoalDef['basis']): GoalDef => ({
+  key,
+  get label() {
+    return tr(`goal.${key}.label`);
+  },
+  kind,
+  unit,
+  basis,
+  get info() {
+    return tr(`goal.${key}.info`);
+  },
+});
+
 export const GOALS: readonly GoalDef[] = [
-  {
-    key: 'rulesKept',
-    label: 'Rules kept',
-    kind: 'process',
-    unit: 'pct',
-    basis: 'checked',
-    info: "Of the trades you ticked against their setup's rules, the share that kept every one. A trade with a rule left unticked and none broken counts on neither side.",
-  },
-  {
-    key: 'cleanTrades',
-    label: 'Clean trades',
-    kind: 'process',
-    unit: 'pct',
-    basis: 'trades',
-    info: 'The share of trades with no mistake, counted from the first day you marked a trade with one.',
-  },
-  {
-    key: 'daysInLimits',
-    label: 'Days inside my limits',
-    kind: 'process',
-    unit: 'pct',
-    basis: 'days',
-    info: 'The share of trading days that lost no more than your daily loss limit and took no more trades than your daily limit, as they are set now.',
-  },
-  {
-    key: 'withStop',
-    label: 'Trades with a stop',
-    kind: 'process',
-    unit: 'pct',
-    basis: 'trades',
-    info: 'The share of trades logged with a stop loss.',
-  },
-  {
-    key: 'winRate',
-    label: 'Win rate',
-    kind: 'result',
-    unit: 'pct',
-    basis: 'trades',
-    info: 'The share of trades that ended above zero, after fees.',
-  },
-  {
-    key: 'profitFactor',
-    label: 'Profit factor',
-    kind: 'result',
-    unit: 'ratio',
-    basis: 'trades',
-    info: 'What the winners made divided by what the losers lost.',
-  },
-  {
-    key: 'avgR',
-    label: 'Average R',
-    kind: 'result',
-    unit: 'r',
-    basis: 'stops',
-    info: 'The average result in units of the risk your stop defined, over the trades with a stop.',
-  },
-  {
-    key: 'expectancy',
-    label: 'Expectancy',
-    kind: 'result',
-    unit: 'money',
-    basis: 'trades',
-    info: 'What an average trade made, after fees.',
-  },
-  {
-    key: 'winLossRatio',
-    label: 'Average win ÷ average loss',
-    kind: 'result',
-    unit: 'ratio',
-    basis: 'trades',
-    info: 'The size of your average winner against your average loser.',
-  },
-  {
-    key: 'greenDayRate',
-    label: 'Green days',
-    kind: 'result',
-    unit: 'pct',
-    basis: 'days',
-    info: 'The share of trading days that ended above zero, after fees.',
-  },
+  goal('rulesKept', 'process', 'pct', 'checked'),
+  goal('cleanTrades', 'process', 'pct', 'trades'),
+  goal('daysInLimits', 'process', 'pct', 'days'),
+  goal('withStop', 'process', 'pct', 'trades'),
+  goal('winRate', 'result', 'pct', 'trades'),
+  goal('profitFactor', 'result', 'ratio', 'trades'),
+  goal('avgR', 'result', 'r', 'stops'),
+  goal('expectancy', 'result', 'money', 'trades'),
+  goal('winLossRatio', 'result', 'ratio', 'trades'),
+  goal('greenDayRate', 'result', 'pct', 'days'),
 ];
 
 const BY_KEY = new Map<string, GoalDef>(GOALS.map((def) => [def.key, def]));
@@ -362,7 +307,7 @@ export function goalValueText(def: GoalDef, value: number | null, target: number
     case 'pct': {
       const tenths = !Number.isInteger(target);
       const shown = tenths ? tenthPct(value) : wholePct(value);
-      return `${missed && shown >= target ? floorTo(value, tenths ? 1 : 0) : shown}%`;
+      return pctText(missed && shown >= target ? floorTo(value, tenths ? 1 : 0) : shown);
     }
     case 'ratio': {
       if (!Number.isFinite(value)) return formatRatio(value);
@@ -370,7 +315,7 @@ export function goalValueText(def: GoalDef, value: number | null, target: number
     }
     case 'r': {
       const r = missed && Number(value.toFixed(2)) >= target ? floorTo(value, 2) : value;
-      return `${r >= 0 ? '+' : ''}${formatRatio(r)}R`;
+      return isolate(`${r >= 0 ? '+' : ''}${formatRatio(r)}R`);
     }
     case 'money': {
       const cents = missed && Number(value.toFixed(2)) >= target ? floorTo(value, 2) : value;
@@ -383,11 +328,11 @@ export function goalValueText(def: GoalDef, value: number | null, target: number
 export function goalTargetText(def: GoalDef, target: number, currency: string): string {
   switch (def.unit) {
     case 'pct':
-      return `${Number(target.toFixed(1))}%`;
+      return pctText(Number(target.toFixed(1)));
     case 'ratio':
       return formatRatio(target);
     case 'r':
-      return `+${formatRatio(target)}R`;
+      return isolate(`+${formatRatio(target)}R`);
     case 'money':
       return formatMoney(target, currency, { sign: true });
   }

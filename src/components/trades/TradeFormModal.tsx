@@ -5,11 +5,12 @@ import { ArrowDownRight, ArrowUpRight, ChevronDown, Trash2, TriangleAlert } from
 import type { RuleChecks, Side, Trade, TradeInput } from '@/lib/types';
 import { useJournal } from '@/store/JournalProvider';
 import { useUI } from '@/store/UIProvider';
-import { detectSession, SESSIONS } from '@/lib/sessions';
+import { detectSession, SESSIONS, sessionName } from '@/lib/sessions';
 import { checksToSave, rulesShown } from '@/lib/rules';
 import { mistakeList, mistakesShown } from '@/lib/mistakes';
 import { arrangeByGroup } from '@/lib/tags';
-import { formatDuration, formatMoney, formatRatio } from '@/lib/format';
+import { formatDuration, formatMoney, formatNumber, formatR, formatRatio } from '@/lib/format';
+import { isolate, tr } from '@/lib/i18n';
 import { grossPnl, holdMinutes, isClosed, netPnl, plannedRR, riskAmount, rMultiple } from '@/lib/trade-math';
 import { cn, toLocalInput, toNumberOrNull } from '@/lib/utils';
 import { storage } from '@/lib/storage';
@@ -110,17 +111,17 @@ function validate(f: FormState, setupRules: string[], editing?: Trade): { errors
   const multiplier = toNumberOrNull(f.multiplier) ?? 1;
   const manualPnl = f.pnlMode === 'manual' ? toNumberOrNull(f.manualPnl) : null;
 
-  if (!symbol) errors.symbol = 'Enter a symbol';
-  if (!f.openedAt) errors.openedAt = 'Enter the entry time';
-  if (quantity == null || quantity <= 0) errors.quantity = 'Must be more than 0';
-  if (entryPrice == null) errors.entryPrice = 'Enter the entry price';
-  if (f.exitPrice.trim() && exitPrice == null) errors.exitPrice = 'Not a number';
-  if (f.stopLoss.trim() && toNumberOrNull(f.stopLoss) == null) errors.stopLoss = 'Not a number';
-  if (f.takeProfit.trim() && toNumberOrNull(f.takeProfit) == null) errors.takeProfit = 'Not a number';
-  if (f.fees.trim() && toNumberOrNull(f.fees) == null) errors.fees = 'Not a number';
-  if (multiplier <= 0) errors.multiplier = 'Must be more than 0';
-  if (f.pnlMode === 'manual' && manualPnl == null) errors.manualPnl = 'Enter the gross P&L';
-  if (f.closedAt && f.openedAt && f.closedAt < f.openedAt) errors.closedAt = 'Exit is before entry';
+  if (!symbol) errors.symbol = tr('form.error.symbol');
+  if (!f.openedAt) errors.openedAt = tr('form.error.entryTime');
+  if (quantity == null || quantity <= 0) errors.quantity = tr('form.error.aboveZero');
+  if (entryPrice == null) errors.entryPrice = tr('form.error.entryPrice');
+  if (f.exitPrice.trim() && exitPrice == null) errors.exitPrice = tr('form.error.number');
+  if (f.stopLoss.trim() && toNumberOrNull(f.stopLoss) == null) errors.stopLoss = tr('form.error.number');
+  if (f.takeProfit.trim() && toNumberOrNull(f.takeProfit) == null) errors.takeProfit = tr('form.error.number');
+  if (f.fees.trim() && toNumberOrNull(f.fees) == null) errors.fees = tr('form.error.number');
+  if (multiplier <= 0) errors.multiplier = tr('form.error.aboveZero');
+  if (f.pnlMode === 'manual' && manualPnl == null) errors.manualPnl = tr('form.error.grossPnl');
+  if (f.closedAt && f.openedAt && f.closedAt < f.openedAt) errors.closedAt = tr('form.error.exitBeforeEntry');
 
   if (Object.keys(errors).length) return { errors };
 
@@ -202,10 +203,11 @@ function rememberWay(way: LogWay) {
     /* storage unavailable: the form simply opens by hand */
   }
 }
-const LOG_WAYS = [
-  { value: 'hand', label: 'By hand' },
-  { value: 'csv', label: 'From a file' },
-] as const;
+const logWays = () =>
+  [
+    { value: 'hand', label: tr('form.byHand') },
+    { value: 'csv', label: tr('form.fromFile') },
+  ] as const;
 
 export function TradeFormModal() {
   const { tradeForm, closeTradeForm } = useUI();
@@ -221,18 +223,12 @@ export function TradeFormModal() {
       closeOnBackdrop={false}
       size="xl"
       phone="full"
-      title={editing ? `Edit ${editing.symbol} trade` : 'Log a trade'}
-      description={
-        editing
-          ? 'Changes are saved to your journal immediately.'
-          : fromCsv
-            ? 'Drop in an export from your broker or trading platform, with one trade or many. Anything missing can be filled in afterwards.'
-            : 'Leave the exit price empty if the position is still open.'
-      }
+      title={editing ? tr('form.editTitle', { symbol: editing.symbol }) : tr('header.logTradeLabel')}
+      description={editing ? tr('form.editHint') : fromCsv ? tr('form.fileHint') : tr('form.handHint')}
     >
       {!editing && (
         <SegmentedControl
-          options={LOG_WAYS}
+          options={logWays()}
           value={fromCsv ? 'csv' : 'hand'}
           onChange={(way) => {
             setChosen(way);
@@ -320,7 +316,7 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
     entry != null &&
     stop != null &&
     ((form.side === 'LONG' && stop >= entry) || (form.side === 'SHORT' && stop <= entry))
-      ? `Your stop is ${form.side === 'LONG' ? 'above' : 'below'} the entry for a ${form.side.toLowerCase()}`
+      ? tr(form.side === 'LONG' ? 'form.stopAbove' : 'form.stopBelow')
       : null;
 
   const save = (addAnother: boolean) => {
@@ -337,12 +333,12 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
     if (named.length) actions.saveMistakes([...listedMistakes, ...named]);
     if (trade) {
       actions.updateTrade(trade.id, result.input);
-      toast(`${result.input.symbol} trade updated`);
+      toast(tr('form.updated', { symbol: result.input.symbol }));
       onDone();
       return;
     }
     actions.addTrade(result.input);
-    toast(`${result.input.symbol} trade saved`);
+    toast(tr('form.saved', { symbol: result.input.symbol }));
     if (addAnother) {
       setForm((f) => ({
         ...initialState(f.accountId),
@@ -358,14 +354,18 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
   const remove = async () => {
     if (!trade) return;
     const ok = await confirm({
-      title: 'Delete this trade?',
-      message: `${trade.symbol} ${trade.side.toLowerCase()} from ${trade.openedAt.replace('T', ' ')} will be permanently removed.`,
-      confirmLabel: 'Delete trade',
+      title: tr('form.delete.title'),
+      message: tr('form.delete.message', {
+        symbol: trade.symbol,
+        side: tr(`side.${trade.side}`).toLowerCase(),
+        time: isolate(trade.openedAt.replace('T', ' ')),
+      }),
+      confirmLabel: tr('form.delete.confirm'),
       tone: 'danger',
     });
     if (ok) {
       actions.deleteTrades([trade.id]);
-      toast('Trade deleted');
+      toast(tr('form.deleted'));
       onDone();
     }
   };
@@ -388,13 +388,13 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
         {/* --------------- left: the trade --------------- */}
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3 md:grid-cols-[1.1fr_1fr_auto]">
-            <Field label="Symbol" error={errors.symbol}>
+            <Field label={tr('form.symbol')} error={errors.symbol}>
               <Input
                 autoFocus={!trade && storage.device === 'pc'}
                 list="sj-symbols"
                 value={form.symbol}
                 onChange={(e) => set('symbol', e.target.value.toUpperCase())}
-                placeholder="e.g. NVDA, EURUSD, BTC"
+                placeholder={tr('goals.example', { n: 'NVDA, EURUSD, BTC' })}
                 invalid={Boolean(errors.symbol)}
                 className="font-semibold uppercase placeholder:normal-case"
               />
@@ -404,7 +404,7 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
                 ))}
               </datalist>
             </Field>
-            <Field label="Account">
+            <Field label={tr('form.account')}>
               <Select value={form.accountId} onChange={(e) => set('accountId', e.target.value)}>
                 {data.accounts.map((a) => (
                   <option key={a.id} value={a.id}>
@@ -413,7 +413,7 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
                 ))}
               </Select>
             </Field>
-            <Field label="Side" className="col-span-2 md:col-span-1">
+            <Field label={tr('form.side')} className="col-span-2 md:col-span-1">
               <div className="grid h-10 grid-cols-2 rounded-md border border-line bg-app p-0.5 md:h-9">
                 {(['LONG', 'SHORT'] as const).map((s) => {
                   const active = form.side === s;
@@ -434,7 +434,7 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
                       )}
                     >
                       <Icon className="size-3.5" />
-                      {s}
+                      {tr(`side.${s}`)}
                     </button>
                   );
                 })}
@@ -443,7 +443,7 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
           </div>
 
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <Field label="Entry time" error={errors.openedAt}>
+            <Field label={tr('form.entryTime')} error={errors.openedAt}>
               <Input
                 type="datetime-local"
                 className="num"
@@ -452,7 +452,7 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
                 invalid={Boolean(errors.openedAt)}
               />
             </Field>
-            <Field label="Exit time" hint="optional" error={errors.closedAt}>
+            <Field label={tr('form.exitTime')} hint={tr('common.optional')} error={errors.closedAt}>
               <Input
                 type="datetime-local"
                 className="num"
@@ -464,7 +464,7 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
           </div>
 
           <div className="grid grid-cols-3 gap-3">
-            <Field label="Quantity" error={errors.quantity}>
+            <Field label={tr('form.quantity')} error={errors.quantity}>
               <Input
                 inputMode="decimal"
                 className="num"
@@ -474,7 +474,7 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
                 invalid={Boolean(errors.quantity)}
               />
             </Field>
-            <Field label="Entry price" error={errors.entryPrice}>
+            <Field label={tr('form.entryPrice')} error={errors.entryPrice}>
               <Input
                 inputMode="decimal"
                 className="num"
@@ -485,8 +485,8 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
               />
             </Field>
             <Field
-              label="Exit price"
-              hint={<span className="max-md:hidden">empty = open</span>}
+              label={tr('form.exitPrice')}
+              hint={<span className="max-md:hidden">{tr('form.emptyIsOpen')}</span>}
               error={errors.exitPrice}
             >
               <Input
@@ -501,7 +501,7 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
           </div>
 
           <div className="grid grid-cols-3 gap-3">
-            <Field label="Stop loss" hint="optional" error={errors.stopLoss}>
+            <Field label={tr('form.stopLoss')} hint={tr('common.optional')} error={errors.stopLoss}>
               <Input
                 inputMode="decimal"
                 className="num"
@@ -510,7 +510,7 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
                 placeholder="0.00"
               />
             </Field>
-            <Field label="Take profit" hint="optional" error={errors.takeProfit}>
+            <Field label={tr('form.takeProfit')} hint={tr('common.optional')} error={errors.takeProfit}>
               <Input
                 inputMode="decimal"
                 className="num"
@@ -522,7 +522,8 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
             <Field
               label={
                 <>
-                  Fees<span className="max-md:hidden"> & commissions</span>
+                  {tr('form.fees')}
+                  <span className="max-md:hidden">{tr('form.feesTail')}</span>
                 </>
               }
               error={errors.fees}
@@ -543,9 +544,9 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
           )}
 
           <div className="grid grid-cols-3 gap-3">
-            <Field label="Setup" hint={data.setups.length ? undefined : 'add in Playbook'}>
+            <Field label={tr('form.setup')} hint={data.setups.length ? undefined : tr('form.addInPlaybook')}>
               <Select value={form.setupId} onChange={(e) => set('setupId', e.target.value)}>
-                <option value="">No setup</option>
+                <option value="">{tr('form.noSetup')}</option>
                 {data.setups.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
@@ -553,20 +554,23 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
                 ))}
               </Select>
             </Field>
-            <Field label="Session" hint={!form.sessionTouched && form.session ? 'from entry time' : undefined}>
+            <Field
+              label={tr('form.session')}
+              hint={!form.sessionTouched && form.session ? tr('form.fromEntryTime') : undefined}
+            >
               <Select
                 value={form.session}
                 onChange={(e) => setForm((f) => ({ ...f, session: e.target.value, sessionTouched: true }))}
               >
-                <option value="">None</option>
+                <option value="">{tr('form.none')}</option>
                 {SESSIONS.map((s) => (
                   <option key={s} value={s}>
-                    {s}
+                    {sessionName(s)}
                   </option>
                 ))}
               </Select>
             </Field>
-            <Field label="Leverage" hint="optional">
+            <Field label={tr('form.leverage')} hint={tr('common.optional')}>
               <div className="relative">
                 <Input
                   inputMode="decimal"
@@ -599,7 +603,7 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
             onChange={(mistakes) => set('mistakes', mistakes)}
           />
 
-          <Field label="Tags" hint="catalysts, emotions, sources">
+          <Field label={tr('form.tags')} hint={tr('form.tagsHint')}>
             <TagInput
               value={form.tags}
               onChange={(tags) => set('tags', tags)}
@@ -608,11 +612,11 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
             />
           </Field>
 
-          <Field label="Notes">
+          <Field label={tr('form.notes')}>
             <Textarea
               value={form.notes}
               onChange={(e) => set('notes', e.target.value)}
-              placeholder="Why you took it, how you managed it, what you would do differently"
+              placeholder={tr('form.notesPlaceholder')}
             />
           </Field>
 
@@ -623,12 +627,12 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
               aria-expanded={showAdvanced}
               className="flex w-full items-center justify-between px-3 py-2.5 text-sm text-muted transition hover:text-fg"
             >
-              Futures, forex and manual P&L
+              {tr('form.advanced')}
               <ChevronDown className={cn('size-4 transition', showAdvanced && 'rotate-180')} />
             </button>
             {showAdvanced && (
               <div className="grid grid-flow-row-dense grid-cols-2 gap-3 border-t border-line p-3 md:grid-flow-row md:grid-cols-3">
-                <Field label="Contract multiplier" hint="1 = shares" error={errors.multiplier}>
+                <Field label={tr('form.multiplier')} hint={tr('form.multiplierHint')} error={errors.multiplier}>
                   <Input
                     inputMode="decimal"
                     className="num"
@@ -637,18 +641,18 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
                     placeholder="1"
                   />
                 </Field>
-                <Field label="P&L calculation" className="col-span-2 md:col-span-1">
+                <Field label={tr('form.pnlMode')} className="col-span-2 md:col-span-1">
                   <SegmentedControl
                     className="flex h-10 w-full md:h-9 [&>button]:flex-1 [&>button]:justify-center"
                     value={form.pnlMode}
                     onChange={(v) => set('pnlMode', v)}
                     options={[
-                      { value: 'auto', label: 'From prices' },
-                      { value: 'manual', label: 'Manual' },
+                      { value: 'auto', label: tr('form.fromPrices') },
+                      { value: 'manual', label: tr('form.manual') },
                     ]}
                   />
                 </Field>
-                <Field label="Gross P&L" hint="before fees" error={errors.manualPnl}>
+                <Field label={tr('form.grossPnl')} hint={tr('form.beforeFees')} error={errors.manualPnl}>
                   <Input
                     inputMode="decimal"
                     className="num"
@@ -659,12 +663,11 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
                   />
                 </Field>
                 <p className="col-span-2 text-xs leading-relaxed text-faint md:col-span-3">
-                  Multiplier examples: ES = 50, NQ = 20, MES = 5, one standard forex lot = 100,000 units. Use manual P&L
-                  when copying the figure straight from your broker is simpler.
+                  {tr('form.multiplierExamples', { lot: formatNumber(100000, 0) })}
                 </p>
                 <Field
-                  label="Chart link"
-                  hint="instead of, or alongside, an uploaded image"
+                  label={tr('form.chartLink')}
+                  hint={tr('form.chartLinkHint')}
                   className="col-span-2 md:col-span-3"
                 >
                   <Input
@@ -682,24 +685,24 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
         {/* on a phone this column dissolves: the result goes first, the chart and review after the form */}
         <div className="max-md:contents md:space-y-4">
           <div className="rounded-lg border border-line bg-app p-3 max-md:order-first md:p-4">
-            <div className="text-xs text-muted">{closed ? 'Net P&L' : 'Position'}</div>
+            <div className="text-xs text-muted">{closed ? tr('form.netPnl') : tr('form.position')}</div>
             <div
               className={cn(
                 'num mt-1 text-2xl font-semibold leading-8 md:text-[30px] md:leading-9',
                 !closed ? 'text-accent' : net > 0 ? 'text-profit' : net < 0 ? 'text-loss' : 'text-fg',
               )}
             >
-              {closed ? formatMoney(net, currency, { sign: true }) : 'Open'}
+              {closed ? formatMoney(net, currency, { sign: true }) : tr('form.open')}
             </div>
             <dl className="mt-3 grid grid-cols-2 gap-x-5 gap-y-1.5 text-xs md:mt-4 md:block md:space-y-2 md:text-sm">
               {(
                 [
-                  ['Gross P&L', closed ? formatMoney(grossPnl(preview), currency, { sign: true }) : '—'],
-                  ['Fees', formatMoney(-(preview.fees || 0), currency)],
-                  ['R multiple', r == null ? '—' : `${r >= 0 ? '+' : ''}${r.toFixed(2)}R`],
-                  ['Risk', risk == null ? '—' : formatMoney(risk, currency)],
-                  ['Planned R:R', rr == null ? '—' : `1:${formatRatio(rr)}`],
-                  ['Hold time', formatDuration(holdMinutes(preview))],
+                  [tr('form.grossPnl'), closed ? formatMoney(grossPnl(preview), currency, { sign: true }) : '—'],
+                  [tr('form.fees'), formatMoney(-(preview.fees || 0), currency)],
+                  [tr('form.rMultiple'), r == null ? '—' : formatR(r)],
+                  [tr('form.risk'), risk == null ? '—' : formatMoney(risk, currency)],
+                  [tr('form.plannedRR'), rr == null ? '—' : isolate(`1:${formatRatio(rr)}`)],
+                  [tr('form.holdTime'), formatDuration(holdMinutes(preview))],
                 ] as const
               ).map(([label, value]) => (
                 <div key={label} className="flex items-center justify-between">
@@ -720,12 +723,16 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
           />
 
           <div className="rounded-lg border border-line p-4">
-            <div className="text-sm font-medium text-fg">Self-review</div>
-            <p className="mb-3 mt-0.5 text-xs text-muted">Rate 1–5. Feeds your Sniper Score.</p>
+            <div className="text-sm font-medium text-fg">{tr('form.selfReview')}</div>
+            <p className="mb-3 mt-0.5 text-xs text-muted">{tr('form.selfReviewHint')}</p>
             <div className="space-y-2.5">
-              <RatingInput label="Discipline" value={form.discipline} onChange={(v) => set('discipline', v)} />
-              <RatingInput label="Execution" value={form.execution} onChange={(v) => set('execution', v)} />
-              <RatingInput label="Patience" value={form.patience} onChange={(v) => set('patience', v)} />
+              <RatingInput
+                label={tr('score.discipline')}
+                value={form.discipline}
+                onChange={(v) => set('discipline', v)}
+              />
+              <RatingInput label={tr('score.execution')} value={form.execution} onChange={(v) => set('execution', v)} />
+              <RatingInput label={tr('score.patience')} value={form.patience} onChange={(v) => set('patience', v)} />
             </div>
           </div>
         </div>
@@ -735,24 +742,25 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
       <div className="-mx-5 -mb-4 mt-5 flex items-center gap-2 border-t border-line px-5 py-3 max-md:pb-safe-3 max-md:sticky max-md:bottom-[-1rem] max-md:bg-surface">
         {trade && (
           <Button variant="ghost" className="text-loss hover:bg-loss/10 hover:text-loss" onClick={remove}>
-            <Trash2 className="size-4" /> Delete
+            <Trash2 className="size-4" /> {tr('common.delete')}
           </Button>
         )}
         <span className="flex-1 md:hidden" />
-        <span className="ml-auto mr-2 text-xs text-faint max-md:hidden">Ctrl + Enter to save</span>
+        <span className="ml-auto mr-2 text-xs text-faint max-md:hidden">{tr('form.ctrlEnter')}</span>
         <Button variant="ghost" className="max-md:hidden" onClick={onDone}>
-          Cancel
+          {tr('common.cancel')}
         </Button>
         {!trade && (
           <Button variant="secondary" onClick={() => save(true)}>
             <span>
-              Save<span className="max-md:hidden"> and log another</span>
-              <span className="md:hidden"> + next</span>
+              {tr('form.save')}
+              <span className="max-md:hidden">{tr('form.saveAnotherTail')}</span>
+              <span className="md:hidden">{tr('form.saveNextTail')}</span>
             </span>
           </Button>
         )}
         <Button variant="primary" type="submit">
-          {trade ? 'Save changes' : 'Save trade'}
+          {trade ? tr('form.saveChanges') : tr('form.saveTrade')}
         </Button>
       </div>
     </form>

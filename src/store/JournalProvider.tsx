@@ -1,6 +1,16 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  Fragment,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { SystemBars, SystemBarsStyle } from '@capacitor/core';
 import type { Account, GoalKey, JournalData, Resource, Setup, Trade, TradeInput, Settings, Profile } from '@/lib/types';
 import { createDefaultData, normalize } from '@/lib/journal';
@@ -15,8 +25,10 @@ import { withGoal } from '@/lib/goals';
 import { chartsOnlyInSample, deleteScreenshot, imagesOnlyIn } from '@/lib/screenshots';
 import { JournalConflict, storage } from '@/lib/storage';
 import { uid } from '@/lib/utils';
+import { tr } from '@/lib/i18n';
 import { accountBalances } from './selectors';
 import { createAutosave, readPatiently } from './autosave';
+import { useJournalLanguage } from './language';
 import {
   decodeMirror,
   encodeMirror,
@@ -343,6 +355,9 @@ export function JournalProvider({ children }: { children: ReactNode }) {
     document.documentElement.classList.toggle('faded-placeholders', data.settings.fadedPlaceholders === true);
   }, [data.settings.fadedPlaceholders]);
 
+  // the app is drawn again, from the top, in a newly chosen language
+  const language = useJournalLanguage(ready, data.settings.language);
+
   const mutate = useCallback((fn: (draft: JournalData) => JournalData) => {
     setData((prev) => ({ ...fn(prev), updatedAt: new Date().toISOString() }));
   }, []);
@@ -542,12 +557,18 @@ export function JournalProvider({ children }: { children: ReactNode }) {
       // its trades come back without those charts. Settings says so.
       replaceAll: (next) => {
         const incoming = normalize(next);
+        // a journal with no language (English, or saved before there was one to choose) keeps the one spoken here
+        incoming.settings.language ??= dataRef.current.settings.language;
         for (const name of imagesOnlyIn(dataRef.current.trades, incoming.trades)) void deleteScreenshot(name);
         setData({ ...incoming, updatedAt: new Date().toISOString() });
       },
       resetAll: () => {
         for (const name of imagesOnlyIn(dataRef.current.trades, [])) void deleteScreenshot(name);
-        setData({ ...createDefaultData(), onboarded: true });
+        // the language stays, and the new account is named in it
+        const fresh = createDefaultData();
+        fresh.settings.language = dataRef.current.settings.language;
+        fresh.accounts[0].name = tr('welcome.defaultAccount');
+        setData({ ...fresh, onboarded: true });
       },
     }),
     [mutate],
@@ -567,14 +588,16 @@ export function JournalProvider({ children }: { children: ReactNode }) {
     return {
       accountTrades,
       activeAccount,
-      activeLabel: isAll ? 'All accounts' : (activeAccount?.name ?? 'Portfolio'),
+      activeLabel: isAll ? tr('shell.allAccounts') : (activeAccount?.name ?? tr('shell.portfolio')),
       startingBalance: isAll
         ? data.accounts.reduce((a, acc) => a + acc.startingBalance, 0)
         : (activeAccount?.startingBalance ?? 0),
       balances,
       sampleCount: data.trades.filter((t) => t.isSample).length,
     };
-  }, [data]);
+    // the label is in the language spoken
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, language]);
 
   const value = useMemo<JournalContextValue>(
     () => ({ data, ready, newer, actions, ...derived }),
@@ -596,7 +619,9 @@ export function JournalProvider({ children }: { children: ReactNode }) {
 
   return (
     <JournalContext.Provider value={value}>
-      <SaveStateContext.Provider value={saveState}>{children}</SaveStateContext.Provider>
+      <SaveStateContext.Provider value={saveState}>
+        <Fragment key={language}>{children}</Fragment>
+      </SaveStateContext.Provider>
     </JournalContext.Provider>
   );
 }

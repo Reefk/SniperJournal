@@ -1,3 +1,4 @@
+import type { Language } from './i18n';
 import type { JOURNAL_VERSION } from './journal-version';
 
 export type Side = 'LONG' | 'SHORT';
@@ -94,6 +95,8 @@ export interface Resource {
 export interface Settings {
   currency: string;
   theme: ThemeMode;
+  /** the language the app speaks; absent (the default) is English (see lib/i18n) */
+  language?: Language;
   /** 'local' or an IANA zone, used for the header clock only */
   timezone: string;
   maxDailyLoss?: number | null;

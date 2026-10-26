@@ -1,0 +1,123 @@
+import type { list as en } from '../en/list';
+import type { Translation } from '../types';
+
+export const list: Translation<typeof en> = {
+  'list.description': { other: '{account} में {count} ट्रेड' },
+  'list.import': 'इम्पोर्ट',
+  'list.exportCsv': 'CSV एक्सपोर्ट करें',
+  'list.exported': { one: '{count} ट्रेड एक्सपोर्ट किया गया', other: '{count} ट्रेड एक्सपोर्ट किए गए' },
+  'list.empty.title': 'अभी तक कोई ट्रेड दर्ज नहीं',
+  'list.empty.description':
+    'हर ट्रेड को बंद करते ही दर्ज करें, या अपने ब्रोकर की फ़ाइल इम्पोर्ट करें। Sniper Journal का हर चार्ट और हर आँकड़ा इन्हीं एंट्री से बनता है।',
+  'list.empty.logFirst': 'अपना पहला ट्रेड दर्ज करें',
+
+  'list.missing': { other: '<num>{count}</num> ट्रेड में कुछ कमी है।' },
+  'list.missingHint': ' कमियाँ भरने तक ये किसी भी आँकड़े में शामिल नहीं होते।',
+  'list.showThem': 'इन्हें दिखाएँ',
+
+  'list.search': 'ट्रेड खोजें',
+  'list.filters': 'फ़िल्टर',
+  'list.allSymbols': 'सभी सिंबल',
+  'list.allSessions': 'सभी सेशन',
+  'list.allLeverage': 'सभी लीवरेज',
+  'list.allSetups': 'सभी सेटअप',
+  'list.mistake': 'गलती',
+  'list.allMistakes': 'सभी गलतियाँ',
+  'list.madeMistake': 'गलती हुई',
+  'list.noMistake': 'कोई गलती दर्ज नहीं',
+  // "अवधि [तारीख़] – [तारीख़]": Hindi puts से and तक after the dates, so a dash joins them
+  'list.from': 'अवधि',
+  'list.to': '–',
+  'list.fromDate': 'शुरुआती तारीख़',
+  'list.toDate': 'आख़िरी तारीख़',
+  'list.allSides': 'दोनों दिशाएँ',
+  'list.long': 'लॉन्ग',
+  'list.short': 'शॉर्ट',
+  'list.allResults': 'सभी नतीजे',
+  'list.wins': 'मुनाफ़े वाले',
+  'list.losses': 'घाटे वाले',
+  'list.open': 'खुले',
+  'list.needsDetails': 'जानकारी चाहिए',
+  'list.clearFilters': { other: '{count} फ़िल्टर हटाएँ' },
+  'list.shown': { other: '<num>{count}</num> दिखाए गए' },
+  'list.net': 'शुद्ध',
+
+  'list.selected': { other: '<num>{count}</num> चुने गए' },
+  'list.clear': 'चयन हटाएँ',
+  'list.mergeIntoOne': 'एक में मिलाएँ',
+  'list.addDetails': 'जानकारी जोड़ें',
+  'list.exclude': 'आँकड़ों से बाहर रखें',
+  'list.excluded': 'आँकड़ों से बाहर किए गए',
+  'list.include': 'शामिल करें',
+  'list.included': 'आँकड़ों में शामिल किए गए',
+
+  'list.noMatch': 'इन फ़िल्टर से कोई ट्रेड मेल नहीं खाता।',
+  'list.clearAll': 'फ़िल्टर हटाएँ',
+  'list.select': '{symbol} ट्रेड चुनें',
+  'list.selectPage': 'इस पेज के सभी चुनें',
+  'list.hasChart': 'चार्ट है',
+  'list.needsBadge': 'जानकारी चाहिए',
+  'list.fills': { other: '{count} फ़िल' },
+  'list.includeStats': 'आँकड़ों में शामिल करें',
+  'list.excludeStats': 'आँकड़ों से बाहर रखें',
+  'list.excludedTitle': 'आँकड़ों से बाहर। शामिल करने के लिए क्लिक करें।',
+  'list.includedTitle': 'आँकड़ों में शामिल। बाहर रखने के लिए क्लिक करें।',
+  'list.col.date': 'तारीख़ और समय',
+  'list.col.qty': 'मात्रा',
+  'list.col.entry': 'एंट्री',
+  'list.col.exit': 'एग्ज़िट',
+  'list.col.pnl': 'P&L',
+  'list.col.action': 'कार्रवाई',
+  'list.manual': 'मैनुअल',
+  'list.edit': '{symbol} ट्रेड बदलें',
+  'list.delete': '{symbol} ट्रेड हटाएँ',
+  'list.showing': '<num>{total}</num> में से <num>{from}–{to}</num> दिखाए जा रहे हैं',
+  'list.previous': 'पिछला पेज',
+  'list.next': 'अगला पेज',
+  'list.tapToEdit': 'बदलने के लिए किसी ट्रेड पर टैप करें।',
+  'list.clickToEdit': 'उस ट्रेड को बदलने के लिए किसी भी पंक्ति पर क्लिक करें।',
+  'list.eyeHint': ' आँख वाला आइकन ट्रेड को आपके जर्नल में रखता है, पर उसे आँकड़ों से बाहर रखता है।',
+
+  'needs.list': '{list} चाहिए',
+  'needs.symbol': 'सिंबल',
+  'needs.entryTime': 'एंट्री का समय',
+  'needs.quantity': 'मात्रा',
+  'needs.entryPrice': 'एंट्री प्राइस',
+
+  'list.delete.titleOne': 'यह ट्रेड हटाएँ?',
+  'list.delete.title': { other: '{count} ट्रेड हटाएँ?' },
+  'list.delete.message': 'हटाए गए ट्रेड आपके जर्नल और हर आँकड़े से निकल जाते हैं। इसे पलटा नहीं जा सकता।',
+  'list.delete.confirmOne': 'ट्रेड हटाएँ',
+  'list.delete.confirm': { other: '{count} ट्रेड हटाएँ' },
+  'list.deletedOne': 'ट्रेड हटा दिया गया',
+  'list.deleted': { other: '{count} ट्रेड हटा दिए गए' },
+
+  'list.merge.title': { other: '{count} हिस्सों को एक ट्रेड में मिलाएँ?' },
+  'list.merge.body':
+    'ये एक ही पोज़िशन लगती है, जिससे हिस्सों में बाहर निकला गया। मिलाने पर <qty></qty> का एक ही <pos></pos> बनता है, एंट्री लगभग <entry></entry> पर और एग्ज़िट लगभग <exit></exit> पर, कुल <pnl></pnl> — उतना ही जितना सब हिस्सों को जोड़कर।',
+  'list.merge.bodyOpen':
+    'ये एक ही पोज़िशन लगती है, जिससे हिस्सों में बाहर निकला गया। मिलाने पर <qty></qty> का एक ही <pos></pos> बनता है, एंट्री लगभग <entry></entry> पर, कुल <pnl></pnl> — उतना ही जितना सब हिस्सों को जोड़कर।',
+  'list.merge.chart':
+    'मिले हुए ट्रेड में उस सबसे पहले हिस्से का चार्ट रहता है जिसमें चार्ट है; दूसरी चार्ट तस्वीर हटा दी जाती है।',
+  'list.merge.charts': {
+    other:
+      'मिले हुए ट्रेड में उस सबसे पहले हिस्से का चार्ट रहता है जिसमें चार्ट है; बाकी {count} चार्ट तस्वीरें हटा दी जाती हैं।',
+  },
+  'list.merge.link':
+    'इसमें उस सबसे पहले हिस्से का चार्ट लिंक रहता है जिसमें लिंक है, और दूसरा लिंक इसके नोट्स में जोड़ दिया जाता है।',
+  'list.merge.links': {
+    other:
+      'इसमें उस सबसे पहले हिस्से का चार्ट लिंक रहता है जिसमें लिंक है, और बाकी {count} लिंक इसके नोट्स में जोड़ दिए जाते हैं।',
+  },
+  'list.merge.undo': 'इसे पलटा नहीं जा सकता, हालाँकि मूल CSV दोबारा इम्पोर्ट करने पर अलग-अलग हिस्से वापस आ जाते हैं।',
+  'list.merge.confirm': 'एक ट्रेड में मिलाएँ',
+  'list.merged': { other: '{count} हिस्से एक ट्रेड में मिला दिए गए' },
+
+  'merge.atLeastTwo': 'मिलाने के लिए कम से कम दो ट्रेड चुनें।',
+  'merge.sameSymbol': 'इनका सिंबल एक ही होना चाहिए।',
+  'merge.sameSide': 'इनकी दिशा एक ही होनी चाहिए।',
+  'merge.sameAccount': 'ये एक ही खाते में होने चाहिए।',
+  'merge.quantity': 'मिलाने से पहले हर हिस्से में मात्रा होनी चाहिए।',
+  'merge.entryPrice': 'मिलाने से पहले हर हिस्से में एंट्री प्राइस होना चाहिए।',
+  'merge.someOpen': 'इनमें से कुछ अभी खुले हैं। बंद वालों को मिलाएँ, या पहले बाकी को बंद करें।',
+};

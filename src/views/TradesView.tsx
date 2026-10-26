@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   ArrowDown,
   ArrowLeftRight,
@@ -28,11 +28,13 @@ import type { Trade } from '@/lib/types';
 import { useJournal } from '@/store/JournalProvider';
 import { useUI } from '@/store/UIProvider';
 import { computeStats } from '@/lib/stats';
-import { SESSIONS } from '@/lib/sessions';
-import { matchesMistakeFilter, mistakeList, type MistakeFilter } from '@/lib/mistakes';
+import { SESSIONS, sessionName } from '@/lib/sessions';
+import { matchesMistakeFilter, mistakeList, mistakeName, type MistakeFilter } from '@/lib/mistakes';
 import { tradesToCsv } from '@/lib/csv';
-import { formatDate, formatMoney, formatNumber, formatPct, formatPrice, formatTime } from '@/lib/format';
-import { isClosed, isIncomplete, matchesSearch, missingDetails, netPnl, outcome, rMultiple } from '@/lib/trade-math';
+import { formatDate, formatMoney, formatNumber, formatPct, formatPrice, formatR, formatTime } from '@/lib/format';
+import { isClosed, isIncomplete, matchesSearch, needsText, netPnl, outcome, rMultiple } from '@/lib/trade-math';
+import { tr } from '@/lib/i18n';
+import { rich } from '@/components/ui/Rich';
 import { cn, dateKey, downloadFile } from '@/lib/utils';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
@@ -195,51 +197,34 @@ export function TradesView() {
     // the same images the merge itself deletes
     const droppedCharts = imagesOnlyIn(legs, [...data.trades.filter((t) => !selected.has(t.id)), preview]).length;
     const movedLinks = linksMovedToNotes(legs).length;
+    const strong = (text: ReactNode) => <strong className="text-fg">{text}</strong>;
     const ok = await confirm({
-      title: `Merge ${legs.length} parts into one trade?`,
+      title: tr('list.merge.title', { count: legs.length }),
       message: (
         <>
-          These look like one position you scaled out of. Merging gives you a single{' '}
-          <strong className="text-fg">
-            {preview.symbol} {preview.side.toLowerCase()}
-          </strong>{' '}
-          of <strong className="text-fg">{formatNumber(preview.quantity, 4)}</strong>, entered around{' '}
-          <span className="num">{formatPrice(preview.entryPrice)}</span>
-          {preview.exitPrice != null && (
-            <>
-              {' '}
-              and exited around <span className="num">{formatPrice(preview.exitPrice)}</span>
-            </>
-          )}
-          , worth <strong className="text-fg">{formatMoney(netPnl(preview), currency, { sign: true })}</strong> — the
-          same as the parts added together.
+          {rich(tr(preview.exitPrice != null ? 'list.merge.body' : 'list.merge.bodyOpen'), {
+            pos: () => strong(`${preview.symbol} ${tr(`side.${preview.side}`).toLowerCase()}`),
+            qty: () => strong(formatNumber(preview.quantity, 4)),
+            entry: () => <span className="num">{formatPrice(preview.entryPrice)}</span>,
+            exit: () => <span className="num">{formatPrice(preview.exitPrice)}</span>,
+            pnl: () => strong(formatMoney(netPnl(preview), currency, { sign: true })),
+          })}
           {(droppedCharts > 0 || movedLinks > 0) && (
             <>
               <br />
               <br />
-              {droppedCharts > 0 && (
-                <>
-                  The merged trade keeps the chart of the earliest part that has one;{' '}
-                  {droppedCharts === 1 ? 'the other chart image is' : `the other ${droppedCharts} chart images are`}{' '}
-                  deleted.{' '}
-                </>
-              )}
-              {movedLinks > 0 && (
-                <>
-                  It keeps the chart link of the earliest part that has one, and{' '}
-                  {movedLinks === 1 ? 'the other link is' : `the other ${movedLinks} links are`} added to its notes.
-                </>
-              )}
+              {droppedCharts > 0 &&
+                `${droppedCharts === 1 ? tr('list.merge.chart') : tr('list.merge.charts', { count: droppedCharts })} `}
+              {movedLinks > 0 &&
+                (movedLinks === 1 ? tr('list.merge.link') : tr('list.merge.links', { count: movedLinks }))}
             </>
           )}
           <br />
           <br />
-          <span className="text-faint">
-            This cannot be undone, though re-importing the original CSV brings the separate parts back.
-          </span>
+          <span className="text-faint">{tr('list.merge.undo')}</span>
         </>
       ),
-      confirmLabel: `Merge into one trade`,
+      confirmLabel: tr('list.merge.confirm'),
     });
     if (!ok) return;
 
@@ -249,14 +234,14 @@ export function TradesView() {
       return;
     }
     setSelected(new Set());
-    toast(`${legs.length} parts merged into one trade`);
+    toast(tr('list.merged', { count: legs.length }));
   };
 
   const deleteIds = async (ids: string[]) => {
     const ok = await confirm({
-      title: ids.length === 1 ? 'Delete this trade?' : `Delete ${ids.length} trades?`,
-      message: 'Deleted trades are removed from your journal and from every statistic. This cannot be undone.',
-      confirmLabel: ids.length === 1 ? 'Delete trade' : `Delete ${ids.length} trades`,
+      title: ids.length === 1 ? tr('list.delete.titleOne') : tr('list.delete.title', { count: ids.length }),
+      message: tr('list.delete.message'),
+      confirmLabel: ids.length === 1 ? tr('list.delete.confirmOne') : tr('list.delete.confirm', { count: ids.length }),
       tone: 'danger',
     });
     if (!ok) return;
@@ -266,17 +251,17 @@ export function TradesView() {
       ids.forEach((id) => next.delete(id));
       return next;
     });
-    toast(ids.length === 1 ? 'Trade deleted' : `${ids.length} trades deleted`);
+    toast(ids.length === 1 ? tr('list.deletedOne') : tr('list.deleted', { count: ids.length }));
   };
 
   const header = (
     <PageHeader
-      title="Trades"
-      description={`${accountTrades.length} ${accountTrades.length === 1 ? 'trade' : 'trades'} in ${activeLabel}`}
+      title={tr('nav.trades')}
+      description={tr('list.description', { count: accountTrades.length, account: activeLabel })}
       actions={
         <>
           <Button onClick={() => setImporting(true)}>
-            <Upload className="size-4" /> Import
+            <Upload className="size-4" /> {tr('list.import')}
           </Button>
           <Button
             disabled={!sorted.length}
@@ -286,13 +271,13 @@ export function TradesView() {
                 tradesToCsv(sorted, data.setups, data.accounts),
                 'text/csv',
               );
-              toast(`Exported ${sorted.length} ${sorted.length === 1 ? 'trade' : 'trades'}`);
+              toast(tr('list.exported', { count: sorted.length }));
             }}
           >
-            <Download className="size-4" /> Export CSV
+            <Download className="size-4" /> {tr('list.exportCsv')}
           </Button>
           <Button variant="primary" className="max-md:hidden" onClick={() => openTradeForm()}>
-            <Plus className="size-4" /> Log trade
+            <Plus className="size-4" /> {tr('header.logTrade')}
           </Button>
         </>
       }
@@ -305,18 +290,18 @@ export function TradesView() {
         {header}
         <EmptyState
           icon={ArrowLeftRight}
-          title="No trades logged yet"
-          description="Log each trade as you close it, or import your broker's file. Every chart and statistic in Sniper Journal is built from these entries."
+          title={tr('list.empty.title')}
+          description={tr('list.empty.description')}
           actions={
             <>
               <Button variant="primary" onClick={() => openTradeForm()}>
-                <Plus className="size-4" /> Log your first trade
+                <Plus className="size-4" /> {tr('list.empty.logFirst')}
               </Button>
               <Button onClick={() => setImporting(true)}>
-                <Upload className="size-4" /> Import
+                <Upload className="size-4" /> {tr('list.import')}
               </Button>
               <Button variant="ghost" onClick={() => actions.loadSampleData()}>
-                <FlaskConical className="size-4" /> Load test data
+                <FlaskConical className="size-4" /> {tr('settings.loadTestData')}
               </Button>
             </>
           }
@@ -357,12 +342,13 @@ export function TradesView() {
         <div className="mb-3 flex items-center gap-3 rounded-xl border border-warn/30 bg-warn/10 px-4 py-2.5 text-sm">
           <TriangleAlert className="size-4 shrink-0 text-warn" />
           <span className="text-fg">
-            <span className="num font-semibold">{needsDetails.length}</span>{' '}
-            {needsDetails.length === 1 ? 'trade is' : 'trades are'} missing something.
-            <span className="text-muted max-md:hidden"> They stay out of every statistic until you fill the gaps.</span>
+            {rich(tr('list.missing', { count: needsDetails.length }), {
+              num: (n) => <span className="num font-semibold">{n}</span>,
+            })}
+            <span className="text-muted max-md:hidden">{tr('list.missingHint')}</span>
           </span>
           <Button size="sm" className="ml-auto" onClick={() => update('result', 'NEEDS')}>
-            Show them
+            {tr('list.showThem')}
           </Button>
         </div>
       )}
@@ -376,23 +362,23 @@ export function TradesView() {
             <Input
               value={filters.q}
               onChange={(e) => update('q', e.target.value)}
-              placeholder="Search trades"
+              placeholder={tr('list.search')}
               className="pl-9"
-              aria-label="Search trades"
+              aria-label={tr('list.search')}
             />
           </div>
           <Button className="md:hidden" aria-expanded={showFilters} onClick={() => setShowFilters((s) => !s)}>
             <SlidersHorizontal className="size-4" />
-            Filters
+            {tr('list.filters')}
             {activeFilterCount > 0 && <span className="num text-accent">{activeFilterCount}</span>}
           </Button>
           <Select
             className={cn('w-[calc(50%_-_0.25rem)] md:w-36', !showFilters && 'max-md:hidden')}
             value={filters.symbol}
             onChange={(e) => update('symbol', e.target.value)}
-            aria-label="Symbol"
+            aria-label={tr('form.symbol')}
           >
-            <option value="">All symbols</option>
+            <option value="">{tr('list.allSymbols')}</option>
             {symbols.map((s) => (
               <option key={s} value={s}>
                 {s}
@@ -403,12 +389,12 @@ export function TradesView() {
             className={cn('w-[calc(50%_-_0.25rem)] md:w-40', !showFilters && 'max-md:hidden')}
             value={filters.session}
             onChange={(e) => update('session', e.target.value)}
-            aria-label="Session"
+            aria-label={tr('form.session')}
           >
-            <option value="">All sessions</option>
+            <option value="">{tr('list.allSessions')}</option>
             {sessions.map((s) => (
               <option key={s} value={s}>
-                {s}
+                {sessionName(s)}
               </option>
             ))}
           </Select>
@@ -416,9 +402,9 @@ export function TradesView() {
             className={cn('w-[calc(50%_-_0.25rem)] md:w-36', !showFilters && 'max-md:hidden')}
             value={filters.leverage}
             onChange={(e) => update('leverage', e.target.value)}
-            aria-label="Leverage"
+            aria-label={tr('form.leverage')}
           >
-            <option value="">All leverage</option>
+            <option value="">{tr('list.allLeverage')}</option>
             {leverages.map((l) => (
               <option key={l} value={String(l)}>
                 {l}×
@@ -430,9 +416,9 @@ export function TradesView() {
               className={cn('w-[calc(50%_-_0.25rem)] md:w-44', !showFilters && 'max-md:hidden')}
               value={filters.setup}
               onChange={(e) => update('setup', e.target.value)}
-              aria-label="Setup"
+              aria-label={tr('form.setup')}
             >
-              <option value="">All setups</option>
+              <option value="">{tr('list.allSetups')}</option>
               {data.setups.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name}
@@ -445,35 +431,35 @@ export function TradesView() {
               className={cn('w-[calc(50%_-_0.25rem)] md:w-44', !showFilters && 'max-md:hidden')}
               value={filters.mistake}
               onChange={(e) => update('mistake', e.target.value as MistakeFilter)}
-              aria-label="Mistake"
+              aria-label={tr('list.mistake')}
             >
-              <option value="">All mistakes</option>
-              <option value="any">Made a mistake</option>
-              <option value="clean">No mistake logged</option>
+              <option value="">{tr('list.allMistakes')}</option>
+              <option value="any">{tr('list.madeMistake')}</option>
+              <option value="clean">{tr('list.noMistake')}</option>
               {mistakes.map((m) => (
                 <option key={m} value={`m:${m}`}>
-                  {m}
+                  {mistakeName(m)}
                 </option>
               ))}
             </Select>
           )}
           <div className={cn('flex items-center gap-1.5 max-md:w-full', !showFilters && 'max-md:hidden')}>
             {/* an empty date box on a phone shows nothing at all, so say what it is */}
-            <span className="text-faint md:hidden">From</span>
+            <span className="text-faint md:hidden">{tr('list.from')}</span>
             <input
               type="date"
               value={filters.from}
               onChange={(e) => update('from', e.target.value)}
               className={cn(inputClass, 'num w-[150px] max-md:min-w-0 max-md:flex-1')}
-              aria-label="From date"
+              aria-label={tr('list.fromDate')}
             />
-            <span className="text-faint">to</span>
+            <span className="text-faint">{tr('list.to')}</span>
             <input
               type="date"
               value={filters.to}
               onChange={(e) => update('to', e.target.value)}
               className={cn(inputClass, 'num w-[150px] max-md:min-w-0 max-md:flex-1')}
-              aria-label="To date"
+              aria-label={tr('list.toDate')}
             />
           </div>
         </div>
@@ -483,12 +469,12 @@ export function TradesView() {
             value={filters.side}
             onChange={(v) => update('side', v)}
             options={[
-              { value: 'ALL', label: 'All sides' },
+              { value: 'ALL', label: tr('list.allSides') },
               {
                 value: 'LONG',
                 label: (
                   <>
-                    <ArrowUp className="size-3 text-profit" /> Long
+                    <ArrowUp className="size-3 text-profit" /> {tr('list.long')}
                   </>
                 ),
               },
@@ -496,7 +482,7 @@ export function TradesView() {
                 value: 'SHORT',
                 label: (
                   <>
-                    <ArrowDown className="size-3 text-loss" /> Short
+                    <ArrowDown className="size-3 text-loss" /> {tr('list.short')}
                   </>
                 ),
               },
@@ -507,17 +493,17 @@ export function TradesView() {
             value={filters.result}
             onChange={(v) => update('result', v)}
             options={[
-              { value: 'ALL', label: 'All results' },
-              { value: 'WIN', label: 'Wins' },
-              { value: 'LOSS', label: 'Losses' },
-              { value: 'OPEN', label: 'Open' },
+              { value: 'ALL', label: tr('list.allResults') },
+              { value: 'WIN', label: tr('list.wins') },
+              { value: 'LOSS', label: tr('list.losses') },
+              { value: 'OPEN', label: tr('list.open') },
               ...(needsDetails.length
                 ? [
                     {
                       value: 'NEEDS' as const,
                       label: (
                         <>
-                          <TriangleAlert className="size-3 text-warn" /> Needs details
+                          <TriangleAlert className="size-3 text-warn" /> {tr('list.needsDetails')}
                         </>
                       ),
                     },
@@ -534,19 +520,20 @@ export function TradesView() {
                 setPage(1);
               }}
             >
-              <RotateCcw className="size-3.5" /> Clear {activeFilterCount}{' '}
-              {activeFilterCount === 1 ? 'filter' : 'filters'}
+              <RotateCcw className="size-3.5" /> {tr('list.clearFilters', { count: activeFilterCount })}
             </Button>
           )}
           <div className="ml-auto flex items-center gap-5 pr-1 text-xs text-muted max-md:w-full max-md:justify-between max-md:pl-1">
             <span>
-              <span className="num text-fg">{filtered.length}</span> shown
+              {rich(tr('list.shown', { count: filtered.length }), {
+                num: (n) => <span className="num text-fg">{n}</span>,
+              })}
             </span>
             <span>
-              Win rate <span className="num text-fg">{stats.total ? formatPct(stats.winRate) : '—'}</span>
+              {tr('score.winRate')} <span className="num text-fg">{stats.total ? formatPct(stats.winRate) : '—'}</span>
             </span>
             <span className="flex items-center gap-1">
-              Net <PnlValue value={stats.net} currency={currency} className="text-xs" />
+              {tr('list.net')} <PnlValue value={stats.net} currency={currency} className="text-xs" />
             </span>
           </div>
         </div>
@@ -556,40 +543,42 @@ export function TradesView() {
       {selected.size > 0 && (
         <div className="animate-pop mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-accent/30 bg-accent/10 px-4 py-2 text-sm md:flex-nowrap">
           <span className="text-fg">
-            <span className="num font-semibold">{selected.size}</span> selected
+            {rich(tr('list.selected', { count: selected.size }), {
+              num: (n) => <span className="num font-semibold">{n}</span>,
+            })}
           </span>
           <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
-            Clear
+            {tr('list.clear')}
           </Button>
           <div className="ml-auto flex flex-wrap gap-2 max-md:w-full md:flex-nowrap">
             {selected.size > 1 && (
               <Button size="sm" onClick={mergeSelected}>
-                <Merge className="size-3.5" /> Merge into one
+                <Merge className="size-3.5" /> {tr('list.mergeIntoOne')}
               </Button>
             )}
             <Button size="sm" onClick={() => setBulkEditing(true)}>
-              <SquarePen className="size-3.5" /> Add details
+              <SquarePen className="size-3.5" /> {tr('list.addDetails')}
             </Button>
             <Button
               size="sm"
               onClick={() => {
                 actions.setExcluded([...selected], true);
-                toast('Excluded from statistics');
+                toast(tr('list.excluded'));
               }}
             >
-              <EyeOff className="size-3.5" /> Exclude from stats
+              <EyeOff className="size-3.5" /> {tr('list.exclude')}
             </Button>
             <Button
               size="sm"
               onClick={() => {
                 actions.setExcluded([...selected], false);
-                toast('Included in statistics');
+                toast(tr('list.included'));
               }}
             >
-              <Eye className="size-3.5" /> Include
+              <Eye className="size-3.5" /> {tr('list.include')}
             </Button>
             <Button size="sm" variant="danger" onClick={() => deleteIds([...selected])}>
-              <Trash2 className="size-3.5" /> Delete
+              <Trash2 className="size-3.5" /> {tr('common.delete')}
             </Button>
           </div>
         </div>
@@ -599,9 +588,9 @@ export function TradesView() {
       <div className="overflow-hidden rounded-xl border border-line bg-surface">
         {rows.length === 0 ? (
           <div className="px-6 py-14 text-center">
-            <p className="text-sm text-fg">No trades match these filters.</p>
+            <p className="text-sm text-fg">{tr('list.noMatch')}</p>
             <Button className="mt-3" size="sm" onClick={() => setFilters(EMPTY)}>
-              <RotateCcw className="size-3.5" /> Clear filters
+              <RotateCcw className="size-3.5" /> {tr('list.clearAll')}
             </Button>
           </div>
         ) : (
@@ -622,7 +611,7 @@ export function TradesView() {
                         type="checkbox"
                         className="size-[18px] cursor-pointer"
                         checked={selected.has(t.id)}
-                        aria-label={`Select ${t.symbol} trade`}
+                        aria-label={tr('list.select', { symbol: t.symbol })}
                         onChange={() =>
                           setSelected((s) => {
                             const next = new Set(s);
@@ -642,11 +631,11 @@ export function TradesView() {
                         <span className="truncate font-semibold text-fg">{t.symbol}</span>
                         <SideBadge side={t.side} />
                         {(t.screenshotFile || t.screenshotUrl) && (
-                          <ImageIcon className="size-3.5 shrink-0 text-faint" aria-label="Has a chart" />
+                          <ImageIcon className="size-3.5 shrink-0 text-faint" aria-label={tr('list.hasChart')} />
                         )}
                         <span className="ml-auto shrink-0">
                           {isIncomplete(t) ? (
-                            <StatusBadge tone="warn">needs details</StatusBadge>
+                            <StatusBadge tone="warn">{tr('list.needsBadge')}</StatusBadge>
                           ) : (
                             <PnlValue value={netPnl(t)} open={!isClosed(t)} currency={currency} />
                           )}
@@ -656,13 +645,13 @@ export function TradesView() {
                         <span className="shrink-0">{formatDate(t.openedAt)}</span>
                         <span className="num shrink-0">{formatTime(t.openedAt)}</span>
                         {setupName && <span className="truncate">· {setupName}</span>}
-                        {r != null && !isIncomplete(t) && (
-                          <span className="num ml-auto shrink-0">{`${r >= 0 ? '+' : ''}${r.toFixed(2)}R`}</span>
-                        )}
+                        {r != null && !isIncomplete(t) && <span className="num ml-auto shrink-0">{formatR(r)}</span>}
                       </div>
                       {(t.tags.length > 0 || fills > 1) && (
                         <div className="mt-1.5 flex flex-wrap gap-1">
-                          {fills > 1 && <span className="px-0.5 text-[11px] text-accent">{fills} fills</span>}
+                          {fills > 1 && (
+                            <span className="px-0.5 text-[11px] text-accent">{tr('list.fills', { count: fills })}</span>
+                          )}
                           {t.tags.slice(0, 3).map((tag) => (
                             <span
                               key={tag}
@@ -680,7 +669,7 @@ export function TradesView() {
                     <button
                       type="button"
                       onClick={() => actions.setExcluded([t.id], !t.excluded)}
-                      aria-label={t.excluded ? 'Include in statistics' : 'Exclude from statistics'}
+                      aria-label={t.excluded ? tr('list.includeStats') : tr('list.excludeStats')}
                       className={cn(
                         'grid size-11 shrink-0 place-items-center',
                         t.excluded ? 'text-warn' : 'text-faint',
@@ -702,7 +691,7 @@ export function TradesView() {
                         type="checkbox"
                         className="size-4 cursor-pointer align-middle"
                         checked={allOnPageSelected}
-                        aria-label="Select all on this page"
+                        aria-label={tr('list.selectPage')}
                         onChange={() =>
                           setSelected((s) => {
                             const next = new Set(s);
@@ -712,15 +701,15 @@ export function TradesView() {
                         }
                       />
                     </th>
-                    <SortHeader label="Date & time" k="date" />
-                    <SortHeader label="Symbol" k="symbol" />
-                    <th className="px-3 py-3 text-left font-medium">Side</th>
-                    <SortHeader label="Qty" k="qty" align="right" />
-                    <th className="px-3 py-3 text-right font-medium">Entry</th>
-                    <th className="px-3 py-3 text-right font-medium">Exit</th>
-                    <SortHeader label="P&L" k="pnl" align="right" />
-                    <th className="px-3 py-3 text-left font-medium">Tags</th>
-                    <th className="px-4 py-3 text-right font-medium">Action</th>
+                    <SortHeader label={tr('list.col.date')} k="date" />
+                    <SortHeader label={tr('form.symbol')} k="symbol" />
+                    <th className="px-3 py-3 text-left font-medium">{tr('form.side')}</th>
+                    <SortHeader label={tr('list.col.qty')} k="qty" align="right" />
+                    <th className="px-3 py-3 text-right font-medium">{tr('list.col.entry')}</th>
+                    <th className="px-3 py-3 text-right font-medium">{tr('list.col.exit')}</th>
+                    <SortHeader label={tr('list.col.pnl')} k="pnl" align="right" />
+                    <th className="px-3 py-3 text-left font-medium">{tr('form.tags')}</th>
+                    <th className="px-4 py-3 text-right font-medium">{tr('list.col.action')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-line">
@@ -742,7 +731,7 @@ export function TradesView() {
                               type="checkbox"
                               className="size-4 cursor-pointer"
                               checked={selected.has(t.id)}
-                              aria-label={`Select ${t.symbol} trade`}
+                              aria-label={tr('list.select', { symbol: t.symbol })}
                               onChange={() =>
                                 setSelected((s) => {
                                   const next = new Set(s);
@@ -755,11 +744,7 @@ export function TradesView() {
                             <button
                               type="button"
                               onClick={() => actions.setExcluded([t.id], !t.excluded)}
-                              title={
-                                t.excluded
-                                  ? 'Excluded from statistics. Click to include.'
-                                  : 'Included in statistics. Click to exclude.'
-                              }
+                              title={t.excluded ? tr('list.excludedTitle') : tr('list.includedTitle')}
                               className={cn('transition hover:text-fg', t.excluded ? 'text-warn' : 'text-faint')}
                             >
                               {t.excluded ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
@@ -777,12 +762,14 @@ export function TradesView() {
                           <div className="flex items-center gap-2">
                             <span className="font-semibold text-fg">{t.symbol}</span>
                             {(t.screenshotFile || t.screenshotUrl) && (
-                              <ImageIcon className="size-3.5 shrink-0 text-faint" aria-label="Has a chart" />
+                              <ImageIcon className="size-3.5 shrink-0 text-faint" aria-label={tr('list.hasChart')} />
                             )}
-                            {isIncomplete(t) && <StatusBadge tone="warn">needs details</StatusBadge>}
+                            {isIncomplete(t) && <StatusBadge tone="warn">{tr('list.needsBadge')}</StatusBadge>}
                           </div>
                           <div className="flex max-w-[190px] items-center gap-1.5 truncate text-xs text-faint">
-                            {(t.fillCount ?? 1) > 1 && <span className="text-accent">{t.fillCount} fills</span>}
+                            {(t.fillCount ?? 1) > 1 && (
+                              <span className="text-accent">{tr('list.fills', { count: t.fillCount ?? 1 })}</span>
+                            )}
                             {(t.fillCount ?? 1) > 1 && t.setupId && setupNames.get(t.setupId) && <span>·</span>}
                             {t.setupId && setupNames.get(t.setupId) && (
                               <span className="truncate">{setupNames.get(t.setupId)}</span>
@@ -800,20 +787,18 @@ export function TradesView() {
                         </td>
                         <td className={cn('num px-3 py-2.5 text-right text-muted', dim)}>
                           {t.manualPnl != null && t.exitPrice == null ? (
-                            <span className="text-faint">manual</span>
+                            <span className="text-faint">{tr('list.manual')}</span>
                           ) : (
                             formatPrice(t.exitPrice)
                           )}
                         </td>
                         <td className={cn('px-3 py-2.5 text-right', dim)}>
                           {isIncomplete(t) ? (
-                            <span className="text-xs text-warn">needs {missingDetails(t).join(', ')}</span>
+                            <span className="text-xs text-warn">{needsText(t)}</span>
                           ) : (
                             <>
                               <PnlValue value={netPnl(t)} open={!isClosed(t)} currency={currency} />
-                              {r != null && (
-                                <div className="num text-[11px] text-faint">{`${r >= 0 ? '+' : ''}${r.toFixed(2)}R`}</div>
-                              )}
+                              {r != null && <div className="num text-[11px] text-faint">{formatR(r)}</div>}
                             </>
                           )}
                         </td>
@@ -838,7 +823,7 @@ export function TradesView() {
                               size="icon"
                               variant="ghost"
                               onClick={() => openTradeForm({ trade: t })}
-                              aria-label={`Edit ${t.symbol} trade`}
+                              aria-label={tr('list.edit', { symbol: t.symbol })}
                             >
                               <Pencil className="size-3.5" />
                             </Button>
@@ -847,7 +832,7 @@ export function TradesView() {
                               variant="ghost"
                               className="hover:bg-loss/10 hover:text-loss"
                               onClick={() => deleteIds([t.id])}
-                              aria-label={`Delete ${t.symbol} trade`}
+                              aria-label={tr('list.delete', { symbol: t.symbol })}
                             >
                               <Trash2 className="size-3.5" />
                             </Button>
@@ -865,11 +850,14 @@ export function TradesView() {
         {pageCount > 1 && (
           <div className="flex items-center justify-between border-t border-line px-4 py-2.5 text-xs text-muted">
             <span>
-              Showing{' '}
-              <span className="num text-fg">
-                {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, sorted.length)}
-              </span>{' '}
-              of <span className="num text-fg">{sorted.length}</span>
+              {rich(
+                tr('list.showing', {
+                  from: (currentPage - 1) * PAGE_SIZE + 1,
+                  to: Math.min(currentPage * PAGE_SIZE, sorted.length),
+                  total: sorted.length,
+                }),
+                { num: (n) => <span className="num text-fg">{n}</span> },
+              )}
             </span>
             <div className="flex items-center gap-1">
               <Button
@@ -877,7 +865,7 @@ export function TradesView() {
                 variant="ghost"
                 disabled={currentPage === 1}
                 onClick={() => setPage(currentPage - 1)}
-                aria-label="Previous page"
+                aria-label={tr('list.previous')}
               >
                 <ChevronLeft className="size-4" />
               </Button>
@@ -889,7 +877,7 @@ export function TradesView() {
                 variant="ghost"
                 disabled={currentPage === pageCount}
                 onClick={() => setPage(currentPage + 1)}
-                aria-label="Next page"
+                aria-label={tr('list.next')}
               >
                 <ChevronRight className="size-4" />
               </Button>
@@ -899,9 +887,9 @@ export function TradesView() {
       </div>
 
       <p className="mt-3 text-xs text-faint">
-        <span className="md:hidden">Tap a trade to edit it.</span>
-        <span className="max-md:hidden">Click any row to edit that trade.</span> The eye icon keeps a trade in your
-        journal but leaves it out of the statistics.
+        <span className="md:hidden">{tr('list.tapToEdit')}</span>
+        <span className="max-md:hidden">{tr('list.clickToEdit')}</span>
+        {tr('list.eyeHint')}
       </p>
 
       <ImportTradesModal open={importing} onClose={() => setImporting(false)} />

@@ -1,0 +1,87 @@
+import type { goals as en } from '../en/goals';
+import type { Translation } from '../types';
+
+export const goals: Translation<typeof en> = {
+  'goal.rulesKept.label': 'Reglas cumplidas',
+  'goal.rulesKept.info':
+    'De las operaciones que marcaste según las reglas de su setup, la proporción que cumplió todas. Una operación con una regla sin marcar y ninguna incumplida no cuenta en ningún lado.',
+  'goal.cleanTrades.label': 'Operaciones limpias',
+  'goal.cleanTrades.info':
+    'La proporción de operaciones sin ningún error, contadas desde el primer día en que marcaste una operación con uno.',
+  'goal.daysInLimits.label': 'Días dentro de mis límites',
+  'goal.daysInLimits.info':
+    'La proporción de días de trading que no perdieron más que tu límite de pérdida diaria ni hicieron más operaciones que tu límite diario, tal como están fijados ahora.',
+  'goal.withStop.label': 'Operaciones con stop',
+  'goal.withStop.info': 'La proporción de operaciones registradas con stop loss.',
+  'goal.winRate.label': 'Tasa de acierto',
+  'goal.winRate.info': 'La proporción de operaciones que terminaron por encima de cero, después de comisiones.',
+  'goal.profitFactor.label': 'Factor de beneficio',
+  'goal.profitFactor.info': 'Lo que ganaron las ganadoras dividido entre lo que perdieron las perdedoras.',
+  'goal.avgR.label': 'R media',
+  'goal.avgR.info': 'El resultado medio en unidades del riesgo que definió tu stop, en las operaciones con stop.',
+  'goal.expectancy.label': 'Expectativa',
+  'goal.expectancy.info': 'Lo que ganó una operación media, después de comisiones.',
+  'goal.winLossRatio.label': 'Ganancia media ÷ pérdida media',
+  'goal.winLossRatio.info': 'El tamaño de tu operación ganadora media frente a tu perdedora media.',
+  'goal.greenDayRate.label': 'Días en verde',
+  'goal.greenDayRate.info':
+    'La proporción de días de trading que terminaron por encima de cero, después de comisiones.',
+
+  'goals.example': 'p. ej., {n}',
+  'goals.hint.pct': '% como mínimo',
+  'goals.hint.ratio': 'como mínimo',
+  'goals.hint.r': 'R como mínimo',
+  'goals.hint.money': '{currency} por operación, como mínimo',
+  'goals.refuse.pct': 'Un número de 0 a 100',
+  'goals.refuse.oneDecimal': 'Un decimal como máximo',
+  'goals.refuse.twoDecimals': 'Dos decimales como máximo',
+  'goals.refuse.aboveZero': 'Un número mayor que 0',
+  'goals.stillUsing': '{why}. Se sigue usando {target}',
+  'goals.setLimitFirst': 'fija antes un límite arriba',
+  'goals.breakEvenNone':
+    'Cuando tengas una operación ganadora y una perdedora, aquí aparecerá la tasa de acierto con la que alcanzas el punto de equilibrio.',
+  'goals.breakEven':
+    'Alcanzas el punto de equilibrio con una tasa de acierto del {pct}, con tu ganancia y tu pérdida medias ({account}, desde el principio).',
+  'goals.process': 'Objetivos de proceso',
+  'goals.processHint': 'Lo que controlas durante el día.',
+  'goals.result': 'Objetivos de resultado',
+  'goals.resultHint': 'Lo que suman las operaciones.',
+
+  'goals.basis.trades': { one: '{count} operación', many: '{count} operaciones', other: '{count} operaciones' },
+  'goals.basis.checked': {
+    one: '{count} operación marcada',
+    many: '{count} operaciones marcadas',
+    other: '{count} operaciones marcadas',
+  },
+  'goals.basis.stops': {
+    one: '{count} operación con stop',
+    many: '{count} operaciones con stop',
+    other: '{count} operaciones con stop',
+  },
+  'goals.basis.days': {
+    one: '{count} día de trading',
+    many: '{count} días de trading',
+    other: '{count} días de trading',
+  },
+  'goals.blocked.noLimits': 'Fija un límite diario en Ajustes para medir esto',
+  'goals.blocked.noMistakes': 'Cuenta desde la primera operación que marques con un error',
+  'goals.met': 'Cumplido',
+  'goals.below': 'Por debajo del objetivo',
+  'goals.needs': 'Necesita {need}; {count} hasta ahora',
+  'goals.nothing': 'Aún no hay nada que medir',
+  'goals.weekOf': 'Semana del {date}',
+  'goals.weekMet': '{week}: {value}, cumplido',
+  'goals.weekBelow': '{week}: {value}, por debajo del objetivo',
+  'goals.weekShort': '{week}: {counted}, no basta para saberlo',
+  'goals.weekNone': '{week}: sin medir',
+  'goals.same': 'igual que antes',
+  'goals.upFrom': 'sube desde <num>{was}</num>',
+  'goals.downFrom': 'baja desde <num>{was}</num>',
+  'goals.weeksLabel': { other: '{goal}, las últimas {count} semanas' },
+  'goals.notEnough': 'Aún no hay suficientes operaciones en este periodo para saberlo',
+  'goals.title': 'Objetivos',
+  'goals.metOf': '{met} de {shown} cumplidos',
+  'goals.arrows': 'flechas frente a {before}',
+  'goals.dots': { other: 'puntos de las últimas {count} semanas' },
+  'goals.edit': 'Editar objetivos',
+};

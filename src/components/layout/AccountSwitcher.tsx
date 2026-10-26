@@ -11,6 +11,7 @@ import { MenuDivider, MenuItem, Popover } from '@/components/ui/Popover';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Field, Input } from '@/components/ui/Field';
+import { tr } from '@/lib/i18n';
 
 export function AccountSwitcher({ variant, align }: { variant: 'card' | 'pill'; align?: 'start' | 'end' }) {
   const { data, actions, balances, activeLabel } = useJournal();
@@ -60,7 +61,7 @@ export function AccountSwitcher({ variant, align }: { variant: 'card' | 'pill'; 
       >
         {(close) => (
           <div>
-            <div className="px-2.5 pb-1 pt-1.5 text-xs text-faint">Accounts</div>
+            <div className="px-2.5 pb-1 pt-1.5 text-xs text-faint">{tr('accounts.heading')}</div>
             {data.accounts.map((a) => (
               <MenuItem
                 key={a.id}
@@ -88,7 +89,7 @@ export function AccountSwitcher({ variant, align }: { variant: 'card' | 'pill'; 
                   close();
                 }}
               >
-                All accounts
+                {tr('shell.allAccounts')}
               </MenuItem>
             )}
             <MenuDivider />
@@ -99,7 +100,7 @@ export function AccountSwitcher({ variant, align }: { variant: 'card' | 'pill'; 
                 setCreating(true);
               }}
             >
-              New account
+              {tr('accounts.new')}
             </MenuItem>
             <Link
               href="/settings"
@@ -107,20 +108,20 @@ export function AccountSwitcher({ variant, align }: { variant: 'card' | 'pill'; 
               className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-sm text-fg transition hover:bg-raised"
             >
               <Settings2 className="size-4 text-muted" />
-              Manage accounts
+              {tr('accounts.manage')}
             </Link>
           </div>
         )}
       </Popover>
 
-      <Modal open={creating} onClose={() => setCreating(false)} title="New account" size="sm">
+      <Modal open={creating} onClose={() => setCreating(false)} title={tr('accounts.new')} size="sm">
         <NewAccountForm
           currency={currency}
           onCancel={() => setCreating(false)}
           onCreate={(name, balance) => {
             actions.addAccount(name, balance);
             setCreating(false);
-            toast(`Account "${name}" created`);
+            toast(tr('common.accountCreated', { name }));
           }}
         />
       </Modal>
@@ -146,22 +147,22 @@ function NewAccountForm({
       onSubmit={(e) => {
         e.preventDefault();
         if (!name.trim()) {
-          setError('Give the account a name');
+          setError(tr('accounts.nameRequired'));
           return;
         }
         onCreate(name.trim(), toNumberOrNull(balance) ?? 0);
       }}
       className="space-y-4"
     >
-      <Field label="Account name" error={error}>
+      <Field label={tr('common.accountName')} error={error}>
         <Input
           autoFocus
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="e.g. Prop firm challenge"
+          placeholder={tr('common.accountPlaceholder')}
         />
       </Field>
-      <Field label="Starting balance" hint={currency}>
+      <Field label={tr('common.startingBalance')} hint={currency}>
         <Input
           inputMode="decimal"
           value={balance}
@@ -172,10 +173,10 @@ function NewAccountForm({
       </Field>
       <div className="flex justify-end gap-2 pt-1">
         <Button variant="ghost" onClick={onCancel}>
-          Cancel
+          {tr('common.cancel')}
         </Button>
         <Button variant="primary" type="submit">
-          Create account
+          {tr('accounts.create')}
         </Button>
       </div>
     </form>

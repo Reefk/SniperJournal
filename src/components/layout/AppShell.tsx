@@ -8,6 +8,7 @@ import { LogoMark } from '@/components/ui/Logo';
 import { Button } from '@/components/ui/Button';
 import { TradeFormModal } from '@/components/trades/TradeFormModal';
 import { useAndroidBack } from '@/hooks/useAndroidBack';
+import { tr } from '@/lib/i18n';
 import { MobileNav, SaveAnnouncer, Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { CopyNotice, RecoveredNotice, SaveConflictDialog } from './SaveConflict';
@@ -30,15 +31,12 @@ function NewerJournal() {
     <main className="grid h-dvh place-items-center bg-app px-4 md:h-screen">
       <div role="alert" className="max-w-xl rounded-xl border border-line bg-surface p-6">
         <TriangleAlert aria-hidden className="size-6 text-warn" />
-        <h1 className="mt-3 text-lg font-semibold text-fg">This journal needs a newer Sniper Journal</h1>
-        <p className="mt-2 text-sm leading-relaxed text-muted">
-          It was last saved by a newer version of the app, which keeps things this one doesn&apos;t know about. Opening
-          it here could lose them, so it was left as it is: nothing in it has been changed.
-        </p>
-        <p className="mt-2 text-sm font-medium text-fg">Update Sniper Journal, then open it again.</p>
+        <h1 className="mt-3 text-lg font-semibold text-fg">{tr('shell.newer.title')}</h1>
+        <p className="mt-2 text-sm leading-relaxed text-muted">{tr('shell.newer.body')}</p>
+        <p className="mt-2 text-sm font-medium text-fg">{tr('shell.newer.update')}</p>
         {filePath && (
           <p className="mt-5 text-xs text-muted">
-            Your journal is kept here:
+            {tr('common.keptHere')}
             <span className="num mt-1 block break-all rounded-md border border-line bg-app px-3 py-2 text-fg">
               {filePath}
             </span>
@@ -74,7 +72,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="grid h-dvh place-items-center bg-app md:h-screen">
         <div className="flex flex-col items-center gap-3 text-sm text-muted">
           <LogoMark size={40} />
-          Opening your journal
+          {tr('shell.opening')}
         </div>
       </div>
     );
@@ -82,14 +80,14 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const removeSample = async () => {
     const ok = await confirm({
-      title: 'Remove test data?',
-      message: `This deletes the ${sampleCount} generated test trades, any chart images you attached to them, and the test playbook setups. Trades you entered yourself are kept.`,
-      confirmLabel: 'Remove test data',
+      title: tr('common.removeTestData.title'),
+      message: tr('common.removeTestData.message', { count: sampleCount }),
+      confirmLabel: tr('common.removeTestData.confirm'),
       tone: 'danger',
     });
     if (ok) {
       actions.clearSampleData();
-      toast('Test data removed');
+      toast(tr('common.testDataRemoved'));
     }
   };
 
@@ -109,12 +107,13 @@ export function AppShell({ children }: { children: ReactNode }) {
             <div className="flex items-center gap-3 border-b border-warn/25 bg-warn/10 px-4 py-2 text-sm md:px-6">
               <FlaskConical className="size-4 shrink-0 text-warn" />
               <span className="text-fg">
-                Test data is loaded ({sampleCount} generated trades).
-                <span className="text-muted max-md:hidden"> Remove it before you start logging real trades.</span>
+                {tr('shell.testBanner', { count: sampleCount })}
+                <span className="text-muted max-md:hidden">{tr('shell.testBannerHint')}</span>
               </span>
               <Button size="sm" variant="secondary" className="ml-auto" onClick={removeSample}>
                 <span>
-                  Remove<span className="max-md:hidden"> test data</span>
+                  {tr('shell.remove')}
+                  <span className="max-md:hidden">{tr('shell.removeTail')}</span>
                 </span>
               </Button>
             </div>

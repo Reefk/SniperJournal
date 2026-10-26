@@ -1,5 +1,7 @@
 import type { Trade } from './types';
 import { mean } from './utils';
+import { formatPct, formatRatio } from './format';
+import { decimalMark, isolate, tr } from './i18n';
 import {
   grossPnl,
   holdMinutes,
@@ -276,13 +278,13 @@ export function breakEvenWinRate(stats: Pick<Stats, 'avgWin' | 'avgLoss'>): numb
 }
 
 export function sqnLabel(sqn: number | null): string {
-  if (sqn == null) return 'Not enough data';
-  if (sqn < 1.6) return 'Below average';
-  if (sqn < 2) return 'Average';
-  if (sqn < 2.5) return 'Good';
-  if (sqn < 3) return 'Excellent';
-  if (sqn < 5) return 'Superb';
-  return 'Exceptional';
+  if (sqn == null) return tr('sqn.none');
+  if (sqn < 1.6) return tr('sqn.below');
+  if (sqn < 2) return tr('sqn.average');
+  if (sqn < 2.5) return tr('sqn.good');
+  if (sqn < 3) return tr('sqn.excellent');
+  if (sqn < 5) return tr('sqn.superb');
+  return tr('sqn.exceptional');
 }
 
 export interface ScoreAxis {
@@ -336,30 +338,29 @@ export function sniperScore(trades: Trade[], stats: Stats): SniperScore {
   const enough = stats.total >= 5;
 
   axes.push({
-    axis: 'Win rate',
+    axis: tr('score.winRate'),
     score: enough ? clamp100(stats.winRate * 1.4) : 0,
     rated: enough,
-    detail: enough ? `${stats.winRate.toFixed(1)}% of trades closed green` : 'Needs at least 5 closed trades',
+    detail: enough ? tr('score.winRate.detail', { pct: formatPct(stats.winRate) }) : tr('score.needsTrades'),
   });
 
   const pf = stats.profitFactor;
   axes.push({
-    axis: 'Profit factor',
+    axis: tr('score.profitFactor'),
     score: enough && pf != null ? clamp100(Number.isFinite(pf) ? (pf / 3) * 100 : 100) : 0,
     rated: enough && pf != null,
-    detail:
-      pf == null
-        ? 'Needs at least 5 closed trades'
-        : `${Number.isFinite(pf) ? pf.toFixed(2) : '∞'} earned per unit lost`,
+    detail: pf == null ? tr('score.needsTrades') : tr('score.profitFactor.detail', { pf: formatRatio(pf) }),
   });
 
   const withStops = closed.filter((t) => t.stopLoss != null);
   const rRated = withStops.length >= 5 && stats.avgR != null;
   axes.push({
-    axis: 'Risk:reward',
+    axis: tr('score.riskReward'),
     score: rRated ? clamp100(((stats.avgR as number) + 0.5) * 50) : 0,
     rated: rRated,
-    detail: rRated ? `${(stats.avgR as number).toFixed(2)}R average result` : 'Log a stop loss on at least 5 trades',
+    detail: rRated
+      ? tr('score.riskReward.detail', { r: isolate(`${decimalMark((stats.avgR as number).toFixed(2))}R`) })
+      : tr('score.needsStops'),
   });
 
   // consistency: how steady the daily results are
@@ -375,25 +376,27 @@ export function sniperScore(trades: Trade[], stats: Stats): SniperScore {
     consistency = clamp100(greenDays * 60 + steadiness * 0.4);
   }
   axes.push({
-    axis: 'Consistency',
+    axis: tr('score.consistency'),
     score: consistency,
     rated: consistencyRated,
     detail: consistencyRated
-      ? `${stats.days.filter((d) => d.net > 0).length} green of ${stats.days.length} trading days`
-      : 'Needs trades on at least 5 days',
+      ? tr('score.consistency.detail', {
+          green: stats.days.filter((d) => d.net > 0).length,
+          count: stats.days.length,
+        })
+      : tr('score.needsDays'),
   });
 
   for (const key of ['discipline', 'execution', 'patience'] as const) {
     const values = closed.map((t) => t.review?.[key]).filter((v): v is number => typeof v === 'number');
-    const label = key[0].toUpperCase() + key.slice(1);
     axes.push({
-      axis: label,
+      axis: tr(`score.${key}`),
       score: values.length ? clamp100((mean(values) / 5) * 100) : 0,
       rated: values.length >= 3,
       detail:
         values.length >= 3
-          ? `${mean(values).toFixed(1)} of 5 across ${values.length} trades`
-          : 'Rate at least 3 trades when you log them',
+          ? tr('score.rating.detail', { avg: decimalMark(mean(values).toFixed(1)), count: values.length })
+          : tr('score.needsRatings'),
     });
   }
 

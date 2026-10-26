@@ -2,6 +2,7 @@ import type { Trade } from './types';
 import { grossPnl, isClosed } from './trade-math';
 import { checksSetupId, combineChecks } from './rules';
 import { combineMistakes } from './mistakes';
+import { tr } from './i18n';
 
 /**
  * Scaling out of a position leaves one entry matched against several exits,
@@ -11,17 +12,17 @@ import { combineMistakes } from './mistakes';
 
 /** Why these trades cannot be merged, or null when they can */
 export function mergeIssue(trades: Trade[]): string | null {
-  if (trades.length < 2) return 'Select at least two trades to merge.';
+  if (trades.length < 2) return tr('merge.atLeastTwo');
   const [first] = trades;
-  if (trades.some((t) => t.symbol !== first.symbol)) return 'They have to be the same symbol.';
-  if (trades.some((t) => t.side !== first.side)) return 'They have to be the same direction.';
-  if (trades.some((t) => t.accountId !== first.accountId)) return 'They have to be in the same account.';
-  if (trades.some((t) => !(t.quantity > 0))) return 'Every part needs a quantity before they can be merged.';
-  if (trades.some((t) => !t.entryPrice)) return 'Every part needs an entry price before they can be merged.';
+  if (trades.some((t) => t.symbol !== first.symbol)) return tr('merge.sameSymbol');
+  if (trades.some((t) => t.side !== first.side)) return tr('merge.sameSide');
+  if (trades.some((t) => t.accountId !== first.accountId)) return tr('merge.sameAccount');
+  if (trades.some((t) => !(t.quantity > 0))) return tr('merge.quantity');
+  if (trades.some((t) => !t.entryPrice)) return tr('merge.entryPrice');
 
   const closed = trades.filter(isClosed).length;
   if (closed !== 0 && closed !== trades.length) {
-    return 'Some of these are still open. Merge the closed ones, or close the rest first.';
+    return tr('merge.someOpen');
   }
   return null;
 }

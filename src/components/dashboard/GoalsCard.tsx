@@ -14,38 +14,33 @@ import { formatShortDate } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { ChartContainer } from '@/components/ui/ChartContainer';
 import { InfoTip } from '@/components/ui/InfoTip';
+import { rich } from '@/components/ui/Rich';
+import { tr, type MessageKey } from '@/lib/i18n';
 
-const NOUN: Record<GoalDef['basis'], [string, string]> = {
-  trades: ['trade', 'trades'],
-  checked: ['checked trade', 'checked trades'],
-  stops: ['trade with a stop', 'trades with a stop'],
-  days: ['trading day', 'trading days'],
-};
+const counted = (def: GoalDef, n: number) => tr(`goals.basis.${def.basis}`, { count: n });
 
-const counted = (def: GoalDef, n: number) => `${n} ${NOUN[def.basis][n === 1 ? 0 : 1]}`;
-
-const BLOCKED: Record<NonNullable<Measure['blocked']>, string> = {
-  'no-limits': 'Set a daily limit in Settings to measure this',
-  'no-mistakes': 'Counts from the first trade you mark with a mistake',
+const BLOCKED: Record<NonNullable<Measure['blocked']>, MessageKey> = {
+  'no-limits': 'goals.blocked.noLimits',
+  'no-mistakes': 'goals.blocked.noMistakes',
 };
 
 const judged = (status: GoalStatus) => status === 'met' || status === 'missed';
 
 function statusText({ def, measure, status, need }: GoalLine): string {
-  if (status === 'met') return 'Met';
-  if (status === 'missed') return 'Below target';
-  if (status === 'short') return `Needs ${counted(def, need)}, ${measure.count} so far`;
-  return measure.blocked ? BLOCKED[measure.blocked] : 'Nothing to measure yet';
+  if (status === 'met') return tr('goals.met');
+  if (status === 'missed') return tr('goals.below');
+  if (status === 'short') return tr('goals.needs', { need: counted(def, need), count: measure.count });
+  return tr(measure.blocked ? BLOCKED[measure.blocked] : 'goals.nothing');
 }
 
 function weekText({ def, target }: GoalLine, week: GoalWeek, currency: string): string {
-  const head = `Week of ${formatShortDate(week.start)}`;
+  const head = tr('goals.weekOf', { date: formatShortDate(week.start) });
   if (judged(week.status)) {
     const value = goalValueText(def, week.measure.value, target, currency);
-    return `${head}: ${value}, ${week.status === 'met' ? 'met' : 'below target'}`;
+    return tr(week.status === 'met' ? 'goals.weekMet' : 'goals.weekBelow', { week: head, value });
   }
-  if (week.status === 'short') return `${head}: ${counted(def, week.measure.count)}, not enough to tell`;
-  return `${head}: not measured`;
+  if (week.status === 'short') return tr('goals.weekShort', { week: head, counted: counted(def, week.measure.count) });
+  return tr('goals.weekNone', { week: head });
 }
 
 /** how far to the target the bar is filled: all of it once met */
@@ -64,14 +59,16 @@ function Trend({ line, currency }: { line: GoalLine; currency: string }) {
   }
   const was = goalValueText(def, before.measure.value, target, currency);
   if (was === goalValueText(def, measure.value, target, currency)) {
-    return <span className="text-faint">same as before</span>;
+    return <span className="text-faint">{tr('goals.same')}</span>;
   }
   const up = measure.value > before.measure.value;
   const Arrow = up ? ArrowUp : ArrowDown;
   return (
     <span className="inline-flex shrink-0 items-center gap-0.5 text-faint">
       <Arrow className={cn('size-3', up ? 'text-profit' : 'text-loss')} aria-hidden />
-      {up ? 'up' : 'down'} from <span className="num">{was}</span>
+      {rich(tr(up ? 'goals.upFrom' : 'goals.downFrom', { was }), {
+        num: (text) => <span className="num">{text}</span>,
+      })}
     </span>
   );
 }
@@ -111,7 +108,10 @@ function GoalRow({ line, currency }: { line: GoalLine; currency: string }) {
         </span>
         <Trend line={line} currency={currency} />
       </div>
-      <ol className="mt-2 flex items-center gap-1.5" aria-label={`${def.label}, the last ${GOAL_WEEKS} weeks`}>
+      <ol
+        className="mt-2 flex items-center gap-1.5"
+        aria-label={tr('goals.weeksLabel', { goal: def.label, count: GOAL_WEEKS })}
+      >
         {weeks.map((week) => {
           const text = weekText(line, week, currency);
           return (
@@ -156,23 +156,21 @@ export function GoalsCard({
   const shown = lines.filter((line) => judged(line.status));
   const met = shown.filter((line) => line.status === 'met').length;
   // none judged: short of trades, or only goals with nothing to measure (no limit set, no mistake marked)
-  const unjudged = lines.some((line) => line.status === 'short')
-    ? 'Not enough trades in this range to tell yet'
-    : 'Nothing to measure yet';
+  const unjudged = lines.some((line) => line.status === 'short') ? tr('goals.notEnough') : tr('goals.nothing');
   return (
     <ChartContainer
       className={className}
-      title="Goals"
+      title={tr('goals.title')}
       subtitle={[
-        shown.length ? `${met} of ${shown.length} met` : unjudged,
-        before && `arrows against ${before}`,
-        `dots for the last ${GOAL_WEEKS} weeks`,
+        shown.length ? tr('goals.metOf', { met, shown: shown.length }) : unjudged,
+        before && tr('goals.arrows', { before }),
+        tr('goals.dots', { count: GOAL_WEEKS }),
       ]
         .filter(Boolean)
         .join(' · ')}
       actions={
         <Link href="/settings" className="shrink-0 text-xs text-accent underline-offset-4 transition hover:underline">
-          Edit goals
+          {tr('goals.edit')}
         </Link>
       }
     >

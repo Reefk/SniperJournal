@@ -1,6 +1,7 @@
 import type { Account, Goals, Resource, RuleChecks, Settings, Setup, TagGroup, Trade } from '@/lib/types';
 import { distinctSets } from '@/lib/tags';
 import { goalDef, goalTarget } from '@/lib/goals';
+import { isLanguage } from '@/lib/i18n';
 
 /**
  * Type-checks everything that comes in from outside the app's own code: the
@@ -158,6 +159,8 @@ export function cleanSettings(v: unknown, base: Settings): Settings {
     // absent until it is first changed, which reads as off
     countExcludedInBalance: optBool(s.countExcludedInBalance),
     fadedPlaceholders: optBool(s.fadedPlaceholders),
+    // absent, or a language this version doesn't speak, reads as English
+    language: isLanguage(s.language) ? s.language : undefined,
     // absent reads as the starting list; an empty one is a list with every mistake taken off,
     // but one with nothing usable in it is damaged, and reads as absent
     mistakes:

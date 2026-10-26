@@ -6,7 +6,7 @@ import { useJournal } from '@/store/JournalProvider';
 import { useUI } from '@/store/UIProvider';
 import { computeStats, groupTrades, sqnLabel, thinMark } from '@/lib/stats';
 import { groupTables, type GroupTable } from '@/lib/tags';
-import { RANGE_OPTIONS, splitByRange, type RangeKey } from '@/lib/ranges';
+import { rangeOptions, splitByRange, type RangeKey } from '@/lib/ranges';
 import { tradesToCsv } from '@/lib/csv';
 import {
   formatDate,
@@ -14,8 +14,8 @@ import {
   formatMoney,
   formatPct,
   formatRatio,
-  MONTHS_SHORT,
-  WEEKDAYS,
+  monthName,
+  weekdayName,
   wholePct,
 } from '@/lib/format';
 import {
@@ -82,7 +82,7 @@ export function ReportsView() {
       groupTrades(
         closed,
         (t) => String(parseLocal(t.openedAt).getDay()),
-        (k) => WEEKDAYS[(Number(k) + 6) % 7],
+        (k) => weekdayName((Number(k) + 6) % 7),
       ),
     [closed],
   );
@@ -118,7 +118,7 @@ export function ReportsView() {
         description={`${activeLabel} · ${stats.total} closed ${stats.total === 1 ? 'trade' : 'trades'}`}
         actions={
           <>
-            <SegmentedControl value={range} onChange={setRange} options={RANGE_OPTIONS} />
+            <SegmentedControl value={range} onChange={setRange} options={rangeOptions()} />
             <Button
               onClick={() => {
                 downloadFile(
@@ -244,7 +244,7 @@ export function ReportsView() {
                 return (
                   <tr key={key} className="border-t border-line">
                     <td className="px-3 py-2 text-fg">
-                      {MONTHS_SHORT[m - 1]} {y}
+                      {monthName(m - 1, 'short')} {y}
                     </td>
                     <td className="num px-3 py-2 text-right text-muted">{agg.trades}</td>
                     <td className="num px-3 py-2 text-right text-muted">

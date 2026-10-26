@@ -1,5 +1,5 @@
 import type { Settings, Setup, Trade } from './types';
-import { formatMoney, WEEKDAYS } from './format';
+import { formatMoney, weekdayName } from './format';
 import { aggregateDays, breakEvenWinRate, computeStats, groupTrades, type GroupStat, type Stats } from './stats';
 import { MIN_RULE_SIDE, playbookRuleReport } from './rules';
 import { mistakeList, mistakeReport } from './mistakes';
@@ -194,7 +194,7 @@ export function buildInsights(trades: Trade[], setups: Setup[], settings: Settin
     groupTrades(
       closed,
       (t) => String(parseLocal(t.openedAt).getDay()),
-      (k) => WEEKDAYS[(Number(k) + 6) % 7],
+      (k) => weekdayName((Number(k) + 6) % 7),
     ),
   );
   if (weekdays.best && weekdays.worst && weekdays.worst.net < 0 && weekdays.best.key !== weekdays.worst.key) {

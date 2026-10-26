@@ -2,7 +2,8 @@
 
 import { useId, useRef, useState } from 'react';
 import { Plus } from 'lucide-react';
-import { matchMistake } from '@/lib/mistakes';
+import { matchMistake, mistakeName } from '@/lib/mistakes';
+import { tr } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 /**
@@ -40,9 +41,9 @@ export function MistakeChips({
   return (
     <div role="group" aria-labelledby={labelId} className="rounded-lg border border-line p-3">
       <div id={labelId} className="text-sm font-medium text-fg">
-        Mistakes
+        {tr('settings.mistakes')}
       </div>
-      <p className="mt-0.5 text-xs text-muted">Tap any this trade made. Reports work out what each one costs you.</p>
+      <p className="mt-0.5 text-xs text-muted">{tr('chips.hint')}</p>
       <div className="mt-2 flex flex-wrap gap-1.5">
         {chips.map((mistake) => {
           const on = value.includes(mistake);
@@ -57,15 +58,15 @@ export function MistakeChips({
                 on ? 'bg-loss/15 text-loss ring-1 ring-loss/30' : 'border border-line bg-app text-muted hover:text-fg',
               )}
             >
-              {mistake}
-              {!listed.includes(mistake) && ' (not on your list)'}
+              {mistakeName(mistake)}
+              {!listed.includes(mistake) && tr('chips.notListed')}
             </button>
           );
         })}
         {adding ? (
           <input
             autoFocus
-            aria-label="New mistake"
+            aria-label={tr('chips.new')}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
@@ -77,7 +78,7 @@ export function MistakeChips({
               }
             }}
             onBlur={add}
-            placeholder="Name it, then Enter"
+            placeholder={tr('chips.newPlaceholder')}
             className="h-9 w-48 rounded-md border border-accent/70 bg-app px-2.5 text-xs text-fg outline-none ring-2 ring-accent/20 placeholder:text-placeholder md:h-7"
           />
         ) : (
@@ -92,7 +93,7 @@ export function MistakeChips({
             onClick={() => setAdding(true)}
             className="flex h-9 items-center gap-1 rounded-md border border-dashed border-line px-2.5 text-xs text-muted transition hover:text-fg md:h-7"
           >
-            <Plus className="size-3.5" /> Add one
+            <Plus className="size-3.5" /> {tr('chips.add')}
           </button>
         )}
       </div>

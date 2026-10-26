@@ -6,7 +6,7 @@ import type { Trade } from '@/lib/types';
 import { useJournal } from '@/store/JournalProvider';
 import { useUI } from '@/store/UIProvider';
 import { aggregateDays, computeStats } from '@/lib/stats';
-import { formatDate, formatMoney, formatMonthKey, formatPct, MONTHS_SHORT, WEEKDAYS } from '@/lib/format';
+import { formatDate, formatMoney, formatMonthKey, formatPct, monthName, weekdayName } from '@/lib/format';
 import { isClosed, netPnl, tradeDay } from '@/lib/trade-math';
 import { cn, dateKey, pad2 } from '@/lib/utils';
 import { realised } from '@/store/selectors';
@@ -153,7 +153,7 @@ export function CalendarView() {
 
           <div className="mt-4 overflow-hidden rounded-xl border border-line bg-surface">
             <div className="grid grid-cols-7 border-b border-line bg-app/40">
-              {WEEKDAYS.map((d) => (
+              {[0, 1, 2, 3, 4, 5, 6].map(weekdayName).map((d) => (
                 <div
                   key={d}
                   className="py-2 text-center text-[11px] font-medium text-muted md:px-3 md:py-2.5 md:text-xs"
@@ -234,7 +234,7 @@ export function CalendarView() {
                     onClick={() => setCursor({ year: y, month: mo - 1 })}
                     className="rounded border border-line px-2 py-0.5 text-xs text-fg transition hover:border-accent/60"
                   >
-                    {MONTHS_SHORT[mo - 1]} {y}
+                    {monthName(mo - 1, 'short')} {y}
                   </button>
                 );
               })}

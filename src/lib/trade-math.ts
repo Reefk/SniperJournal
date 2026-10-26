@@ -1,5 +1,8 @@
 import type { Trade } from './types';
 import { parseLocal } from './utils';
+import { tr } from './i18n';
+import { sessionName } from './sessions';
+import { mistakeName } from './starting-mistakes';
 
 export function isClosed(t: Trade): boolean {
   return t.manualPnl != null || (t.exitPrice != null && Number.isFinite(t.exitPrice));
@@ -77,6 +80,21 @@ export function missingDetails(t: Trade): string[] {
   return missing;
 }
 
+const NEEDS = {
+  symbol: 'needs.symbol',
+  'entry time': 'needs.entryTime',
+  quantity: 'needs.quantity',
+  'entry price': 'needs.entryPrice',
+} as const;
+
+/** "needs symbol, quantity" in the language on screen, or '' when nothing is missing */
+export function needsText(t: Trade): string {
+  const missing = missingDetails(t);
+  if (!missing.length) return '';
+  const names = missing.map((m) => tr(NEEDS[m as keyof typeof NEEDS]));
+  return tr('needs.list', { list: names.join(tr('format.comma')) });
+}
+
 export function isIncomplete(t: Trade): boolean {
   return missingDetails(t).length > 0;
 }
@@ -110,7 +128,18 @@ export function statTrades(trades: Trade[]): Trade[] {
 export function matchesSearch(t: Trade, term: string, setupNames?: Map<string, string>): boolean {
   if (!term) return true;
   const setup = t.setupId ? (setupNames?.get(t.setupId) ?? '') : '';
-  return [t.symbol, t.side, t.notes ?? '', t.session ?? '', setup, ...t.tags, ...(t.mistakes ?? [])]
+  // what is saved, and what the screen calls it in the language it is in
+  return [
+    t.symbol,
+    t.side,
+    tr(`side.${t.side}`),
+    t.notes ?? '',
+    t.session ?? '',
+    sessionName(t.session ?? ''),
+    setup,
+    ...t.tags,
+    ...(t.mistakes ?? []).flatMap((m) => [m, mistakeName(m)]),
+  ]
     .join(' ')
     .toLowerCase()
     .includes(term);

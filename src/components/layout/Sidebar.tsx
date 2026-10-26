@@ -24,38 +24,39 @@ import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { exportBackup } from '@/lib/backup';
 import { cn } from '@/lib/utils';
 import { storage } from '@/lib/storage';
+import { tr, type MessageKey } from '@/lib/i18n';
 import { LogoMark } from '@/components/ui/Logo';
 import { Modal } from '@/components/ui/Modal';
 import { AccountSwitcher } from './AccountSwitcher';
 
-const NAV = [
-  { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/calendar', label: 'Calendar', icon: CalendarDays },
-  { href: '/playbook', label: 'The Playbook', icon: BookOpen },
-  { href: '/trades', label: 'Trades', icon: ArrowLeftRight },
-  { href: '/insights', label: 'Insights & Signals', icon: Lightbulb },
-  { href: '/resources', label: 'Resources', icon: LibraryBig },
-  { href: '/support', label: 'Support', icon: LifeBuoy },
-  { href: '/reports', label: 'Reports', icon: FileBarChart },
+const NAV: Array<{ href: string; label: MessageKey; icon: typeof LayoutDashboard }> = [
+  { href: '/', label: 'nav.dashboard', icon: LayoutDashboard },
+  { href: '/calendar', label: 'nav.calendar', icon: CalendarDays },
+  { href: '/playbook', label: 'nav.playbook', icon: BookOpen },
+  { href: '/trades', label: 'nav.trades', icon: ArrowLeftRight },
+  { href: '/insights', label: 'nav.insights', icon: Lightbulb },
+  { href: '/resources', label: 'nav.resources', icon: LibraryBig },
+  { href: '/support', label: 'nav.support', icon: LifeBuoy },
+  { href: '/reports', label: 'nav.reports', icon: FileBarChart },
 ];
 
-const SAVE_LABEL: Record<SaveStatus, string> =
+const SAVE_LABEL: Record<SaveStatus, MessageKey> =
   storage.kind === 'native'
     ? {
-        saved: 'Saved on this device',
-        saving: 'Saving…',
-        browser: 'Saved temporarily',
-        unsaved: 'Not saved',
-        error: 'Journal file unreadable',
-        conflict: 'Changed elsewhere',
+        saved: 'save.savedDevice',
+        saving: 'save.saving',
+        browser: 'save.savedTemporarily',
+        unsaved: 'save.unsaved',
+        error: 'save.error',
+        conflict: 'save.conflict',
       }
     : {
-        saved: 'Saved to disk',
-        saving: 'Saving…',
-        browser: 'Saved in browser',
-        unsaved: 'Not saved',
-        error: 'Journal file unreadable',
-        conflict: 'Changed elsewhere',
+        saved: 'save.savedDisk',
+        saving: 'save.saving',
+        browser: 'save.savedBrowser',
+        unsaved: 'save.unsaved',
+        error: 'save.error',
+        conflict: 'save.conflict',
       };
 
 /** the states where changes are not reaching the file */
@@ -76,7 +77,7 @@ export function SaveAnnouncer() {
   if (saveStatus !== 'saving' && saveStatus !== settled) setSettled(saveStatus);
   return (
     <p className="sr-only" aria-live="polite" aria-atomic="true">
-      {settled && SAVE_LABEL[settled]}
+      {settled && tr(SAVE_LABEL[settled])}
     </p>
   );
 }
@@ -104,7 +105,7 @@ export function Sidebar() {
         <AccountSwitcher variant="card" />
       </div>
 
-      <nav className="mt-5 min-h-0 flex-1 space-y-0.5 overflow-y-auto px-3" aria-label="Main">
+      <nav className="mt-5 min-h-0 flex-1 space-y-0.5 overflow-y-auto px-3" aria-label={tr('nav.main')}>
         {NAV.map(({ href, label, icon: Icon }) => {
           const active = isActive(href);
           return (
@@ -119,7 +120,7 @@ export function Sidebar() {
             >
               {active && <span className="absolute inset-y-2 left-0 w-[3px] rounded-r bg-accent" />}
               <Icon className={cn('size-4 shrink-0', active ? 'text-accent' : 'text-faint group-hover:text-muted')} />
-              <span className="truncate">{label}</span>
+              <span className="truncate">{tr(label)}</span>
             </Link>
           );
         })}
@@ -134,13 +135,13 @@ export function Sidebar() {
           )}
         >
           <Settings className={cn('size-4', isActive('/settings') ? 'text-accent' : 'text-faint')} />
-          Settings
+          {tr('nav.settings')}
         </Link>
 
         <div
           className="grid grid-cols-2 rounded-lg border border-line bg-app p-0.5"
           role="group"
-          aria-label="Colour theme"
+          aria-label={tr('shell.theme')}
         >
           {(['dark', 'light'] as const).map((mode) => {
             const Icon = mode === 'dark' ? Moon : Sun;
@@ -156,7 +157,7 @@ export function Sidebar() {
                 )}
               >
                 <Icon className="size-3.5" />
-                {mode}
+                {tr(`shell.theme.${mode}`)}
               </button>
             );
           })}
@@ -171,14 +172,11 @@ export function Sidebar() {
                   online ? { boxShadow: '0 0 0 3px color-mix(in srgb, var(--profit) 20%, transparent)' } : undefined
                 }
               />
-              {online ? 'Online' : 'Offline'}
+              {online ? tr('shell.online') : tr('shell.offline')}
             </span>
           )}
-          <span
-            className={cn(ALARM.includes(saveStatus) ? 'text-loss' : 'text-faint')}
-            title="Where your journal is stored"
-          >
-            {SAVE_LABEL[saveStatus]}
+          <span className={cn(ALARM.includes(saveStatus) ? 'text-loss' : 'text-faint')} title={tr('shell.storedWhere')}>
+            {tr(SAVE_LABEL[saveStatus])}
           </span>
         </div>
       </div>
@@ -187,16 +185,16 @@ export function Sidebar() {
 }
 
 /** the four pages a phone gets one tap away; everything else is behind More */
-const TABS: Array<{ href: string; label: string }> = [
-  { href: '/', label: 'Dashboard' },
-  { href: '/trades', label: 'Trades' },
-  { href: '/calendar', label: 'Calendar' },
-  { href: '/insights', label: 'Insights' },
+const TABS: Array<{ href: string; label: MessageKey }> = [
+  { href: '/', label: 'nav.dashboard' },
+  { href: '/trades', label: 'nav.trades' },
+  { href: '/calendar', label: 'nav.calendar' },
+  { href: '/insights', label: 'nav.insightsTab' },
 ];
 
 const MORE = [
   ...NAV.filter((n) => !TABS.some((t) => t.href === n.href)),
-  { href: '/settings', label: 'Settings', icon: Settings },
+  { href: '/settings', label: 'nav.settings' as const, icon: Settings },
 ];
 
 /** The phone's navigation: a tab bar at the bottom, with a sheet for the rest */
@@ -220,7 +218,7 @@ export function MobileNav() {
 
   return (
     <>
-      <nav aria-label="Main" className="flex shrink-0 border-t border-line bg-surface pb-safe md:hidden">
+      <nav aria-label={tr('nav.main')} className="flex shrink-0 border-t border-line bg-surface pb-safe md:hidden">
         {TABS.map(({ href, label }) => {
           const Icon = NAV.find((n) => n.href === href)?.icon ?? LayoutDashboard;
           const active = isActive(href);
@@ -235,7 +233,7 @@ export function MobileNav() {
               )}
             >
               <Icon className="size-5" />
-              {label}
+              {tr(label)}
             </Link>
           );
         })}
@@ -249,11 +247,11 @@ export function MobileNav() {
           )}
         >
           <Menu className="size-5" />
-          More
+          {tr('nav.more')}
         </button>
       </nav>
 
-      <Modal open={more} onClose={() => setMore(false)} title="More" size="sm">
+      <Modal open={more} onClose={() => setMore(false)} title={tr('nav.more')} size="sm">
         <div className="-mx-2 -mt-1">
           {MORE.map(({ href, label, icon: Icon }) => {
             const active = isActive(href);
@@ -269,7 +267,7 @@ export function MobileNav() {
                 )}
               >
                 <Icon className={cn('size-5', active ? 'text-accent' : 'text-muted')} />
-                {label}
+                {tr(label)}
               </Link>
             );
           })}
@@ -278,12 +276,12 @@ export function MobileNav() {
             onClick={() => {
               exportBackup(data);
               setMore(false);
-              if (storage.kind === 'web') toast('Backup downloaded');
+              if (storage.kind === 'web') toast(tr('common.backupDownloaded'));
             }}
             className="flex h-12 w-full items-center gap-3 rounded-md px-3 text-left text-sm text-fg transition hover:bg-raised"
           >
             <Download className="size-5 text-muted" />
-            Back up your journal
+            {tr('common.backUpJournal')}
           </button>
         </div>
 
@@ -291,7 +289,7 @@ export function MobileNav() {
           <div
             className="grid w-44 grid-cols-2 rounded-lg border border-line bg-app p-0.5"
             role="group"
-            aria-label="Colour theme"
+            aria-label={tr('shell.theme')}
           >
             {(['dark', 'light'] as const).map((mode) => {
               const Icon = mode === 'dark' ? Moon : Sun;
@@ -307,13 +305,13 @@ export function MobileNav() {
                   )}
                 >
                   <Icon className="size-3.5" />
-                  {mode}
+                  {tr(`shell.theme.${mode}`)}
                 </button>
               );
             })}
           </div>
           <span className={cn('text-xs', ALARM.includes(saveStatus) ? 'text-loss' : 'text-faint')}>
-            {SAVE_LABEL[saveStatus]}
+            {tr(SAVE_LABEL[saveStatus])}
           </span>
         </div>
       </Modal>
