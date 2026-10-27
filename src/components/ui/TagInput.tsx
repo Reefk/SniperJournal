@@ -37,7 +37,7 @@ export function TagInput({
         {value.map((tag) => (
           <span
             key={tag}
-            className="inline-flex items-center gap-1 rounded bg-accent/15 py-0.5 pl-1.5 pr-1 text-xs text-accent"
+            className="inline-flex items-center gap-1 rounded bg-accent/15 py-0.5 ps-1.5 pe-1 text-xs text-accent"
           >
             {tag}
             <button

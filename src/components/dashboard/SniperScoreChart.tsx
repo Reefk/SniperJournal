@@ -9,7 +9,8 @@ export function SniperScoreChart({ score }: { score: SniperScore }) {
   const theme = useChartTheme();
 
   return (
-    <ResponsiveContainer width="100%" height="100%">
+    // left to right in every language, as time runs; Arabic labels read right to left inside it
+    <ResponsiveContainer width="100%" height="100%" style={{ direction: 'ltr' }}>
       <RadarChart data={score.axes} outerRadius="72%" margin={{ top: 8, right: 28, bottom: 8, left: 28 }}>
         <PolarGrid stroke={theme.grid} />
         <PolarAngleAxis dataKey="axis" tick={{ fill: theme.muted, fontSize: 11 }} />

@@ -30,7 +30,7 @@ export function ProfileMenu() {
           onClick={toggle}
           aria-expanded={open}
           aria-label={tr('profile.menu')}
-          className="ml-1 grid size-10 place-items-center rounded-full md:size-9 border border-line bg-raised text-xs font-semibold text-fg transition hover:border-line-strong"
+          className="ms-1 grid size-10 place-items-center rounded-full md:size-9 border border-line bg-raised text-xs font-semibold text-fg transition hover:border-line-strong"
         >
           {initials || <User className="size-4 text-muted" />}
         </button>
@@ -39,7 +39,9 @@ export function ProfileMenu() {
       {(close) => (
         <div>
           <div className="px-2.5 py-2">
-            <div className="truncate text-sm font-medium text-fg">{name || tr('profile.trader')}</div>
+            <div dir="auto" className="truncate text-sm font-medium text-fg">
+              {name || tr('profile.trader')}
+            </div>
             <div className="text-xs text-muted">
               {storage.device === 'phone' ? tr('profile.storedPhone') : tr('profile.storedPc')}
             </div>

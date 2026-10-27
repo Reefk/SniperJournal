@@ -252,7 +252,7 @@ export function SettingsView() {
                   onChange={(e) => actions.updateAccount(account.id, { name: e.target.value })}
                   aria-label={tr('common.accountName')}
                 />
-                <div className="flex items-center gap-2 max-md:order-last max-md:w-full max-md:pl-7">
+                <div className="flex items-center gap-2 max-md:order-last max-md:w-full max-md:ps-7">
                   <span className="text-xs text-muted max-md:whitespace-nowrap">{tr('common.startingBalance')}</span>
                   <Input
                     className="num w-32"
@@ -264,8 +264,8 @@ export function SettingsView() {
                     aria-label={tr('common.startingBalance')}
                   />
                 </div>
-                <div className="ml-auto flex items-center gap-4">
-                  <div className="text-right">
+                <div className="ms-auto flex items-center gap-4">
+                  <div className="text-end">
                     <div className="num text-sm font-medium text-fg">
                       {formatMoney(balances[account.id] ?? 0, currency)}
                     </div>

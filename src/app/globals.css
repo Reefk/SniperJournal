@@ -128,6 +128,24 @@
   input[type='checkbox'] {
     accent-color: var(--accent-strong);
   }
+  /* In a right-to-left language (Arabic) a number typed in a box still reads
+     left to right, so "-12.5" never shows as "12.5-"; it sits at the right of
+     its box, under its label. The example shown while it is empty is a
+     sentence in the language, so it reads right to left. A box inside a part
+     set to read left to right (the leverage's "1 ×") is left as it is there. */
+  :root[dir='rtl'] input:is([inputmode='decimal'], [inputmode='numeric']):not([dir='ltr'] *) {
+    direction: ltr;
+    text-align: right;
+  }
+  :root[dir='rtl'] input:is([inputmode='decimal'], [inputmode='numeric']):not([dir='ltr'] *):placeholder-shown {
+    direction: rtl;
+  }
+  /* A name of the person's own (an account, a setup, a tag, a file's column)
+     reads in its own direction, so an English one inside Arabic is cut short
+     at its end, not its start; it still lines up as the page does. */
+  [dir='auto'] {
+    text-align: match-parent;
+  }
 }
 
 /* thin themed scrollbars; a phone keeps its own, which float over the page

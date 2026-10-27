@@ -95,7 +95,7 @@ export function Sidebar() {
   const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname.startsWith(href));
 
   return (
-    <aside className="hidden w-[248px] shrink-0 flex-col border-r border-line bg-surface md:flex">
+    <aside className="hidden w-[248px] shrink-0 flex-col border-e border-line bg-surface md:flex">
       <div className="flex h-14 shrink-0 items-center gap-2.5 border-b border-line px-5">
         <LogoMark alt="" />
         <span className="text-[15px] font-semibold tracking-tight text-fg">Sniper Journal</span>
@@ -118,7 +118,7 @@ export function Sidebar() {
                 active ? 'bg-accent/10 font-medium text-fg' : 'text-muted hover:bg-raised hover:text-fg',
               )}
             >
-              {active && <span className="absolute inset-y-2 left-0 w-[3px] rounded-r bg-accent" />}
+              {active && <span className="absolute inset-y-2 start-0 w-[3px] rounded-e bg-accent" />}
               <Icon className={cn('size-4 shrink-0', active ? 'text-accent' : 'text-faint group-hover:text-muted')} />
               <span className="truncate">{tr(label)}</span>
             </Link>
@@ -278,7 +278,7 @@ export function MobileNav() {
               setMore(false);
               if (storage.kind === 'web') toast(tr('common.backupDownloaded'));
             }}
-            className="flex h-12 w-full items-center gap-3 rounded-md px-3 text-left text-sm text-fg transition hover:bg-raised"
+            className="flex h-12 w-full items-center gap-3 rounded-md px-3 text-start text-sm text-fg transition hover:bg-raised"
           >
             <Download className="size-5 text-muted" />
             {tr('common.backUpJournal')}

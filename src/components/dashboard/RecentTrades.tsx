@@ -16,10 +16,12 @@ export function RecentTrades({ trades, currency }: { trades: Trade[]; currency: 
           <button
             type="button"
             onClick={() => openTradeForm({ trade: t })}
-            className="grid w-full grid-cols-[1fr_auto] items-center gap-3 rounded-md px-3 py-2.5 text-left transition hover:bg-raised"
+            className="grid w-full grid-cols-[1fr_auto] items-center gap-3 rounded-md px-3 py-2.5 text-start transition hover:bg-raised"
           >
             <div className="flex min-w-0 items-center gap-2.5">
-              <span className="w-16 shrink-0 truncate font-semibold text-fg md:w-[72px]">{t.symbol}</span>
+              <span dir="auto" className="w-16 shrink-0 truncate font-semibold text-fg md:w-[72px]">
+                {t.symbol}
+              </span>
               <SideBadge side={t.side} />
               <span className="num truncate text-xs text-faint">
                 {formatShortDate(t.openedAt)}

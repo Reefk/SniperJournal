@@ -41,11 +41,12 @@ let unlockPage: (() => void) | null = null;
 function lockPageScroll(): () => void {
   if (scrollLocks++ === 0) {
     const pages = [...document.querySelectorAll<HTMLElement>('[data-page-scroll]')];
-    const before = pages.map((el) => ({ overflow: el.style.overflow, paddingRight: el.style.paddingRight }));
+    const before = pages.map((el) => ({ overflow: el.style.overflow, paddingInlineEnd: el.style.paddingInlineEnd }));
     for (const el of pages) {
       const scrollbar = el.offsetWidth - el.clientWidth;
       el.style.overflow = 'hidden';
-      if (scrollbar > 0) el.style.paddingRight = `${scrollbar}px`;
+      // on the scrollbar's side: the right, or the left in a right-to-left language
+      if (scrollbar > 0) el.style.paddingInlineEnd = `${scrollbar}px`;
     }
     unlockPage = () => pages.forEach((el, i) => Object.assign(el.style, before[i]));
   }

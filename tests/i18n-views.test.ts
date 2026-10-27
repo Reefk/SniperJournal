@@ -8,6 +8,7 @@ import { CURRENCIES } from '@/lib/format';
 import { PLATFORMS, importTradesFromCsv } from '@/lib/csv';
 import { LANGUAGES, setLanguage, type Language } from '@/lib/i18n';
 import { STARTING_MISTAKES } from '@/lib/mistakes';
+import { CalendarView } from '@/views/CalendarView';
 import { DashboardView } from '@/views/DashboardView';
 import { SettingsView } from '@/views/SettingsView';
 import { TradesView } from '@/views/TradesView';
@@ -233,6 +234,23 @@ const SCREENS: Array<{
 }> = [
   { name: 'Dashboard', view: DashboardView, trades: TRADES },
   { name: 'Dashboard, empty', view: DashboardView, trades: [] },
+  { name: 'Calendar', view: CalendarView, trades: TRADES },
+  { name: 'Calendar, empty', view: CalendarView, trades: [] },
+  {
+    name: 'Calendar, a month with no trades',
+    view: CalendarView,
+    trades: TRADES,
+    open: () => document.querySelector('svg.lucide-chevron-left')?.closest('button')?.click(),
+    modal: false,
+    // the months that have trades, offered under the grid
+    ready: () => document.querySelectorAll('.mt-3.flex-wrap > button').length > 0,
+  },
+  {
+    name: "Calendar, a day's trades",
+    view: CalendarView,
+    trades: TRADES,
+    open: () => document.querySelector<HTMLButtonElement>('.grid-cols-7 > button:enabled')?.click(),
+  },
   { name: 'Settings', view: SettingsView, trades: TRADES },
   { name: 'Trade form, new', view: TradeFormModal, trades: TRADES, open: () => ui?.openTradeForm() },
   { name: 'Trade form, editing', view: TradeFormModal, trades: [FULL], open: () => ui?.openTradeForm({ trade: FULL }) },

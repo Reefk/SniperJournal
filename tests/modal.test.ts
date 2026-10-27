@@ -121,10 +121,11 @@ describe('the page behind does not scroll', () => {
   it('is locked while a dialog is open, with the scrollbar given back as padding, and restored on close', async () => {
     await page.render(h(Page, { first: true }));
     expect(scroller().style.overflow).toBe('hidden');
-    expect(scroller().style.paddingRight).toBe('15px');
+    // on the scrollbar's side, the end of the line: the right, or the left in Arabic
+    expect(scroller().style.paddingInlineEnd).toBe('15px');
     await page.render(h(Page));
     expect(scroller().style.overflow).toBe('auto');
-    expect(scroller().style.paddingRight).toBe('');
+    expect(scroller().style.paddingInlineEnd).toBe('');
   });
 
   it('stays locked when a dialog over another closes, until the last one does', async () => {

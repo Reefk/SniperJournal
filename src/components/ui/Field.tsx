@@ -84,10 +84,10 @@ export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSel
   const link = useFieldLink({ id });
   return (
     <div className={cn('relative', className)}>
-      <select ref={ref} className={cn(inputClass, 'cursor-pointer appearance-none pr-8')} {...link} {...rest}>
+      <select ref={ref} className={cn(inputClass, 'cursor-pointer appearance-none pe-8')} {...link} {...rest}>
         {children}
       </select>
-      <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 text-faint" />
+      <ChevronDown className="pointer-events-none absolute end-2.5 top-1/2 size-4 -translate-y-1/2 text-faint" />
     </div>
   );
 });

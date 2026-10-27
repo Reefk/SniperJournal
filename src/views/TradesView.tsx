@@ -315,7 +315,7 @@ export function TradesView() {
     const active = sort.key === k;
     const Icon = !active ? ArrowUpDown : sort.dir === 'asc' ? ArrowUp : ArrowDown;
     return (
-      <th className={cn('px-3 py-3 font-medium', align === 'right' ? 'text-right' : 'text-left')}>
+      <th className={cn('px-3 py-3 font-medium', align === 'right' ? 'text-end' : 'text-start')}>
         <button
           type="button"
           onClick={() =>
@@ -347,7 +347,7 @@ export function TradesView() {
             })}
             <span className="text-muted max-md:hidden">{tr('list.missingHint')}</span>
           </span>
-          <Button size="sm" className="ml-auto" onClick={() => update('result', 'NEEDS')}>
+          <Button size="sm" className="ms-auto" onClick={() => update('result', 'NEEDS')}>
             {tr('list.showThem')}
           </Button>
         </div>
@@ -358,12 +358,12 @@ export function TradesView() {
       <div className="mb-3 rounded-xl border border-line bg-surface p-3">
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative min-w-[55%] flex-1 md:w-64 md:min-w-0 md:flex-none">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-faint" />
+            <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-faint" />
             <Input
               value={filters.q}
               onChange={(e) => update('q', e.target.value)}
               placeholder={tr('list.search')}
-              className="pl-9"
+              className="ps-9"
               aria-label={tr('list.search')}
             />
           </div>
@@ -523,7 +523,7 @@ export function TradesView() {
               <RotateCcw className="size-3.5" /> {tr('list.clearFilters', { count: activeFilterCount })}
             </Button>
           )}
-          <div className="ml-auto flex items-center gap-5 pr-1 text-xs text-muted max-md:w-full max-md:justify-between max-md:pl-1">
+          <div className="ms-auto flex items-center gap-5 pe-1 text-xs text-muted max-md:w-full max-md:justify-between max-md:ps-1">
             <span>
               {rich(tr('list.shown', { count: filtered.length }), {
                 num: (n) => <span className="num text-fg">{n}</span>,
@@ -550,7 +550,7 @@ export function TradesView() {
           <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
             {tr('list.clear')}
           </Button>
-          <div className="ml-auto flex flex-wrap gap-2 max-md:w-full md:flex-nowrap">
+          <div className="ms-auto flex flex-wrap gap-2 max-md:w-full md:flex-nowrap">
             {selected.size > 1 && (
               <Button size="sm" onClick={mergeSelected}>
                 <Merge className="size-3.5" /> {tr('list.mergeIntoOne')}
@@ -604,7 +604,7 @@ export function TradesView() {
                 return (
                   <li
                     key={t.id}
-                    className={cn('flex items-start gap-1 py-1 pl-1 pr-0.5', selected.has(t.id) && 'bg-accent/5')}
+                    className={cn('flex items-start gap-1 py-1 ps-1 pe-0.5', selected.has(t.id) && 'bg-accent/5')}
                   >
                     <label className="grid size-11 shrink-0 cursor-pointer place-items-center">
                       <input
@@ -625,15 +625,17 @@ export function TradesView() {
                     <button
                       type="button"
                       onClick={() => openTradeForm({ trade: t })}
-                      className={cn('min-w-0 flex-1 py-2.5 text-left', t.excluded && 'opacity-50')}
+                      className={cn('min-w-0 flex-1 py-2.5 text-start', t.excluded && 'opacity-50')}
                     >
                       <div className="flex items-center gap-2">
-                        <span className="truncate font-semibold text-fg">{t.symbol}</span>
+                        <span dir="auto" className="truncate font-semibold text-fg">
+                          {t.symbol}
+                        </span>
                         <SideBadge side={t.side} />
                         {(t.screenshotFile || t.screenshotUrl) && (
                           <ImageIcon className="size-3.5 shrink-0 text-faint" aria-label={tr('list.hasChart')} />
                         )}
-                        <span className="ml-auto shrink-0">
+                        <span className="ms-auto shrink-0">
                           {isIncomplete(t) ? (
                             <StatusBadge tone="warn">{tr('list.needsBadge')}</StatusBadge>
                           ) : (
@@ -644,8 +646,12 @@ export function TradesView() {
                       <div className="mt-1 flex items-center gap-1.5 text-xs text-faint">
                         <span className="shrink-0">{formatDate(t.openedAt)}</span>
                         <span className="num shrink-0">{formatTime(t.openedAt)}</span>
-                        {setupName && <span className="truncate">· {setupName}</span>}
-                        {r != null && !isIncomplete(t) && <span className="num ml-auto shrink-0">{formatR(r)}</span>}
+                        {setupName && (
+                          <span dir="auto" className="truncate">
+                            · {setupName}
+                          </span>
+                        )}
+                        {r != null && !isIncomplete(t) && <span className="num ms-auto shrink-0">{formatR(r)}</span>}
                       </div>
                       {(t.tags.length > 0 || fills > 1) && (
                         <div className="mt-1.5 flex flex-wrap gap-1">
@@ -685,7 +691,7 @@ export function TradesView() {
               <table className="w-full text-sm">
                 <thead className="border-b border-line bg-app/50 text-xs text-muted">
                   <tr>
-                    <th className="w-[84px] px-4 py-3 text-left">
+                    <th className="w-[84px] px-4 py-3 text-start">
                       <input
                         ref={headerCheckbox}
                         type="checkbox"
@@ -703,13 +709,13 @@ export function TradesView() {
                     </th>
                     <SortHeader label={tr('list.col.date')} k="date" />
                     <SortHeader label={tr('form.symbol')} k="symbol" />
-                    <th className="px-3 py-3 text-left font-medium">{tr('form.side')}</th>
+                    <th className="px-3 py-3 text-start font-medium">{tr('form.side')}</th>
                     <SortHeader label={tr('list.col.qty')} k="qty" align="right" />
-                    <th className="px-3 py-3 text-right font-medium">{tr('list.col.entry')}</th>
-                    <th className="px-3 py-3 text-right font-medium">{tr('list.col.exit')}</th>
+                    <th className="px-3 py-3 text-end font-medium">{tr('list.col.entry')}</th>
+                    <th className="px-3 py-3 text-end font-medium">{tr('list.col.exit')}</th>
                     <SortHeader label={tr('list.col.pnl')} k="pnl" align="right" />
-                    <th className="px-3 py-3 text-left font-medium">{tr('form.tags')}</th>
-                    <th className="px-4 py-3 text-right font-medium">{tr('list.col.action')}</th>
+                    <th className="px-3 py-3 text-start font-medium">{tr('form.tags')}</th>
+                    <th className="px-4 py-3 text-end font-medium">{tr('list.col.action')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-line">
@@ -772,27 +778,29 @@ export function TradesView() {
                             )}
                             {(t.fillCount ?? 1) > 1 && t.setupId && setupNames.get(t.setupId) && <span>·</span>}
                             {t.setupId && setupNames.get(t.setupId) && (
-                              <span className="truncate">{setupNames.get(t.setupId)}</span>
+                              <span dir="auto" className="truncate">
+                                {setupNames.get(t.setupId)}
+                              </span>
                             )}
                           </div>
                         </td>
                         <td className={cn('px-3 py-2.5', dim)}>
                           <SideBadge side={t.side} />
                         </td>
-                        <td className={cn('num px-3 py-2.5 text-right text-fg', dim)}>
+                        <td className={cn('num px-3 py-2.5 text-end text-fg', dim)}>
                           {t.quantity > 0 ? formatNumber(t.quantity, 4) : '—'}
                         </td>
-                        <td className={cn('num px-3 py-2.5 text-right text-muted', dim)}>
+                        <td className={cn('num px-3 py-2.5 text-end text-muted', dim)}>
                           {t.entryPrice ? formatPrice(t.entryPrice) : '—'}
                         </td>
-                        <td className={cn('num px-3 py-2.5 text-right text-muted', dim)}>
+                        <td className={cn('num px-3 py-2.5 text-end text-muted', dim)}>
                           {t.manualPnl != null && t.exitPrice == null ? (
                             <span className="text-faint">{tr('list.manual')}</span>
                           ) : (
                             formatPrice(t.exitPrice)
                           )}
                         </td>
-                        <td className={cn('px-3 py-2.5 text-right', dim)}>
+                        <td className={cn('px-3 py-2.5 text-end', dim)}>
                           {isIncomplete(t) ? (
                             <span className="text-xs text-warn">{needsText(t)}</span>
                           ) : (
@@ -817,7 +825,7 @@ export function TradesView() {
                             )}
                           </div>
                         </td>
-                        <td className="px-4 py-2.5 text-right" onClick={(e) => e.stopPropagation()}>
+                        <td className="px-4 py-2.5 text-end" onClick={(e) => e.stopPropagation()}>
                           <div className="flex justify-end gap-0.5 opacity-60 transition group-hover:opacity-100">
                             <Button
                               size="icon"
@@ -867,7 +875,7 @@ export function TradesView() {
                 onClick={() => setPage(currentPage - 1)}
                 aria-label={tr('list.previous')}
               >
-                <ChevronLeft className="size-4" />
+                <ChevronLeft className="size-4 rtl:-scale-x-100" />
               </Button>
               <span className="num px-2 text-fg">
                 {currentPage} / {pageCount}
@@ -879,7 +887,7 @@ export function TradesView() {
                 onClick={() => setPage(currentPage + 1)}
                 aria-label={tr('list.next')}
               >
-                <ChevronRight className="size-4" />
+                <ChevronRight className="size-4 rtl:-scale-x-100" />
               </Button>
             </div>
           </div>

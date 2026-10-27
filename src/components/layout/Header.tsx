@@ -23,7 +23,7 @@ export function Header() {
         <AccountSwitcher variant="pill" align="start" />
       </div>
       <GlobalSearch />
-      <div className="flex items-center gap-2 md:ml-auto">
+      <div className="flex items-center gap-2 md:ms-auto">
         <Button
           variant="primary"
           onClick={() => openTradeForm()}
@@ -33,7 +33,7 @@ export function Header() {
         >
           <Plus className="size-4" />
           <span className="max-md:hidden">{tr('header.logTrade')}</span>
-          <kbd className="num ml-0.5 rounded bg-white/15 px-1.5 py-px text-[10px] font-medium max-md:hidden">N</kbd>
+          <kbd className="num ms-0.5 rounded bg-white/15 px-1.5 py-px text-[10px] font-medium max-md:hidden">N</kbd>
         </Button>
         <div className="mx-2 h-6 w-px bg-line max-md:hidden" />
         <div className="max-md:hidden">

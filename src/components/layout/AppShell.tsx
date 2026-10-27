@@ -110,7 +110,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 {tr('shell.testBanner', { count: sampleCount })}
                 <span className="text-muted max-md:hidden">{tr('shell.testBannerHint')}</span>
               </span>
-              <Button size="sm" variant="secondary" className="ml-auto" onClick={removeSample}>
+              <Button size="sm" variant="secondary" className="ms-auto" onClick={removeSample}>
                 <span>
                   {tr('shell.remove')}
                   <span className="max-md:hidden">{tr('shell.removeTail')}</span>

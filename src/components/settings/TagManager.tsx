@@ -99,7 +99,7 @@ export function TagManager() {
                     </span>
                   ))}
                 </span>
-                <span className="ml-auto flex flex-wrap gap-1.5">
+                <span className="ms-auto flex flex-wrap gap-1.5">
                   <Button size="sm" onClick={() => setAsking({ kind: 'merge', tags: set })}>
                     <Merge className="size-3.5" /> {tr('tags.merge')}
                   </Button>
@@ -252,7 +252,9 @@ function TagRow({
   return (
     <li className="flex items-center gap-3 py-2">
       <div className="min-w-0 flex-1">
-        <div className="truncate whitespace-pre text-sm text-fg">{line.tag}</div>
+        <div dir="auto" className="truncate whitespace-pre text-sm text-fg">
+          {line.tag}
+        </div>
         <div className="text-xs text-muted">
           {tr('common.trades', { count: line.trades })}
           {line.group && <> · {line.group}</>}
@@ -508,7 +510,7 @@ function GroupEditor({
               <Trash2 className="size-3.5" /> {tr('tags.group.delete')}
             </Button>
           )}
-          <div className="ml-auto flex gap-2">
+          <div className="ms-auto flex gap-2">
             <Button variant="ghost" onClick={onClose}>
               {tr('common.cancel')}
             </Button>
@@ -552,7 +554,9 @@ function GroupEditor({
                     checked={chosen.includes(tag)}
                     onChange={(e) => setChosen((c) => (e.target.checked ? [...c, tag] : c.filter((t) => t !== tag)))}
                   />
-                  <span className="min-w-0 truncate whitespace-pre">{tag}</span>
+                  <span dir="auto" className="min-w-0 truncate whitespace-pre">
+                    {tag}
+                  </span>
                   {elsewhere(tag) && (
                     <span className="shrink-0 text-xs text-faint">
                       {tr('tags.group.inOther', { name: elsewhere(tag) ?? '' })}

@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react';
 import type { DayAgg, EquityPoint, ScoreAxis } from '@/lib/stats';
 import { formatMoney, formatShortDate } from '@/lib/format';
-import { tr } from '@/lib/i18n';
+import { language, tr } from '@/lib/i18n';
 
 /** Minimal shape of what Recharts hands a custom tooltip */
 export interface TooltipProps<T> {
@@ -11,9 +11,13 @@ export interface TooltipProps<T> {
   payload?: Array<{ payload?: T }>;
 }
 
+/** inside a chart, which reads left to right in every language, in the language's own direction */
 function Card({ title, children }: { title: ReactNode; children: ReactNode }) {
   return (
-    <div className="rounded-lg border border-line bg-surface px-3 py-2 text-xs shadow-2xl shadow-black/40">
+    <div
+      dir={language().dir}
+      className="rounded-lg border border-line bg-surface px-3 py-2 text-xs shadow-2xl shadow-black/40"
+    >
       <div className="mb-1 font-medium text-fg">{title}</div>
       <div className="space-y-0.5 text-muted">{children}</div>
     </div>

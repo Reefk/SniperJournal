@@ -112,7 +112,9 @@ export function PlaybookView() {
                     style={{ background: setup.color ?? COLORS[0] }}
                   />
                   <div className="min-w-0 flex-1">
-                    <h3 className="truncate text-[15px] font-semibold text-fg">{setup.name}</h3>
+                    <h3 dir="auto" className="truncate text-[15px] font-semibold text-fg">
+                      {setup.name}
+                    </h3>
                     {setup.description && (
                       <p className="mt-1 text-sm leading-relaxed text-muted">{setup.description}</p>
                     )}
@@ -275,13 +277,13 @@ function RulesKept({ report, currency }: { report: RuleReport; currency: string 
       <table className="mt-2 w-full">
         <thead>
           <tr className="text-[11px] text-faint">
-            <th className="text-left font-normal">
+            <th className="text-start font-normal">
               <span className="sr-only">Rules</span>
             </th>
-            <th className="pl-2 text-right font-normal">Trades</th>
-            <th className="pl-2 text-right font-normal">Net</th>
-            <th className="pl-2 text-right font-normal">Win rate</th>
-            <th className="pl-2 text-right font-normal">Avg R</th>
+            <th className="ps-2 text-end font-normal">Trades</th>
+            <th className="ps-2 text-end font-normal">Net</th>
+            <th className="ps-2 text-end font-normal">Win rate</th>
+            <th className="ps-2 text-end font-normal">Avg R</th>
           </tr>
         </thead>
         <tbody>
@@ -292,15 +294,15 @@ function RulesKept({ report, currency }: { report: RuleReport; currency: string 
             ] as const
           ).map(([label, side]) => (
             <tr key={label}>
-              <th scope="row" className="py-0.5 text-left font-normal text-muted">
+              <th scope="row" className="py-0.5 text-start font-normal text-muted">
                 {label}
               </th>
-              <td className="num pl-2 text-right text-fg">{side?.trades ?? 0}</td>
-              <td className={cn('num pl-2 text-right', side ? net(side.net) : 'text-faint')}>
+              <td className="num ps-2 text-end text-fg">{side?.trades ?? 0}</td>
+              <td className={cn('num ps-2 text-end', side ? net(side.net) : 'text-faint')}>
                 {side ? short(side.net, currency) : '—'}
               </td>
-              <td className="num pl-2 text-right text-fg">{side ? formatPct(side.winRate, 0) : '—'}</td>
-              <td className="num pl-2 text-right text-fg">
+              <td className="num ps-2 text-end text-fg">{side ? formatPct(side.winRate, 0) : '—'}</td>
+              <td className="num ps-2 text-end text-fg">
                 {side?.avgR != null ? `${side.avgR >= 0 ? '+' : ''}${side.avgR.toFixed(2)}R` : '—'}
               </td>
             </tr>

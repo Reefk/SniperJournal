@@ -37,6 +37,17 @@ export function formatMoney(
 }
 
 /**
+ * A short amount, split for a box too narrow for it on one line: the number,
+ * then what the language writes after it ("тыс. $", "US$", "हज़ार"). Null when
+ * nothing is written after the number, as in English ("+$1.36K").
+ */
+export function numberAndUnit(text: string): [string, string] | null {
+  // \s takes in the no-break spaces Intl puts there
+  const match = /^(.*\d)\s+(\D.*)$/s.exec(text);
+  return match ? [match[1], match[2]] : null;
+}
+
+/**
  * Axis labels: plain thousands until the numbers get big, then compact. `span`
  * is how much the axis covers (its highest value less its lowest): an axis
  * spanning little of a big number keeps whole dollars, where compact labels

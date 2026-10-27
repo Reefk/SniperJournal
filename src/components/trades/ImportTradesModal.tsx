@@ -451,7 +451,7 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
                     : tr(likely.length === 1 ? 'impw.likely.leftOut.one' : 'impw.likely.leftOut.many')}
                 </span>
               </p>
-              <ul className="mt-2 space-y-0.5 pl-6 text-xs text-muted">
+              <ul className="mt-2 space-y-0.5 ps-6 text-xs text-muted">
                 {likely.slice(0, 4).map((t) => (
                   <li key={t.id} className="num">
                     {t.symbol} {sideWord(t.side)} · {formatShortDate(t.openedAt)} {formatTime(t.openedAt)} ·{' '}
@@ -460,7 +460,7 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
                 ))}
                 {likely.length > 4 && <li>{tr('impw.more', { count: likely.length - 4 })}</li>}
               </ul>
-              <label className="mt-2 flex cursor-pointer items-center gap-2 pl-6 text-xs text-muted">
+              <label className="mt-2 flex cursor-pointer items-center gap-2 ps-6 text-xs text-muted">
                 <input
                   type="checkbox"
                   className="size-4"
@@ -493,7 +493,7 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
                   )}
                 </span>
               </p>
-              <ul className="mt-2 space-y-0.5 pl-6 text-xs text-muted">
+              <ul className="mt-2 space-y-0.5 ps-6 text-xs text-muted">
                 {finishable.slice(0, 4).map((t) => {
                   const was = journalById.get(t.id);
                   const part = was != null && was.quantity > t.quantity + 1e-9;
@@ -518,7 +518,7 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
                 })}
                 {finishable.length > 4 && <li>{tr('impw.more', { count: finishable.length - 4 })}</li>}
               </ul>
-              <label className="mt-2 flex cursor-pointer items-center gap-2 pl-6 text-xs text-muted">
+              <label className="mt-2 flex cursor-pointer items-center gap-2 ps-6 text-xs text-muted">
                 <input
                   type="checkbox"
                   className="size-4"
@@ -540,7 +540,7 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
                   <span>{tr('impw.fee.fromFile')}</span>
                 )}
               </p>
-              <div className="mt-3 grid grid-cols-1 gap-3 pl-6 md:grid-cols-2">
+              <div className="mt-3 grid grid-cols-1 gap-3 ps-6 md:grid-cols-2">
                 <Field label={tr(missing ? 'impw.fee.toAdd' : 'impw.fee.fees')}>
                   <Select
                     value={choice.per}
@@ -570,7 +570,7 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
                   </Field>
                 )}
               </div>
-              <p className="mt-2 pl-6 text-xs leading-relaxed text-muted">
+              <p className="mt-2 ps-6 text-xs leading-relaxed text-muted">
                 {rich(tr('impw.fee.totals'), {
                   money: () => <span className="num text-fg">{formatMoney(feesTotal, currency)}</span>,
                   pnl: () => <PnlValue value={netTotal} currency={currency} />,
@@ -643,10 +643,12 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
                 {layout.columns.map((column) => (
                   <div key={column.index} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] items-center gap-3">
                     <div className="min-w-0">
-                      <div className="truncate text-sm text-fg">
+                      <div dir="auto" className="truncate text-sm text-fg">
                         {column.header || tr('impw.columns.unnamed', { n: column.index + 1 })}
                       </div>
-                      <div className="num truncate text-[11px] text-faint">{column.sample || '—'}</div>
+                      <div dir="auto" className="num truncate text-[11px] text-faint">
+                        {column.sample || '—'}
+                      </div>
                       {column.guessed && <div className="text-[11px] text-warn">{tr('impw.columns.guessedOne')}</div>}
                     </div>
                     <Select
@@ -709,13 +711,13 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
               <table className="w-full whitespace-nowrap text-sm md:whitespace-normal">
                 <thead className="border-b border-line bg-app/50 text-xs text-muted">
                   <tr>
-                    <th className="px-3 py-2 text-left font-medium">{tr('impw.col.date')}</th>
-                    <th className="px-3 py-2 text-left font-medium">{tr('form.symbol')}</th>
-                    <th className="px-3 py-2 text-left font-medium">{tr('form.side')}</th>
-                    <th className="px-3 py-2 text-right font-medium">{tr('list.col.qty')}</th>
-                    <th className="px-3 py-2 text-right font-medium">{tr('list.col.entry')}</th>
-                    <th className="px-3 py-2 text-right font-medium">{tr('list.col.exit')}</th>
-                    <th className="px-3 py-2 text-right font-medium">{tr('list.col.pnl')}</th>
+                    <th className="px-3 py-2 text-start font-medium">{tr('impw.col.date')}</th>
+                    <th className="px-3 py-2 text-start font-medium">{tr('form.symbol')}</th>
+                    <th className="px-3 py-2 text-start font-medium">{tr('form.side')}</th>
+                    <th className="px-3 py-2 text-end font-medium">{tr('list.col.qty')}</th>
+                    <th className="px-3 py-2 text-end font-medium">{tr('list.col.entry')}</th>
+                    <th className="px-3 py-2 text-end font-medium">{tr('list.col.exit')}</th>
+                    <th className="px-3 py-2 text-end font-medium">{tr('list.col.pnl')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-line">
@@ -734,7 +736,7 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
                       <td className="px-3 py-2 font-semibold text-fg">
                         {t.symbol}
                         {(t.fillCount ?? 1) > 1 && (
-                          <span className="ml-1.5 text-[11px] font-normal text-accent">
+                          <span className="ms-1.5 text-[11px] font-normal text-accent">
                             {tr('list.fills', { count: t.fillCount ?? 1 })}
                           </span>
                         )}
@@ -742,12 +744,12 @@ export function ImportBody({ onClose }: { onClose: () => void }) {
                       <td className="px-3 py-2">
                         <SideBadge side={t.side} />
                       </td>
-                      <td className="num px-3 py-2 text-right text-fg">{t.quantity || '—'}</td>
-                      <td className="num px-3 py-2 text-right text-muted">
+                      <td className="num px-3 py-2 text-end text-fg">{t.quantity || '—'}</td>
+                      <td className="num px-3 py-2 text-end text-muted">
                         {t.entryPrice ? formatPrice(t.entryPrice) : '—'}
                       </td>
-                      <td className="num px-3 py-2 text-right text-muted">{formatPrice(t.exitPrice)}</td>
-                      <td className="px-3 py-2 text-right">
+                      <td className="num px-3 py-2 text-end text-muted">{formatPrice(t.exitPrice)}</td>
+                      <td className="px-3 py-2 text-end">
                         {t.needsReview ? (
                           <span className="text-xs text-warn">{describeGaps(t)}</span>
                         ) : (

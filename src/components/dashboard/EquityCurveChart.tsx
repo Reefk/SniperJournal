@@ -26,7 +26,8 @@ export function EquityCurveChart({
     points.reduce((lo, p) => Math.min(lo, p.equity), Infinity);
 
   return (
-    <ResponsiveContainer width="100%" height="100%">
+    // left to right in every language, as time runs; Arabic labels read right to left inside it
+    <ResponsiveContainer width="100%" height="100%" style={{ direction: 'ltr' }}>
       <AreaChart
         data={points}
         margin={{ top: 8, right: 12, left: 4, bottom: 0 }}

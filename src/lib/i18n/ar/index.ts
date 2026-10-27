@@ -1,5 +1,6 @@
 import type { Messages } from '../en';
 import type { Translation } from '../types';
+import { calendar } from './calendar';
 import { common } from './common';
 import { dashboard } from './dashboard';
 import { format } from './format';
@@ -14,6 +15,7 @@ import { trade } from './trade';
 import { ui } from './ui';
 
 export const ar: Translation<Messages> = {
+  ...calendar,
   ...common,
   ...dashboard,
   ...format,

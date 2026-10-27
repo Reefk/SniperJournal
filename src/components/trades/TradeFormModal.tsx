@@ -571,15 +571,16 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
               </Select>
             </Field>
             <Field label={tr('form.leverage')} hint={tr('common.optional')}>
-              <div className="relative">
+              {/* "1 ×" reads left to right in every language, as the number in it does */}
+              <div className="relative" dir="ltr">
                 <Input
                   inputMode="decimal"
-                  className="num pr-7"
+                  className="num pe-7"
                   value={form.leverage}
                   onChange={(e) => set('leverage', e.target.value)}
                   placeholder="1"
                 />
-                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-faint">
+                <span className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 text-xs text-faint">
                   ×
                 </span>
               </div>
@@ -746,7 +747,7 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
           </Button>
         )}
         <span className="flex-1 md:hidden" />
-        <span className="ml-auto mr-2 text-xs text-faint max-md:hidden">{tr('form.ctrlEnter')}</span>
+        <span className="ms-auto me-2 text-xs text-faint max-md:hidden">{tr('form.ctrlEnter')}</span>
         <Button variant="ghost" className="max-md:hidden" onClick={onDone}>
           {tr('common.cancel')}
         </Button>

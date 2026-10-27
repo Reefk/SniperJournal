@@ -306,7 +306,7 @@ export function DashboardView() {
                   : tr('dash.equityHint')
               }
               actions={
-                <div className="text-right">
+                <div className="text-end">
                   <div
                     className={`num text-lg font-semibold ${stats.net > 0 ? 'text-profit' : stats.net < 0 ? 'text-loss' : 'text-fg'}`}
                   >
@@ -427,7 +427,7 @@ export function DashboardView() {
             {tr('dash.openPositions', { count: openCount })}
             <span className="text-muted">{tr('dash.openExcluded', { count: openCount })}</span>
           </span>
-          <Link href="/trades" className="ml-auto text-xs text-accent underline-offset-4 hover:underline">
+          <Link href="/trades" className="ms-auto text-xs text-accent underline-offset-4 hover:underline">
             {tr('dash.openTable')}
           </Link>
         </div>

@@ -109,7 +109,7 @@ export function CopyNotice() {
             ? tr(native ? 'copy.lostErrorNative' : 'copy.lostErrorWeb', { why })
             : tr(native ? 'copy.lostNative' : 'copy.lostWeb', { why })}
       </span>
-      <span className="ml-auto flex gap-2">
+      <span className="ms-auto flex gap-2">
         {lost && (
           <Button size="sm" variant="secondary" onClick={() => exportBackup(data)}>
             <Download className="size-4" /> {tr('common.downloadBackup')}
@@ -144,7 +144,7 @@ export function RecoveredNotice() {
           path: (text) => <span className="num break-all text-muted">{text}</span>,
         })}
       </span>
-      <Button size="sm" variant="secondary" className="ml-auto" onClick={dismissRecovered}>
+      <Button size="sm" variant="secondary" className="ms-auto" onClick={dismissRecovered}>
         {tr('common.ok')}
       </Button>
     </div>

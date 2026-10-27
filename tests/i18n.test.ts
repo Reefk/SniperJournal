@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { decimalMark, isolate, LANGUAGES, messagesOf, setLanguage, tr, type Language } from '@/lib/i18n';
 import { en } from '@/lib/i18n/en';
 import type { Message, PluralForms } from '@/lib/i18n/types';
-import { formatMoney, formatNumber, formatPct, formatPrice, formatR, formatRatio } from '@/lib/format';
+import { formatMoney, formatNumber, formatPct, formatPrice, formatR, formatRatio, numberAndUnit } from '@/lib/format';
 import { withoutKept } from './i18n-kept';
 
 /**
@@ -147,6 +147,35 @@ describe('numbers inside the text', () => {
     for (const { code } of LANGUAGES) {
       setLanguage(code);
       expect(marked(shown()), code).toEqual(code === 'ar' ? shown().slice(0, 7) : []);
+    }
+  });
+});
+
+describe('a short amount on two lines', () => {
+  it('puts what is written after the number on a line of its own', () => {
+    expect(numberAndUnit('+1,36 тыс. $')).toEqual(['+1,36', 'тыс. $']);
+    // Intl's no-break spaces, between the parts and inside one
+    expect(numberAndUnit('-740,31 US$')).toEqual(['-740,31', 'US$']);
+    expect(numberAndUnit('+1,36 mil US$')).toEqual(['+1,36', 'mil US$']);
+    expect(numberAndUnit('+$1.36 हज़ार')).toEqual(['+$1.36', 'हज़ार']);
+    // a thousands separator that is a space stays inside the number
+    expect(numberAndUnit('+1 234,56 $')).toEqual(['+1 234,56', '$']);
+  });
+
+  it('leaves whole an amount with nothing after the number, or with its currency before it', () => {
+    expect(numberAndUnit('+$1.36K')).toBeNull();
+    expect(numberAndUnit('-$740.31')).toBeNull();
+    expect(numberAndUnit('+CHF 1.36K')).toBeNull();
+    expect(numberAndUnit('')).toBeNull();
+  });
+
+  it("splits the languages' own short amounts where the phone calendar needs it", () => {
+    // Spanish, Russian and Hindi write "thousand" or the currency after the number; English and Arabic don't
+    const splits: Record<Language, boolean> = { en: false, es: true, ru: true, ar: false, hi: true };
+    for (const { code } of LANGUAGES) {
+      setLanguage(code);
+      const short = formatMoney(1360, 'USD', { sign: true, compact: true });
+      expect(numberAndUnit(short) !== null, `${code}: ${short}`).toBe(splits[code]);
     }
   });
 });

@@ -115,7 +115,7 @@ export function InsightsView() {
                   <span className="rounded border border-line px-1.5 py-0.5 text-[11px] font-medium text-muted">
                     {insight.category}
                   </span>
-                  {insight.metric && <span className="num ml-auto text-xs text-faint">{insight.metric}</span>}
+                  {insight.metric && <span className="num ms-auto text-xs text-faint">{insight.metric}</span>}
                 </div>
                 <h3 className="mt-3 text-[15px] font-semibold leading-snug text-fg">{insight.title}</h3>
                 <p className="mt-1.5 text-sm leading-relaxed text-muted">{insight.body}</p>
@@ -134,12 +134,14 @@ export function InsightsView() {
                 <tbody>
                   {b.rows.map((row) => (
                     <tr key={row.key} className="border-b border-line last:border-0">
-                      <td className="max-w-[120px] truncate px-2 py-2 text-fg">{row.label}</td>
-                      <td className="num px-1 py-2 text-right text-xs text-faint">{row.trades}×</td>
-                      <td className="num px-1 py-2 text-right text-xs text-muted">{formatPct(row.winRate, 0)}</td>
+                      <td dir="auto" className="max-w-[120px] truncate px-2 py-2 text-fg">
+                        {row.label}
+                      </td>
+                      <td className="num px-1 py-2 text-end text-xs text-faint">{row.trades}×</td>
+                      <td className="num px-1 py-2 text-end text-xs text-muted">{formatPct(row.winRate, 0)}</td>
                       <td
                         className={cn(
-                          'num px-2 py-2 text-right font-medium',
+                          'num px-2 py-2 text-end font-medium',
                           row.net > 0 ? 'text-profit' : row.net < 0 ? 'text-loss' : 'text-muted',
                         )}
                       >
@@ -159,7 +161,7 @@ export function InsightsView() {
           <Lightbulb className="size-4 text-accent" />
           <h2 className="text-sm font-semibold text-fg">Sniper Score breakdown</h2>
           {score.overall != null && (
-            <span className="num ml-auto text-sm font-semibold text-accent">{score.overall} / 100</span>
+            <span className="num ms-auto text-sm font-semibold text-accent">{score.overall} / 100</span>
           )}
         </div>
         <div className="mt-4 space-y-2.5">
@@ -178,7 +180,7 @@ export function InsightsView() {
                   }}
                 />
               </div>
-              <span className={cn('num w-16 text-right text-xs md:w-32', axis.rated ? 'text-fg' : 'text-faint')}>
+              <span className={cn('num w-16 text-end text-xs md:w-32', axis.rated ? 'text-fg' : 'text-faint')}>
                 {axis.rated ? Math.round(axis.score) : 'not rated'}
               </span>
             </div>

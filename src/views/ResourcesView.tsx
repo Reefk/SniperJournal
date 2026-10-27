@@ -80,7 +80,9 @@ export function ResourcesView() {
                 {items.map((r) => (
                   <article key={r.id} className="group flex flex-col rounded-xl border border-line bg-surface p-4">
                     <div className="flex items-start gap-2">
-                      <h3 className="min-w-0 flex-1 truncate text-sm font-medium text-fg">{r.title}</h3>
+                      <h3 dir="auto" className="min-w-0 flex-1 truncate text-sm font-medium text-fg">
+                        {r.title}
+                      </h3>
                       {/* a phone has no hover to reveal them, so they are always there */}
                       <div className="-my-2 flex shrink-0 gap-0.5 transition md:my-0 md:opacity-0 md:group-hover:opacity-100">
                         <Button
@@ -112,7 +114,9 @@ export function ResourcesView() {
                         className="mt-3 inline-flex items-center gap-1.5 truncate text-xs text-accent underline-offset-4 hover:underline"
                       >
                         <ExternalLink className="size-3.5 shrink-0" />
-                        <span className="truncate">{r.url?.replace(/^https?:\/\//, '')}</span>
+                        <span dir="auto" className="truncate">
+                          {r.url?.replace(/^https?:\/\//, '')}
+                        </span>
                       </a>
                     )}
                   </article>

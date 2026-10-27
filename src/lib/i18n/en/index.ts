@@ -1,3 +1,4 @@
+import { calendar } from './calendar';
 import { common } from './common';
 import { dashboard } from './dashboard';
 import { format } from './format';
@@ -16,6 +17,7 @@ import { ui } from './ui';
  * languages have the same files, with every key (see ../types.ts).
  */
 export const en = {
+  ...calendar,
   ...common,
   ...dashboard,
   ...format,

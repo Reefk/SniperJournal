@@ -58,7 +58,7 @@ export function Popover({
           data-popover
           className={cn(
             'animate-pop absolute top-full z-40 mt-2 rounded-lg border border-line bg-surface p-1 shadow-2xl shadow-black/40 data-[side=top]:bottom-full data-[side=top]:top-auto data-[side=top]:mb-2 data-[side=top]:mt-0',
-            align === 'end' ? 'right-0' : 'left-0',
+            align === 'end' ? 'end-0' : 'start-0',
             className,
           )}
         >
@@ -89,12 +89,14 @@ export function MenuItem({
       type="button"
       onClick={onClick}
       className={cn(
-        'flex w-full items-center gap-2.5 rounded-md px-2.5 py-3 text-left text-sm transition md:py-2',
+        'flex w-full items-center gap-2.5 rounded-md px-2.5 py-3 text-start text-sm transition md:py-2',
         danger ? 'text-loss hover:bg-loss/10' : 'text-fg hover:bg-raised',
       )}
     >
       {Icon && <Icon className={cn('size-4 shrink-0', danger ? 'text-loss' : 'text-muted')} />}
-      <span className="min-w-0 flex-1 truncate">{children}</span>
+      <span dir="auto" className="min-w-0 flex-1 truncate">
+        {children}
+      </span>
       {trailing}
       {selected && <Check className="size-4 shrink-0 text-accent" />}
     </button>

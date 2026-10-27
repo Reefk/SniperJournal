@@ -20,7 +20,8 @@ export function DailyPnlChart({ days, currency }: { days: DayAgg[]; currency: st
   const theme = useChartTheme();
 
   return (
-    <ResponsiveContainer width="100%" height="100%">
+    // left to right in every language, as time runs; Arabic labels read right to left inside it
+    <ResponsiveContainer width="100%" height="100%" style={{ direction: 'ltr' }}>
       <BarChart data={days} margin={{ top: 8, right: 12, left: 4, bottom: 0 }}>
         <CartesianGrid stroke={theme.grid} vertical={false} />
         <XAxis

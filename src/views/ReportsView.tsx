@@ -232,10 +232,10 @@ export function ReportsView() {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-xs text-muted">
-                <th className="px-3 py-2 text-left font-medium">Month</th>
-                <th className="px-3 py-2 text-right font-medium">Trades</th>
-                <th className="px-3 py-2 text-right font-medium">Win rate</th>
-                <th className="px-3 py-2 text-right font-medium">Net</th>
+                <th className="px-3 py-2 text-start font-medium">Month</th>
+                <th className="px-3 py-2 text-end font-medium">Trades</th>
+                <th className="px-3 py-2 text-end font-medium">Win rate</th>
+                <th className="px-3 py-2 text-end font-medium">Net</th>
               </tr>
             </thead>
             <tbody>
@@ -246,13 +246,11 @@ export function ReportsView() {
                     <td className="px-3 py-2 text-fg">
                       {monthName(m - 1, 'short')} {y}
                     </td>
-                    <td className="num px-3 py-2 text-right text-muted">{agg.trades}</td>
-                    <td className="num px-3 py-2 text-right text-muted">
-                      {formatPct((agg.wins / agg.trades) * 100, 0)}
-                    </td>
+                    <td className="num px-3 py-2 text-end text-muted">{agg.trades}</td>
+                    <td className="num px-3 py-2 text-end text-muted">{formatPct((agg.wins / agg.trades) * 100, 0)}</td>
                     <td
                       className={cn(
-                        'num px-3 py-2 text-right font-medium',
+                        'num px-3 py-2 text-end font-medium',
                         agg.net > 0 ? 'text-profit' : agg.net < 0 ? 'text-loss' : 'text-muted',
                       )}
                     >
@@ -278,12 +276,14 @@ export function ReportsView() {
                   <tbody>
                     {b.rows.slice(0, 6).map((row) => (
                       <tr key={row.key} className="border-b border-line last:border-0">
-                        <td className="max-w-[130px] truncate px-3 py-2 text-fg md:max-w-[160px]">{row.label}</td>
-                        <td className="num px-2 py-2 text-right text-xs text-faint">{row.trades}×</td>
-                        <td className="num px-2 py-2 text-right text-xs text-muted">{formatPct(row.winRate, 0)}</td>
+                        <td dir="auto" className="max-w-[130px] truncate px-3 py-2 text-fg md:max-w-[160px]">
+                          {row.label}
+                        </td>
+                        <td className="num px-2 py-2 text-end text-xs text-faint">{row.trades}×</td>
+                        <td className="num px-2 py-2 text-end text-xs text-muted">{formatPct(row.winRate, 0)}</td>
                         <td
                           className={cn(
-                            'num px-3 py-2 text-right font-medium',
+                            'num px-3 py-2 text-end font-medium',
                             row.net > 0 ? 'text-profit' : row.net < 0 ? 'text-loss' : 'text-muted',
                           )}
                         >
@@ -328,7 +328,7 @@ function Row({ label, value, tone, info }: { label: string; value: string; tone?
       </span>
       <span
         className={cn(
-          'num text-right text-sm font-medium',
+          'num text-end text-sm font-medium',
           tone === 'profit' ? 'text-profit' : tone === 'loss' ? 'text-loss' : 'text-fg',
         )}
       >
@@ -359,11 +359,11 @@ function TagGroupTables({ tables, currency }: { tables: GroupTable[]; currency: 
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-xs text-muted">
-                  <th className="px-2 py-2 text-left font-medium md:px-3">Tag</th>
-                  <th className="px-2 py-2 text-right font-medium md:px-3">Trades</th>
-                  <th className="px-2 py-2 text-right font-medium max-md:hidden md:px-3">Win rate</th>
-                  <th className="px-2 py-2 text-right font-medium md:px-3">Net</th>
-                  <th className="px-2 py-2 text-right font-medium md:px-3">Avg R</th>
+                  <th className="px-2 py-2 text-start font-medium md:px-3">Tag</th>
+                  <th className="px-2 py-2 text-end font-medium md:px-3">Trades</th>
+                  <th className="px-2 py-2 text-end font-medium max-md:hidden md:px-3">Win rate</th>
+                  <th className="px-2 py-2 text-end font-medium md:px-3">Net</th>
+                  <th className="px-2 py-2 text-end font-medium md:px-3">Avg R</th>
                 </tr>
               </thead>
               <tbody>
@@ -373,6 +373,7 @@ function TagGroupTables({ tables, currency }: { tables: GroupTable[]; currency: 
                   return (
                     <tr key={row.tag} className="border-t border-line" data-mark={mark ?? undefined}>
                       <td
+                        dir="auto"
                         className={cn(
                           'max-w-[140px] truncate whitespace-pre px-2 py-2 md:px-3',
                           few ? 'text-faint' : 'text-fg',
@@ -380,7 +381,7 @@ function TagGroupTables({ tables, currency }: { tables: GroupTable[]; currency: 
                       >
                         {row.tag}
                       </td>
-                      <td className="num px-2 py-2 text-right md:px-3">
+                      <td className="num px-2 py-2 text-end md:px-3">
                         <span
                           className={cn(
                             few ? 'text-faint' : 'text-muted',
@@ -392,21 +393,18 @@ function TagGroupTables({ tables, currency }: { tables: GroupTable[]; currency: 
                       </td>
                       <td
                         className={cn(
-                          'num px-2 py-2 text-right max-md:hidden md:px-3',
+                          'num px-2 py-2 text-end max-md:hidden md:px-3',
                           few ? 'text-faint' : 'text-muted',
                         )}
                       >
                         {formatPct(row.winRate, 0)}
                       </td>
                       <td
-                        className={cn(
-                          'num px-2 py-2 text-right font-medium md:px-3',
-                          few ? 'text-faint' : tone(row.net),
-                        )}
+                        className={cn('num px-2 py-2 text-end font-medium md:px-3', few ? 'text-faint' : tone(row.net))}
                       >
                         {formatMoney(row.net, currency, { sign: true, compact: true })}
                       </td>
-                      <td className={cn('num px-2 py-2 text-right md:px-3', few ? 'text-faint' : 'text-muted')}>
+                      <td className={cn('num px-2 py-2 text-end md:px-3', few ? 'text-faint' : 'text-muted')}>
                         {row.avgR == null ? '—' : `${row.avgR >= 0 ? '+' : ''}${row.avgR.toFixed(2)}R`}
                       </td>
                     </tr>
@@ -480,11 +478,11 @@ function MistakesReport({
       <table className="w-full text-sm">
         <thead>
           <tr className="text-xs text-muted">
-            <th className="px-2 py-2 text-left font-medium md:px-3">Mistake</th>
-            <th className="px-2 py-2 text-right font-medium md:px-3">Times</th>
-            <th className="px-2 py-2 text-right font-medium max-md:hidden md:px-3">Win rate</th>
-            <th className="px-2 py-2 text-right font-medium md:px-3">Net</th>
-            <th className="px-2 py-2 text-right font-medium md:px-3">Cost</th>
+            <th className="px-2 py-2 text-start font-medium md:px-3">Mistake</th>
+            <th className="px-2 py-2 text-end font-medium md:px-3">Times</th>
+            <th className="px-2 py-2 text-end font-medium max-md:hidden md:px-3">Win rate</th>
+            <th className="px-2 py-2 text-end font-medium md:px-3">Net</th>
+            <th className="px-2 py-2 text-end font-medium md:px-3">Cost</th>
           </tr>
         </thead>
         <tbody>
@@ -494,16 +492,14 @@ function MistakesReport({
                 {line.mistake}
                 {!line.listed && <span className="text-xs text-faint"> (not on your list)</span>}
               </td>
-              <td className="num px-2 py-2 text-right text-muted md:px-3">{line.trades}</td>
-              <td className="num px-2 py-2 text-right text-muted max-md:hidden md:px-3">
-                {formatPct(line.winRate, 0)}
-              </td>
-              <td className={cn('num px-2 py-2 text-right md:px-3', tone(line.net))}>
+              <td className="num px-2 py-2 text-end text-muted md:px-3">{line.trades}</td>
+              <td className="num px-2 py-2 text-end text-muted max-md:hidden md:px-3">{formatPct(line.winRate, 0)}</td>
+              <td className={cn('num px-2 py-2 text-end md:px-3', tone(line.net))}>
                 {formatMoney(line.net, currency, { sign: true, compact: true })}
               </td>
               <td
                 className={cn(
-                  'num px-2 py-2 text-right font-medium md:px-3',
+                  'num px-2 py-2 text-end font-medium md:px-3',
                   isMoney(line.cost) ? 'text-loss' : 'text-faint',
                 )}
               >

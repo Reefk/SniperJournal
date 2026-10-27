@@ -56,7 +56,7 @@ export function GlobalSearch() {
       <Button
         size="icon"
         variant="ghost"
-        className="ml-auto md:hidden"
+        className="ms-auto md:hidden"
         aria-label={tr('search.open')}
         aria-expanded={phoneOpen}
         onClick={() => {
@@ -69,11 +69,11 @@ export function GlobalSearch() {
       <div
         className={cn(
           'md:contents',
-          phoneOpen ? 'absolute inset-x-0 bottom-0 z-40 flex h-14 items-center gap-1 bg-surface pl-3 pr-1' : 'hidden',
+          phoneOpen ? 'absolute inset-x-0 bottom-0 z-40 flex h-14 items-center gap-1 bg-surface ps-3 pe-1' : 'hidden',
         )}
       >
         <div className="relative w-full md:w-[380px]">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-faint" />
+          <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-faint" />
           <input
             ref={inputRef}
             value={query}
@@ -90,15 +90,15 @@ export function GlobalSearch() {
             placeholder={tr('search.placeholder')}
             aria-label={tr('search.label')}
             enterKeyHint="search"
-            className="h-10 w-full rounded-md border border-line bg-app pl-9 pr-3 text-sm text-fg placeholder:text-placeholder transition focus:border-accent/70 focus:outline-none focus:ring-2 focus:ring-accent/20 md:h-9 md:pr-16"
+            className="h-10 w-full rounded-md border border-line bg-app ps-9 pe-3 text-sm text-fg placeholder:text-placeholder transition focus:border-accent/70 focus:outline-none focus:ring-2 focus:ring-accent/20 md:h-9 md:pe-16"
           />
-          <kbd className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded border border-line px-1.5 py-px text-[10px] text-faint max-md:hidden">
+          <kbd className="pointer-events-none absolute end-2.5 top-1/2 -translate-y-1/2 rounded border border-line px-1.5 py-px text-[10px] text-faint max-md:hidden">
             Ctrl K
           </kbd>
 
           {focused && query.trim() && (
             <div
-              className="animate-pop absolute left-0 right-0 top-full z-40 mt-2 overflow-hidden rounded-lg border border-line bg-surface shadow-2xl shadow-black/40"
+              className="animate-pop absolute start-0 end-0 top-full z-40 mt-2 overflow-hidden rounded-lg border border-line bg-surface shadow-2xl shadow-black/40"
               onMouseDown={(e) => e.preventDefault()}
             >
               {results.length === 0 ? (
@@ -113,9 +113,11 @@ export function GlobalSearch() {
                           openTradeForm({ trade: t });
                           inputRef.current?.blur();
                         }}
-                        className="flex w-full items-center gap-3 rounded-md px-3 py-3 text-left transition hover:bg-raised md:py-2"
+                        className="flex w-full items-center gap-3 rounded-md px-3 py-3 text-start transition hover:bg-raised md:py-2"
                       >
-                        <span className="w-16 truncate font-semibold text-fg">{t.symbol}</span>
+                        <span dir="auto" className="w-16 truncate font-semibold text-fg">
+                          {t.symbol}
+                        </span>
                         <SideBadge side={t.side} />
                         <span className="flex-1 truncate text-xs text-muted">{formatDate(t.openedAt)}</span>
                         <PnlValue

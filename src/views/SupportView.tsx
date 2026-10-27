@@ -188,9 +188,9 @@ export function SupportView() {
             <details key={item.q} className="group px-4 py-3.5 md:px-5">
               <summary className="cursor-pointer select-none list-none text-sm font-medium text-fg marker:hidden">
                 <span className="inline-block transition group-open:rotate-90">›</span>
-                <span className="ml-2">{item.q}</span>
+                <span className="ms-2">{item.q}</span>
               </summary>
-              <p className="ml-5 mt-2 text-sm leading-relaxed text-muted">{item.a}</p>
+              <p className="ms-5 mt-2 text-sm leading-relaxed text-muted">{item.a}</p>
             </details>
           ))}
         </div>

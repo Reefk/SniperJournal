@@ -10,7 +10,7 @@ export function SideBadge({ side }: { side: Side }) {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-0.5 rounded border py-0.5 pl-1 pr-1.5 text-[11px] font-semibold',
+        'inline-flex items-center gap-0.5 rounded border py-0.5 ps-1 pe-1.5 text-[11px] font-semibold',
         long ? 'border-profit/25 bg-profit/10 text-profit' : 'border-loss/25 bg-loss/10 text-loss',
       )}
     >

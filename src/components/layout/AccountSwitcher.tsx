@@ -34,13 +34,15 @@ export function AccountSwitcher({ variant, align }: { variant: 'card' | 'pill'; 
               type="button"
               onClick={toggle}
               aria-expanded={open}
-              className="flex w-full items-center gap-3 rounded-lg border border-line bg-app px-3 py-2.5 text-left transition hover:border-line-strong"
+              className="flex w-full items-center gap-3 rounded-lg border border-line bg-app px-3 py-2.5 text-start transition hover:border-line-strong"
             >
               <div className="grid size-8 shrink-0 place-items-center rounded-md bg-raised">
                 {isAll ? <Layers className="size-4 text-accent" /> : <Wallet className="size-4 text-accent" />}
               </div>
               <div className="min-w-0 flex-1">
-                <div className="truncate text-[13px] font-medium text-fg">{activeLabel}</div>
+                <div dir="auto" className="truncate text-[13px] font-medium text-fg">
+                  {activeLabel}
+                </div>
                 <div className="num truncate text-xs text-muted">{formatMoney(activeBalance, currency)}</div>
               </div>
               <ChevronsUpDown className="size-4 shrink-0 text-faint" />
@@ -50,10 +52,12 @@ export function AccountSwitcher({ variant, align }: { variant: 'card' | 'pill'; 
               type="button"
               onClick={toggle}
               aria-expanded={open}
-              className="flex h-10 items-center gap-2 rounded-md border border-line bg-app pl-2.5 pr-2 text-sm transition hover:border-line-strong md:h-9"
+              className="flex h-10 items-center gap-2 rounded-md border border-line bg-app ps-2.5 pe-2 text-sm transition hover:border-line-strong md:h-9"
             >
               <Wallet className="size-3.5 text-faint" />
-              <span className="max-w-[96px] truncate text-fg md:max-w-[160px]">{activeLabel}</span>
+              <span dir="auto" className="max-w-[96px] truncate text-fg md:max-w-[160px]">
+                {activeLabel}
+              </span>
               <ChevronsUpDown className="size-3.5 text-faint" />
             </button>
           )

@@ -6,16 +6,26 @@ import type { Trade } from '@/lib/types';
 import { useJournal } from '@/store/JournalProvider';
 import { useUI } from '@/store/UIProvider';
 import { aggregateDays, computeStats } from '@/lib/stats';
-import { formatDate, formatMoney, formatMonthKey, formatPct, monthName, weekdayName } from '@/lib/format';
+import {
+  formatDate,
+  formatMoney,
+  formatMonthKey,
+  formatPct,
+  monthName,
+  numberAndUnit,
+  weekdayName,
+} from '@/lib/format';
 import { isClosed, netPnl, tradeDay } from '@/lib/trade-math';
 import { cn, dateKey, pad2 } from '@/lib/utils';
 import { realised } from '@/store/selectors';
+import { tr } from '@/lib/i18n';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { MetricCard, toneFor } from '@/components/ui/MetricCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { PnlValue, SideBadge } from '@/components/ui/StatusBadge';
 import { Modal } from '@/components/ui/Modal';
+import { rich } from '@/components/ui/Rich';
 
 /** Monday-first grid cells, including the padding days from adjacent months */
 function monthGrid(year: number, month: number): Array<{ key: string; inMonth: boolean; day: number }> {
@@ -30,6 +40,19 @@ function monthGrid(year: number, month: number): Array<{ key: string; inMonth: b
   }
   // trim a trailing week that belongs entirely to the next month
   return cells.slice(0, cells.slice(35).every((c) => !c.inMonth) ? 35 : 42);
+}
+
+/** a short amount, with a unit the language writes after the number ("тыс. $") on a line of its own */
+function ShortAmount({ text }: { text: string }) {
+  const parts = numberAndUnit(text);
+  if (!parts) return text;
+  return (
+    <>
+      {parts[0]}
+      <br />
+      {parts[1]}
+    </>
+  );
 }
 
 export function CalendarView() {
@@ -87,29 +110,34 @@ export function CalendarView() {
   return (
     <>
       <PageHeader
-        title="Performance Calendar"
+        title={tr('cal.title')}
         description={
           <>
-            {activeLabel} · <span className="md:hidden">tap</span>
-            <span className="max-md:hidden">click</span> any day to see the trades behind the number
+            {activeLabel} ·{' '}
+            {rich(tr('cal.hint'), {
+              phone: (text) => <span className="md:hidden">{text}</span>,
+              pc: (text) => <span className="max-md:hidden">{text}</span>,
+            })}
           </>
         }
         actions={
           <>
             <div className="flex items-center gap-1 rounded-lg border border-line bg-surface p-0.5 max-md:flex-1">
-              <Button size="icon" variant="ghost" onClick={() => move(-1)} aria-label="Previous month">
-                <ChevronLeft className="size-4" />
+              <Button size="icon" variant="ghost" onClick={() => move(-1)} aria-label={tr('cal.previous')}>
+                <ChevronLeft className="size-4 rtl:-scale-x-100" />
               </Button>
               <span className="min-w-[150px] px-2 text-center text-sm font-medium text-fg max-md:min-w-0 max-md:flex-1">
                 {formatMonthKey(cursor.year, cursor.month)}
               </span>
-              <Button size="icon" variant="ghost" onClick={() => move(1)} aria-label="Next month">
-                <ChevronRight className="size-4" />
+              <Button size="icon" variant="ghost" onClick={() => move(1)} aria-label={tr('cal.next')}>
+                <ChevronRight className="size-4 rtl:-scale-x-100" />
               </Button>
             </div>
-            <Button onClick={() => setCursor({ year: today.getFullYear(), month: today.getMonth() })}>Today</Button>
+            <Button onClick={() => setCursor({ year: today.getFullYear(), month: today.getMonth() })}>
+              {tr('cal.today')}
+            </Button>
             <Button variant="primary" className="max-md:hidden" onClick={() => openTradeForm()}>
-              <Plus className="size-4" /> Log trade
+              <Plus className="size-4" /> {tr('header.logTrade')}
             </Button>
           </>
         }
@@ -118,11 +146,11 @@ export function CalendarView() {
       {accountTrades.length === 0 ? (
         <EmptyState
           icon={CalendarDays}
-          title="Your trading calendar is empty"
-          description="Once you log trades, each day fills in with its net profit or loss and the number of trades you took, so streaks and problem days become obvious at a glance."
+          title={tr('cal.empty.title')}
+          description={tr('cal.empty.text')}
           actions={
             <Button variant="primary" onClick={() => openTradeForm()}>
-              <Plus className="size-4" /> Log a trade
+              <Plus className="size-4" /> {tr('header.logTradeLabel')}
             </Button>
           }
         />
@@ -130,24 +158,31 @@ export function CalendarView() {
         <>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
             <MetricCard
-              label="Monthly net P&L"
+              label={tr('cal.net')}
               value={formatMoney(stats.net, currency, { sign: true })}
               tone={toneFor(stats.net)}
             />
             <MetricCard
-              label="Total trades"
+              label={tr('stat.totalTrades')}
               value={stats.total}
-              sub={stats.open > 0 ? `${stats.open} still open` : undefined}
+              sub={stats.open > 0 ? tr('cal.stillOpen', { count: stats.open }) : undefined}
             />
             <MetricCard
-              label="Active days"
+              label={tr('cal.activeDays')}
               value={stats.activeDays}
-              sub={`${stats.days.filter((d) => d.net > 0).length} green, ${stats.days.filter((d) => d.net < 0).length} red`}
+              sub={tr('cal.greenRed', {
+                count: stats.days.filter((d) => d.net > 0).length,
+                red: stats.days.filter((d) => d.net < 0).length,
+              })}
             />
             <MetricCard
-              label="Win rate this month"
+              label={tr('cal.winRate')}
               value={stats.total ? formatPct(stats.winRate) : '—'}
-              sub={stats.total ? `${stats.wins}W · ${stats.losses}L` : 'no closed trades yet'}
+              sub={
+                stats.total
+                  ? `${tr('stat.wins', { n: stats.wins })} · ${tr('stat.losses', { n: stats.losses })}`
+                  : tr('cal.noneClosed')
+              }
             />
           </div>
 
@@ -174,8 +209,8 @@ export function CalendarView() {
                     disabled={!hasTrades}
                     onClick={() => setSelectedDay(cell.key)}
                     className={cn(
-                      'relative flex h-16 flex-col items-center justify-end gap-1 border-b border-r border-line px-0.5 pb-2 text-center transition md:h-[104px] md:justify-center md:p-2',
-                      i % 7 === 6 && 'border-r-0',
+                      'relative flex h-16 flex-col items-center justify-end gap-1 border-b border-e border-line px-0.5 pb-2 text-center transition md:h-[104px] md:justify-center md:p-2',
+                      i % 7 === 6 && 'border-e-0',
                       i >= cells.length - 7 && 'border-b-0',
                       !cell.inMonth && 'bg-app/40',
                       hasTrades ? 'cursor-pointer hover:bg-raised' : 'cursor-default',
@@ -185,7 +220,7 @@ export function CalendarView() {
                   >
                     <span
                       className={cn(
-                        'absolute left-1.5 top-1 text-[11px] md:left-2.5 md:top-2 md:text-xs',
+                        'absolute start-1.5 top-1 text-[11px] md:start-2.5 md:top-2 md:text-xs',
                         isToday
                           ? 'grid size-5 place-items-center rounded-full bg-accent-strong font-semibold text-white'
                           : cell.inMonth
@@ -205,14 +240,14 @@ export function CalendarView() {
                         >
                           {/* a phone cell is a seventh of the screen: always the short form there */}
                           <span className="md:hidden">
-                            {formatMoney(agg.net, currency, { sign: true, compact: true })}
+                            <ShortAmount text={formatMoney(agg.net, currency, { sign: true, compact: true })} />
                           </span>
                           <span className="max-md:hidden">
                             {formatMoney(agg.net, currency, { sign: true, compact: Math.abs(agg.net) >= 10000 })}
                           </span>
                         </span>
                         <span className="text-[10px] font-medium uppercase tracking-wide text-faint max-md:hidden">
-                          {agg.trades} {agg.trades === 1 ? 'trade' : 'trades'}
+                          {tr('common.trades', { count: agg.trades })}
                         </span>
                       </>
                     )}
@@ -224,7 +259,7 @@ export function CalendarView() {
 
           {monthTrades.length === 0 && (
             <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-muted">
-              <span>No trades in {formatMonthKey(cursor.year, cursor.month)}.</span>
+              <span>{tr('cal.noneIn', { month: formatMonthKey(cursor.year, cursor.month) })}</span>
               {monthsWithTrades.slice(0, 6).map((m) => {
                 const [y, mo] = m.split('-').map(Number);
                 return (
@@ -251,11 +286,10 @@ export function CalendarView() {
         description={
           selectedDay
             ? // the same trades the day cell counted, so the two totals agree
-              `${selectedTrades.length} ${selectedTrades.length === 1 ? 'trade' : 'trades'} · net ${formatMoney(
-                realised(selectedTrades),
-                currency,
-                { sign: true },
-              )}`
+              tr('cal.dayNet', {
+                count: selectedTrades.length,
+                net: formatMoney(realised(selectedTrades), currency, { sign: true }),
+              })
             : undefined
         }
       >
@@ -268,9 +302,11 @@ export function CalendarView() {
                   setSelectedDay(null);
                   openTradeForm({ trade: t });
                 }}
-                className="flex w-full items-center gap-3 rounded-md px-2 py-2.5 text-left transition hover:bg-raised"
+                className="flex w-full items-center gap-3 rounded-md px-2 py-2.5 text-start transition hover:bg-raised"
               >
-                <span className="w-20 shrink-0 truncate font-semibold text-fg">{t.symbol}</span>
+                <span dir="auto" className="w-20 shrink-0 truncate font-semibold text-fg">
+                  {t.symbol}
+                </span>
                 <SideBadge side={t.side} />
                 <span className="num flex-1 truncate text-xs text-faint">
                   {t.openedAt.slice(11, 16)}
