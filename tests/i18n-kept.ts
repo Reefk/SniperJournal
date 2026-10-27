@@ -15,14 +15,21 @@ export const KEPT = [
   'MNQ',
   'MES',
   'INSTALLER.bat',
-  // folder names, as they are on disk
+  // folder and file names, as they are on disk
   'data/backups',
   'data/screenshots',
+  'data/journal.json',
+  'journal.json',
   'backups',
   'screenshots',
   // app and platform names
   'Google',
   'Drive',
+  'Chrome',
+  'OneDrive',
+  'Windows',
+  'Android',
+  'Microsoft Store',
   'Excel',
   'Interactive Brokers',
   'TradingView',
@@ -52,6 +59,21 @@ export const KEPT = [
   'N',
   'R',
 ];
+
+/** what the Support page puts in as it is typed: the commands, the address and broker column headings */
+export const SUPPORT_TYPED = [
+  'npm start',
+  'npm run dev',
+  'http://localhost:3000',
+  'qty',
+  'ticker',
+  'commission',
+  'realized pnl',
+];
+
+/** English words that are not also Spanish, to find what was left untranslated in Spanish ("importó" is not "import") */
+export const ENGLISH =
+  /(?<!\p{L})(the|and|of|your|trades?|with|for|is|are|you|this|that|from|days?|wins?|loss(es)?|rate|profit|average|closed|show|view|log|balance|settings|delete|edit|add|yet|per|green|red|best|worst|largest|streak|current|recent|equity|curve|rated|backups?|images?|account|tags?|mistakes?|limits?|goals?|cancel|confirm|close|save|import|export|merge|search|filters?|selected|shown|open|needs|details|page|next|previous|net)(?!\p{L})/iu;
 
 /** a translation's text with the names, units and codes that stay in English taken out */
 export function withoutKept(text: string): string {

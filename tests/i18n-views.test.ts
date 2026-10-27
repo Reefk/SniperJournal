@@ -14,6 +14,7 @@ import { InsightsView } from '@/views/InsightsView';
 import { PlaybookView } from '@/views/PlaybookView';
 import { ResourcesView } from '@/views/ResourcesView';
 import { SettingsView } from '@/views/SettingsView';
+import { SupportView } from '@/views/SupportView';
 import { TradesView } from '@/views/TradesView';
 import { TradeFormModal } from '@/components/trades/TradeFormModal';
 import { BulkDetailsModal } from '@/components/trades/BulkDetailsModal';
@@ -22,7 +23,7 @@ import { JournalProvider, useJournal } from '@/store/JournalProvider';
 import { UIProvider, useUI } from '@/store/UIProvider';
 import { pnl, trade } from './helpers';
 import { click, mount, type, until } from './render';
-import { KEPT } from './i18n-kept';
+import { ENGLISH, KEPT, SUPPORT_TYPED } from './i18n-kept';
 import { INSIGHTS, INSIGHT_SETUPS } from './insights-journal';
 
 /**
@@ -503,6 +504,8 @@ const SCREENS: Array<{
     },
     own: LINK,
   },
+  // the browser version, everything saved; the apps' answers and the other save states are in i18n-support.test.ts
+  { name: 'Support', view: SupportView, trades: [], own: [...SUPPORT_TYPED, 'C:\\journal\\data\\journal.json'] },
 ];
 
 /** what may stay in Latin letters: the kept words, and the journal's and the app's own names */
@@ -544,10 +547,6 @@ const allowed = (words: string[]) =>
   [...new Set(words)]
     .sort((a, b) => b.length - a.length)
     .map((word) => new RegExp(`(^|[^A-Za-z])${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=[^A-Za-z]|$)`, 'g'));
-
-/** English words that are not also Spanish, to find what was left untranslated in Spanish ("importó" is not "import") */
-const ENGLISH =
-  /(?<!\p{L})(the|and|of|your|trades?|with|for|is|are|you|this|that|from|days?|wins?|loss(es)?|rate|profit|average|closed|show|view|log|balance|settings|delete|edit|add|yet|per|green|red|best|worst|largest|streak|current|recent|equity|curve|rated|backups?|images?|account|tags?|mistakes?|limits?|goals?|cancel|confirm|close|save|import|export|merge|search|filters?|selected|shown|open|needs|details|page|next|previous|net)(?!\p{L})/iu;
 
 /** each piece of text the page shows or says, one per text node or attribute */
 function shown(): string[] {

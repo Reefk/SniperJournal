@@ -14,6 +14,7 @@ import { playbook } from './playbook';
 import { resources } from './resources';
 import { settings } from './settings';
 import { shell } from './shell';
+import { support } from './support';
 import { trade } from './trade';
 import { ui } from './ui';
 
@@ -32,6 +33,7 @@ export const hi: Translation<Messages> = {
   ...resources,
   ...settings,
   ...shell,
+  ...support,
   ...trade,
   ...ui,
 };

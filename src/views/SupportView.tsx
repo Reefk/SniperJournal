@@ -6,96 +6,68 @@ import type { CopyMiss } from '@/store/mirror';
 import { WHY_NO_COPY } from '@/components/layout/SaveConflict';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { storage } from '@/lib/storage';
+import { formatNumber } from '@/lib/format';
 import { cn } from '@/lib/utils';
-import { tr } from '@/lib/i18n';
+import { tr, type MessageKey } from '@/lib/i18n';
 
-const SHORTCUTS = [
-  ['N', 'Log a new trade'],
-  ['Ctrl K  or  /', 'Jump to search'],
-  ['Ctrl + Enter', 'Save the trade form'],
-  ['Esc', 'Close a dialog'],
+/** each shortcut's keys as written on the keyboard (two keys that do the same, or one), and what it does */
+const SHORTCUTS: Array<[string | [string, string], MessageKey]> = [
+  ['N', 'sup.key.newTrade'],
+  [['Ctrl K', '/'], 'sup.key.search'],
+  ['Ctrl + Enter', 'sup.key.saveForm'],
+  ['Esc', 'sup.key.closeDialog'],
 ];
 
-const FAQ: Array<{ q: string; a: string }> = [
-  {
-    q: 'Where exactly is my data kept?',
-    a: 'In a plain JSON file at data/journal.json inside the Sniper Journal folder on this PC. Nothing is uploaded anywhere, and the app works with your internet disconnected. A copy is also mirrored into this browser so your work survives if the app is closed mid-edit, as long as the journal fits in the browser (up to about 7,500 trades).',
-  },
-  {
-    q: 'What happens if I break something?',
-    a: 'Every day that you make a change, the previous version of the file is copied into data/backups before the new one is written. The last 30 daily copies are kept. You can also download a backup at any time from your profile menu, and restore it from Settings.',
-  },
-  {
-    q: 'Why is a trade missing from my statistics?',
-    a: 'Statistics only count closed trades, so anything without an exit price or a manual P&L is left out until you close it. Trades you marked with the eye icon are also deliberately excluded while staying in the journal.',
-  },
-  {
-    q: 'How do I log futures or forex properly?',
-    a: 'Open the "Futures, forex and manual P&L" section in the trade form and set the contract multiplier: ES is 50, NQ is 20, MES is 5, and one standard forex lot is 100,000 units. If it is easier, switch P&L to manual and paste the figure from your broker instead.',
-  },
-  {
-    q: 'What counts as an R multiple?',
-    a: 'Your result divided by the money you had at risk between entry and stop loss. Trades logged without a stop cannot be measured in R, which is why the risk and R:R statistics ask you to record one.',
-  },
-  {
-    q: 'Do I need to keep a window open for this to work?',
-    a: 'Yes, the one where you ran npm start (or npm run dev): that is the server, and the page needs it. Nothing is lost by stopping it, because your journal is written to disk within a third of a second of every change.',
-  },
-  {
-    q: 'Can I open it in its own window instead of a browser tab?',
-    a: 'Yes. In Chrome, click the three dots at the top right, choose Cast, save and share, then Install page as app. Sniper Journal gets its own window with no address bar, plus an icon in the Start menu and on the taskbar. It is the same app either way, using the same journal file.',
-  },
-  {
-    q: 'Can I run this on more than one computer?',
-    a: 'Each installation keeps its own file. To move your journal, download a backup from one machine and restore it on the other from Settings.',
-  },
+/** a question and its answer, as the texts' keys; looked up when the page is drawn */
+interface Question {
+  q: MessageKey;
+  a: MessageKey;
+}
+
+const FAQ: Question[] = [
+  { q: 'sup.q.where', a: 'sup.a.where' },
+  { q: 'sup.q.broken', a: 'sup.a.broken' },
+  { q: 'sup.q.missing', a: 'sup.a.missing' },
+  { q: 'sup.q.futures', a: 'sup.a.futures' },
+  { q: 'sup.q.rMultiple', a: 'sup.a.rMultiple' },
+  { q: 'sup.q.window', a: 'sup.a.window' },
+  { q: 'sup.q.ownWindow', a: 'sup.a.ownWindow' },
+  { q: 'sup.q.computers', a: 'sup.a.computers' },
 ];
+
+/** by question: its wording and answer in one version, or null where that version doesn't ask it */
+type Changes = Partial<Record<MessageKey, { q?: MessageKey; a: MessageKey } | null>>;
 
 /** The phone app answers the same questions, minus everything about Windows and folders */
-const PHONE_ANSWERS: Record<string, { q?: string; a: string } | null> = {
-  'Where exactly is my data kept?': {
-    a: 'In the app’s own private storage on this phone. Nothing is uploaded anywhere, there is no account, and the app works with the network off. Other apps cannot read it, and uninstalling the app deletes it, so save a backup somewhere else now and then.',
-  },
-  'What happens if I break something?': {
-    a: 'Every day that you make a change, the previous version of your journal is copied aside inside the app before the new one is written, and the last 30 daily copies are kept. You can also save a backup at any time from More → Back up your journal, and restore it from Settings.',
-  },
-  'Do I need to keep a window open for this to work?': null,
-  'Can I open it in its own window instead of a browser tab?': null,
-  'Can I run this on more than one computer?': {
-    q: 'Can I use it on more than one device?',
-    a: 'Each phone and each computer keeps its own journal. To move yours, save a backup on one device and restore it on the other from Settings.',
-  },
+const PHONE_ANSWERS: Changes = {
+  'sup.q.where': { a: 'sup.a.where.phone' },
+  'sup.q.broken': { a: 'sup.a.broken.phone' },
+  'sup.q.window': null,
+  'sup.q.ownWindow': null,
+  'sup.q.computers': { q: 'sup.q.computers.phone', a: 'sup.a.computers.phone' },
 };
 
 /** The Windows app answers them too, minus the server and the browser */
-const WINDOWS_APP_ANSWERS: Record<string, { q?: string; a: string } | null> = {
-  'Where exactly is my data kept?': {
-    a: 'In a plain JSON file, journal.json, in the Sniper Journal folder in your Documents. The app uploads nothing and works with your internet disconnected (if OneDrive backs up your Documents, it backs up the journal too). The folder stays when you uninstall the app, so reinstalling picks your journal up again.',
-  },
-  'What happens if I break something?': {
-    a: 'Every day that you make a change, the previous version of the file is copied into the backups folder next to it before the new one is written. The last 30 daily copies are kept. You can also save a backup at any time from your profile menu, and restore it from Settings.',
-  },
-  'Do I need to keep a window open for this to work?': {
-    a: 'Only while you use it. Every change is written to disk within a third of a second, and closing the window waits for the last one, so nothing is lost when you close it.',
-  },
-  'Can I open it in its own window instead of a browser tab?': null,
-  'Can I run this on more than one computer?': {
-    a: 'Each computer keeps its own journal. To move yours, save a backup on one computer and restore it on the other from Settings, and copy the screenshots folder across for its chart images.',
-  },
+const WINDOWS_APP_ANSWERS: Changes = {
+  'sup.q.where': { a: 'sup.a.where.app' },
+  'sup.q.broken': { a: 'sup.a.broken.app' },
+  'sup.q.window': { a: 'sup.a.window.app' },
+  'sup.q.ownWindow': null,
+  'sup.q.computers': { a: 'sup.a.computers.app' },
 };
 
 /** asked only of the Windows app */
-const WINDOWS_APP_EXTRA = [
-  {
-    q: 'I used the earlier version. How do I bring my journal over?',
-    a: 'In Settings, under Backups, choose Bring over from the earlier version, then pick the folder you installed it in (the one with INSTALLER.bat). Your trades and chart images are copied over, and the old folder is left exactly as it was.',
-  },
-];
+const WINDOWS_APP_EXTRA: Question[] = [{ q: 'sup.q.bringOver', a: 'sup.a.bringOver' }];
+
+/** what's typed as it is: the commands that start the server version */
+const COMMANDS = { start: 'npm start', dev: 'npm run dev' };
 
 const native = storage.kind === 'native';
 const phone = storage.device === 'phone';
+/** which of a text's two versions this one is: an app's, or the browser's */
+const where = native ? 'app' : 'web';
 
-function answered(changes: Record<string, { q?: string; a: string } | null>) {
+function answered(changes: Changes) {
   return FAQ.flatMap((item) => {
     if (!(item.q in changes)) return [item];
     const changed = changes[item.q];
@@ -114,40 +86,38 @@ function fileStatus(status: SaveStatus, copyMiss: CopyMiss | null): string {
   const why = copyMiss ? tr(WHY_NO_COPY[copyMiss]) : '';
   switch (status) {
     case 'error':
-      return copyMiss
-        ? `The journal file could not be read when the app started, so it is being left exactly as it is rather than saved over. ${native ? 'The app' : 'This browser'} can't keep your changes either (${why}), so changes made now are not saved anywhere. Download a backup before you close the app, then close and reopen it to try again.`
-        : `The journal file could not be read when the app started, so it is being left exactly as it is rather than saved over. Your changes are kept ${native ? 'temporarily' : 'in this browser'} for now. Close and reopen the app to try again. If this keeps happening, restore your latest backup in Settings.`;
+      return copyMiss ? tr(`sup.file.errorLost.${where}`, { why }) : tr(`sup.file.error.${where}`);
     case 'conflict':
-      return 'Another tab, window or copy of the app saved the journal after this window opened it, so this window stopped saving rather than writing over that work. Its own version was kept as a copy in your backups. Reload to carry on.';
+      return tr('sup.file.conflict');
     case 'browser':
-      return native
-        ? 'The app cannot write its file right now, so changes are being kept temporarily. They will be written as soon as it can.'
-        : 'The app cannot reach its file right now, so changes are being kept in this browser only. They will be written to disk as soon as it is reachable again.';
+      return tr(`sup.file.browser.${where}`);
     case 'unsaved':
-      return native
-        ? `The app cannot write its file right now and can't keep a temporary copy either (${why}), so your latest changes are not saved anywhere yet. Keep the app open: they will be written as soon as it can. To be safe, save a backup.`
-        : `The app cannot reach its file right now and this browser can't keep a copy either (${why}), so your latest changes are not saved anywhere yet. Keep the app open: they will be written to disk as soon as the file is reachable again. To be safe, download a backup.`;
+      return tr(`sup.file.unsaved.${where}`, { why });
     default:
-      return copyMiss && !native
-        ? `Saved automatically a moment after every change. The spare copy in this browser is off: ${why}.`
-        : 'Saved automatically a moment after every change.';
+      return copyMiss && !native ? tr('sup.file.savedNoCopy', { why }) : tr('sup.file.saved');
   }
 }
 
 export function SupportView() {
   const { filePath, saveStatus, copyMiss } = useSaveState();
+  // the answers' numbers, written the language's way
+  const answer = { ...COMMANDS, max: formatNumber(7500), lot: formatNumber(100_000) };
 
   return (
     <>
-      <PageHeader title="Support" description="How Sniper Journal works, and where your data lives." />
+      <PageHeader title={tr('nav.support')} description={tr('sup.description')} />
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <section className="rounded-xl border border-line bg-surface p-5">
           <HardDrive className="size-5 text-accent" />
-          <h2 className="mt-3 text-sm font-semibold text-fg">Your journal file</h2>
+          <h2 className="mt-3 text-sm font-semibold text-fg">{tr('sup.file.title')}</h2>
           <p className="mt-1.5 text-sm leading-relaxed text-muted">{fileStatus(saveStatus, copyMiss)}</p>
           {filePath && (
-            <p className="num mt-3 break-all rounded-md border border-line bg-app px-3 py-2 text-xs text-muted">
+            // a path reads left to right, so a leading "/" stays at its start in Arabic
+            <p
+              dir="ltr"
+              className="num mt-3 break-all rounded-md border border-line bg-app px-3 py-2 text-xs text-muted"
+            >
               {filePath}
             </p>
           )}
@@ -155,23 +125,25 @@ export function SupportView() {
 
         <section className="rounded-xl border border-line bg-surface p-5">
           <ShieldCheck className="size-5 text-profit" />
-          <h2 className="mt-3 text-sm font-semibold text-fg">Nothing leaves this {phone ? 'phone' : 'PC'}</h2>
+          <h2 className="mt-3 text-sm font-semibold text-fg">{tr(phone ? 'sup.private.phone' : 'sup.private.pc')}</h2>
           <p className="mt-1.5 text-sm leading-relaxed text-muted">
-            There is no account, no server and no telemetry. The app only talks to its own folder on this{' '}
-            {phone ? 'phone' : 'machine'}, which is why it keeps working with the network off.
+            {tr(phone ? 'sup.privateText.phone' : 'sup.privateText.pc')}
           </p>
         </section>
 
         {/* keyboard shortcuts mean nothing on a touch screen */}
         <section className={cn('rounded-xl border border-line bg-surface p-5', phone && 'hidden')}>
           <Keyboard className="size-5 text-accent" />
-          <h2 className="mt-3 text-sm font-semibold text-fg">Shortcuts</h2>
+          <h2 className="mt-3 text-sm font-semibold text-fg">{tr('sup.shortcuts')}</h2>
           <dl className="mt-3 space-y-2">
-            {SHORTCUTS.map(([key, label]) => (
-              <div key={key} className="flex items-center justify-between gap-3">
-                <dt className="text-sm text-muted">{label}</dt>
+            {SHORTCUTS.map(([keys, label]) => (
+              <div key={label} className="flex items-center justify-between gap-3">
+                <dt className="text-sm text-muted">{tr(label)}</dt>
                 <dd>
-                  <kbd className="num rounded border border-line bg-app px-1.5 py-0.5 text-[11px] text-fg">{key}</kbd>
+                  {/* the label wraps, never the keys ("Guardar el formulario de la operación") */}
+                  <kbd className="num whitespace-nowrap rounded border border-line bg-app px-1.5 py-0.5 text-[11px] text-fg">
+                    {typeof keys === 'string' ? keys : tr('sup.key.either', { first: keys[0], second: keys[1] })}
+                  </kbd>
                 </dd>
               </div>
             ))}
@@ -181,16 +153,16 @@ export function SupportView() {
 
       <section className="mt-4 rounded-xl border border-line bg-surface">
         <h2 className="flex items-center gap-2 border-b border-line px-5 py-4 text-sm font-semibold text-fg">
-          <LifeBuoy className="size-4 text-accent" /> Common questions
+          <LifeBuoy className="size-4 text-accent" /> {tr('sup.faq')}
         </h2>
         <div className="divide-y divide-line">
           {QUESTIONS.map((item) => (
             <details key={item.q} className="group px-4 py-3.5 md:px-5">
               <summary className="cursor-pointer select-none list-none text-sm font-medium text-fg marker:hidden">
                 <span className="inline-block transition group-open:rotate-90">›</span>
-                <span className="ms-2">{item.q}</span>
+                <span className="ms-2">{tr(item.q)}</span>
               </summary>
-              <p className="ms-5 mt-2 text-sm leading-relaxed text-muted">{item.a}</p>
+              <p className="ms-5 mt-2 text-sm leading-relaxed text-muted">{tr(item.a, answer)}</p>
             </details>
           ))}
         </div>
@@ -199,22 +171,17 @@ export function SupportView() {
       <section className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className="rounded-xl border border-line bg-surface p-5">
           <Upload className="size-5 text-accent" />
-          <h2 className="mt-3 text-sm font-semibold text-fg">Importing from your broker</h2>
+          <h2 className="mt-3 text-sm font-semibold text-fg">{tr('sup.import.title')}</h2>
           <p className="mt-1.5 text-sm leading-relaxed text-muted">
-            Open Trades and choose Import. The exports of 30 platforms, CSV or Excel, import as they come, and the
-            import window says which file to export from each. For anything else, download the template to see the
-            column names: common broker headings such as qty, ticker, commission and realized pnl are recognised
-            automatically, and any rows that cannot be read are listed before you commit the import.
+            {tr('sup.import.text', { qty: 'qty', ticker: 'ticker', commission: 'commission', pnl: 'realized pnl' })}
           </p>
         </div>
         {/* how to start the server version; the Windows and phone apps just open */}
         <div className={cn('rounded-xl border border-line bg-surface p-5', native && 'hidden')}>
           <FolderOpen className="size-5 text-accent" />
-          <h2 className="mt-3 text-sm font-semibold text-fg">Opening the app</h2>
+          <h2 className="mt-3 text-sm font-semibold text-fg">{tr('sup.open.title')}</h2>
           <p className="mt-1.5 text-sm leading-relaxed text-muted">
-            This is the version served from the project folder: run npm start there (npm run dev while you edit the
-            code), then open http://localhost:3000. The Windows app from the Microsoft Store and the Android app open
-            like any other app.
+            {tr('sup.open.text', { ...COMMANDS, url: 'http://localhost:3000' })}
           </p>
         </div>
       </section>

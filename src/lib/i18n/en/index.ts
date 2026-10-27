@@ -12,6 +12,7 @@ import { playbook } from './playbook';
 import { resources } from './resources';
 import { settings } from './settings';
 import { shell } from './shell';
+import { support } from './support';
 import { trade } from './trade';
 import { ui } from './ui';
 
@@ -34,6 +35,7 @@ export const en = {
   ...resources,
   ...settings,
   ...shell,
+  ...support,
   ...trade,
   ...ui,
 };
