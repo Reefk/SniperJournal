@@ -10,6 +10,7 @@ import { LANGUAGES, setLanguage, type Language } from '@/lib/i18n';
 import { STARTING_MISTAKES } from '@/lib/mistakes';
 import { CalendarView } from '@/views/CalendarView';
 import { DashboardView } from '@/views/DashboardView';
+import { InsightsView } from '@/views/InsightsView';
 import { SettingsView } from '@/views/SettingsView';
 import { TradesView } from '@/views/TradesView';
 import { TradeFormModal } from '@/components/trades/TradeFormModal';
@@ -20,6 +21,7 @@ import { UIProvider, useUI } from '@/store/UIProvider';
 import { pnl, trade } from './helpers';
 import { click, mount, type, until } from './render';
 import { KEPT } from './i18n-kept';
+import { INSIGHTS, INSIGHT_SETUPS } from './insights-journal';
 
 /**
  * Every screen drawn in each language, with no English left in what a
@@ -115,6 +117,9 @@ function journalIn(language: Language, trades: Trade[]): JournalData {
     resources: [],
   };
 }
+
+/** the Calendar's trades with no stop and no rating, so the Sniper Score has axes it can't score */
+const UNRATED = TRADES.map((t) => ({ ...t, stopLoss: null, review: undefined }));
 
 /** a trade with everything the form shows: a setup with rules, a mistake not on the list, a chart */
 const FULL = {
@@ -251,6 +256,18 @@ const SCREENS: Array<{
     trades: TRADES,
     open: () => document.querySelector<HTMLButtonElement>('.grid-cols-7 > button:enabled')?.click(),
   },
+  { name: 'Insights', view: InsightsView, trades: INSIGHTS },
+  {
+    name: 'Insights, with more setups',
+    view: InsightsView,
+    trades: INSIGHTS,
+    open: () => INSIGHT_SETUPS.forEach((setup) => journal?.actions.upsertSetup(setup)),
+    modal: false,
+    ready: () => journal?.data.setups.length === 1 + INSIGHT_SETUPS.length,
+  },
+  { name: 'Insights, nothing rated', view: InsightsView, trades: UNRATED },
+  { name: 'Insights, empty', view: InsightsView, trades: [] },
+  { name: 'Insights, too few trades', view: InsightsView, trades: TRADES.slice(0, 2) },
   { name: 'Settings', view: SettingsView, trades: TRADES },
   { name: 'Trade form, new', view: TradeFormModal, trades: TRADES, open: () => ui?.openTradeForm() },
   { name: 'Trade form, editing', view: TradeFormModal, trades: [FULL], open: () => ui?.openTradeForm({ trade: FULL }) },

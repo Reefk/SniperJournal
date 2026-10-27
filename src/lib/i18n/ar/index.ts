@@ -7,6 +7,7 @@ import { format } from './format';
 import { goals } from './goals';
 import { importDialog } from './importDialog';
 import { importer } from './importer';
+import { insights } from './insights';
 import { list } from './list';
 import { platforms } from './platforms';
 import { settings } from './settings';
@@ -22,6 +23,7 @@ export const ar: Translation<Messages> = {
   ...goals,
   ...importDialog,
   ...importer,
+  ...insights,
   ...list,
   ...platforms,
   ...settings,

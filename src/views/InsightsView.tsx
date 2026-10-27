@@ -7,6 +7,8 @@ import { useUI } from '@/store/UIProvider';
 import { buildInsights, buildSignals, MIN_TRADES_FOR_INSIGHTS, type Tone } from '@/lib/insights';
 import { computeStats, groupTrades, sniperScore } from '@/lib/stats';
 import { formatMoney, formatPct, weekdayName } from '@/lib/format';
+import { tr } from '@/lib/i18n';
+import { sessionName } from '@/lib/sessions';
 import { statTrades } from '@/lib/trade-math';
 import { cn, parseLocal } from '@/lib/utils';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -38,35 +40,35 @@ export function InsightsView() {
   const breakdowns = useMemo(() => {
     const closed = statTrades(accountTrades);
     return [
-      { title: 'By symbol', rows: groupTrades(closed, (t) => t.symbol).slice(0, 6) },
-      { title: 'By session', rows: groupTrades(closed, (t) => t.session).slice(0, 6) },
+      { title: tr('ins.bySymbol'), rows: groupTrades(closed, (t) => t.symbol).slice(0, 6) },
+      { title: tr('ins.bySession'), rows: groupTrades(closed, (t) => t.session, sessionName).slice(0, 6) },
       {
-        title: 'By weekday',
+        title: tr('ins.byWeekday'),
         rows: groupTrades(
           closed,
           (t) => String(parseLocal(t.openedAt).getDay()),
           (k) => weekdayName((Number(k) + 6) % 7),
         ).slice(0, 7),
       },
-      { title: 'By tag', rows: groupTrades(closed, (t) => t.tags).slice(0, 6) },
+      { title: tr('ins.byTag'), rows: groupTrades(closed, (t) => t.tags).slice(0, 6) },
     ].filter((b) => b.rows.length > 0);
   }, [accountTrades]);
 
   if (closedCount < MIN_TRADES_FOR_INSIGHTS) {
     return (
       <>
-        <PageHeader title="Insights & Signals" description="Patterns found in your own trades, not generic advice." />
+        <PageHeader title={tr('nav.insights')} description={tr('ins.description')} />
         <EmptyState
           icon={Lightbulb}
           title={
             closedCount === 0
-              ? 'Nothing to analyse yet'
-              : `${MIN_TRADES_FOR_INSIGHTS - closedCount} more closed ${MIN_TRADES_FOR_INSIGHTS - closedCount === 1 ? 'trade' : 'trades'} needed`
+              ? tr('ins.empty.none')
+              : tr('ins.empty.more', { count: MIN_TRADES_FOR_INSIGHTS - closedCount })
           }
-          description={`This page reads your journal and reports what it finds: which session pays you, whether you revenge trade, whether you hold losers longer than winners. It stays quiet until there are at least ${MIN_TRADES_FOR_INSIGHTS} closed trades, because anything less is noise rather than a pattern.`}
+          description={tr('ins.empty.text', { count: MIN_TRADES_FOR_INSIGHTS })}
           actions={
             <Button variant="primary" onClick={() => openTradeForm()}>
-              <Plus className="size-4" /> Log a trade
+              <Plus className="size-4" /> {tr('header.logTradeLabel')}
             </Button>
           }
         />
@@ -76,14 +78,11 @@ export function InsightsView() {
 
   return (
     <>
-      <PageHeader
-        title="Insights & Signals"
-        description={`Read from ${closedCount} closed trades. Every claim points at a number you can check in the table.`}
-      />
+      <PageHeader title={tr('nav.insights')} description={tr('ins.readFrom', { count: closedCount })} />
 
       {signals.length > 0 && (
         <section className="mb-5">
-          <h2 className="mb-2.5 text-sm font-semibold text-fg">Live signals</h2>
+          <h2 className="mb-2.5 text-sm font-semibold text-fg">{tr('ins.live')}</h2>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
             {signals.map((s) => {
               const style = TONE_STYLES[s.tone];
@@ -103,7 +102,7 @@ export function InsightsView() {
       )}
 
       <section>
-        <h2 className="mb-2.5 text-sm font-semibold text-fg">What your journal says</h2>
+        <h2 className="mb-2.5 text-sm font-semibold text-fg">{tr('ins.says')}</h2>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {insights.map((insight) => {
             const style = TONE_STYLES[insight.tone];
@@ -113,7 +112,7 @@ export function InsightsView() {
                 <div className="flex items-center gap-2">
                   <Icon className={cn('size-4 shrink-0', style.text)} />
                   <span className="rounded border border-line px-1.5 py-0.5 text-[11px] font-medium text-muted">
-                    {insight.category}
+                    {tr(`ins.cat.${insight.category}`)}
                   </span>
                   {insight.metric && <span className="num ms-auto text-xs text-faint">{insight.metric}</span>}
                 </div>
@@ -126,7 +125,7 @@ export function InsightsView() {
       </section>
 
       <section className="mt-5">
-        <h2 className="mb-2.5 text-sm font-semibold text-fg">Where the money comes from</h2>
+        <h2 className="mb-2.5 text-sm font-semibold text-fg">{tr('ins.money')}</h2>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-4">
           {breakdowns.map((b) => (
             <ChartContainer key={b.title} title={b.title} bodyClassName="px-2 pb-3 pt-2">
@@ -159,7 +158,7 @@ export function InsightsView() {
       <section className="mt-5 rounded-xl border border-line bg-surface p-4 md:p-5">
         <div className="flex items-center gap-2">
           <Lightbulb className="size-4 text-accent" />
-          <h2 className="text-sm font-semibold text-fg">Sniper Score breakdown</h2>
+          <h2 className="text-sm font-semibold text-fg">{tr('ins.score')}</h2>
           {score.overall != null && (
             <span className="num ms-auto text-sm font-semibold text-accent">{score.overall} / 100</span>
           )}
@@ -181,15 +180,15 @@ export function InsightsView() {
                 />
               </div>
               <span className={cn('num w-16 text-end text-xs md:w-32', axis.rated ? 'text-fg' : 'text-faint')}>
-                {axis.rated ? Math.round(axis.score) : 'not rated'}
+                {axis.rated ? Math.round(axis.score) : tr('ins.notRated')}
               </span>
             </div>
           ))}
         </div>
         <p className="mt-4 text-xs leading-relaxed text-faint">
           {score.unrated.length > 0
-            ? `${score.unrated.join(', ')} ${score.unrated.length === 1 ? 'is' : 'are'} not scored yet. Record a stop loss and rate your discipline, execution and patience when you log a trade.`
-            : 'Every axis is scored from data you supplied.'}
+            ? tr('ins.unrated', { count: score.unrated.length, axes: score.unrated.join(tr('format.comma')) })
+            : tr('ins.allScored')}
         </p>
       </section>
     </>

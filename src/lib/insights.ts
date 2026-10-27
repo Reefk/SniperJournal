@@ -1,8 +1,10 @@
 import type { Settings, Setup, Trade } from './types';
-import { formatMoney, weekdayName } from './format';
+import { capital, formatMoney, formatPct, weekdayName } from './format';
+import { decimalMark, tr } from './i18n';
 import { aggregateDays, breakEvenWinRate, computeStats, groupTrades, type GroupStat, type Stats } from './stats';
 import { MIN_RULE_SIDE, playbookRuleReport } from './rules';
-import { mistakeList, mistakeReport } from './mistakes';
+import { mistakeList, mistakeName, mistakeReport } from './mistakes';
+import { sessionName } from './sessions';
 import { netPnl, sortChronological, statTrades, tradeDay } from './trade-math';
 import { dateKey, mean, parseLocal } from './utils';
 
@@ -18,6 +20,7 @@ export interface Signal {
 export interface Insight {
   id: string;
   tone: Tone;
+  /** named on screen in the current language (ins.cat.*) */
   category: 'Edge' | 'Timing' | 'Risk' | 'Behaviour' | 'Cost';
   title: string;
   body: string;
@@ -29,11 +32,17 @@ export const MIN_TRADES_FOR_INSIGHTS = 5;
 
 const MIN_GROUP = 4;
 
+/** a day with this many trades or more is a busy one */
+const BUSY_DAY = 4;
+
 function strongest(groups: GroupStat[], min = MIN_GROUP): { best?: GroupStat; worst?: GroupStat } {
   const eligible = groups.filter((g) => g.trades >= min);
   if (eligible.length < 2) return {};
   return { best: eligible[0], worst: eligible[eligible.length - 1] };
 }
+
+/** percentage points to one decimal, in the language's own decimal mark */
+const points = (value: number) => decimalMark(value.toFixed(1));
 
 /**
  * Live warnings about today and this week. These are about what is
@@ -55,15 +64,15 @@ export function buildSignals(trades: Trade[], settings: Settings, now = new Date
       signals.push({
         id: 'daily-loss-breached',
         tone: 'bad',
-        title: 'Daily loss limit reached',
-        body: `Today is down past the limit you set. Your own rule says stop here.`,
+        title: tr('sig.lossBreached.title'),
+        body: tr('sig.lossBreached.text'),
       });
     } else if (used >= 70) {
       signals.push({
         id: 'daily-loss-near',
         tone: 'warn',
-        title: 'Close to your daily loss limit',
-        body: `You have used ${used.toFixed(0)}% of the loss you allow yourself in a day.`,
+        title: tr('sig.lossNear.title'),
+        body: tr('sig.lossNear.text', { pct: formatPct(used, 0) }),
       });
     }
   }
@@ -73,8 +82,8 @@ export function buildSignals(trades: Trade[], settings: Settings, now = new Date
     signals.push({
       id: 'trade-count',
       tone: todays.length > maxTrades ? 'bad' : 'warn',
-      title: `${todays.length} ${todays.length === 1 ? 'trade' : 'trades'} today`,
-      body: `Your limit is ${maxTrades} a day. Extra trades past the plan are usually the expensive ones.`,
+      title: tr('sig.tradeCount.title', { count: todays.length }),
+      body: tr('sig.tradeCount.text', { max: maxTrades }),
     });
   }
 
@@ -88,8 +97,8 @@ export function buildSignals(trades: Trade[], settings: Settings, now = new Date
     signals.push({
       id: 'losing-streak',
       tone: 'warn',
-      title: `${streak} losses in a row`,
-      body: 'Size down or step away until you have a clean setup. Streaks are when discipline slips.',
+      title: tr('sig.losing.title', { count: streak }),
+      body: tr('sig.losing.text'),
     });
   }
 
@@ -102,8 +111,8 @@ export function buildSignals(trades: Trade[], settings: Settings, now = new Date
     signals.push({
       id: 'winning-streak',
       tone: 'good',
-      title: `${winStreak} wins in a row`,
-      body: 'Running well. Keep the position size you had when the streak started.',
+      title: tr('sig.winning.title', { count: winStreak }),
+      body: tr('sig.winning.text'),
     });
   }
 
@@ -123,8 +132,8 @@ export function buildSignals(trades: Trade[], settings: Settings, now = new Date
       signals.push({
         id: 'week-trend',
         tone: better ? 'good' : 'info',
-        title: better ? 'Better than last week' : 'Behind last week',
-        body: `The last 7 days are running ${better ? 'ahead of' : 'behind'} the 7 days before them.`,
+        title: tr(better ? 'sig.better.title' : 'sig.behind.title'),
+        body: tr(better ? 'sig.better.text' : 'sig.behind.text'),
       });
     }
   }
@@ -153,40 +162,51 @@ export function buildInsights(trades: Trade[], setups: Setup[], settings: Settin
     id: 'expectancy',
     tone: stats.expectancy > 0 ? 'good' : 'bad',
     category: 'Edge',
-    title: stats.expectancy > 0 ? 'Your system has a positive expectancy' : 'Your system is losing money per trade',
-    body:
-      stats.expectancy > 0
-        ? `Across ${stats.total} closed trades you keep an average of this much per trade. More trades of the same quality should compound it.`
-        : `Across ${stats.total} closed trades the average result is negative. Cutting the worst setup usually matters more than finding a new one.`,
-    metric: `${formatMoney(stats.expectancy, money, { sign: true })} per trade`,
+    title: tr(stats.expectancy > 0 ? 'ins.expectancy.goodTitle' : 'ins.expectancy.badTitle'),
+    body: tr(stats.expectancy > 0 ? 'ins.expectancy.goodText' : 'ins.expectancy.badText', { count: stats.total }),
+    metric: tr('ins.expectancy.metric', { money: formatMoney(stats.expectancy, money, { sign: true }) }),
   });
 
   const breakEvenWR = breakEvenWinRate(stats);
   if (breakEvenWR != null) {
     const margin = stats.winRate - breakEvenWR;
+    const winning = formatPct(stats.winRate, 1);
     out.push({
       id: 'break-even-wr',
       tone: margin > 5 ? 'good' : margin > 0 ? 'warn' : 'bad',
       category: 'Edge',
-      title: `You need to win ${breakEvenWR.toFixed(1)}% to break even`,
+      title: tr('ins.breakEven.title', { pct: formatPct(breakEvenWR, 1) }),
       body:
         margin > 0
-          ? `You are winning ${stats.winRate.toFixed(1)}%, which leaves ${margin.toFixed(1)} points of cushion. Protect that gap before chasing a higher win rate.`
-          : `You are winning ${stats.winRate.toFixed(1)}%, below the break-even line. Either win more often or make your winners bigger relative to your losers.`,
-      metric: `${margin >= 0 ? '+' : ''}${margin.toFixed(1)} pts of margin`,
+          ? tr('ins.breakEven.above', { pct: winning, points: points(margin) })
+          : tr('ins.breakEven.below', { pct: winning }),
+      metric: tr('ins.breakEven.metric', { points: `${margin >= 0 ? '+' : ''}${points(margin)}` }),
     });
   }
 
   // --- timing ----------------------------------------------------------
-  const sessions = strongest(groupTrades(closed, (t) => t.session));
+  const sessions = strongest(groupTrades(closed, (t) => t.session, sessionName));
   if (sessions.best && sessions.worst && sessions.best.key !== sessions.worst.key) {
+    const { best, worst } = sessions;
     out.push({
       id: 'session',
       tone: 'info',
       category: 'Timing',
-      title: `${sessions.best.label} is your most profitable session`,
-      body: `${sessions.best.label} has made ${formatMoney(sessions.best.net, money, { sign: true })} across ${sessions.best.trades} trades at a ${sessions.best.winRate.toFixed(0)}% win rate. ${sessions.worst.label} has made ${formatMoney(sessions.worst.net, money, { sign: true })} across ${sessions.worst.trades} at ${sessions.worst.winRate.toFixed(0)}%. If the gap holds for another month, the quiet session is the one to cut.`,
-      metric: `${formatMoney(sessions.best.net, money, { sign: true, compact: true })} vs ${formatMoney(sessions.worst.net, money, { sign: true, compact: true })}`,
+      title: tr('ins.session.title', { session: best.label }),
+      body: tr('ins.session.text', {
+        best: best.label,
+        bestNet: formatMoney(best.net, money, { sign: true }),
+        bestTrades: best.trades,
+        bestRate: formatPct(best.winRate, 0),
+        worst: worst.label,
+        worstNet: formatMoney(worst.net, money, { sign: true }),
+        worstTrades: worst.trades,
+        worstRate: formatPct(worst.winRate, 0),
+      }),
+      metric: tr('ins.vs', {
+        a: formatMoney(best.net, money, { sign: true, compact: true }),
+        b: formatMoney(worst.net, money, { sign: true, compact: true }),
+      }),
     });
   }
 
@@ -194,30 +214,52 @@ export function buildInsights(trades: Trade[], setups: Setup[], settings: Settin
     groupTrades(
       closed,
       (t) => String(parseLocal(t.openedAt).getDay()),
-      (k) => weekdayName((Number(k) + 6) % 7),
+      (k) => weekdayName((Number(k) + 6) % 7, 'long'),
     ),
   );
   if (weekdays.best && weekdays.worst && weekdays.worst.net < 0 && weekdays.best.key !== weekdays.worst.key) {
+    const { best, worst } = weekdays;
     out.push({
       id: 'weekday',
       tone: 'warn',
       category: 'Timing',
-      title: `${weekdays.worst.label} is costing you`,
-      body: `${weekdays.worst.label} is down ${formatMoney(Math.abs(weekdays.worst.net), money)} across ${weekdays.worst.trades} trades, while ${weekdays.best.label} is your strongest day at ${formatMoney(weekdays.best.net, money, { sign: true })}. Worth asking what is different about that day.`,
-      metric: `${weekdays.worst.label}: ${formatMoney(weekdays.worst.net, money, { sign: true, compact: true })}`,
+      title: tr('ins.weekday.title', { day: worst.label }),
+      body: tr('ins.weekday.text', {
+        worst: worst.label,
+        loss: formatMoney(Math.abs(worst.net), money),
+        count: worst.trades,
+        best: best.label,
+        bestNet: formatMoney(best.net, money, { sign: true }),
+      }),
+      metric: tr('ins.labelNet', {
+        // "Martes: −$120", though the sentence says "el martes"
+        label: capital(worst.label),
+        net: formatMoney(worst.net, money, { sign: true, compact: true }),
+      }),
     });
   }
 
   // --- edge by instrument and setup -----------------------------------
   const symbols = strongest(groupTrades(closed, (t) => t.symbol));
   if (symbols.best && symbols.worst && symbols.best.key !== symbols.worst.key && symbols.worst.net < 0) {
+    const { best, worst } = symbols;
     out.push({
       id: 'symbol',
       tone: 'info',
       category: 'Edge',
-      title: `${symbols.best.key} is carrying you, ${symbols.worst.key} is dragging`,
-      body: `${symbols.best.key} has made ${formatMoney(symbols.best.net, money, { sign: true })} over ${symbols.best.trades} trades. ${symbols.worst.key} has lost ${formatMoney(Math.abs(symbols.worst.net), money)} over ${symbols.worst.trades}. Dropping your worst instrument is usually the cheapest improvement available.`,
-      metric: `${symbols.worst.key}: ${formatMoney(symbols.worst.net, money, { sign: true, compact: true })}`,
+      title: tr('ins.symbol.title', { best: best.key, worst: worst.key }),
+      body: tr('ins.symbol.text', {
+        best: best.key,
+        bestNet: formatMoney(best.net, money, { sign: true }),
+        bestTrades: best.trades,
+        worst: worst.key,
+        worstLoss: formatMoney(Math.abs(worst.net), money),
+        worstTrades: worst.trades,
+      }),
+      metric: tr('ins.labelNet', {
+        label: worst.key,
+        net: formatMoney(worst.net, money, { sign: true, compact: true }),
+      }),
     });
   }
 
@@ -225,17 +267,24 @@ export function buildInsights(trades: Trade[], setups: Setup[], settings: Settin
     groupTrades(
       closed,
       (t) => t.setupId,
-      (k) => setupNames.get(k) ?? 'Unknown setup',
+      (k) => setupNames.get(k) ?? tr('ins.setup.unknown'),
     ),
   );
   if (setupGroups.best && setupGroups.worst && setupGroups.best.key !== setupGroups.worst.key) {
+    const { best, worst } = setupGroups;
     out.push({
       id: 'setup',
       tone: 'info',
       category: 'Edge',
-      title: `"${setupGroups.best.label}" is your best playbook setup`,
-      body: `It has produced ${formatMoney(setupGroups.best.net, money, { sign: true })} over ${setupGroups.best.trades} trades at a ${setupGroups.best.winRate.toFixed(0)}% win rate, against ${formatMoney(setupGroups.worst.net, money, { sign: true })} for "${setupGroups.worst.label}". Give the better one more of your size.`,
-      metric: setupGroups.best.label,
+      title: tr('ins.setup.title', { name: best.label }),
+      body: tr('ins.setup.text', {
+        bestNet: formatMoney(best.net, money, { sign: true }),
+        count: best.trades,
+        rate: formatPct(best.winRate, 0),
+        worstNet: formatMoney(worst.net, money, { sign: true }),
+        worst: worst.label,
+      }),
+      metric: best.label,
     });
   }
 
@@ -246,9 +295,13 @@ export function buildInsights(trades: Trade[], setups: Setup[], settings: Settin
       id: 'tag',
       tone: 'bad',
       category: 'Behaviour',
-      title: `Trades tagged "${worstTag.label}" lose money`,
-      body: `${worstTag.trades} trades carry this tag and together they are down ${formatMoney(Math.abs(worstTag.net), money)} at a ${worstTag.winRate.toFixed(0)}% win rate. You already named the problem when you tagged them.`,
-      metric: `${worstTag.trades} trades tagged`,
+      title: tr('ins.tag.title', { tag: worstTag.label }),
+      body: tr('ins.tag.text', {
+        count: worstTag.trades,
+        loss: formatMoney(Math.abs(worstTag.net), money),
+        rate: formatPct(worstTag.winRate, 0),
+      }),
+      metric: tr('ins.tag.metric', { count: worstTag.trades }),
     });
   }
 
@@ -259,31 +312,43 @@ export function buildInsights(trades: Trade[], setups: Setup[], settings: Settin
     // to the cent, so what is left over from adding up never reads as "cost you about $0.00"
     const cost = Math.round(rules.cost * 100) / 100;
     const gap = cost / costed;
-    const sameSetup = 'the trades of the same setup that kept every rule';
     const rest = broken.trades - costed;
-    const others = rest
-      ? ` ${rest === 1 ? 'One more trade broke a rule in a setup that needs' : `${rest} more broke a rule in setups that need`} ${MIN_RULE_SIDE} trades that kept every rule and ${MIN_RULE_SIDE} that broke one before ${rest === 1 ? 'it' : 'they'} can be compared.`
-      : '';
-    const worst = costliest
-      ? ` The rule that cost the most to break: "${costliest.rule}"${setups.length > 1 ? ` (${setupNames.get(costliest.setupId)})` : ''}, ${formatMoney(costliest.brokenNet, money, { sign: true })} over the ${costliest.broken === 1 ? 'trade' : `${costliest.broken} trades`} that broke it.`
-      : '';
+    const others = rest ? ` ${tr('ins.rules.others', { count: rest, min: MIN_RULE_SIDE })}` : '';
+    let worst = '';
+    if (costliest) {
+      const said = {
+        rule: costliest.rule,
+        net: formatMoney(costliest.brokenNet, money, { sign: true }),
+        count: costliest.broken,
+      };
+      worst = ` ${
+        setups.length > 1
+          ? tr('ins.rules.worstIn', { ...said, setup: setupNames.get(costliest.setupId) ?? tr('ins.setup.unknown') })
+          : tr('ins.rules.worst', said)
+      }`;
+    }
+    const metric = tr('ins.rules.metric', { broken: broken.trades, count: rules.checked });
     out.push(
       cost > 0
         ? {
             id: 'rules',
             tone: 'bad',
             category: 'Behaviour',
-            title: `Breaking your rules cost you about ${formatMoney(cost, money)}`,
-            body: `${costed} trades broke a rule of their setup and made ${formatMoney(gap, money)} a trade less than ${sameSetup}. Had they done as well, you would be about that much better off.${others}${worst}`,
-            metric: `${broken.trades} of ${rules.checked} checked trades broke a rule`,
+            title: tr('ins.rules.costTitle', { money: formatMoney(cost, money) }),
+            body: `${tr('ins.rules.costText', { count: costed, gap: formatMoney(gap, money) })}${others}${worst}`,
+            metric,
           }
         : {
             id: 'rules',
             tone: 'info',
             category: 'Behaviour',
-            title: 'Breaking your rules has not cost you so far',
-            body: `The ${costed} trades that broke a rule of their setup made ${gap <= -0.005 ? `${formatMoney(-gap, money)} a trade more than` : 'as much as'} ${sameSetup}. Either those rules are not what makes your setups work, or it is too early to tell. Worth reading them again.${others}`,
-            metric: `${broken.trades} of ${rules.checked} checked trades broke a rule`,
+            title: tr('ins.rules.noCostTitle'),
+            body: `${
+              gap <= -0.005
+                ? tr('ins.rules.noCostMore', { count: costed, gap: formatMoney(-gap, money) })
+                : tr('ins.rules.noCostSame', { count: costed })
+            }${others}`,
+            metric,
           },
     );
   }
@@ -296,9 +361,15 @@ export function buildInsights(trades: Trade[], setups: Setup[], settings: Settin
       id: 'mistake',
       tone: 'bad',
       category: 'Behaviour',
-      title: `"${costliest.mistake}" is your most expensive mistake`,
-      body: `You made it on ${costliest.trades} trades, and they averaged ${formatMoney(costliest.avg, money, { sign: true })} against ${formatMoney(clean.avg, money, { sign: true })} for the ${clean.trades} clean trades, the ones with no mistake. Had they done as well, you would be about ${formatMoney(cost, money)} better off.`,
-      metric: `about ${formatMoney(cost, money)} over ${costliest.trades} trades`,
+      title: tr('ins.mistake.title', { mistake: mistakeName(costliest.mistake) }),
+      body: tr('ins.mistake.text', {
+        count: costliest.trades,
+        avg: formatMoney(costliest.avg, money, { sign: true }),
+        cleanAvg: formatMoney(clean.avg, money, { sign: true }),
+        clean: clean.trades,
+        cost: formatMoney(cost, money),
+      }),
+      metric: tr('ins.mistake.metric', { cost: formatMoney(cost, money), count: costliest.trades }),
     });
   }
 
@@ -306,35 +377,38 @@ export function buildInsights(trades: Trade[], setups: Setup[], settings: Settin
   const sides = groupTrades(closed, (t) => t.side);
   if (sides.length === 2 && sides.every((s) => s.trades >= MIN_GROUP)) {
     const [strong, weak] = sides;
-    // "longs" in a sentence, "Longs" at the start of one
-    const many = (side: string, start = false) =>
-      side === 'LONG' ? (start ? 'Longs' : 'longs') : start ? 'Shorts' : 'shorts';
     if (strong.winRate - weak.winRate >= 15) {
+      const longs = strong.key === 'LONG';
       out.push({
         id: 'side',
         tone: 'info',
         category: 'Edge',
-        title: `You read ${many(strong.key)} better than ${many(weak.key)}`,
-        body: `${many(strong.key, true)}: ${strong.winRate.toFixed(0)}% across ${strong.trades} trades. ${many(weak.key, true)}: ${weak.winRate.toFixed(0)}% across ${weak.trades}. A one-directional edge is still an edge.`,
-        metric: `${(strong.winRate - weak.winRate).toFixed(0)} point gap`,
+        title: tr(longs ? 'ins.side.longsTitle' : 'ins.side.shortsTitle'),
+        body: tr(longs ? 'ins.side.longsText' : 'ins.side.shortsText', {
+          strongRate: formatPct(strong.winRate, 0),
+          strongTrades: strong.trades,
+          weakRate: formatPct(weak.winRate, 0),
+          weakTrades: weak.trades,
+        }),
+        metric: tr('ins.side.metric', { points: (strong.winRate - weak.winRate).toFixed(0) }),
       });
     }
   }
 
   // --- behaviour -------------------------------------------------------
   const days = aggregateDays(trades);
-  const busy = days.filter((d) => d.trades >= 4);
+  const busy = days.filter((d) => d.trades >= BUSY_DAY);
   if (busy.length >= 3 && days.length >= 6) {
     const busyAvg = mean(busy.map((d) => d.net));
-    const calmAvg = mean(days.filter((d) => d.trades < 4).map((d) => d.net));
+    const calmAvg = mean(days.filter((d) => d.trades < BUSY_DAY).map((d) => d.net));
     if (calmAvg > busyAvg) {
       out.push({
         id: 'overtrading',
         tone: 'warn',
         category: 'Behaviour',
-        title: 'Your busy days are your worst days',
-        body: `Days with 4 or more trades average less than your quieter days. Volume is not where your edge lives.`,
-        metric: `${busy.length} busy days measured`,
+        title: tr('ins.busy.title'),
+        body: tr('ins.busy.text', { min: BUSY_DAY }),
+        metric: tr('ins.busy.metric', { count: busy.length }),
       });
     }
   }
@@ -352,9 +426,12 @@ export function buildInsights(trades: Trade[], setups: Setup[], settings: Settin
         id: 'revenge',
         tone: avgAfter < 0 ? 'bad' : 'warn',
         category: 'Behaviour',
-        title: 'The trade right after a loss performs worse',
-        body: `${after.length} trades were taken immediately after a same-day loss, and they average below your normal trade. A short cool-off after a red trade would have saved money.`,
-        metric: `${formatMoney(avgAfter, money, { sign: true })} vs ${formatMoney(stats.expectancy, money, { sign: true })} normally`,
+        title: tr('ins.revenge.title'),
+        body: tr('ins.revenge.text', { count: after.length }),
+        metric: tr('ins.revenge.metric', {
+          after: formatMoney(avgAfter, money, { sign: true }),
+          normal: formatMoney(stats.expectancy, money, { sign: true }),
+        }),
       });
     }
   }
@@ -364,9 +441,12 @@ export function buildInsights(trades: Trade[], setups: Setup[], settings: Settin
       id: 'hold-asymmetry',
       tone: 'warn',
       category: 'Behaviour',
-      title: 'You hold losers longer than winners',
-      body: 'Losing trades stay open noticeably longer than winning ones. That is hope management, not risk management. A hard time stop fixes it.',
-      metric: `${Math.round(stats.avgLossHold)}m vs ${Math.round(stats.avgWinHold)}m`,
+      title: tr('ins.hold.title'),
+      body: tr('ins.hold.text'),
+      metric: tr('ins.vs', {
+        a: tr('format.minutes', { m: Math.round(stats.avgLossHold) }),
+        b: tr('format.minutes', { m: Math.round(stats.avgWinHold) }),
+      }),
     });
   }
 
@@ -378,9 +458,9 @@ export function buildInsights(trades: Trade[], setups: Setup[], settings: Settin
       id: 'stops',
       tone: 'warn',
       category: 'Risk',
-      title: `Only ${stopPct.toFixed(0)}% of your trades record a stop`,
-      body: 'Without a stop price the journal cannot measure your R multiples, and more importantly you cannot prove you ever defined the risk. Add one on every trade.',
-      metric: `${withStop} of ${closed.length} trades`,
+      title: tr('ins.stops.title', { pct: formatPct(stopPct, 0) }),
+      body: tr('ins.stops.text'),
+      metric: tr('ins.stops.metric', { n: withStop, count: closed.length }),
     });
   }
 
@@ -393,9 +473,9 @@ export function buildInsights(trades: Trade[], setups: Setup[], settings: Settin
         id: 'outlier-loss',
         tone: 'bad',
         category: 'Risk',
-        title: 'One loss is far bigger than the rest',
-        body: `Your largest loss is more than two and a half times your average one. A single trade like that undoes a week of good ones. Find out whether the stop was moved.`,
-        metric: `${formatMoney(worst, money)} vs ${formatMoney(avgLoss, money)} average`,
+        title: tr('ins.outlier.title'),
+        body: tr('ins.outlier.text'),
+        metric: tr('ins.outlier.metric', { worst: formatMoney(worst, money), avg: formatMoney(avgLoss, money) }),
       });
     }
   }
@@ -403,20 +483,15 @@ export function buildInsights(trades: Trade[], setups: Setup[], settings: Settin
   // --- cost ------------------------------------------------------------
   if (stats.fees > 0) {
     const share = stats.grossProfit > 0 ? (stats.fees / stats.grossProfit) * 100 : 0;
-    if (share > 15 || (stats.net < 0 && stats.net + stats.fees > 0)) {
+    const flipped = stats.net < 0 && stats.net + stats.fees > 0;
+    if (share > 15 || flipped) {
       out.push({
         id: 'fees',
-        tone: stats.net < 0 && stats.net + stats.fees > 0 ? 'bad' : 'warn',
+        tone: flipped ? 'bad' : 'warn',
         category: 'Cost',
-        title:
-          stats.net < 0 && stats.net + stats.fees > 0
-            ? 'Commissions turned a winning system into a losing one'
-            : 'Commissions are eating a large share of your profit',
-        body:
-          stats.net < 0 && stats.net + stats.fees > 0
-            ? 'Before fees you are profitable; after fees you are not. Fewer, larger trades or a cheaper broker would flip this.'
-            : `Fees account for roughly ${share.toFixed(0)}% of your gross profit.`,
-        metric: `${formatMoney(stats.fees, money)} paid in fees`,
+        title: tr(flipped ? 'ins.fees.flipTitle' : 'ins.fees.shareTitle'),
+        body: flipped ? tr('ins.fees.flipText') : tr('ins.fees.shareText', { pct: formatPct(share, 0) }),
+        metric: tr('ins.fees.metric', { money: formatMoney(stats.fees, money) }),
       });
     }
   }
@@ -431,9 +506,9 @@ export function buildInsights(trades: Trade[], setups: Setup[], settings: Settin
         id: 'discipline',
         tone: 'good',
         category: 'Behaviour',
-        title: 'Your own discipline ratings predict your results',
-        body: `Trades you rated 4–5 for discipline average better than the ones you rated 1–2. You can tell a good trade from a bad one in the moment, which means the fix is following your own read.`,
-        metric: `${high.length} disciplined vs ${low.length} rushed`,
+        title: tr('ins.discipline.title'),
+        body: tr('ins.discipline.text'),
+        metric: tr('ins.discipline.metric', { high: high.length, low: low.length }),
       });
     }
   }

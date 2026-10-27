@@ -2,7 +2,16 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { decimalMark, isolate, LANGUAGES, messagesOf, setLanguage, tr, type Language } from '@/lib/i18n';
 import { en } from '@/lib/i18n/en';
 import type { Message, PluralForms } from '@/lib/i18n/types';
-import { formatMoney, formatNumber, formatPct, formatPrice, formatR, formatRatio, numberAndUnit } from '@/lib/format';
+import {
+  formatMoney,
+  formatNumber,
+  formatPct,
+  formatPrice,
+  formatR,
+  formatRatio,
+  numberAndUnit,
+  weekdayName,
+} from '@/lib/format';
 import { withoutKept } from './i18n-kept';
 
 /**
@@ -177,5 +186,38 @@ describe('a short amount on two lines', () => {
       const short = formatMoney(1360, 'USD', { sign: true, compact: true });
       expect(numberAndUnit(short) !== null, `${code}: ${short}`).toBe(splits[code]);
     }
+  });
+});
+
+describe('a weekday', () => {
+  it('is named in full for a sentence, and short for a table; English says "Fri" in both, as it did', () => {
+    // Monday is 0, Friday 4
+    const names = Object.fromEntries(
+      LANGUAGES.map(({ code }) => {
+        setLanguage(code);
+        return [code, [weekdayName(4), weekdayName(4, 'long'), weekdayName(0, 'long')]];
+      }),
+    );
+    expect(names).toEqual({
+      en: ['Fri', 'Fri', 'Mon'],
+      es: ['vie', 'viernes', 'lunes'],
+      ru: ['пт', 'пятница', 'понедельник'],
+      // Arabic's short name is its full one
+      ar: ['الجمعة', 'الجمعة', 'الاثنين'],
+      hi: ['शुक्र', 'शुक्रवार', 'सोमवार'],
+    });
+  });
+
+  it('has seven different names in every language, both short and long, the last one Sunday', () => {
+    for (const { code } of LANGUAGES) {
+      setLanguage(code);
+      for (const form of ['short', 'long'] as const) {
+        const week = [0, 1, 2, 3, 4, 5, 6].map((i) => weekdayName(i, form));
+        expect(new Set(week).size, `${code} ${form}`).toBe(7);
+        expect(week.every(Boolean), `${code} ${form}`).toBe(true);
+      }
+    }
+    setLanguage('es');
+    expect(weekdayName(6, 'long')).toBe('domingo');
   });
 });

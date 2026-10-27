@@ -147,8 +147,8 @@ function dates(options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
   return f;
 }
 
-/** "Октябрь 2026": a month heading starts with a capital, as it does in English */
-const capital = (text: string) => text.charAt(0).toLocaleUpperCase(language().dates) + text.slice(1);
+/** "Октябрь 2026": a month heading, or a label a line starts with, takes a capital, as it does in English */
+export const capital = (text: string) => text.charAt(0).toLocaleUpperCase(language().dates) + text.slice(1);
 
 /** a month's name, 0 for January */
 export function monthName(month: number, form: 'long' | 'short'): string {
@@ -156,11 +156,16 @@ export function monthName(month: number, form: 'long' | 'short'): string {
   return capital(dates({ month: form }).format(Date.UTC(2024, month, 1)));
 }
 
-/** a weekday's short name, Monday-first (0 is Monday), as the calendar grid is laid out */
-export function weekdayName(index: number): string {
+/**
+ * A weekday's name, Monday-first (0 is Monday), as the calendar grid is laid
+ * out. Short for a table or the grid; long where a sentence names the day,
+ * since "vie" or "пт" read badly in one. English says "Fri" in both, as its
+ * sentences always have.
+ */
+export function weekdayName(index: number, form: 'short' | 'long' = 'short'): string {
   if (language().code === 'en') return WEEKDAYS[index] ?? '';
   // 1 January 2024 was a Monday
-  return dates({ weekday: 'short' }).format(Date.UTC(2024, 0, 1 + index));
+  return dates({ weekday: form }).format(Date.UTC(2024, 0, 1 + index));
 }
 
 /** year, month (0 for January) and day of an ISO date, or null when it isn't one */

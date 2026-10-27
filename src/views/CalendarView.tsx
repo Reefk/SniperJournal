@@ -188,12 +188,12 @@ export function CalendarView() {
 
           <div className="mt-4 overflow-hidden rounded-xl border border-line bg-surface">
             <div className="grid grid-cols-7 border-b border-line bg-app/40">
-              {[0, 1, 2, 3, 4, 5, 6].map(weekdayName).map((d) => (
+              {[0, 1, 2, 3, 4, 5, 6].map((i) => (
                 <div
-                  key={d}
+                  key={i}
                   className="py-2 text-center text-[11px] font-medium text-muted md:px-3 md:py-2.5 md:text-xs"
                 >
-                  {d}
+                  {weekdayName(i)}
                 </div>
               ))}
             </div>

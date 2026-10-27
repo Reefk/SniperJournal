@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildInsights, buildSignals } from '@/lib/insights';
+import { setLanguage } from '@/lib/i18n';
 import type { Settings, Setup, Trade } from '@/lib/types';
 import { pnl } from './helpers';
 
@@ -197,6 +198,18 @@ describe('insights', () => {
     expect(insight([...mondays, ...[5, -5, 5, -5.01].map((v, i) => on(3, v, {}, 9 + i))], 'weekday')?.title).toBe(
       'Tue is costing you',
     );
+  });
+
+  it('weekdays: in another language the sentence names the day in full, not "mar"', () => {
+    const trades = [...many(4, (i) => on(2, 10, {}, 9 + i)), ...[5, -5, 5, -5.01].map((v, i) => on(3, v, {}, 9 + i))];
+    setLanguage('es');
+    try {
+      const found = insight(trades, 'weekday');
+      expect(found?.title).toBe('El martes te está costando dinero');
+      expect(found?.metric).toMatch(/^Martes: /);
+    } finally {
+      setLanguage('en');
+    }
   });
 
   it('symbols: the worst is named once it has four trades and is below zero', () => {
