@@ -10,6 +10,8 @@ import { importer } from './importer';
 import { insights } from './insights';
 import { list } from './list';
 import { platforms } from './platforms';
+import { playbook } from './playbook';
+import { resources } from './resources';
 import { settings } from './settings';
 import { shell } from './shell';
 import { trade } from './trade';
@@ -26,6 +28,8 @@ export const ar: Translation<Messages> = {
   ...insights,
   ...list,
   ...platforms,
+  ...playbook,
+  ...resources,
   ...settings,
   ...shell,
   ...trade,

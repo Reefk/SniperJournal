@@ -11,6 +11,8 @@ import { STARTING_MISTAKES } from '@/lib/mistakes';
 import { CalendarView } from '@/views/CalendarView';
 import { DashboardView } from '@/views/DashboardView';
 import { InsightsView } from '@/views/InsightsView';
+import { PlaybookView } from '@/views/PlaybookView';
+import { ResourcesView } from '@/views/ResourcesView';
 import { SettingsView } from '@/views/SettingsView';
 import { TradesView } from '@/views/TradesView';
 import { TradeFormModal } from '@/components/trades/TradeFormModal';
@@ -225,6 +227,51 @@ async function tickAll() {
   await click(buttons[buttons.length - 1]);
 }
 
+/**
+ * The Playbook. The journal's setup has enough trades on each side of its rules to cost breaking
+ * one, a rule broken often enough to be the costliest, one it no longer has, and trades partly
+ * or not checked; three more setups have breaking a rule pay, too few trades to cost it, and no
+ * rules or trades at all. TRADES have no setup.
+ */
+const ticked = (net: number, ruleChecks: Trade['ruleChecks'], setupId = 's1') =>
+  pnl(net, { setupId, ruleChecks, symbol: 'X', stopLoss: 90, entryPrice: 100 });
+const PLAYBOOK: Trade[] = [
+  ...TRADES,
+  ...[30, 40, 25, 35].map((net) => ticked(net, { r1: true, r2: true })),
+  ...[-20, -30, 10, -15].map((net) => ticked(net, { r1: false, r2: true })),
+  ticked(-5, { r1: true, r2: true, r0: false }),
+  ticked(12, { r1: true, r2: null }),
+  ticked(8, undefined),
+  ...[5, 6, 4, 5].map((net) => ticked(net, { r3: true }, 's2')),
+  ...[20, 25, 30, 15].map((net) => ticked(net, { r3: false }, 's2')),
+  ticked(10, { r4: true }, 's3'),
+  ticked(-10, { r4: false }, 's3'),
+];
+const MORE_SETUPS: JournalData['setups'] = [
+  { id: 's2', name: 'T', rules: ['r3'] },
+  { id: 's3', name: 'U', rules: ['r4'] },
+  { id: 's4', name: 'V', rules: [] },
+];
+const addSetups = () => MORE_SETUPS.forEach((setup) => journal?.actions.upsertSetup(setup));
+const fourSetups = () => document.querySelectorAll('article').length === 4;
+/** the colours offered, as their codes, in each colour's label */
+const COLOURS = ['#38bdf8', '#a78bfa'];
+const inModal = (selector: string) => document.querySelector<HTMLElement>(`[data-modal-root] ${selector}`);
+const lastModalButton = () => [...document.querySelectorAll<HTMLElement>('[data-modal-root] button')].at(-1) ?? null;
+
+/** Resources: one in each category the app offers; their titles, notes and links are the person's own */
+const RESOURCES = ['Charting', 'News & data', 'Education', 'Broker', 'Tools', 'Reading', 'Other'].map(
+  (category, i) => ({ id: `q${i}`, title: 'Q', url: 'https://q.example', category, notes: 'n', createdAt: '' }),
+);
+const LINK = ['q.example', 'tradingview.com'];
+const addResources = () => RESOURCES.forEach((resource) => journal?.actions.upsertResource(resource));
+const allResources = () => document.querySelectorAll('article').length === RESOURCES.length;
+/** the first of a resource's buttons, once its icon `icon` is there, and the window it opens */
+async function openFirst(icon: string) {
+  await click(document.querySelector(`svg[class*="lucide-${icon}"]`)?.closest('button') ?? null);
+  await until(() => Boolean(document.querySelector('[data-modal-root]')));
+}
+
 const SCREENS: Array<{
   name: string;
   view: () => ReactNode;
@@ -335,6 +382,126 @@ const SCREENS: Array<{
     open: () => choose(NO_SYMBOL),
     ready: read,
     own: cells(NO_SYMBOL),
+  },
+  { name: 'Playbook', view: PlaybookView, trades: PLAYBOOK, open: addSetups, modal: false, ready: fourSetups },
+  {
+    name: 'Playbook, empty',
+    view: PlaybookView,
+    trades: [],
+    open: () => journal?.actions.deleteSetup('s1'),
+    modal: false,
+    ready: () => !document.querySelector('article'),
+  },
+  {
+    name: 'Playbook, deleting a setup with trades',
+    view: PlaybookView,
+    trades: PLAYBOOK,
+    open: () => document.querySelector('svg[class*="lucide-trash"]')?.closest('button')?.click(),
+  },
+  {
+    name: 'Playbook, deleting a setup with none',
+    view: PlaybookView,
+    trades: PLAYBOOK,
+    open: addSetups,
+    modal: false,
+    ready: fourSetups,
+    then: async () => {
+      await click([...document.querySelectorAll('svg[class*="lucide-trash"]')].at(-1)?.closest('button') ?? null);
+      await until(() => Boolean(document.querySelector('[data-modal-root]')));
+    },
+  },
+  {
+    name: 'Playbook, a setup deleted',
+    view: PlaybookView,
+    trades: PLAYBOOK,
+    open: () => document.querySelector('svg[class*="lucide-trash"]')?.closest('button')?.click(),
+    then: () => click(lastModalButton()),
+  },
+  {
+    name: 'Playbook, a new setup saved without a name',
+    view: PlaybookView,
+    trades: TRADES,
+    open: () => document.querySelector('svg.lucide-plus')?.closest('button')?.click(),
+    then: () => click(inModal('button[type="submit"]')),
+    own: COLOURS,
+  },
+  {
+    name: 'Playbook, editing a setup',
+    view: PlaybookView,
+    trades: PLAYBOOK,
+    open: () => document.querySelector('svg[class*="lucide-pencil"]')?.closest('button')?.click(),
+    own: COLOURS,
+  },
+  {
+    name: 'Playbook, a setup saved',
+    view: PlaybookView,
+    trades: PLAYBOOK,
+    open: () => document.querySelector('svg[class*="lucide-pencil"]')?.closest('button')?.click(),
+    then: () => click(inModal('button[type="submit"]')),
+  },
+  {
+    name: 'Resources',
+    view: ResourcesView,
+    trades: [],
+    open: addResources,
+    modal: false,
+    ready: allResources,
+    own: LINK,
+  },
+  { name: 'Resources, empty', view: ResourcesView, trades: [] },
+  {
+    name: 'Resources, removing one',
+    view: ResourcesView,
+    trades: [],
+    open: addResources,
+    modal: false,
+    ready: allResources,
+    then: () => openFirst('trash'),
+    own: LINK,
+  },
+  {
+    name: 'Resources, one removed',
+    view: ResourcesView,
+    trades: [],
+    open: addResources,
+    modal: false,
+    ready: allResources,
+    then: async () => {
+      await openFirst('trash');
+      await click(lastModalButton());
+    },
+    own: LINK,
+  },
+  {
+    name: 'Resources, a new one saved without a title',
+    view: ResourcesView,
+    trades: [],
+    open: () => document.querySelector('svg.lucide-plus')?.closest('button')?.click(),
+    then: () => click(inModal('button[type="submit"]')),
+    own: LINK,
+  },
+  {
+    name: 'Resources, editing one',
+    view: ResourcesView,
+    trades: [],
+    open: addResources,
+    modal: false,
+    ready: allResources,
+    then: () => openFirst('pencil'),
+    own: LINK,
+  },
+  {
+    name: 'Resources, one saved',
+    view: ResourcesView,
+    trades: [],
+    open: addResources,
+    modal: false,
+    ready: allResources,
+    then: async () => {
+      await openFirst('pencil');
+      await click(inModal('button[type="submit"]'));
+    },
+    own: LINK,
   },
 ];
 

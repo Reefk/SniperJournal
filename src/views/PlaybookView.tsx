@@ -14,15 +14,17 @@ import {
   type RuleLine,
   type RuleReport,
 } from '@/lib/rules';
-import { formatMoney, formatPct, formatRatio } from '@/lib/format';
+import { formatMoney, formatPct, formatR, formatRatio } from '@/lib/format';
 import { cn, uid } from '@/lib/utils';
 import { storage } from '@/lib/storage';
+import { tr } from '@/lib/i18n';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Modal } from '@/components/ui/Modal';
 import { Field, Input, Textarea } from '@/components/ui/Field';
 import { StatusBadge } from '@/components/ui/StatusBadge';
+import { rich } from '@/components/ui/Rich';
 
 const COLORS = ['#6366f1', '#34d399', '#f59e0b', '#f43f5e', '#38bdf8', '#a78bfa'];
 
@@ -47,24 +49,22 @@ export function PlaybookView() {
   const remove = async (setup: Setup) => {
     const used = accountTrades.filter((t) => t.setupId === setup.id).length;
     const ok = await confirm({
-      title: `Delete "${setup.name}"?`,
-      message: used
-        ? `${used} ${used === 1 ? 'trade is' : 'trades are'} tagged with this setup. The trades stay in your journal, they just lose the setup label.`
-        : 'This setup will be removed from your playbook.',
-      confirmLabel: 'Delete setup',
+      title: tr('pb.delete.title', { name: setup.name }),
+      message: used ? tr('pb.delete.used', { count: used }) : tr('pb.delete.unused'),
+      confirmLabel: tr('pb.delete.confirm'),
       tone: 'danger',
     });
     if (ok) {
       actions.deleteSetup(setup.id);
-      toast('Setup deleted');
+      toast(tr('pb.deleted'));
     }
   };
 
   return (
     <>
       <PageHeader
-        title="The Playbook"
-        description="Write down the setups you are allowed to trade, then see which ones actually pay."
+        title={tr('nav.playbook')}
+        description={tr('pb.description')}
         actions={
           <Button
             variant="primary"
@@ -78,7 +78,7 @@ export function PlaybookView() {
               })
             }
           >
-            <Plus className="size-4" /> New setup
+            <Plus className="size-4" /> {tr('pb.new')}
           </Button>
         }
       />
@@ -86,14 +86,14 @@ export function PlaybookView() {
       {data.setups.length === 0 ? (
         <EmptyState
           icon={BookOpen}
-          title="Your playbook is empty"
-          description="A setup is a pattern you have decided is worth your money, with the rules that make it valid. Once you tag trades with a setup, this page shows you which of your patterns earn and which only feel good."
+          title={tr('pb.empty.title')}
+          description={tr('pb.empty.text')}
           actions={
             <Button
               variant="primary"
               onClick={() => setEditing({ id: uid(), name: '', description: '', rules: [''], color: COLORS[0] })}
             >
-              <Plus className="size-4" /> Write your first setup
+              <Plus className="size-4" /> {tr('pb.empty.first')}
             </Button>
           }
         />
@@ -124,7 +124,7 @@ export function PlaybookView() {
                       size="icon"
                       variant="ghost"
                       onClick={() => setEditing(setup)}
-                      aria-label={`Edit ${setup.name}`}
+                      aria-label={tr('pb.editNamed', { name: setup.name })}
                     >
                       <Pencil className="size-3.5" />
                     </Button>
@@ -133,7 +133,7 @@ export function PlaybookView() {
                       variant="ghost"
                       className="hover:bg-loss/10 hover:text-loss"
                       onClick={() => remove(setup)}
-                      aria-label={`Delete ${setup.name}`}
+                      aria-label={tr('settings.deleteNamed', { name: setup.name })}
                     >
                       <Trash2 className="size-3.5" />
                     </Button>
@@ -154,11 +154,11 @@ export function PlaybookView() {
                       ))}
                     </ul>
                   ) : (
-                    <p className="text-sm text-faint">No rules written yet. Rules are what make a setup checkable.</p>
+                    <p className="text-sm text-faint">{tr('pb.noRules')}</p>
                   )}
                   {removed.length > 0 && (
                     <div className="mt-3">
-                      <div className="text-[11px] text-faint">No longer in this setup</div>
+                      <div className="text-[11px] text-faint">{tr('pb.removedRules')}</div>
                       <ul className="mt-1 space-y-2">
                         {removed.map((line) => (
                           <li key={line.rule} className="text-sm text-faint">
@@ -177,15 +177,15 @@ export function PlaybookView() {
                   {perf ? (
                     <div className="grid grid-cols-4 gap-2 text-center">
                       {[
-                        ['Trades', String(perf.trades), 'text-fg'],
-                        ['Win rate', formatPct(perf.winRate, 0), 'text-fg'],
+                        [tr('pb.trades'), String(perf.trades), 'text-fg'],
+                        [tr('score.winRate'), formatPct(perf.winRate, 0), 'text-fg'],
                         [
-                          'Net',
+                          tr('list.net'),
                           formatMoney(perf.net, currency, { sign: true, compact: true }),
                           perf.net > 0 ? 'text-profit' : perf.net < 0 ? 'text-loss' : 'text-fg',
                         ],
                         [
-                          'Factor',
+                          tr('pb.factor'),
                           formatRatio(perf.profitFactor),
                           perf.profitFactor != null && perf.profitFactor >= 1 ? 'text-profit' : 'text-loss',
                         ],
@@ -197,7 +197,7 @@ export function PlaybookView() {
                       ))}
                     </div>
                   ) : (
-                    <p className="text-center text-xs text-faint">No trades tagged with this setup yet</p>
+                    <p className="text-center text-xs text-faint">{tr('pb.noTrades')}</p>
                   )}
                 </footer>
               </article>
@@ -209,8 +209,7 @@ export function PlaybookView() {
       {unassigned > 0 && data.setups.length > 0 && (
         <p className="mt-4 flex items-center gap-2 text-xs text-muted">
           <StatusBadge tone="warn">{unassigned}</StatusBadge>
-          {unassigned === 1 ? 'trade has' : 'trades have'} no setup attached. Tagging them is what makes this page
-          useful.
+          {tr('pb.unassigned', { count: unassigned })}
         </p>
       )}
 
@@ -221,7 +220,7 @@ export function PlaybookView() {
           onSave={(next, renamedRules) => {
             actions.upsertSetup(next, renamedRules);
             setEditing(null);
-            toast(`Setup "${next.name}" saved`);
+            toast(tr('pb.saved', { name: next.name }));
           }}
         />
       )}
@@ -246,15 +245,13 @@ function RuleTally({
   if (!line || line.kept + line.broken === 0) return null;
   return (
     <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-faint">
-      <span className="num">
-        kept {line.kept} of {line.kept + line.broken}
-      </span>
+      <span className="num">{tr('pb.keptOf', { kept: line.kept, total: line.kept + line.broken })}</span>
       {line.broken > 0 && (
         <span className={cn('num', line.brokenNet < 0 && 'text-loss')}>
-          broken {line.broken}× · {short(line.brokenNet, currency)}
+          {tr('pb.brokenTimes', { count: line.broken, net: short(line.brokenNet, currency) })}
         </span>
       )}
-      {line === costliest && <StatusBadge tone="loss">costliest to break</StatusBadge>}
+      {line === costliest && <StatusBadge tone="loss">{tr('pb.costliest')}</StatusBadge>}
     </div>
   );
 }
@@ -263,34 +260,34 @@ function RuleTally({
 function RulesKept({ report, currency }: { report: RuleReport; currency: string }) {
   const { kept, broken, checked, partial, cost } = report;
   const unchecked = report.trades - checked;
-  const many = (n: number) => (n === 1 ? 'trade' : 'trades');
   const net = (v: number) => (v > 0 ? 'text-profit' : v < 0 ? 'text-loss' : 'text-fg');
 
   return (
-    <section aria-label="Rules kept" className="border-t border-line px-5 py-3 text-xs">
+    <section aria-label={tr('goal.rulesKept.label')} className="border-t border-line px-5 py-3 text-xs">
       <p className="text-muted">
-        Every rule kept on <span className="num font-semibold text-fg">{kept?.trades ?? 0}</span> of {checked} checked{' '}
-        {many(checked)}
-        {partial > 0 && <> · {partial} partly checked</>}
-        {unchecked > 0 && <> · {unchecked} not checked</>}
+        {rich(tr('pb.everyKeptOn', { count: checked, kept: kept?.trades ?? 0 }), {
+          num: (text) => <span className="num font-semibold text-fg">{text}</span>,
+        })}
+        {partial > 0 && <> · {tr('pb.partly', { count: partial })}</>}
+        {unchecked > 0 && <> · {tr('pb.unchecked', { count: unchecked })}</>}
       </p>
       <table className="mt-2 w-full">
         <thead>
           <tr className="text-[11px] text-faint">
             <th className="text-start font-normal">
-              <span className="sr-only">Rules</span>
+              <span className="sr-only">{tr('pb.rules')}</span>
             </th>
-            <th className="ps-2 text-end font-normal">Trades</th>
-            <th className="ps-2 text-end font-normal">Net</th>
-            <th className="ps-2 text-end font-normal">Win rate</th>
-            <th className="ps-2 text-end font-normal">Avg R</th>
+            <th className="ps-2 text-end font-normal">{tr('pb.trades')}</th>
+            <th className="ps-2 text-end font-normal">{tr('list.net')}</th>
+            <th className="ps-2 text-end font-normal">{tr('score.winRate')}</th>
+            <th className="ps-2 text-end font-normal">{tr('pb.avgR')}</th>
           </tr>
         </thead>
         <tbody>
           {(
             [
-              ['Every rule kept', kept],
-              ['A rule broken', broken],
+              [tr('pb.allKept'), kept],
+              [tr('pb.oneBroken'), broken],
             ] as const
           ).map(([label, side]) => (
             <tr key={label}>
@@ -302,31 +299,22 @@ function RulesKept({ report, currency }: { report: RuleReport; currency: string 
                 {side ? short(side.net, currency) : '—'}
               </td>
               <td className="num ps-2 text-end text-fg">{side ? formatPct(side.winRate, 0) : '—'}</td>
-              <td className="num ps-2 text-end text-fg">
-                {side?.avgR != null ? `${side.avgR >= 0 ? '+' : ''}${side.avgR.toFixed(2)}R` : '—'}
-              </td>
+              <td className="num ps-2 text-end text-fg">{side?.avgR != null ? formatR(side.avgR) : '—'}</td>
             </tr>
           ))}
         </tbody>
       </table>
       {cost != null && broken && (
         <p className="mt-2 leading-relaxed text-muted">
-          {cost > 0 ? (
-            <>
-              Breaking a rule cost about{' '}
-              <span className="num font-semibold text-loss">{formatMoney(cost, currency)}</span> here: the{' '}
-              {broken.trades} {many(broken.trades)} that broke one would have made that much more at the average of the
-              trades that kept every rule.
-            </>
-          ) : (
-            'Breaking a rule has not cost money on this setup so far.'
-          )}
+          {cost > 0
+            ? rich(tr('pb.cost', { count: broken.trades, money: formatMoney(cost, currency) }), {
+                loss: (text) => <span className="num font-semibold text-loss">{text}</span>,
+              })
+            : tr('pb.noCost')}
         </p>
       )}
       {cost == null && kept && broken && (
-        <p className="mt-2 leading-relaxed text-faint">
-          What breaking a rule costs shows once {MIN_RULE_SIDE} trades are on each side.
-        </p>
+        <p className="mt-2 leading-relaxed text-faint">{tr('pb.costNeeds', { count: MIN_RULE_SIDE })}</p>
       )}
     </section>
   );
@@ -358,14 +346,14 @@ function SetupEditor({
       onClose={onClose}
       closeOnBackdrop={false}
       size="lg"
-      title={setup.name ? `Edit ${setup.name}` : 'New setup'}
-      description="A setup you can check against before you click buy."
+      title={setup.name ? tr('pb.editNamed', { name: setup.name }) : tr('pb.new')}
+      description={tr('pb.editor.hint')}
     >
       <form
         onSubmit={(e) => {
           e.preventDefault();
           if (!draft.name.trim()) {
-            setError('Give the setup a name');
+            setError(tr('pb.nameRequired'));
             return;
           }
           const { rules, renamed } = editedRules(rows);
@@ -374,21 +362,21 @@ function SetupEditor({
         className="space-y-4"
       >
         <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_auto]">
-          <Field label="Setup name" error={error}>
+          <Field label={tr('pb.name')} error={error}>
             <Input
               autoFocus={storage.device === 'pc'}
               value={draft.name}
               onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
-              placeholder="e.g. Opening Range Breakout"
+              placeholder={tr('pb.namePlaceholder')}
             />
           </Field>
-          <Field label="Colour">
+          <Field label={tr('pb.colour')}>
             <div className="flex h-10 items-center gap-2.5 md:h-9 md:gap-1.5">
               {COLORS.map((c) => (
                 <button
                   key={c}
                   type="button"
-                  aria-label={`Use colour ${c}`}
+                  aria-label={tr('pb.useColour', { colour: c })}
                   onClick={() => setDraft((d) => ({ ...d, color: c }))}
                   className="size-8 rounded-full transition md:size-6"
                   style={{
@@ -402,18 +390,18 @@ function SetupEditor({
           </Field>
         </div>
 
-        <Field label="What it is" hint="optional">
+        <Field label={tr('pb.what')} hint={tr('common.optional')}>
           <Textarea
             value={draft.description ?? ''}
             onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
-            placeholder="Describe the pattern in a sentence or two, the way you would explain it to someone else."
+            placeholder={tr('pb.whatPlaceholder')}
           />
         </Field>
 
         <div>
           <div className="mb-1.5 flex items-baseline justify-between text-xs">
-            <span className="font-medium text-muted">Rules</span>
-            <span className="text-faint">every one must be true before you take the trade</span>
+            <span className="font-medium text-muted">{tr('pb.rules')}</span>
+            <span className="text-faint">{tr('pb.rulesHint')}</span>
           </div>
           <div className="space-y-2">
             {rows.map((row, i) => (
@@ -422,7 +410,7 @@ function SetupEditor({
                 <Input
                   value={row.text}
                   onChange={(e) => setRule(i, e.target.value)}
-                  placeholder="e.g. Volume above the 20 period average"
+                  placeholder={tr('pb.rulePlaceholder')}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault();
@@ -433,7 +421,7 @@ function SetupEditor({
                 <Button
                   size="icon"
                   variant="ghost"
-                  aria-label={`Remove rule ${i + 1}`}
+                  aria-label={tr('pb.removeRule', { n: i + 1 })}
                   onClick={() => setRows((rs) => rs.filter((_, idx) => idx !== i))}
                 >
                   <X className="size-4" />
@@ -442,16 +430,16 @@ function SetupEditor({
             ))}
           </div>
           <Button size="sm" variant="ghost" className="mt-2" onClick={addRule}>
-            <Plus className="size-3.5" /> Add a rule
+            <Plus className="size-3.5" /> {tr('pb.addRule')}
           </Button>
         </div>
 
         <div className="-mx-5 -mb-4 flex justify-end gap-2 border-t border-line px-5 py-3">
           <Button variant="ghost" onClick={onClose}>
-            Cancel
+            {tr('common.cancel')}
           </Button>
           <Button variant="primary" type="submit">
-            Save setup
+            {tr('pb.save')}
           </Button>
         </div>
       </form>

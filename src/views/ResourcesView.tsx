@@ -6,6 +6,7 @@ import type { Resource } from '@/lib/types';
 import { useJournal } from '@/store/JournalProvider';
 import { useUI } from '@/store/UIProvider';
 import { uid } from '@/lib/utils';
+import { tr } from '@/lib/i18n';
 import { safeLink } from '@/store/sanitize';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
@@ -13,7 +14,13 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Modal } from '@/components/ui/Modal';
 import { Field, Input, Select, Textarea } from '@/components/ui/Field';
 
-const CATEGORIES = ['Charting', 'News & data', 'Education', 'Broker', 'Tools', 'Reading', 'Other'];
+/** saved on a resource in English whatever the language; see categoryName */
+const CATEGORIES = ['Charting', 'News & data', 'Education', 'Broker', 'Tools', 'Reading', 'Other'] as const;
+type Category = (typeof CATEGORIES)[number];
+
+/** a category as the screen names it: one of CATEGORIES in the current language, any other as it is */
+const categoryName = (category: string) =>
+  (CATEGORIES as readonly string[]).includes(category) ? tr(`res.cat.${category as Category}`) : category;
 
 export function ResourcesView() {
   const { data, actions } = useJournal();
@@ -23,7 +30,8 @@ export function ResourcesView() {
   const grouped = useMemo(() => {
     const map = new Map<string, Resource[]>();
     for (const r of data.resources) map.set(r.category, [...(map.get(r.category) ?? []), r]);
-    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+    // in the order of the names shown, which in English are the names saved
+    return [...map.entries()].sort((a, b) => categoryName(a[0]).localeCompare(categoryName(b[0])));
   }, [data.resources]);
 
   const blank = (): Resource => ({
@@ -37,25 +45,25 @@ export function ResourcesView() {
 
   const remove = async (resource: Resource) => {
     const ok = await confirm({
-      title: `Remove "${resource.title}"?`,
-      message: 'This only removes the link from your resources list.',
-      confirmLabel: 'Remove',
+      title: tr('res.remove.title', { name: resource.title }),
+      message: tr('res.remove.message'),
+      confirmLabel: tr('shell.remove'),
       tone: 'danger',
     });
     if (ok) {
       actions.deleteResource(resource.id);
-      toast('Resource removed');
+      toast(tr('res.removed'));
     }
   };
 
   return (
     <>
       <PageHeader
-        title="Resources"
-        description="Your own shortlist of tools, feeds and reading. Nothing is added for you."
+        title={tr('nav.resources')}
+        description={tr('res.description')}
         actions={
           <Button variant="primary" onClick={() => setEditing(blank())}>
-            <Plus className="size-4" /> Add resource
+            <Plus className="size-4" /> {tr('res.add')}
           </Button>
         }
       />
@@ -63,11 +71,11 @@ export function ResourcesView() {
       {data.resources.length === 0 ? (
         <EmptyState
           icon={LibraryBig}
-          title="No resources saved"
-          description="Keep the handful of links you actually open every session in one place: your charting platform, your economic calendar, the broker statement page, a book you are working through."
+          title={tr('res.empty.title')}
+          description={tr('res.empty.text')}
           actions={
             <Button variant="primary" onClick={() => setEditing(blank())}>
-              <Plus className="size-4" /> Add your first resource
+              <Plus className="size-4" /> {tr('res.empty.first')}
             </Button>
           }
         />
@@ -75,7 +83,7 @@ export function ResourcesView() {
         <div className="space-y-6">
           {grouped.map(([category, items]) => (
             <section key={category}>
-              <h2 className="mb-2.5 text-sm font-semibold text-fg">{category}</h2>
+              <h2 className="mb-2.5 text-sm font-semibold text-fg">{categoryName(category)}</h2>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
                 {items.map((r) => (
                   <article key={r.id} className="group flex flex-col rounded-xl border border-line bg-surface p-4">
@@ -89,7 +97,7 @@ export function ResourcesView() {
                           size="icon"
                           variant="ghost"
                           onClick={() => setEditing(r)}
-                          aria-label={`Edit ${r.title}`}
+                          aria-label={tr('pb.editNamed', { name: r.title })}
                         >
                           <Pencil className="size-3.5" />
                         </Button>
@@ -98,7 +106,7 @@ export function ResourcesView() {
                           variant="ghost"
                           className="hover:bg-loss/10 hover:text-loss"
                           onClick={() => remove(r)}
-                          aria-label={`Remove ${r.title}`}
+                          aria-label={tr('res.removeNamed', { name: r.title })}
                         >
                           <Trash2 className="size-3.5" />
                         </Button>
@@ -133,7 +141,7 @@ export function ResourcesView() {
           onClose={() => setEditing(null)}
           closeOnBackdrop={false}
           size="md"
-          title={editing.title ? 'Edit resource' : 'Add resource'}
+          title={editing.title ? tr('res.edit') : tr('res.add')}
         >
           <ResourceForm
             resource={editing}
@@ -141,7 +149,7 @@ export function ResourcesView() {
             onSave={(next) => {
               actions.upsertResource(next);
               setEditing(null);
-              toast('Resource saved');
+              toast(tr('res.saved'));
             }}
           />
         </Modal>
@@ -167,7 +175,7 @@ function ResourceForm({
       onSubmit={(e) => {
         e.preventDefault();
         if (!draft.title.trim()) {
-          setError('Give it a title');
+          setError(tr('res.titleRequired'));
           return;
         }
         const url = draft.url?.trim();
@@ -179,45 +187,45 @@ function ResourceForm({
       }}
       className="space-y-4"
     >
-      <Field label="Title" error={error}>
+      <Field label={tr('res.title')} error={error}>
         <Input
           autoFocus
           value={draft.title}
           onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
-          placeholder="e.g. TradingView"
+          placeholder={tr('goals.example', { n: 'TradingView' })}
         />
       </Field>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_180px]">
-        <Field label="Link" hint="optional">
+        <Field label={tr('res.link')} hint={tr('common.optional')}>
           <Input
             value={draft.url ?? ''}
             onChange={(e) => setDraft((d) => ({ ...d, url: e.target.value }))}
             placeholder="tradingview.com"
           />
         </Field>
-        <Field label="Category">
+        <Field label={tr('res.category')}>
           <Select value={draft.category} onChange={(e) => setDraft((d) => ({ ...d, category: e.target.value }))}>
             {CATEGORIES.map((c) => (
               <option key={c} value={c}>
-                {c}
+                {categoryName(c)}
               </option>
             ))}
           </Select>
         </Field>
       </div>
-      <Field label="Notes" hint="optional">
+      <Field label={tr('form.notes')} hint={tr('common.optional')}>
         <Textarea
           value={draft.notes ?? ''}
           onChange={(e) => setDraft((d) => ({ ...d, notes: e.target.value }))}
-          placeholder="What you use it for"
+          placeholder={tr('res.notesPlaceholder')}
         />
       </Field>
       <div className="-mx-5 -mb-4 flex justify-end gap-2 border-t border-line px-5 py-3">
         <Button variant="ghost" onClick={onCancel}>
-          Cancel
+          {tr('common.cancel')}
         </Button>
         <Button variant="primary" type="submit">
-          Save
+          {tr('common.save')}
         </Button>
       </div>
     </form>
