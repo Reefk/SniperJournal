@@ -101,7 +101,7 @@ export const shell: Translation<typeof en> = {
     'No se pudo guardar una copia de la versión de esta ventana. Descárgala antes de recargar o se perderán los cambios hechos en esta ventana.',
   'conflict.reloadHint': 'Recarga para seguir con el diario tal como está guardado ahora.',
 
-  'copy.why.tooBig': 'el diario es demasiado grande para él',
+  'copy.why.tooBig': 'el diario es demasiado grande',
   'copy.why.refused': 'su almacenamiento está lleno o desactivado',
   'copy.offTooBig':
     'Tu diario ya es demasiado grande para que este navegador guarde su copia de repuesto. Nada más cambia: se sigue guardando en el archivo del diario un momento después de cada cambio.',
