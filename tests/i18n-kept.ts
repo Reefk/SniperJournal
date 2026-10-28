@@ -9,6 +9,7 @@ export const KEPT = [
   'Sniper Score',
   // what traders call these in every language
   'FOMO',
+  'VWAP',
   // futures symbols
   'ES',
   'NQ',

@@ -1,4 +1,5 @@
 import type { RuleChecks, Setup, Trade } from './types';
+import { tr } from './i18n';
 import { checksSetupId } from './rules';
 import { STARTING_MISTAKES } from './mistakes';
 import { detectSession } from './sessions';
@@ -8,6 +9,8 @@ import { pad2, uid } from './utils';
  * TEST DATA ONLY.
  * Everything produced here is flagged isSample so it can be wiped in one
  * click. Nothing in the app generates trades unless the user asks for it.
+ * Its setups, rules, tags and notes are written in the language on screen
+ * when it is made; from then on they are journal data, kept as written.
  */
 
 // deterministic RNG so "load test data" gives a believable, stable set
@@ -36,56 +39,47 @@ const SYMBOLS = [
   { symbol: 'ES', price: 5720, tick: 0.25, decimals: 2, mult: 50 },
 ];
 
-const TAGS = [
-  'planned',
-  'breakout',
-  'pullback',
-  'news',
-  'fomo',
-  'early entry',
-  'moved stop',
-  'A+ setup',
-  'tired',
-  'oversized',
+// in this order: a test trade's tags are picked by their place in the list
+const sampleTags = () => [
+  tr('sample.tag.planned'),
+  tr('sample.tag.breakout'),
+  tr('sample.tag.pullback'),
+  tr('sample.tag.news'),
+  tr('sample.tag.fomo'),
+  tr('sample.tag.earlyEntry'),
+  tr('sample.tag.movedStop'),
+  tr('sample.tag.aPlus'),
+  tr('sample.tag.tired'),
+  tr('sample.tag.oversized'),
 ];
 
 export function sampleSetups(): Setup[] {
   return [
     {
       id: uid(),
-      name: 'Opening Range Breakout',
-      description: 'Break and hold of the first 15 minute range, taken only in the direction of the daily trend.',
-      rules: [
-        'Wait for the first 15 minutes to complete',
-        'Enter on the retest, not the first push',
-        'Stop below the range mid',
-        'Target 2R or the prior day high',
-      ],
+      name: tr('sample.orb.name'),
+      description: tr('sample.orb.description'),
+      rules: [tr('sample.orb.wait'), tr('sample.orb.retest'), tr('sample.orb.stop'), tr('sample.orb.target')],
       color: '#6366f1',
       isSample: true,
     },
     {
       id: uid(),
-      name: 'VWAP Reclaim',
-      description: 'Price loses VWAP, flushes, then reclaims it with volume.',
-      rules: [
-        'Must reclaim within 30 minutes of losing it',
-        'Volume on the reclaim candle above average',
-        'Stop under the flush low',
-        'Scale half at 1R',
-      ],
+      name: tr('sample.vwap.name'),
+      description: tr('sample.vwap.description'),
+      rules: [tr('sample.vwap.within'), tr('sample.vwap.volume'), tr('sample.vwap.stop'), tr('sample.vwap.scale')],
       color: '#34d399',
       isSample: true,
     },
     {
       id: uid(),
-      name: 'Trend Pullback',
-      description: 'Buying the first controlled pullback into a rising moving average.',
+      name: tr('sample.pullback.name'),
+      description: tr('sample.pullback.description'),
       rules: [
-        'Higher highs and higher lows on the 5 minute',
-        'Pullback on falling volume',
-        'Entry on the reversal candle close',
-        'No entry in the last hour',
+        tr('sample.pullback.trend'),
+        tr('sample.pullback.volume'),
+        tr('sample.pullback.entry'),
+        tr('sample.pullback.late'),
       ],
       color: '#f59e0b',
       isSample: true,
@@ -134,6 +128,8 @@ export function generateSampleData(accountId: string): { trades: Trade[]; setups
   const ruleRand = mulberry32(20261019);
   const mistakeRand = mulberry32(20261025);
   const setups = sampleSetups();
+  const tagNames = sampleTags();
+  const notes = { won: tr('sample.note.won'), lost: tr('sample.note.lost') };
   const trades: Trade[] = [];
   const now = new Date().toISOString();
 
@@ -184,8 +180,8 @@ export function generateSampleData(accountId: string): { trades: Trade[]; setups
                 : Math.max(5, Math.round(rawQty));
 
         const tags: string[] = [];
-        if (rand() > 0.55) tags.push(TAGS[Math.floor(rand() * TAGS.length)]);
-        if (rand() > 0.85) tags.push(TAGS[Math.floor(rand() * TAGS.length)]);
+        if (rand() > 0.55) tags.push(tagNames[Math.floor(rand() * tagNames.length)]);
+        if (rand() > 0.85) tags.push(tagNames[Math.floor(rand() * tagNames.length)]);
 
         const good = rMultipleOutcome > 0;
         const rate = (base: number) => Math.max(1, Math.min(5, Math.round(base + (rand() - 0.5) * 2)));
@@ -216,7 +212,7 @@ export function generateSampleData(accountId: string): { trades: Trade[]; setups
           ruleChecksSetupId: checksSetupId(setup.id, ruleChecks),
           mistakes: sampleMistakes(good, mistakeRand),
           tags: [...new Set(tags)],
-          notes: good ? 'Followed the plan, let the runner work.' : 'Entered before confirmation and paid for it.',
+          notes: good ? notes.won : notes.lost,
           review: { discipline: rate(good ? 4 : 2.5), execution: rate(good ? 4 : 3), patience: rate(good ? 4 : 2.5) },
           excluded: false,
           isSample: true,

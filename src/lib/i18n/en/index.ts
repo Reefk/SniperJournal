@@ -12,6 +12,7 @@ import { platforms } from './platforms';
 import { playbook } from './playbook';
 import { reports } from './reports';
 import { resources } from './resources';
+import { sample } from './sample';
 import { settings } from './settings';
 import { shell } from './shell';
 import { support } from './support';
@@ -37,6 +38,7 @@ export const en = {
   ...playbook,
   ...reports,
   ...resources,
+  ...sample,
   ...settings,
   ...shell,
   ...support,
