@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { JournalData } from '@/lib/types';
-import { UNSUPPORTED_IMAGE } from '@/lib/storage/image-types';
+import { unsupportedImage } from '@/lib/storage/image-types';
 
 /**
  * The Windows app's storage, against an in-memory stand-in for the commands
@@ -225,7 +225,7 @@ describe('chart images and exports', () => {
   it("goes by the image's own type: anything but PNG, JPEG, WebP and GIF is refused, and nothing is written", async () => {
     const s = await freshStorage();
     for (const type of ['image/svg+xml', 'image/avif', 'image/bmp']) {
-      await expect(s.saveImage(new Blob([new Uint8Array([1])], { type }))).rejects.toThrow(UNSUPPORTED_IMAGE);
+      await expect(s.saveImage(new Blob([new Uint8Array([1])], { type }))).rejects.toThrow(unsupportedImage());
     }
     expect(called('save_image')).toEqual([]);
     expect(await s.saveImage(new Blob([new Uint8Array([1])], { type: 'image/jpeg' }))).toMatch(/^[a-z0-9]{6,40}\.jpg$/);

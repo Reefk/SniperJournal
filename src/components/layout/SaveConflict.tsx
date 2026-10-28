@@ -134,13 +134,13 @@ export function CopyNotice() {
  */
 export function RecoveredNotice() {
   const { recovered, dismissRecovered } = useSaveState();
-  if (!recovered) return null;
+  if (recovered === null) return null;
 
   return (
     <div className="flex items-start gap-3 border-b border-accent/25 bg-accent/10 px-4 py-2 text-sm md:px-6">
       <Info className="mt-0.5 size-4 shrink-0 text-accent" />
       <span className="min-w-0 text-fg">
-        {rich(tr('recovered.body', { path: recovered }), {
+        {rich(tr('recovered.body', { path: recovered || tr('recovered.backups') }), {
           path: (text) => <span className="num break-all text-muted">{text}</span>,
         })}
       </span>

@@ -75,7 +75,7 @@ export interface JournalStorage {
 
   /**
    * Save a chart image and return the name to store on the trade. Its
-   * extension comes from the blob's own type; throws UNSUPPORTED_IMAGE
+   * extension comes from the blob's own type; throws unsupportedImage()
    * (image-types.ts) for a type that cannot be saved.
    */
   saveImage(blob: Blob): Promise<string>;

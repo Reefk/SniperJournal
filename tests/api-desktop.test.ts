@@ -13,7 +13,6 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { UNSUPPORTED_IMAGE } from '@/lib/storage/image-types';
 
 /**
  * The desktop server's API routes, run against a throwaway folder: the
@@ -335,7 +334,8 @@ describe('/api/screenshot', () => {
     for (const type of ['image/avif', 'image/bmp', 'image/heic']) {
       const res = await upload(new Blob([new Uint8Array([1, 2, 3])], { type }), 'chart.jpg');
       expect(res.status).toBe(400);
-      expect((await res.json()).error).toBe(UNSUPPORTED_IMAGE);
+      // the server's words, as the browser version shows them
+      expect((await res.json()).error).toBe('Only PNG, JPEG, WebP and GIF images can be saved.');
     }
     expect(existsSync(join(root, 'data', 'screenshots'))).toBe(false);
     // a JPEG is saved as .jpg; one saved as .jpeg is still served as a JPEG

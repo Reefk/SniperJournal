@@ -17,6 +17,8 @@
  * refers to cannot be known, so nothing is deleted.
  */
 
+import { tr } from '../i18n';
+
 /** how long a new image is left alone, whatever refers to it */
 export const SWEEP_GRACE_MS = 24 * 60 * 60 * 1000;
 
@@ -57,19 +59,19 @@ export interface SweepFiles {
 
 /**
  * Why the search stopped before anything was deleted, worded for the person
- * using the app. Every failure of `findUnused` is one of these.
+ * using the app, in the language on screen (in English on the PC's server).
+ * Every failure of `findUnused` is one of these.
  */
 export class SweepError extends Error {}
 
-const NOTHING = 'so no chart image was deleted';
 const lower = (name: string) => name.toLowerCase();
 const fileName = (path: string) => path.split(/[\\/]/).pop() ?? path;
 
-async function attempt<T>(task: () => Promise<T>, failure: string): Promise<T> {
+async function attempt<T>(task: () => Promise<T>, failure: () => string): Promise<T> {
   try {
     return await task();
   } catch {
-    throw new SweepError(`${failure}, ${NOTHING}.`);
+    throw new SweepError(failure());
   }
 }
 
@@ -108,24 +110,35 @@ export function sweepCandidates(
 export async function findUnused(files: SweepFiles, inUse: Iterable<string>, now = Date.now()): Promise<UnusedImage[]> {
   const shown = new Set([...inUse].map(lower));
   let unused = sweepCandidates(
-    await attempt(() => files.images(), 'The screenshots folder could not be read'),
+    await attempt(
+      () => files.images(),
+      () => tr('sweep.shotsUnreadable'),
+    ),
     shown,
     now,
   );
   if (!unused.length) return [];
 
-  const journals = await attempt(() => files.journals(), 'The backups folder could not be read');
-  if (!journals.length) throw new SweepError(`Your journal file could not be read, ${NOTHING}.`);
+  const journals = await attempt(
+    () => files.journals(),
+    () => tr('sweep.backupsUnreadable'),
+  );
+  if (!journals.length) throw new SweepError(tr('sweep.journalUnreadable'));
   for (const [i, journal] of journals.entries()) {
-    const what = i === 0 ? 'Your journal file' : `The backup ${fileName(journal)}`;
-    const text = await attempt(() => files.read(journal), `${what} could not be read`);
+    const unreadable = () =>
+      i === 0 ? tr('sweep.journalUnreadable') : tr('sweep.backupUnreadable', { file: fileName(journal) });
+    const text = await attempt(() => files.read(journal), unreadable);
     if (text === null) {
       // a copy deleted since it was listed protects nothing; the journal must be there
-      if (i === 0) throw new SweepError(`${what} could not be read, ${NOTHING}.`);
+      if (i === 0) throw new SweepError(unreadable());
       continue;
     }
     const mentioned = mentionsIn(text);
-    if (!mentioned) throw new SweepError(`${what} is damaged (it is not a complete journal), ${NOTHING}.`);
+    if (!mentioned) {
+      throw new SweepError(
+        i === 0 ? tr('sweep.journalDamaged') : tr('sweep.backupDamaged', { file: fileName(journal) }),
+      );
+    }
     unused = unused.filter((image) => !mentioned.has(lower(image.name)));
     if (!unused.length) return [];
   }

@@ -1,3 +1,5 @@
+import { tr } from '../i18n';
+
 /**
  * The kinds of image a chart can be saved as, by the extension its file gets.
  * One list for the trade form, the PC's server and the phone, so none of them
@@ -12,7 +14,8 @@ const TYPES = new Map([
   ['gif', 'image/gif'],
 ]);
 
-export const UNSUPPORTED_IMAGE = 'Only PNG, JPEG, WebP and GIF images can be saved.';
+/** why an image of another kind is refused, in the language on screen (in English on the PC's server) */
+export const unsupportedImage = () => tr('img.unsupported');
 
 /** the extension an image of this type is saved with; null for one that cannot be saved */
 export function imageExtension(type: string): string | null {

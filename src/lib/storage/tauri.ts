@@ -4,7 +4,7 @@ import { newerJournal, versionInFile } from '@/lib/journal-version';
 import type { JournalData } from '@/lib/types';
 import { JournalConflict, KEEP_COPIES, copyStamp, type CopyReason, type JournalStorage } from './types';
 import { IMAGE_NAME, findUnused, removeUnused, type SweepFiles, type UnusedImage } from './sweep';
-import { UNSUPPORTED_IMAGE, imageExtension } from './image-types';
+import { imageExtension, unsupportedImage } from './image-types';
 
 /**
  * The Windows app (src-tauri/): the journal and its chart images live in
@@ -165,7 +165,7 @@ export const tauriStorage: JournalStorage = {
 
   async saveImage(blob: Blob): Promise<string> {
     const ext = imageExtension(blob.type);
-    if (!ext) throw new Error(UNSUPPORTED_IMAGE);
+    if (!ext) throw new Error(unsupportedImage());
     const name = `${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36).slice(-4)}.${ext}`;
     // the bytes go as they are, not as text
     await invoke('save_image', new Uint8Array(await blob.arrayBuffer()), { headers: { 'x-name': name } });

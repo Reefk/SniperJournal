@@ -1,5 +1,6 @@
+import { tr } from './i18n';
 import { storage } from './storage';
-import { UNSUPPORTED_IMAGE, imageExtension } from './storage/image-types';
+import { imageExtension, unsupportedImage } from './storage/image-types';
 import type { UnusedImage } from './storage/sweep';
 import type { Trade } from './types';
 
@@ -52,12 +53,12 @@ export interface UploadResult {
 
 /** Saves an image into the screenshots folder and returns the name to store on the trade */
 export async function uploadScreenshot(file: File): Promise<UploadResult> {
-  if (!file.type.startsWith('image/')) return { error: 'That file is not an image.' };
+  if (!file.type.startsWith('image/')) return { error: tr('img.notImage') };
 
   const blob = await shrink(file);
   // still the file as it came when it was small enough to keep, or the
   // browser could not draw it (HEIC, say): an AVIF or BMP stays one
-  if (!imageExtension(blob.type)) return { error: UNSUPPORTED_IMAGE };
+  if (!imageExtension(blob.type)) return { error: unsupportedImage() };
 
   try {
     return { name: await storage.saveImage(blob) };
@@ -65,7 +66,7 @@ export async function uploadScreenshot(file: File): Promise<UploadResult> {
     // a plain Error carries the storage's own explanation; anything else
     // (a failed fetch, an unreadable reply) means the folder was unreachable
     if (err instanceof Error && err.name === 'Error' && err.message) return { error: err.message };
-    return { error: 'Images can only be saved while the app can reach its data folder.' };
+    return { error: tr('img.unreachable') };
   }
 }
 

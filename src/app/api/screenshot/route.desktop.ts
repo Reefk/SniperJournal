@@ -10,7 +10,7 @@ import {
   type StoredImage,
   type SweepFiles,
 } from '@/lib/storage/sweep';
-import { UNSUPPORTED_IMAGE, imageExtension, imageType } from '@/lib/storage/image-types';
+import { imageExtension, imageType, unsupportedImage } from '@/lib/storage/image-types';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -142,7 +142,7 @@ export async function POST(request: Request) {
     }
 
     const ext = imageExtension(file.type);
-    if (!ext) return NextResponse.json({ ok: false, error: UNSUPPORTED_IMAGE }, { status: 400 });
+    if (!ext) return NextResponse.json({ ok: false, error: unsupportedImage() }, { status: 400 });
 
     await fs.mkdir(DIR, { recursive: true });
     const name = `${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36).slice(-4)}.${ext}`;

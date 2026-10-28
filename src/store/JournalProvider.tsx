@@ -167,7 +167,8 @@ interface SaveState {
   conflict: Conflict | null;
   /**
    * Where unsaved changes from another window were kept, when they turned up
-   * in the browser at startup but were made on top of an older file.
+   * in the browser at startup but were made on top of an older file: the
+   * copy's path, or '' when the storage kept it without saying where.
    */
   recovered: string | null;
   dismissRecovered: () => void;
@@ -285,7 +286,7 @@ export function JournalProvider({ children }: { children: ReactNode }) {
         try {
           const copy = await storage.keepCopy(stale, 'conflict');
           removeMirror();
-          if (!cancelled) setRecovered(copy ?? 'your backups');
+          if (!cancelled) setRecovered(copy ?? '');
         } catch {
           /* nowhere else to put them */
         }

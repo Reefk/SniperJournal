@@ -1,10 +1,11 @@
 import { Capacitor } from '@capacitor/core';
 import { Directory, Encoding, Filesystem } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
+import { tr } from '@/lib/i18n';
 import type { JournalData } from '@/lib/types';
 import { KEEP_COPIES, copyStamp, type CopyReason, type JournalStorage } from './types';
 import { IMAGE_NAME, findUnused, removeUnused, type SweepFiles, type UnusedImage } from './sweep';
-import { UNSUPPORTED_IMAGE, imageExtension } from './image-types';
+import { imageExtension, unsupportedImage } from './image-types';
 
 /**
  * The phone implementation: the journal and its chart images live in the
@@ -113,7 +114,7 @@ function toBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result).split(',')[1] ?? '');
-    reader.onerror = () => reject(reader.error ?? new Error('Could not read the image.'));
+    reader.onerror = () => reject(reader.error ?? new Error(tr('img.unreadable')));
     reader.readAsDataURL(blob);
   });
 }
@@ -221,7 +222,7 @@ export const capacitorStorage: JournalStorage = {
 
   async saveImage(blob: Blob): Promise<string> {
     const ext = imageExtension(blob.type);
-    if (!ext) throw new Error(UNSUPPORTED_IMAGE);
+    if (!ext) throw new Error(unsupportedImage());
     const name = `${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36).slice(-4)}.${ext}`;
     await Filesystem.writeFile({
       path: `${SHOTS_DIR}/${name}`,
@@ -263,7 +264,7 @@ export const capacitorStorage: JournalStorage = {
       directory: Directory.Cache,
     });
     try {
-      await Share.share({ title: filename, files: [uri], dialogTitle: `Save or send ${filename}` });
+      await Share.share({ title: filename, files: [uri], dialogTitle: tr('share.title', { file: filename }) });
     } catch {
       // closing the share sheet without picking anything is not an error
     }

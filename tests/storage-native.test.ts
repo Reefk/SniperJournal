@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { JournalData } from '@/lib/types';
-import { UNSUPPORTED_IMAGE } from '@/lib/storage/image-types';
+import { unsupportedImage } from '@/lib/storage/image-types';
 
 /**
  * The phone's storage, against an in-memory stand-in for Capacitor's
@@ -266,7 +266,7 @@ describe('chart images and exports', () => {
   it("goes by the image's own type: an AVIF, BMP or HEIC is refused, in the desktop's words, and nothing is written", async () => {
     const s = await freshStorage();
     for (const type of ['image/avif', 'image/bmp', 'image/heic']) {
-      await expect(s.saveImage(new Blob([new Uint8Array([1, 2, 3])], { type }))).rejects.toThrow(UNSUPPORTED_IMAGE);
+      await expect(s.saveImage(new Blob([new Uint8Array([1, 2, 3])], { type }))).rejects.toThrow(unsupportedImage());
     }
     expect([...fs.files.keys()].filter((k) => k.includes('screenshots/'))).toEqual([]);
     // a JPEG is saved as .jpg, as on the desktop
@@ -359,5 +359,47 @@ describe('chart images and exports', () => {
     await s.exportFile('../../trades:2026.csv', 'a,b', 'text/csv');
     expect(fs.files.get('CACHE:..-..-trades-2026.csv')).toBe('a,b');
     expect(share.calls).toHaveLength(1);
+  });
+
+  it('titles the share sheet in the language on screen', async () => {
+    const s = await freshStorage();
+    // the language the storage just loaded speaks: freshStorage loads every module afresh
+    const { setLanguage } = await import('@/lib/i18n');
+    share.calls.length = 0;
+    for (const code of ['en', 'ru', 'ar']) {
+      setLanguage(code);
+      await s.exportFile('trades.csv', 'a,b', 'text/csv');
+    }
+    setLanguage('en');
+    expect(share.calls.map((c) => (c as { title: string; dialogTitle: string }).dialogTitle)).toEqual([
+      'Save or send trades.csv',
+      'Сохранить или отправить trades.csv',
+      // the file's name set apart, so it reads left to right in the Arabic
+      'حفظ \u2068trades.csv\u2069 أو إرساله',
+    ]);
+    // the file shared keeps its own name in every language
+    expect(share.calls.map((c) => (c as { title: string }).title)).toEqual(['trades.csv', 'trades.csv', 'trades.csv']);
+  });
+
+  it('says it could not read an image that the WebView failed to read without a reason, in the language on screen', async () => {
+    vi.stubGlobal(
+      'FileReader',
+      class {
+        error = null;
+        onload: (() => void) | null = null;
+        onerror: (() => void) | null = null;
+        readAsDataURL() {
+          queueMicrotask(() => this.onerror?.());
+        }
+      },
+    );
+    const s = await freshStorage();
+    const { setLanguage } = await import('@/lib/i18n');
+    const png = () => new Blob([new Uint8Array([1, 2, 3])], { type: 'image/png' });
+    await expect(s.saveImage(png())).rejects.toThrow('Could not read the image.');
+    setLanguage('ru');
+    await expect(s.saveImage(png())).rejects.toThrow('Не удалось прочитать изображение.');
+    setLanguage('en');
+    expect([...fs.files.keys()].filter((k) => k.includes('screenshots/'))).toEqual([]);
   });
 });

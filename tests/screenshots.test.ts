@@ -7,7 +7,7 @@ import {
   removeUnusedCharts,
   uploadScreenshot,
 } from '@/lib/screenshots';
-import { UNSUPPORTED_IMAGE } from '@/lib/storage/image-types';
+import { unsupportedImage } from '@/lib/storage/image-types';
 import { mergeTrades } from '@/lib/merge';
 import { trade } from './helpers';
 
@@ -173,14 +173,14 @@ describe('saving a chart image', () => {
   it('refuses a small AVIF or BMP, which would be kept as it came, instead of saving it as a .jpg', async () => {
     browserDraws({ width: 800, height: 600 });
     for (const type of ['image/avif', 'image/bmp']) {
-      expect(await uploadScreenshot(image(type))).toEqual({ error: UNSUPPORTED_IMAGE });
+      expect(await uploadScreenshot(image(type))).toEqual({ error: unsupportedImage() });
     }
     expect(saved.types).toEqual([]);
   });
 
   it('refuses an image the browser cannot draw (a HEIC), which is left as it came', async () => {
     browserDraws(null);
-    expect(await uploadScreenshot(image('image/heic'))).toEqual({ error: UNSUPPORTED_IMAGE });
+    expect(await uploadScreenshot(image('image/heic'))).toEqual({ error: unsupportedImage() });
     expect(saved.types).toEqual([]);
   });
 

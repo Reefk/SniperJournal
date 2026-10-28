@@ -3,6 +3,7 @@ import type { Translation } from '../types';
 import { calendar } from './calendar';
 import { common } from './common';
 import { dashboard } from './dashboard';
+import { files } from './files';
 import { format } from './format';
 import { goals } from './goals';
 import { importDialog } from './importDialog';
@@ -23,6 +24,7 @@ export const ar: Translation<Messages> = {
   ...calendar,
   ...common,
   ...dashboard,
+  ...files,
   ...format,
   ...goals,
   ...importDialog,

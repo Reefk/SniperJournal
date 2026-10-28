@@ -113,7 +113,8 @@ export function mergeTrades(trades: Trade[]): Trade {
   const [screenshotUrl, ...otherLinks] = chartLinks(legs);
   const notes = [
     ...new Set(legs.map((t) => t.notes?.trim()).filter(Boolean)),
-    ...(otherLinks.length ? [`Chart links of the merged parts: ${otherLinks.join(' ')}`] : []),
+    // the links go after the text, not into it, so no direction marks are saved with them in Arabic
+    ...(otherLinks.length ? [`${tr('merge.chartLinks')} ${otherLinks.join(' ')}`] : []),
   ].join(' / ');
   const externalIds = legs.flatMap((t) => (t.externalId ? t.externalId.split('|') : []));
   // the merged trade has the first setup found; the ticks of a part with another setup are about other rules

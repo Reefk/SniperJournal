@@ -1,3 +1,4 @@
+import { tr } from './i18n';
 import { newerJournal } from './journal-version';
 import type { JournalData } from './types';
 import { dateKey, downloadFile } from './utils';
@@ -10,16 +11,16 @@ export function exportBackup(data: JournalData) {
 export function parseBackup(text: string): { data?: JournalData; error?: string } {
   try {
     const parsed = JSON.parse(text) as Partial<JournalData>;
-    if (!parsed || typeof parsed !== 'object') return { error: 'That file is not a Sniper Journal backup.' };
+    if (!parsed || typeof parsed !== 'object') return { error: tr('backup.notBackup') };
     // restoring it here would quietly drop whatever the newer version added
     if (newerJournal(parsed) != null) {
-      return { error: 'This backup was made by a newer version of Sniper Journal. Update the app, then restore it.' };
+      return { error: tr('backup.newer') };
     }
     if (!Array.isArray(parsed.trades) || !Array.isArray(parsed.accounts)) {
-      return { error: 'That file does not contain a trades and accounts list.' };
+      return { error: tr('backup.noLists') };
     }
     return { data: parsed as JournalData };
   } catch {
-    return { error: 'That file is not valid JSON.' };
+    return { error: tr('backup.notJson') };
   }
 }
