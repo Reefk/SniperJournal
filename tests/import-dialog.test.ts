@@ -151,7 +151,7 @@ describe('the preview says what the importer returned', () => {
     expect(errorLines()).toEqual(result.errors);
     const incomplete = result.trades.filter((t) => t.needsReview).length;
     expect(incomplete).toBe(1);
-    expect(text()).toContain(`${incomplete} need details before they count`);
+    expect(text()).toContain('1 needs details before it counts');
   });
 
   it('a long list of problems: the first 30, and how many more', async () => {

@@ -38,7 +38,7 @@ export const shell = {
   'shell.offline': 'Offline',
   'shell.storedWhere': 'Where your journal is stored',
   'shell.testBanner': {
-    one: 'Test data is loaded ({count} generated trades).',
+    one: 'Test data is loaded ({count} generated trade).',
     other: 'Test data is loaded ({count} generated trades).',
   },
   'shell.testBannerHint': ' Remove it before you start logging real trades.',

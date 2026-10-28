@@ -113,7 +113,7 @@ export const settings = {
   'settings.loadTestData': 'Load test data',
   'settings.regenerateTestData': 'Regenerate test data',
   'settings.testTradesLoaded': {
-    one: '{count} test trades currently loaded',
+    one: '{count} test trade currently loaded',
     other: '{count} test trades currently loaded',
   },
 

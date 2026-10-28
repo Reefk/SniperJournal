@@ -121,6 +121,12 @@ describe('tr', () => {
   it.each([
     ['settings.accountTrades', '1 trade'],
     ['impw.newSetups', '1 new playbook setup will be created'],
+    ['impw.incomplete', '<num>1</num> needs details before it counts'],
+    // the number of trades imported is filled in where {done} is
+    ['impw.done.needDetails', '{done} — 1 needs details'],
+    ['impw.moreRows', '…and 1 more row.'],
+    ['shell.testBanner', 'Test data is loaded (1 generated trade).'],
+    ['settings.testTradesLoaded', '1 test trade currently loaded'],
   ] as const)('says one in English, not "1 …s": %s', (key, text) => {
     expect(tr(key, { count: 1 })).toBe(text);
   });

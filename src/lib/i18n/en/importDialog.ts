@@ -27,7 +27,10 @@ export const importDialog = {
     other: '<num>{count}</num> open trades finished',
   },
   'impw.duplicates': { other: '<num>{count}</num> already in your journal, skipped' },
-  'impw.incomplete': { other: '<num>{count}</num> need details before they count' },
+  'impw.incomplete': {
+    one: '<num>{count}</num> needs details before it counts',
+    other: '<num>{count}</num> need details before they count',
+  },
   'impw.combined': { other: '<num>{count}</num> partial fills folded into whole positions' },
   'impw.newSetups': {
     one: '{count} new playbook setup will be created',
@@ -118,7 +121,7 @@ export const importDialog = {
   // the preview table
   'impw.col.date': 'Date',
   'impw.noDate': 'no date',
-  'impw.moreRows': { other: '…and {count} more rows.' },
+  'impw.moreRows': { one: '…and {count} more row.', other: '…and {count} more rows.' },
   // the names of the columns are drawn where <num></num> is
   'impw.ignored': 'Columns not used: <num></num>. Nothing was lost — those simply have no place in the journal.',
   'impw.moreErrors': { other: '…and {count} more.' },
@@ -164,5 +167,5 @@ export const importDialog = {
   // what goes in {open} above
   'impw.done.open': { one: '{count} open trade', other: '{count} open trades' },
   'impw.done.finished': { one: 'Finished {count} open trade', other: 'Finished {count} open trades' },
-  'impw.done.needDetails': { other: '{done} — {count} need details' },
+  'impw.done.needDetails': { one: '{done} — {count} needs details', other: '{done} — {count} need details' },
 } satisfies Record<string, Message>;
