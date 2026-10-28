@@ -6,11 +6,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { JournalData, Trade } from '@/lib/types';
 import { CURRENCIES } from '@/lib/format';
 import { PLATFORMS, importTradesFromCsv } from '@/lib/csv';
-import { LANGUAGES, setLanguage, type Language } from '@/lib/i18n';
+import { LANGUAGES, setLanguage, tr, type Language } from '@/lib/i18n';
+import { reports } from '@/lib/i18n/en/reports';
+import type { RangeKey } from '@/lib/ranges';
 import { STARTING_MISTAKES } from '@/lib/mistakes';
 import { CalendarView } from '@/views/CalendarView';
 import { DashboardView } from '@/views/DashboardView';
 import { InsightsView } from '@/views/InsightsView';
+import { ReportsView } from '@/views/ReportsView';
 import { PlaybookView } from '@/views/PlaybookView';
 import { ResourcesView } from '@/views/ResourcesView';
 import { SettingsView } from '@/views/SettingsView';
@@ -54,6 +57,18 @@ vi.mock('@/lib/storage', () => ({
     async deleteImage() {},
   },
 }));
+/** every key a screen asks tr() for, so a test can tell that none of an area's text went unseen */
+const asked = vi.hoisted(() => new Set<string>());
+vi.mock('@/lib/i18n', async (original) => {
+  const i18n = await original<typeof import('@/lib/i18n')>();
+  return {
+    ...i18n,
+    tr: (...args: Parameters<typeof i18n.tr>) => {
+      asked.add(args[0]);
+      return i18n.tr(...args);
+    },
+  };
+});
 vi.mock('next/link', () => ({
   default: ({ href, children, ...rest }: { href: string; children: ReactNode }) => h('a', { href, ...rest }, children),
 }));
@@ -123,6 +138,26 @@ function journalIn(language: Language, trades: Trade[]): JournalData {
 
 /** the Calendar's trades with no stop and no rating, so the Sniper Score has axes it can't score */
 const UNRATED = TRADES.map((t) => ({ ...t, stopLoss: null, review: undefined }));
+/** the Calendar's trades in the journal's setup and in one since deleted, so Reports has its table of setups */
+const IN_SETUPS = TRADES.map((t, i) => ({ ...t, setupId: i % 2 ? 's1' : 'gone' }));
+/** Reports' tag tables: x1 on every trade, x2 on two (greyed), x3 on four (dotted), and a group no trade has */
+const TAG_GROUPS = [
+  { name: 'G', tags: ['x1', 'x2', 'x3'] },
+  { name: 'H', tags: ['y1'] },
+];
+/** with a second mistake on the four biggest wins, so its cost is none so far */
+const TAGGED = IN_SETUPS.map((t, i) => ({
+  ...t,
+  tags: ['x1', ...(i < 2 ? ['x2'] : i < 6 ? ['x3'] : [])],
+  mistakes: (t.manualPnl ?? 0) >= 30 ? [STARTING_MISTAKES[1]] : t.mistakes,
+}));
+/** a day the month before, with a mistake, so Reports compares the two months */
+const SEPTEMBER = day('2026-09-10', [-25, 30]);
+/** the range picker's button for a range, found by its label in the language shown */
+const rangeButton = (range: RangeKey) =>
+  [...document.querySelectorAll<HTMLButtonElement>('[role="group"] button')].find(
+    (button) => button.textContent === tr(`range.${range}`),
+  );
 
 /** a trade with everything the form shows: a setup with rules, a mistake not on the list, a chart */
 const FULL = {
@@ -316,6 +351,48 @@ const SCREENS: Array<{
   { name: 'Insights, nothing rated', view: InsightsView, trades: UNRATED },
   { name: 'Insights, empty', view: InsightsView, trades: [] },
   { name: 'Insights, too few trades', view: InsightsView, trades: TRADES.slice(0, 2) },
+  { name: 'Reports', view: ReportsView, trades: IN_SETUPS },
+  { name: 'Reports, empty', view: ReportsView, trades: [] },
+  // one closed trade, one green day
+  { name: 'Reports, one trade', view: ReportsView, trades: TRADES.slice(0, 1) },
+  { name: 'Reports, no green day', view: ReportsView, trades: TRADES.filter((t) => (t.manualPnl ?? 0) < 0) },
+  {
+    name: 'Reports, tag groups',
+    view: ReportsView,
+    trades: TAGGED,
+    open: () => journal?.actions.updateSettings({ tagGroups: TAG_GROUPS }),
+    modal: false,
+    ready: () =>
+      Boolean(document.querySelector('tr[data-mark="few"]') && document.querySelector('tr[data-mark="thin"]')),
+  },
+  // the first mistake before the range, and a month before this one
+  {
+    name: 'Reports, the last 30 days',
+    view: ReportsView,
+    trades: [...SEPTEMBER, ...TRADES],
+    open: () => rangeButton('30D')?.click(),
+    modal: false,
+    ready: () => rangeButton('30D')?.getAttribute('aria-pressed') === 'true',
+  },
+  // nothing closed in the range, though there are mistakes before it
+  {
+    name: 'Reports, the last 7 days',
+    view: ReportsView,
+    trades: TRADES,
+    open: () => rangeButton('7D')?.click(),
+    modal: false,
+    ready: () => rangeButton('7D')?.getAttribute('aria-pressed') === 'true',
+  },
+  { name: 'Reports, nothing closed this month', view: ReportsView, trades: SEPTEMBER },
+  // no balance to take the drawdown's percentage of
+  {
+    name: 'Reports, no starting balance',
+    view: ReportsView,
+    trades: TRADES,
+    open: () => journal?.actions.updateAccount('acc1', { startingBalance: 0 }),
+    modal: false,
+    ready: () => journal?.data.accounts[0]?.startingBalance === 0,
+  },
   { name: 'Settings', view: SettingsView, trades: TRADES },
   { name: 'Trade form, new', view: TradeFormModal, trades: TRADES, open: () => ui?.openTradeForm() },
   { name: 'Trade form, editing', view: TradeFormModal, trades: [FULL], open: () => ui?.openTradeForm({ trade: FULL }) },
@@ -619,4 +696,10 @@ describe.each(LANGUAGES.filter((l) => l.code !== 'en'))('$name', ({ code, dir })
       expect(leftovers(code, own)).toEqual([]);
     },
   );
+});
+
+// each of Reports' texts was asked for on one of the screens above, so each was checked in every language;
+// it counts on those screens running first, so a -t filter that leaves them out fails it
+it('Reports: every text is on one of its screens', () => {
+  expect(Object.keys(reports).filter((key) => !asked.has(key))).toEqual([]);
 });

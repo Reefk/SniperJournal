@@ -73,7 +73,7 @@ export const SUPPORT_TYPED = [
 
 /** English words that are not also Spanish, to find what was left untranslated in Spanish ("importó" is not "import") */
 export const ENGLISH =
-  /(?<!\p{L})(the|and|of|your|trades?|with|for|is|are|you|this|that|from|days?|wins?|loss(es)?|rate|profit|average|closed|show|view|log|balance|settings|delete|edit|add|yet|per|green|red|best|worst|largest|streak|current|recent|equity|curve|rated|backups?|images?|account|tags?|mistakes?|limits?|goals?|cancel|confirm|close|save|import|export|merge|search|filters?|selected|shown|open|needs|details|page|next|previous|net)(?!\p{L})/iu;
+  /(?<!\p{L})(the|and|of|your|trades?|with|for|is|are|you|this|that|from|days?|wins?|loss(es)?|rate|profit|average|closed|show|view|log|balance|settings|delete|edit|add|yet|per|green|red|best|worst|largest|streak|current|recent|equity|curve|rated|backups?|images?|account|tags?|mistakes?|limits?|goals?|cancel|confirm|close|save|import|export|merge|search|filters?|selected|shown|open|needs|details|page|next|previous|net|results|consistency|risk|gross|commissions?|expectancy|recovery|months?|week|symbols?|unknown|longest|hold|times?|print|reports?|summar(y|ies)|cost|none|clean|greyed|dotted|groups?|under|since|made|less|about|each|rows?|counts?|range|starting|peak|share|monthly|printable|have|two|all)(?!\p{L})/iu;
 
 /** a translation's text with the names, units and codes that stay in English taken out */
 export function withoutKept(text: string): string {

@@ -11,6 +11,7 @@ import { insights } from './insights';
 import { list } from './list';
 import { platforms } from './platforms';
 import { playbook } from './playbook';
+import { reports } from './reports';
 import { resources } from './resources';
 import { settings } from './settings';
 import { shell } from './shell';
@@ -30,6 +31,7 @@ export const es: Translation<Messages> = {
   ...list,
   ...platforms,
   ...playbook,
+  ...reports,
   ...resources,
   ...settings,
   ...shell,
