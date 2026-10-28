@@ -606,7 +606,7 @@ describe('one row per fill', () => {
       42,
       '1001|1002',
     ]);
-    expect(r.notices.join(' ')).toMatch(/MNQH6: one point taken as worth 2 a point \(MNQ futures\)/);
+    expect(r.notices.join(' ')).toMatch(/MNQH6: one point taken as worth 2 \(MNQ futures\)/);
     const again = read(csv, { existing: r.trades });
     expect([again.trades.length, again.duplicates]).toEqual([0, 1]);
   });

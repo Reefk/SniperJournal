@@ -117,6 +117,14 @@ describe('tr', () => {
     ]);
   });
 
+  // texts that said "1 trades" or the like, once
+  it.each([
+    ['settings.accountTrades', '1 trade'],
+    ['impw.newSetups', '1 new playbook setup will be created'],
+  ] as const)('says one in English, not "1 …s": %s', (key, text) => {
+    expect(tr(key, { count: 1 })).toBe(text);
+  });
+
   it('speaks English for anything that is not one of its languages', () => {
     setLanguage('ru');
     setLanguage('xx');

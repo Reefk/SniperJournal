@@ -370,7 +370,7 @@ describe('stage 2: reading the values of a row', () => {
     expect(r.knownMultiplier('AAPL  260320C00180000', row)).toBe(100);
     expect(r.knownMultiplier('AAPL', row)).toBeNull();
     expect([...r.findings.inferred]).toEqual([
-      ['ESH6', '50 a point (ES futures)'],
+      ['ESH6', '50 (ES futures)'],
       ['AAPL  260320C00180000', '100 (an option contract)'],
     ]);
   });
@@ -629,7 +629,7 @@ describe('stage 4: rows of single fills', () => {
     ]);
     expect(read.notices).toEqual([
       'Each row is one fill: 4 fills were put back together into 2 trades, following the position in each symbol.',
-      '1 position was still open at the end of the file, so it was imported as open trade.',
+      '1 position was still open at the end of the file, so it was imported as an open trade.',
     ]);
     expect(read.errors).toEqual(['Row 6: no price, so the fill was left out.']);
   });
@@ -725,7 +725,7 @@ describe('stage 5: the messages', () => {
 
   it('notices: what the rows said, values worked out, then how the table was found', () => {
     const { notices } = collectMessages(
-      findings({ inferred: new Map([['ESH6', '50 a point (ES futures)']]), zoned: 2 }),
+      findings({ inferred: new Map([['ESH6', '50 (ES futures)']]), zoned: 2 }),
       table({ preamble: 3, skipped: 1 }),
       {
         errors: [],
@@ -734,7 +734,7 @@ describe('stage 5: the messages', () => {
     );
     expect(notices).toEqual([
       'from the rows',
-      'ESH6: one point taken as worth 50 a point (ES futures). Check it if that is not right.',
+      'ESH6: one point taken as worth 50 (ES futures). Check it if that is not right.',
       'The column names are on line 4; the lines above them were left out.',
       '1 total, summary or repeated header line was left out.',
       "Times in this file carry a time zone, so they were converted to this device's local time.",

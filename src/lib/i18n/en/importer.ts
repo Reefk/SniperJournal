@@ -53,7 +53,7 @@ export const importer = {
   'imp.netAboveGross.many':
     'the P&L after fees is more than the one before them, so no fees were worked out from the two. Check their fees.',
   'imp.inferred': '{symbol}: one point taken as worth {how}. Check it if that is not right.',
-  'imp.how.future': '{value} a point ({root} futures)',
+  'imp.how.future': '{value} ({root} futures)',
   'imp.how.option': '{value} (an option contract)',
   'imp.how.amount': '{value} (from the amount against the price)',
   'imp.andMore': { other: '{list} and {count} more' },
@@ -123,7 +123,7 @@ export const importer = {
   'imp.noSideFills':
     'There is no direction column and no fill has a size below zero, so every fill was read as a buy. Check any sells.',
   'imp.stillOpen': {
-    one: '{count} position was still open at the end of the file, so it was imported as open trade.',
+    one: '{count} position was still open at the end of the file, so it was imported as an open trade.',
     other: '{count} positions were still open at the end of the file, so they were imported as open trades.',
   },
   'imp.orphans': {

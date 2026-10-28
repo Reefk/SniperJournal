@@ -29,7 +29,10 @@ export const importDialog = {
   'impw.duplicates': { other: '<num>{count}</num> already in your journal, skipped' },
   'impw.incomplete': { other: '<num>{count}</num> need details before they count' },
   'impw.combined': { other: '<num>{count}</num> partial fills folded into whole positions' },
-  'impw.newSetups': { other: '{count} new playbook setups will be created' },
+  'impw.newSetups': {
+    one: '{count} new playbook setup will be created',
+    other: '{count} new playbook setups will be created',
+  },
   // the end of a list of four: "…and 3 more"
   'impw.more': { other: '…and {count} more' },
 

@@ -299,7 +299,7 @@ describe('import: P&L columns and fees', () => {
     // 2 MNQ up 10.5 points is 42 before fees; this used to give 1.9410 a point
     const r = importTradesFromCsv('symbol,side,qty,entry,exit,net pnl\nMNQH6,Long,2,21000.25,21010.75,40.76', ctx());
     expect([r.trades[0].multiplier, r.trades[0].manualPnl]).toEqual([2, 40.76]);
-    expect(r.notices.join(' ')).toMatch(/MNQH6: one point taken as worth 2 a point \(MNQ futures\)/);
+    expect(r.notices.join(' ')).toMatch(/MNQH6: one point taken as worth 2 \(MNQ futures\)/);
   });
 });
 

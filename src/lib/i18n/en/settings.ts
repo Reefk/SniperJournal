@@ -45,8 +45,7 @@ export const settings = {
 
   'settings.accounts': 'Accounts',
   'settings.accountsHint': 'Each account keeps its own trades, balance and statistics.',
-  // English says "1 trades" here, as it did before the translations
-  'settings.accountTrades': { one: '{count} trades', other: '{count} trades' },
+  'settings.accountTrades': { one: '{count} trade', other: '{count} trades' },
   'settings.oneAccountNeeded': 'You need at least one account',
   'settings.deleteThisAccount': 'Delete this account',
   'settings.deleteNamed': 'Delete {name}',
