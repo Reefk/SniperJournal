@@ -703,3 +703,38 @@ describe.each(LANGUAGES.filter((l) => l.code !== 'en'))('$name', ({ code, dir })
 it('Reports: every text is on one of its screens', () => {
   expect(Object.keys(reports).filter((key) => !asked.has(key))).toEqual([]);
 });
+
+// what the person typed reads in its own direction (dir="auto"), so English typed into the Arabic app,
+// or Arabic into the English one, keeps its full stop at its end
+it.each([
+  {
+    name: 'Playbook: a setup’s name, description and rules, and a rule it no longer has',
+    view: PlaybookView,
+    open: () => journal?.actions.upsertSetup({ id: 's1', name: 'S', description: 'd1', rules: ['r1', 'r2'] }),
+    ready: () => document.body.textContent?.includes('d1') === true,
+    typed: ['S', 'd1', 'r1', 'r2', 'r0'],
+  },
+  {
+    name: 'Resources: a resource’s title, notes and link',
+    view: ResourcesView,
+    open: addResources,
+    ready: allResources,
+    typed: ['Q', 'n', 'q.example'],
+  },
+])('$name', { timeout: 30_000 }, async ({ view, open, ready, typed }) => {
+  disk.journal = journalIn('ar', PLAYBOOK);
+  app = await mount(h(JournalProvider, null, h(UIProvider, null, h(Probe, { onRender: seen }), h(view))));
+  await until(() => journal?.ready === true);
+  await act(async () => open());
+  await until(ready);
+  const nodes: Text[] = [];
+  const walker = document.createTreeWalker(document.querySelector('main') ?? document.body, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const inCard = node.parentElement?.closest('article');
+    if (inCard && typed.includes(node.textContent?.trim() ?? '')) nodes.push(node as Text);
+  }
+  // each one found, and none outside its own direction
+  expect([...new Set(nodes.map((node) => node.textContent?.trim()))].sort()).toEqual([...typed].sort());
+  const fixed = nodes.filter((node) => !node.parentElement?.closest('[dir="auto"]'));
+  expect(fixed.map((node) => node.textContent)).toEqual([]);
+});

@@ -116,7 +116,9 @@ export function PlaybookView() {
                       {setup.name}
                     </h3>
                     {setup.description && (
-                      <p className="mt-1 text-sm leading-relaxed text-muted">{setup.description}</p>
+                      <p dir="auto" className="mt-1 text-sm leading-relaxed text-muted">
+                        {setup.description}
+                      </p>
                     )}
                   </div>
                   <div className="flex shrink-0 gap-0.5">
@@ -147,7 +149,9 @@ export function PlaybookView() {
                         <li key={i} className="flex gap-2.5 text-sm text-muted">
                           <Check className="mt-0.5 size-3.5 shrink-0 text-profit" />
                           <div className="min-w-0">
-                            <span className="leading-relaxed">{rule}</span>
+                            <span dir="auto" className="leading-relaxed">
+                              {rule}
+                            </span>
                             <RuleTally line={lineOf.get(rule)} costliest={rules?.costliest} currency={currency} />
                           </div>
                         </li>
@@ -162,7 +166,9 @@ export function PlaybookView() {
                       <ul className="mt-1 space-y-2">
                         {removed.map((line) => (
                           <li key={line.rule} className="text-sm text-faint">
-                            <span className="leading-relaxed">{line.rule}</span>
+                            <span dir="auto" className="leading-relaxed">
+                              {line.rule}
+                            </span>
                             <RuleTally line={line} costliest={rules?.costliest} currency={currency} />
                           </li>
                         ))}

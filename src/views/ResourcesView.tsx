@@ -112,7 +112,11 @@ export function ResourcesView() {
                         </Button>
                       </div>
                     </div>
-                    {r.notes && <p className="mt-1.5 line-clamp-3 text-xs leading-relaxed text-muted">{r.notes}</p>}
+                    {r.notes && (
+                      <p dir="auto" className="mt-1.5 line-clamp-3 text-xs leading-relaxed text-muted">
+                        {r.notes}
+                      </p>
+                    )}
                     {/* only ever an http(s) link: a javascript: one would run inside the app */}
                     {safeLink(r.url) && (
                       <a
