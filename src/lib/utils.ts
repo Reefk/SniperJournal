@@ -4,6 +4,25 @@ export function cn(...parts: Array<string | false | null | undefined>): string {
   return parts.filter(Boolean).join(' ');
 }
 
+/**
+ * The letter a keyboard shortcut (N, Ctrl K) reads from a key press, in lower
+ * case, or null for a key that types no letter. A layout that types Latin
+ * letters gives its own, so N is where the N is on any of them; one that types
+ * another script (Russian, Arabic, Hindi) gives the Latin letter on the same
+ * key, so the shortcuts work without switching the layout first. With Alt held
+ * (AltGr, which Windows reports as Ctrl and Alt, or a Mac's Option) a key types
+ * a character of its own, "œ" on K say, so then it goes by the letter only.
+ */
+export function shortcutLetter(e: Pick<KeyboardEvent, 'key' | 'code' | 'altKey'>): string | null {
+  if (/^[a-z]$/i.test(e.key)) return e.key.toLowerCase();
+  // every character past ASCII: one letter, a vowel sign or a pair such as Arabic's "لا";
+  // a named key ("Process" while an input method composes, "Dead") is plain ASCII
+  if (!e.altKey && /^[\u0080-\u{10FFFF}]+$/u.test(e.key)) {
+    return /^Key([A-Z])$/.exec(e.code)?.[1].toLowerCase() ?? null;
+  }
+  return null;
+}
+
 const ID_CHARS = '0123456789abcdefghijklmnopqrstuvwxyz';
 
 /**

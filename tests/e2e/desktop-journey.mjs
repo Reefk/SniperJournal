@@ -971,6 +971,31 @@ async function journey() {
   await press('Escape');
   await b.until(`!$modal()`, 'trade form closed');
 
+  // ---- 11b. N and Ctrl K on a Russian or Arabic keyboard ----------------------
+  // the key where English has N types "т" there, and K "л" or "ن"; the shortcuts go by the key
+  const pressOn = async (key, code, vk, ctrl = false) => {
+    const event = { key, code, windowsVirtualKeyCode: vk, nativeVirtualKeyCode: vk, modifiers: ctrl ? 2 : 0 };
+    await b.send('Input.dispatchKeyEvent', {
+      ...event,
+      ...(ctrl ? { type: 'rawKeyDown' } : { type: 'keyDown', text: key }),
+    });
+    await b.send('Input.dispatchKeyEvent', { ...event, type: 'keyUp' });
+  };
+  await b.run(`document.activeElement?.blur(); true`);
+  await pressOn('т', 'KeyN', 78);
+  check(
+    'N on a Russian keyboard opens a new trade',
+    await seen(`!!$modal() && !$t('Delete', $modal())`, 'trade form by N', 3000),
+  );
+  await press('Escape');
+  await b.until(`!$modal()`, 'new trade form closed');
+  await pressOn('ن', 'KeyK', 75, true);
+  check(
+    'Ctrl K on an Arabic keyboard goes to the search',
+    await seen(`document.activeElement?.getAttribute('aria-label') === 'Search all trades'`, 'search by Ctrl K', 3000),
+  );
+  await b.run(`document.activeElement?.blur(); true`);
+
   // ---- 12. deleting an account deletes its charts, and only its charts --------
   const png = join(work, 'chart.png');
   writeFileSync(

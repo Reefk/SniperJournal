@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { TradeFormModal } from '@/components/trades/TradeFormModal';
 import { useAndroidBack } from '@/hooks/useAndroidBack';
 import { tr } from '@/lib/i18n';
+import { shortcutLetter } from '@/lib/utils';
 import { MobileNav, SaveAnnouncer, Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { CopyNotice, RecoveredNotice, SaveConflictDialog } from './SaveConflict';
@@ -57,7 +58,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     const onKey = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey || isTypingTarget(e.target)) return;
       if (document.querySelector('[data-modal-root]')) return;
-      if (e.key === 'n' || e.key === 'N') {
+      if (shortcutLetter(e) === 'n') {
         e.preventDefault();
         openTradeForm();
       }

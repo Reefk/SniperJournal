@@ -9,7 +9,7 @@ import { formatDate } from '@/lib/format';
 import { isClosed, matchesSearch, netPnl, tradeTimestamp } from '@/lib/trade-math';
 import { PnlValue, SideBadge } from '@/components/ui/StatusBadge';
 import { Button } from '@/components/ui/Button';
-import { cn } from '@/lib/utils';
+import { cn, shortcutLetter } from '@/lib/utils';
 import { tr } from '@/lib/i18n';
 
 export function GlobalSearch() {
@@ -24,7 +24,7 @@ export function GlobalSearch() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const typing = ['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement)?.tagName);
-      if (((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') || (e.key === '/' && !typing)) {
+      if (((e.ctrlKey || e.metaKey) && shortcutLetter(e) === 'k') || (e.key === '/' && !typing)) {
         if (document.querySelector('[data-modal-root]')) return;
         e.preventDefault();
         inputRef.current?.focus();
