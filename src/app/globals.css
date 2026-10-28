@@ -97,6 +97,34 @@
   letter-spacing: -0.01em;
 }
 
+/* Arabic and Hindi words in a figure ("1 س 41 د", "39 में से 29"). JetBrains Mono has
+   neither script, so the words fell to the system's monospace font (Courier New's Arabic,
+   letters set apart) between JetBrains Mono's wide spaces. In those languages a figure
+   takes its digits, signs and Latin letters from JetBrains Mono, through this copy of it
+   without the spaces, and the rest from the normal font. */
+@font-face {
+  font-family: 'Figures';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 800;
+  src: url('../../node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2')
+    format('woff2-variations');
+  unicode-range: U+0021-007E, U+00A1-00FF, U+2010-2027, U+2030-205E, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215;
+}
+/* the other currency signs, ₪ and ₹ among them */
+@font-face {
+  font-family: 'Figures';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 800;
+  src: url('../../node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-ext-wght-normal.woff2')
+    format('woff2-variations');
+  unicode-range: U+20A0-20AB, U+20AD-20C0;
+}
+:root:is([lang='ar'], [lang='hi']) .num {
+  font-family: 'Figures', var(--font-sans);
+}
+
 @layer base {
   * {
     border-color: var(--line);
