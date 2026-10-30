@@ -23,6 +23,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { MetricCard, toneFor } from '@/components/ui/MetricCard';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { FitText } from '@/components/ui/FitText';
 import { PnlValue, SideBadge } from '@/components/ui/StatusBadge';
 import { Modal } from '@/components/ui/Modal';
 import { rich } from '@/components/ui/Rich';
@@ -232,9 +233,12 @@ export function CalendarView() {
                     </span>
                     {hasTrades && agg && (
                       <>
-                        <span
+                        {/* a smaller figure rather than a cut one: "+$740.31" is 47 px in a 360 px
+                            phone's 42 px cell, "+1624,91 US$" wider than a cell of the narrowest
+                            desktop (1180 px) */}
+                        <FitText
                           className={cn(
-                            'num max-w-full truncate text-[10px] font-semibold md:text-[17px]',
+                            'num max-w-full text-[10px] font-semibold md:text-[17px]',
                             agg.net > 0 ? 'text-profit' : agg.net < 0 ? 'text-loss' : 'text-muted',
                           )}
                         >
@@ -245,7 +249,7 @@ export function CalendarView() {
                           <span className="max-md:hidden">
                             {formatMoney(agg.net, currency, { sign: true, compact: Math.abs(agg.net) >= 10000 })}
                           </span>
-                        </span>
+                        </FitText>
                         <span className="text-[10px] font-medium uppercase tracking-wide text-faint max-md:hidden">
                           {tr('common.trades', { count: agg.trades })}
                         </span>
