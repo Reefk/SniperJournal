@@ -48,6 +48,16 @@ export function numberAndUnit(text: string): [string, string] | null {
 }
 
 /**
+ * The same amount, free to break between the number and what follows it when
+ * its box is too narrow ("+9,04" over "mil US$"); on one line when it fits.
+ * English, with nothing after the number, is returned as it is.
+ */
+export function breakableAmount(text: string): string {
+  const parts = numberAndUnit(text);
+  return parts ? `${parts[0]} ${parts[1]}` : text;
+}
+
+/**
  * Axis labels: plain thousands until the numbers get big, then compact. `span`
  * is how much the axis covers (its highest value less its lowest): an axis
  * spanning little of a big number keeps whole dollars, where compact labels

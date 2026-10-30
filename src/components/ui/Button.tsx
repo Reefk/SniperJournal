@@ -19,13 +19,24 @@ const SIZES: Record<Size, string> = {
   icon: 'size-11 md:size-8',
 };
 
+// the same heights as a floor, for a label that may take two lines (one line,
+// its padding and a border stay inside the floor); max-w-full lets it narrow in
+// a flex row, where shrink-0 alone keeps it as wide as its one-line label
+const WRAP_SIZES: Record<Size, string> = {
+  sm: 'min-h-9 gap-1.5 px-2.5 py-1 text-xs md:min-h-8',
+  md: 'min-h-10 gap-2 px-3.5 py-1.5 text-sm md:min-h-9',
+  icon: SIZES.icon,
+};
+
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
   size?: Size;
+  /** a long label wraps instead of widening the page: "Освободить место…" on a phone */
+  wrap?: boolean;
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-  { variant = 'secondary', size = 'md', className, type = 'button', ...rest },
+  { variant = 'secondary', size = 'md', wrap = false, className, type = 'button', ...rest },
   ref,
 ) {
   return (
@@ -33,9 +44,10 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       ref={ref}
       type={type}
       className={cn(
-        'inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-md font-medium transition disabled:pointer-events-none disabled:opacity-50',
+        'inline-flex shrink-0 items-center justify-center rounded-md font-medium transition disabled:pointer-events-none disabled:opacity-50',
+        wrap ? 'max-w-full text-start' : 'whitespace-nowrap',
         VARIANTS[variant],
-        SIZES[size],
+        wrap ? WRAP_SIZES[size] : SIZES[size],
         className,
       )}
       {...rest}

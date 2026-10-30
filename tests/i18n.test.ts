@@ -3,6 +3,7 @@ import { decimalMark, isolate, LANGUAGES, messagesOf, setLanguage, tr, type Lang
 import { en } from '@/lib/i18n/en';
 import type { Message, PluralForms } from '@/lib/i18n/types';
 import {
+  breakableAmount,
   formatMoney,
   formatNumber,
   formatPct,
@@ -199,6 +200,25 @@ describe('a short amount on two lines', () => {
       setLanguage(code);
       const short = formatMoney(1360, 'USD', { sign: true, compact: true });
       expect(numberAndUnit(short) !== null, `${code}: ${short}`).toBe(splits[code]);
+    }
+  });
+
+  it('may break before what follows the number, and nowhere else, when its box is too narrow', () => {
+    // the Playbook card's net figure, a quarter of a phone's card; Intl joins the parts with no-break spaces
+    const nb = String.fromCharCode(0xa0);
+    expect(breakableAmount(`+9,04${nb}mil${nb}US$`)).toBe(`+9,04 mil${nb}US$`);
+    expect(breakableAmount(`+9,04${nb}тыс.${nb}$`)).toBe(`+9,04 тыс.${nb}$`);
+    expect(breakableAmount(`+1${nb}234,56${nb}$`)).toBe(`+1${nb}234,56 $`);
+    expect(breakableAmount('+$9.04K')).toBe('+$9.04K');
+    // nothing that isn't an amount is touched
+    expect(breakableAmount('')).toBe('');
+    expect(breakableAmount(`n/a${nb}US$`)).toBe(`n/a${nb}US$`);
+    for (const { code } of LANGUAGES) {
+      setLanguage(code);
+      const short = formatMoney(9040, 'USD', { sign: true, compact: true });
+      const parts = numberAndUnit(short);
+      // English and Arabic, with nothing after the number, come back exactly as they were
+      expect(breakableAmount(short), code).toBe(parts ? `${parts[0]} ${parts[1]}` : short);
     }
   });
 });

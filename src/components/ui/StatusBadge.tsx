@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { ArrowDownRight, ArrowUpRight } from 'lucide-react';
 import type { Side } from '@/lib/types';
-import { formatMoney } from '@/lib/format';
+import { breakableAmount, formatMoney } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { tr } from '@/lib/i18n';
 
@@ -58,19 +58,23 @@ export function PnlValue({
   open,
   className,
   compact,
+  breakable,
 }: {
   value: number;
   currency: string;
   open?: boolean;
   className?: string;
   compact?: boolean;
+  /** in a narrow row, may break before what follows the number ("+958,75" over "US$") */
+  breakable?: boolean;
 }) {
   if (open) return <StatusBadge tone="accent">{tr('common.open')}</StatusBadge>;
+  const text = formatMoney(value, currency, { sign: true, compact });
   return (
     <span
       className={cn('num font-medium', value > 0 ? 'text-profit' : value < 0 ? 'text-loss' : 'text-muted', className)}
     >
-      {formatMoney(value, currency, { sign: true, compact })}
+      {breakable ? breakableAmount(text) : text}
     </span>
   );
 }
