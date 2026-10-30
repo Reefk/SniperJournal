@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { tr } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 export function ChartContainer({
@@ -36,7 +37,7 @@ export function ChartContainer({
       <div className={cn('relative min-h-0 flex-1 px-3 pb-4 pt-3', bodyClassName)}>
         {empty ? (
           <div className="grid h-full min-h-[180px] place-items-center px-6 text-center text-sm leading-relaxed text-faint">
-            {emptyText ?? 'No data yet'}
+            {emptyText ?? tr('common.noData')}
           </div>
         ) : (
           children
