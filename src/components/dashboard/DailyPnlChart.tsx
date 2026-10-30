@@ -29,6 +29,8 @@ export function DailyPnlChart({ days, currency }: { days: DayAgg[]; currency: st
           tick={{ fill: theme.axis }}
           tickLine={false}
           axisLine={{ stroke: theme.grid }}
+          // the dates a little lower, so the first clears the lowest amount at the corner
+          tickMargin={6}
           minTickGap={28}
           tickFormatter={formatShortDate}
         />

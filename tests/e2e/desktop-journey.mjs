@@ -684,6 +684,20 @@ async function journey() {
     equityTicks.length >= 3 && new Set(equityTicks).size === equityTicks.length,
     equityTicks.join(' '),
   );
+  // each chart's labels: the size globals.css gives them, and the lowest amount never over the first date
+  const axisLabels = `[...document.querySelectorAll('main .recharts-wrapper')].filter((w) => w.querySelector('.recharts-xAxis-tick-labels')).map((w) => {
+    const labels = (axis) => [...w.querySelectorAll('.recharts-' + axis + '-tick-labels text')].map((t) => ({ text: t.textContent, size: getComputedStyle(t).fontSize, box: t.getBoundingClientRect() }));
+    const amounts = labels('yAxis');
+    const dates = labels('xAxis');
+    const over = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+    return {
+      sizes: [...new Set([...amounts, ...dates].map((l) => l.size))],
+      over: amounts.flatMap((a) => dates.filter((d) => over(a.box, d.box)).map((d) => a.text + ' / ' + d.text)),
+    };
+  })`;
+  const axesOk = (axes) => axes.length === 2 && axes.every((a) => a.sizes.join() === '11px' && a.over.length === 0);
+  const pcAxes = await b.run(axisLabels);
+  check("the charts' axis labels are 11px, and no amount sits over a date", axesOk(pcAxes), JSON.stringify(pcAxes));
   // a narrow phone: the note under the Sniper Score wraps to the most lines
   await b.send('Emulation.setDeviceMetricsOverride', { width: 360, height: 780, deviceScaleFactor: 1, mobile: true });
   const scoreCard = await b.run(`new Promise((r) => setTimeout(() => {
@@ -692,11 +706,17 @@ async function journey() {
     const bottom = (el) => Math.round(el.getBoundingClientRect().bottom);
     r(card && note ? { card: bottom(card), note: bottom(note), chart: Math.round(card.querySelector('.recharts-wrapper')?.getBoundingClientRect().height ?? 0) } : null);
   }, 500))`);
+  const phoneAxes = await b.run(axisLabels);
   await b.send('Emulation.clearDeviceMetricsOverride');
   check(
     'on a phone the note under the Sniper Score stays inside its card, beside the chart',
     scoreCard !== null && scoreCard.note <= scoreCard.card && scoreCard.chart >= 100,
     JSON.stringify(scoreCard),
+  );
+  check(
+    "on a phone too, the charts' axis labels are 11px, and no amount sits over a date",
+    axesOk(phoneAxes),
+    JSON.stringify(phoneAxes),
   );
   const live = `document.querySelector('p.sr-only[aria-live=polite]')?.textContent`;
   check(

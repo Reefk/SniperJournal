@@ -45,6 +45,8 @@ export function EquityCurveChart({
           tick={{ fill: theme.axis }}
           tickLine={false}
           axisLine={{ stroke: theme.grid }}
+          // the dates a little lower, so the first ("Start") clears the lowest amount at the corner
+          tickMargin={6}
           minTickGap={48}
           tickFormatter={(v: string) => (v === 'Start' ? tr('dash.start') : formatShortDate(v))}
         />

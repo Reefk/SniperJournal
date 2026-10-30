@@ -221,7 +221,9 @@
 .glow-line path.recharts-curve {
   filter: drop-shadow(0 0 6px color-mix(in srgb, var(--profit) 55%, transparent));
 }
-.recharts-cartesian-axis-tick text {
+/* recharts 3 gives an axis label's text this class; it isn't inside
+   .recharts-cartesian-axis-tick any more, so a rule on that drew them at 16px */
+.recharts-cartesian-axis-tick-value {
   font-size: 11px;
 }
 .recharts-surface:focus {
