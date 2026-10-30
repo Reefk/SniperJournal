@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import type { Settings, TagGroup, Trade } from '@/lib/types';
 import {
   arrangeByGroup,
@@ -12,9 +12,10 @@ import {
   tagLines,
   tradesWith,
 } from '@/lib/tags';
-import { STARTING_MISTAKES, mistakeList } from '@/lib/mistakes';
+import { STARTING_MISTAKES, mistakeList, mistakeName } from '@/lib/mistakes';
 import { parseBackup } from '@/lib/backup';
 import { createDefaultData, normalize } from '@/lib/journal';
+import { setLanguage } from '@/lib/i18n';
 import { cleanSettings } from '@/store/sanitize';
 import { pnl, trade } from './helpers';
 
@@ -253,6 +254,78 @@ describe('moving a tag to the mistakes', () => {
     expect(likelyMistake(['tired', 'TIRED'], list)).toBeNull();
     expect(likelyMistake(['FOMO', 'fomo'], list)).toBe(FOMO);
     expect(likelyMistake(['  '], list)).toBeNull();
+  });
+
+  it('offers the first of two that fit as well', () => {
+    expect(likelyMistake(['entry'], ['Late entry', 'Early entry'])).toBe('Late entry');
+    expect(likelyMistake(['entry'], ['Early entry', 'Late entry'])).toBe('Early entry');
+  });
+
+  describe('in another language', () => {
+    afterEach(() => setLanguage('en'));
+
+    it.each(['es', 'ru', 'ar', 'hi'] as const)(
+      'offers a starting mistake for a tag typed as it is shown, saved by its English name (%s)',
+      (code) => {
+        setLanguage(code);
+        const list = [...STARTING_MISTAKES];
+        expect(list.map((m) => likelyMistake([mistakeName(m).toLowerCase()], list))).toEqual(list);
+        // and still for one typed in English
+        expect(likelyMistake(['moved-stop'], list)).toBe('Moved my stop');
+        expect(likelyMistake(['tired'], list)).toBeNull();
+      },
+    );
+
+    it('reads a word the same with or without its accents and marks', () => {
+      const list = [...STARTING_MISTAKES];
+      setLanguage('es');
+      expect(likelyMistake(['movi mi stop'], list)).toBe('Moved my stop');
+      expect(likelyMistake(['salí pronto'], list)).toBe('Exited too early');
+      setLanguage('ar');
+      // حرّكت without its shadda, مبكرًا without its tanween
+      expect(likelyMistake(['حركت وقف'], list)).toBe('Moved my stop');
+      expect(likelyMistake(['خرجت مبكرا'], list)).toBe('Exited too early');
+      setLanguage('ru');
+      // ё typed as е
+      expect(likelyMistake(['объем'], list)).toBe('Oversized');
+      setLanguage('hi');
+      expect(likelyMistake(['खिसकाना'], list)).toBe('Moved my stop');
+      // a zero-width joiner some keyboards put inside a word
+      expect(likelyMistake(['खिस\u200cकाना'], list)).toBe('Moved my stop');
+      // बड़ी and पोज़िशन without their nukta dots
+      expect(likelyMistake(['बडी पोजिशन'], list)).toBe('Oversized');
+      setLanguage('en');
+      expect(likelyMistake(['Exited too early'], list)).toBe('Exited too early');
+    });
+
+    it("counts Hindi's vowel signs as letters of the word", () => {
+      setLanguage('hi');
+      const list = [...STARTING_MISTAKES];
+      // खिसकाना and खसकना, का and की, differ only in their vowel signs
+      expect(likelyMistake(['खसकना'], list)).toBeNull();
+      expect(likelyMistake(['की'], list)).toBeNull();
+      expect(likelyMistake(['का ट्रेड'], list)).toBe('Revenge trade');
+    });
+
+    it('weighs a mistake added by hand with the starting ones, by its name as written', () => {
+      setLanguage('ru');
+      const list = [...STARTING_MISTAKES, 'Поздний вход', 'Late exit'];
+      expect(likelyMistake(['поздний вход'], list)).toBe('Поздний вход');
+      expect(likelyMistake(['late exit'], list)).toBe('Late exit');
+      // "Поздний вход" has fewer other words than "Ранний вход (FOMO)"
+      expect(likelyMistake(['вход'], list)).toBe('Поздний вход');
+    });
+
+    it('takes the fewest other words, in either of its names', () => {
+      setLanguage('es');
+      const list = [...STARTING_MISTAKES, 'Mi plan roto'];
+      // "Fuera de mi plan" (Outside my plan) has two other words, "Mi plan roto" one
+      expect(likelyMistake(['mi plan'], list)).toBe('Mi plan roto');
+      // only the English name has "my"
+      expect(likelyMistake(['my plan'], list)).toBe('Outside my plan');
+      // "No stop" and "Sin stop" have one other word, "Moved my stop" and "Moví mi stop" two
+      expect(likelyMistake(['stop'], list)).toBe('No stop');
+    });
   });
 });
 

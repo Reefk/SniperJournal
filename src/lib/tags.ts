@@ -1,5 +1,5 @@
 import type { Settings, TagGroup, Trade } from './types';
-import { matchMistake, mistakeList } from './mistakes';
+import { matchMistake, mistakeList, mistakeName } from './mistakes';
 import { netPnl, rMultiple, statTrades } from './trade-math';
 
 /**
@@ -162,13 +162,21 @@ export function keepApart(settings: Settings, tags: string[]): string[][] {
 /**
  * The mistake a tag most likely is, for Move to mistakes to offer first: one
  * whose words include all of the tag's ("fomo" is "Entered early (FOMO)",
- * "moved stop" is "Moved my stop"), the one with the fewest other words. A
- * plural "s" doesn't count. Null when none is.
+ * "moved stop" is "Moved my stop"), the one with the fewest other words. Its
+ * name as shown counts as well as the one it is saved under, so a tag typed in
+ * the language on screen finds a starting mistake ("перенос стопа" is
+ * "Перенос стопа", saved as "Moved my stop"). A plural "s" doesn't count. Null
+ * when none is.
  */
 export function likelyMistake(tags: string[], list: string[]): string | null {
+  // what is often left out when typing doesn't count: accents ("movi" is
+  // "moví", "объем" is "объём"), Arabic's vowel marks and Hindi's nukta dot.
+  // Hindi's vowel signs are letters of the word, and a joiner doesn't split one.
   const words = (s: string) =>
     spelled(s)
-      .replace(/[^\p{L}\p{N} ]+/gu, ' ')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f\u064b-\u065f\u0670\u0640\u093c\u200c\u200d]/g, '')
+      .replace(/[^\p{L}\p{M}\p{N} ]+/gu, ' ')
       .split(' ')
       .filter(Boolean)
       .map((w) => (w.length > 3 && w.endsWith('s') ? w.slice(0, -1) : w));
@@ -177,10 +185,12 @@ export function likelyMistake(tags: string[], list: string[]): string | null {
     const own = words(tag);
     if (!own.length) continue;
     for (const mistake of list) {
-      const theirs = words(mistake);
-      if (!own.every((w) => theirs.includes(w))) continue;
-      const extra = theirs.length - own.length;
-      if (!best || extra < best.extra) best = { mistake, extra };
+      for (const name of new Set([mistake, mistakeName(mistake)])) {
+        const theirs = words(name);
+        if (!own.every((w) => theirs.includes(w))) continue;
+        const extra = theirs.length - own.length;
+        if (!best || extra < best.extra) best = { mistake, extra };
+      }
     }
   }
   return best?.mistake ?? null;
