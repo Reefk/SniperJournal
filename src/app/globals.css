@@ -170,9 +170,12 @@
   }
   /* A name of the person's own (an account, a setup, a tag, a file's column)
      reads in its own direction, so an English one inside Arabic is cut short
-     at its end, not its start; it still lines up as the page does. */
+     at its end, not its start; it still lines up as the page does. Chromium
+     (the Windows app, the phone) knows only the -webkit- spelling of
+     match-parent; without it an English name sat at the far side in Arabic. */
   [dir='auto'] {
     text-align: match-parent;
+    text-align: -webkit-match-parent;
   }
 }
 

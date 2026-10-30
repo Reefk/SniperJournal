@@ -267,3 +267,11 @@ describe('a path through the menus ("Settings → Restore")', () => {
     expect(wrong).toEqual([]);
   });
 });
+
+describe('a name in its own direction (dir="auto")', () => {
+  it('lines up with the page in Chromium, which knows match-parent only as -webkit-match-parent', () => {
+    const css = readFileSync(join(SRC, 'app', 'globals.css'), 'utf8');
+    const rule = css.match(/\[dir='auto'\]\s*\{([^}]*)\}/)?.[1] ?? '';
+    expect(rule).toMatch(/text-align:\s*-webkit-match-parent;/);
+  });
+});
