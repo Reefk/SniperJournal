@@ -49,10 +49,13 @@ export function MetricCard({
       )}
     >
       <div className="min-w-0">
-        {/* a longer label or line in another language takes two lines rather than being cut */}
+        {/* a longer label or line in another language wraps rather than being cut: at the
+            narrowest desktop (1180 px) Spanish takes three lines for "Factor de beneficio" and four
+            for "13,09 mil US$ ganados frente a 1,91 mil US$ perdidos" */}
         <div className="flex items-center gap-1.5 text-[13px] text-muted">
           {Icon && <Icon className="size-3.5 shrink-0 text-faint" />}
-          <span className="line-clamp-2">{label}</span>
+          {/* min-w-0: a word longer than the card breaks rather than pushing out of it */}
+          <span className="min-w-0 break-words">{label}</span>
           {info && <InfoTip text={info} />}
         </div>
         <FitText
@@ -63,7 +66,7 @@ export function MetricCard({
         >
           {value}
         </FitText>
-        {sub && <div className="mt-1.5 line-clamp-2 text-xs text-muted">{sub}</div>}
+        {sub && <div className="mt-1.5 text-xs text-muted">{sub}</div>}
       </div>
       {aside && <div className="shrink-0">{aside}</div>}
     </div>
@@ -81,7 +84,7 @@ export function MetricCell({
   return (
     <div className="min-w-0 bg-surface px-4 py-3.5">
       <div className="flex items-center gap-1 text-xs text-muted">
-        <span className="line-clamp-2">{label}</span>
+        <span className="min-w-0 break-words">{label}</span>
         {info && <InfoTip text={info} />}
       </div>
       <FitText className={cn('num mt-1.5 text-[15px] font-semibold', toneText(tone))}>{value}</FitText>
