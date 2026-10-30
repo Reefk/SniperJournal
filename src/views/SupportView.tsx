@@ -159,7 +159,8 @@ export function SupportView() {
           {QUESTIONS.map((item) => (
             <details key={item.q} className="group px-4 py-3.5 md:px-5">
               <summary className="cursor-pointer select-none list-none text-sm font-medium text-fg marker:hidden">
-                <span className="inline-block transition group-open:rotate-90">›</span>
+                {/* Arabic draws › as ‹ by itself, so it turns the other way to point down when open */}
+                <span className="inline-block transition group-open:rotate-90 rtl:group-open:-rotate-90">›</span>
                 <span className="ms-2">{tr(item.q)}</span>
               </summary>
               <p className="ms-5 mt-2 text-sm leading-relaxed text-muted">{tr(item.a, answer)}</p>
