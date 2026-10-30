@@ -18,7 +18,7 @@ import { UIProvider } from '@/store/UIProvider';
 import { RecoveredNotice } from '@/components/layout/SaveConflict';
 import { trade } from './helpers';
 import { button, click, mount, until } from './render';
-import { ENGLISH, withoutKept } from './i18n-kept';
+import { withoutKept, looksEnglish } from './i18n-kept';
 
 /**
  * What the journal's files say, in every language: a backup that can't be
@@ -74,7 +74,7 @@ const OTHERS = LANGUAGES.filter((l) => l.code !== 'en');
 /** English left in a text: two Latin letters in a row, or for Spanish an English word, once the kept names are out */
 function english(code: Language, text: string): boolean {
   const rest = withoutKept(text);
-  return code === 'es' ? ENGLISH.test(rest) : /[A-Za-z]{2}/.test(rest);
+  return code === 'es' ? looksEnglish(rest) : /[A-Za-z]{2}/.test(rest);
 }
 
 /** a text in the language on screen: not English, and not the English text either */

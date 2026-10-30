@@ -5,7 +5,7 @@ import { LANGUAGES, type Language } from '@/lib/i18n';
 import type { SaveStatus } from '@/store/JournalProvider';
 import type { CopyMiss } from '@/store/mirror';
 import { mount } from './render';
-import { ENGLISH, KEPT, SUPPORT_TYPED } from './i18n-kept';
+import { KEPT, SUPPORT_TYPED, looksEnglish } from './i18n-kept';
 
 /**
  * The Support page as the browser version, the Windows app and the phone app
@@ -121,7 +121,7 @@ describe.each(VERSIONS)('Support, $name', (version) => {
       const latin = (text: string) => /[A-Za-z]{2}/.test(rest(text));
       // Spanish shares the Latin letters: there a text is English when it is the English one, or has English words
       const left = (await texts(code)).filter((text) =>
-        code === 'es' ? (latin(text) && english.has(text)) || ENGLISH.test(rest(text)) : latin(text),
+        code === 'es' ? (latin(text) && english.has(text)) || looksEnglish(rest(text)) : latin(text),
       );
       expect(left).toEqual([]);
     },

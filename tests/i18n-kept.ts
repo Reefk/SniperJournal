@@ -3,6 +3,9 @@
  * every language, and text with it taken out.
  */
 
+import { messagesOf } from '../src/lib/i18n';
+import type { PluralForms } from '../src/lib/i18n/types';
+
 /** words that stay as they are in every language: names, units and codes */
 export const KEPT = [
   'Sniper Journal',
@@ -91,3 +94,29 @@ export function withoutKept(text: string): string {
   }
   return out;
 }
+
+const wordsOf = (text: string) =>
+  withoutKept(text)
+    .toLowerCase()
+    .match(/\p{L}{3,}/gu) ?? [];
+const textsOf = (code: 'en' | 'es') =>
+  Object.values(messagesOf(code)).flatMap((m: string | PluralForms) =>
+    typeof m === 'string' ? [m] : Object.values(m).filter((f) => f !== undefined),
+  );
+
+/**
+ * Words of the app's English texts that no Spanish text has. Spanish is
+ * written in Latin letters, so one of these on a Spanish screen is English
+ * left over, even a word the ENGLISH list doesn't name ("costing", "pts").
+ */
+export const ENGLISH_ONLY: ReadonlySet<string> = (() => {
+  const spanish = new Set(textsOf('es').flatMap(wordsOf));
+  return new Set(
+    textsOf('en')
+      .flatMap(wordsOf)
+      .filter((w) => !spanish.has(w)),
+  );
+})();
+
+/** a text on a Spanish screen that has English in it */
+export const looksEnglish = (text: string) => ENGLISH.test(text) || wordsOf(text).some((w) => ENGLISH_ONLY.has(w));

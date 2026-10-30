@@ -26,7 +26,7 @@ import { JournalProvider, useJournal } from '@/store/JournalProvider';
 import { UIProvider, useUI } from '@/store/UIProvider';
 import { pnl, trade } from './helpers';
 import { click, mount, type, until } from './render';
-import { ENGLISH, KEPT, SUPPORT_TYPED } from './i18n-kept';
+import { KEPT, SUPPORT_TYPED, looksEnglish } from './i18n-kept';
 import { INSIGHTS, INSIGHT_SETUPS } from './insights-journal';
 
 /**
@@ -648,7 +648,7 @@ function leftovers(code: Language, own: string[] = []): string[] {
   return shown().filter((text) => {
     let rest = text;
     for (const word of words) rest = rest.replace(word, '$1 ');
-    return code === 'es' ? ENGLISH.test(rest) : /[A-Za-z]{2}/.test(rest);
+    return code === 'es' ? looksEnglish(rest) : /[A-Za-z]{2}/.test(rest);
   });
 }
 

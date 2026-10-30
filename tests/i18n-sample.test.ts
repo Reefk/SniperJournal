@@ -13,7 +13,7 @@ import { JournalProvider, useJournal } from '@/store/JournalProvider';
 import { UIProvider } from '@/store/UIProvider';
 import { WelcomeModal } from '@/components/layout/WelcomeModal';
 import { button, click, field, mount, type, until } from './render';
-import { ENGLISH, withoutKept } from './i18n-kept';
+import { withoutKept, looksEnglish } from './i18n-kept';
 
 /**
  * The test journal (Load test data) is written in the language on screen
@@ -52,7 +52,7 @@ const OTHERS = LANGUAGES.filter((l) => l.code !== 'en');
 /** English left in a text: two Latin letters in a row, or for Spanish an English word, once the kept names are out */
 function english(code: Language, text: string): boolean {
   const rest = withoutKept(text);
-  return code === 'es' ? ENGLISH.test(rest) : /[A-Za-z]{2}/.test(rest);
+  return code === 'es' ? looksEnglish(rest) : /[A-Za-z]{2}/.test(rest);
 }
 
 /** the test journal as it is made in `code`, on a day where every tag is used */
