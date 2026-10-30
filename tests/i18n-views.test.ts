@@ -614,6 +614,8 @@ const ALLOWED = [
   // the trade's own words, and an example address
   'Own one',
   'NVDA, EURUSD, BTC',
+  // the same example right to left, one symbol
+  'NVDA',
   'https://www.tradingview.com/x/…',
   // what Spanish traders call them too
   'Stop loss',

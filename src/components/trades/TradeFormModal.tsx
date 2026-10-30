@@ -10,7 +10,7 @@ import { checksToSave, rulesShown } from '@/lib/rules';
 import { mistakeList, mistakesShown } from '@/lib/mistakes';
 import { arrangeByGroup } from '@/lib/tags';
 import { formatDuration, formatMoney, formatNumber, formatR, formatRatio } from '@/lib/format';
-import { isolate, tr } from '@/lib/i18n';
+import { isolate, language, tr } from '@/lib/i18n';
 import { grossPnl, holdMinutes, isClosed, netPnl, plannedRR, riskAmount, rMultiple } from '@/lib/trade-math';
 import { cn, toLocalInput, toNumberOrNull } from '@/lib/utils';
 import { storage } from '@/lib/storage';
@@ -394,7 +394,8 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
                 list="sj-symbols"
                 value={form.symbol}
                 onChange={(e) => set('symbol', e.target.value.toUpperCase())}
-                placeholder={tr('goals.example', { n: 'NVDA, EURUSD, BTC' })}
+                // right to left, a list cut short in a narrow box loses its start ("…EURUSD, BTC"), so one symbol there
+                placeholder={tr('goals.example', { n: language().dir === 'rtl' ? 'NVDA' : 'NVDA, EURUSD, BTC' })}
                 invalid={Boolean(errors.symbol)}
                 className="font-semibold uppercase placeholder:normal-case"
               />

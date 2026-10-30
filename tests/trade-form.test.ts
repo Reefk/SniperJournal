@@ -7,6 +7,7 @@ import { isIncomplete } from '@/lib/trade-math';
 import { JournalProvider, useJournal } from '@/store/JournalProvider';
 import { UIProvider, useUI } from '@/store/UIProvider';
 import { STARTING_MISTAKES } from '@/lib/mistakes';
+import { setLanguage } from '@/lib/i18n';
 import { trade } from './helpers';
 import { button, click, field, mount, press, type, until } from './render';
 
@@ -288,5 +289,27 @@ describe('tag suggestions', () => {
       .filter((text) => text.startsWith('+ '))
       .map((text) => text.slice(2));
     expect(shown).toEqual(['tired', 'calm', 'scanner', 'x']);
+  });
+});
+
+describe("the symbol box's example", () => {
+  const example = () =>
+    dialog()
+      ?.querySelector<HTMLInputElement>('input[list="sj-symbols"]')
+      ?.placeholder.replace(/[\u2066-\u2069]/g, '');
+  afterEach(() => {
+    setLanguage('en');
+  });
+
+  it('names three symbols', async () => {
+    await open();
+    expect(example()).toBe('e.g. NVDA, EURUSD, BTC');
+  });
+
+  // right to left, a narrow box (a phone's) cut the list at its start: "…EURUSD, BTC"
+  it('names one in Arabic', async () => {
+    await act(async () => setLanguage('ar'));
+    await open();
+    expect(example()).toBe('مثال: NVDA');
   });
 });
