@@ -345,7 +345,7 @@ export function SettingsView() {
             </Button>
             {CAN_BRING_OVER && (
               <Button onClick={() => void bringOver()}>
-                <FolderInput className="size-4" /> {tr('settings.bringOver')}
+                <FolderInput className="size-4 rtl:-scale-x-100" /> {tr('settings.bringOver')}
               </Button>
             )}
             <input

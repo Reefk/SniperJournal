@@ -148,7 +148,7 @@ export function ChartImage({
                 rel="noreferrer noopener"
                 className="inline-flex items-center gap-1.5 text-xs text-accent underline-offset-4 hover:underline"
               >
-                <ExternalLink className="size-3.5" /> {tr('chart.fullSize')}
+                <ExternalLink className="size-3.5 rtl:-scale-x-100" /> {tr('chart.fullSize')}
               </a>
             )}
           </div>

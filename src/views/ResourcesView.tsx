@@ -125,7 +125,7 @@ export function ResourcesView() {
                         rel="noreferrer noopener"
                         className="mt-3 inline-flex items-center gap-1.5 truncate text-xs text-accent underline-offset-4 hover:underline"
                       >
-                        <ExternalLink className="size-3.5 shrink-0" />
+                        <ExternalLink className="size-3.5 shrink-0 rtl:-scale-x-100" />
                         <span dir="auto" className="truncate">
                           {r.url?.replace(/^https?:\/\//, '')}
                         </span>
