@@ -126,7 +126,7 @@ export const insights: Translation<typeof en> = {
   'ins.mistake.title': '«{mistake}» هو أغلى أخطائك',
   'ins.mistake.text': {
     other:
-      'ارتكبته في صفقات عددها {count}، وكان متوسطها {avg} مقابل {cleanAvg} للصفقات النظيفة الخالية من الأخطاء (عددها {clean}). لو أدّت بالقدر نفسه، لكنت أفضل حالًا بنحو {cost}.',
+      'ارتكبته في صفقات عددها\u00a0{count}، وكان متوسطها {avg} مقابل {cleanAvg} للصفقات النظيفة الخالية من الأخطاء (عددها\u00a0{clean}). لو أدّت بالقدر نفسه، لكنت أفضل حالًا بنحو {cost}.',
   },
   'ins.mistake.metric': { other: 'نحو {cost} على {count} من الصفقات' },
 

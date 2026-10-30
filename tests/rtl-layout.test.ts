@@ -275,3 +275,15 @@ describe('a name in its own direction (dir="auto")', () => {
     expect(rule).toMatch(/text-align:\s*-webkit-match-parent;/);
   });
 });
+
+describe('a count in Arabic', () => {
+  // "(عددها 30)" broke as "(عددها" at the end of one line and "30)" at the start of the next
+  // (any other space between them, a thin one or a line break included, can break there too)
+  it('stays with its word: عددها and the number after it are joined by a no-break space', () => {
+    const arabic = messagesOf('ar');
+    const forms = (m: string | PluralForms) => (typeof m === 'string' ? [m] : Object.values(m).filter(Boolean));
+    expect(
+      Object.keys(arabic).filter((key) => forms(arabic[key as MessageKey]).some((t) => /عددها[^\S\u00a0]+\{/.test(t))),
+    ).toEqual([]);
+  });
+});
