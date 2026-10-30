@@ -627,19 +627,20 @@ export function TradesView() {
                       onClick={() => openTradeForm({ trade: t })}
                       className={cn('min-w-0 flex-1 py-2.5 text-start', t.excluded && 'opacity-50')}
                     >
+                      {/* on a narrow phone the amount takes two lines ("+958,75" over "US$"), not the symbol "BTC…" */}
                       <div className="flex items-center gap-2">
-                        <span dir="auto" className="truncate font-semibold text-fg">
+                        <span dir="auto" className="max-w-[40%] shrink-0 truncate font-semibold text-fg">
                           {t.symbol}
                         </span>
                         <SideBadge side={t.side} />
                         {(t.screenshotFile || t.screenshotUrl) && (
                           <ImageIcon className="size-3.5 shrink-0 text-faint" aria-label={tr('list.hasChart')} />
                         )}
-                        <span className="ms-auto shrink-0">
+                        <span className={cn('ms-auto', isIncomplete(t) ? 'shrink-0' : 'min-w-0 text-end')}>
                           {isIncomplete(t) ? (
                             <StatusBadge tone="warn">{tr('list.needsBadge')}</StatusBadge>
                           ) : (
-                            <PnlValue value={netPnl(t)} open={!isClosed(t)} currency={currency} />
+                            <PnlValue value={netPnl(t)} open={!isClosed(t)} currency={currency} breakable />
                           )}
                         </span>
                       </div>
@@ -772,7 +773,8 @@ export function TradesView() {
                             )}
                             {isIncomplete(t) && <StatusBadge tone="warn">{tr('list.needsBadge')}</StatusBadge>}
                           </div>
-                          <div className="flex max-w-[190px] items-center gap-1.5 truncate text-xs text-faint">
+                          {/* 160px keeps the table inside its card on a laptop with a long Russian setup name */}
+                          <div className="flex max-w-[160px] items-center gap-1.5 truncate text-xs text-faint">
                             {(t.fillCount ?? 1) > 1 && (
                               <span className="text-accent">{tr('list.fills', { count: t.fillCount ?? 1 })}</span>
                             )}

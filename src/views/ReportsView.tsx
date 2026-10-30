@@ -9,6 +9,7 @@ import { groupTables, type GroupTable } from '@/lib/tags';
 import { rangeOptions, splitByRange, type RangeKey } from '@/lib/ranges';
 import { tradesToCsv } from '@/lib/csv';
 import {
+  breakableAmount,
   formatDate,
   formatDuration,
   formatMoney,
@@ -245,10 +246,10 @@ export function ReportsView() {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-xs text-muted">
-                <th className="px-3 py-2 text-start font-medium">{tr('rep.month')}</th>
-                <th className="px-3 py-2 text-end font-medium">{tr('rep.trades')}</th>
-                <th className="px-3 py-2 text-end font-medium">{tr('rep.winRate')}</th>
-                <th className="px-3 py-2 text-end font-medium">{tr('rep.net')}</th>
+                <th className="px-2 py-2 text-start font-medium md:px-3">{tr('rep.month')}</th>
+                <th className="px-2 py-2 text-end font-medium md:px-3">{tr('rep.trades')}</th>
+                <th className="px-2 py-2 text-end font-medium md:px-3">{tr('rep.winRate')}</th>
+                <th className="px-2 py-2 text-end font-medium md:px-3">{tr('rep.net')}</th>
               </tr>
             </thead>
             <tbody>
@@ -256,18 +257,20 @@ export function ReportsView() {
                 const [y, m] = key.split('-').map(Number);
                 return (
                   <tr key={key} className="border-t border-line">
-                    <td className="px-3 py-2 text-fg">
+                    <td className="px-2 py-2 text-fg md:px-3">
                       {monthName(m - 1, 'short')} {y}
                     </td>
-                    <td className="num px-3 py-2 text-end text-muted">{agg.trades}</td>
-                    <td className="num px-3 py-2 text-end text-muted">{formatPct((agg.wins / agg.trades) * 100, 0)}</td>
+                    <td className="num px-2 py-2 text-end text-muted md:px-3">{agg.trades}</td>
+                    <td className="num px-2 py-2 text-end text-muted md:px-3">
+                      {formatPct((agg.wins / agg.trades) * 100, 0)}
+                    </td>
                     <td
                       className={cn(
-                        'num px-3 py-2 text-end font-medium',
+                        'num px-2 py-2 text-end font-medium md:px-3',
                         agg.net > 0 ? 'text-profit' : agg.net < 0 ? 'text-loss' : 'text-muted',
                       )}
                     >
-                      {formatMoney(agg.net, currency, { sign: true })}
+                      {breakableAmount(formatMoney(agg.net, currency, { sign: true }))}
                     </td>
                   </tr>
                 );
@@ -300,7 +303,7 @@ export function ReportsView() {
                             row.net > 0 ? 'text-profit' : row.net < 0 ? 'text-loss' : 'text-muted',
                           )}
                         >
-                          {formatMoney(row.net, currency, { sign: true, compact: true })}
+                          {breakableAmount(formatMoney(row.net, currency, { sign: true, compact: true }))}
                         </td>
                       </tr>
                     ))}
@@ -419,7 +422,7 @@ function TagGroupTables({ tables, currency }: { tables: GroupTable[]; currency: 
                       <td
                         className={cn('num px-2 py-2 text-end font-medium md:px-3', few ? 'text-faint' : tone(row.net))}
                       >
-                        {formatMoney(row.net, currency, { sign: true, compact: true })}
+                        {breakableAmount(formatMoney(row.net, currency, { sign: true, compact: true }))}
                       </td>
                       <td className={cn('num px-2 py-2 text-end md:px-3', few ? 'text-faint' : 'text-muted')}>
                         {row.avgR == null ? '—' : formatR(row.avgR)}
@@ -516,8 +519,9 @@ function MistakesReport({
               </td>
               <td className="num px-2 py-2 text-end text-muted md:px-3">{line.trades}</td>
               <td className="num px-2 py-2 text-end text-muted max-md:hidden md:px-3">{formatPct(line.winRate, 0)}</td>
+              {/* on a phone, "3870,05 US$" takes two lines rather than pushing the table out of its card */}
               <td className={cn('num px-2 py-2 text-end md:px-3', tone(line.net))}>
-                {formatMoney(line.net, currency, { sign: true, compact: true })}
+                {breakableAmount(formatMoney(line.net, currency, { sign: true, compact: true }))}
               </td>
               <td
                 className={cn(
@@ -525,7 +529,11 @@ function MistakesReport({
                   isMoney(line.cost) ? 'text-loss' : 'text-faint',
                 )}
               >
-                {line.cost == null ? '—' : isMoney(line.cost) ? formatMoney(line.cost, currency) : tr('rep.mis.noCost')}
+                {line.cost == null
+                  ? '—'
+                  : isMoney(line.cost)
+                    ? breakableAmount(formatMoney(line.cost, currency))
+                    : tr('rep.mis.noCost')}
               </td>
             </tr>
           ))}

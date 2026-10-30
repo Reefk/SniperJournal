@@ -308,9 +308,12 @@ export function CalendarView() {
                   {t.symbol}
                 </span>
                 <SideBadge side={t.side} />
-                <span className="num flex-1 truncate text-xs text-faint">
+                {/* in a narrow row the times take two lines, "09:59 –" over "11:22", not "09:59 –…";
+                    they keep at least the room of "09:59" (the dash may reach into the gap), so a
+                    longer amount ("-245,59 US$") takes two lines first */}
+                <span className="num min-w-[5ch] flex-1 text-xs text-faint">
                   {t.openedAt.slice(11, 16)}
-                  {t.closedAt ? ` – ${t.closedAt.slice(11, 16)}` : ''}
+                  {t.closedAt ? `\u00a0– ${t.closedAt.slice(11, 16)}` : ''}
                 </span>
                 {t.tags.slice(0, 2).map((tag) => (
                   <span
@@ -320,7 +323,7 @@ export function CalendarView() {
                     {tag}
                   </span>
                 ))}
-                <PnlValue value={netPnl(t)} open={!isClosed(t)} currency={currency} />
+                <PnlValue value={netPnl(t)} open={!isClosed(t)} currency={currency} className="text-end" breakable />
               </button>
             </li>
           ))}

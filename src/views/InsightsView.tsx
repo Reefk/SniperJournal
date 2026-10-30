@@ -169,7 +169,8 @@ export function InsightsView() {
               key={axis.axis}
               className="grid grid-cols-[96px_1fr_auto] items-center gap-3 md:grid-cols-[120px_1fr_auto]"
             >
-              <span className="truncate text-sm text-muted">{axis.axis}</span>
+              {/* "Factor de beneficio" takes two lines in the 96px a phone gives it */}
+              <span className="line-clamp-2 text-sm text-muted">{axis.axis}</span>
               <div className="h-1.5 overflow-hidden rounded-full bg-line">
                 <div
                   className="h-full rounded-full transition-all duration-700"

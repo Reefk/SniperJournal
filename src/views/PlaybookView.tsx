@@ -14,7 +14,7 @@ import {
   type RuleLine,
   type RuleReport,
 } from '@/lib/rules';
-import { formatMoney, formatPct, formatR, formatRatio } from '@/lib/format';
+import { breakableAmount, formatMoney, formatPct, formatR, formatRatio } from '@/lib/format';
 import { cn, uid } from '@/lib/utils';
 import { storage } from '@/lib/storage';
 import { tr } from '@/lib/i18n';
@@ -187,7 +187,8 @@ export function PlaybookView() {
                         [tr('score.winRate'), formatPct(perf.winRate, 0), 'text-fg'],
                         [
                           tr('list.net'),
-                          formatMoney(perf.net, currency, { sign: true, compact: true }),
+                          // a quarter of a phone's card: "+9,04 mil US$" takes two lines there
+                          breakableAmount(formatMoney(perf.net, currency, { sign: true, compact: true })),
                           perf.net > 0 ? 'text-profit' : perf.net < 0 ? 'text-loss' : 'text-fg',
                         ],
                         [
@@ -302,7 +303,7 @@ function RulesKept({ report, currency }: { report: RuleReport; currency: string 
               </th>
               <td className="num ps-2 text-end text-fg">{side?.trades ?? 0}</td>
               <td className={cn('num ps-2 text-end', side ? net(side.net) : 'text-faint')}>
-                {side ? short(side.net, currency) : '—'}
+                {side ? breakableAmount(short(side.net, currency)) : '—'}
               </td>
               <td className="num ps-2 text-end text-fg">{side ? formatPct(side.winRate, 0) : '—'}</td>
               <td className="num ps-2 text-end text-fg">{side?.avgR != null ? formatR(side.avgR) : '—'}</td>

@@ -1,5 +1,6 @@
 import type { ComponentType, ReactNode } from 'react';
 import { cn } from '@/lib/utils';
+import { FitText } from './FitText';
 import { InfoTip } from './InfoTip';
 
 export type MetricTone = 'profit' | 'loss' | 'accent' | 'neutral';
@@ -48,20 +49,21 @@ export function MetricCard({
       )}
     >
       <div className="min-w-0">
+        {/* a longer label or line in another language takes two lines rather than being cut */}
         <div className="flex items-center gap-1.5 text-[13px] text-muted">
           {Icon && <Icon className="size-3.5 shrink-0 text-faint" />}
-          <span className="truncate">{label}</span>
+          <span className="line-clamp-2">{label}</span>
           {info && <InfoTip text={info} />}
         </div>
-        <div
+        <FitText
           className={cn(
-            'num mt-1.5 truncate text-[21px] font-semibold leading-7 md:mt-2 md:text-[27px] md:leading-8',
+            'num mt-1.5 text-[21px] font-semibold leading-7 md:mt-2 md:text-[27px] md:leading-8',
             toneText(tone),
           )}
         >
           {value}
-        </div>
-        {sub && <div className="mt-1.5 truncate text-xs text-muted">{sub}</div>}
+        </FitText>
+        {sub && <div className="mt-1.5 line-clamp-2 text-xs text-muted">{sub}</div>}
       </div>
       {aside && <div className="shrink-0">{aside}</div>}
     </div>
@@ -79,10 +81,10 @@ export function MetricCell({
   return (
     <div className="min-w-0 bg-surface px-4 py-3.5">
       <div className="flex items-center gap-1 text-xs text-muted">
-        <span className="truncate">{label}</span>
+        <span className="line-clamp-2">{label}</span>
         {info && <InfoTip text={info} />}
       </div>
-      <div className={cn('num mt-1.5 truncate text-[15px] font-semibold', toneText(tone))}>{value}</div>
+      <FitText className={cn('num mt-1.5 text-[15px] font-semibold', toneText(tone))}>{value}</FitText>
       {/* eight to a row on a laptop leaves too little room for "held 1h 49m on average": it wraps rather than being cut */}
       {sub && <div className="mt-0.5 text-[11px] text-faint">{sub}</div>}
     </div>

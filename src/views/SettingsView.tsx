@@ -332,20 +332,22 @@ export function SettingsView() {
         <Section title={tr('settings.backups')} description={tr('settings.backupsHint')}>
           <div className="flex flex-wrap gap-2">
             <Button
+              wrap
               onClick={() => {
                 exportBackup(data);
                 // a phone opens its share sheet instead, which speaks for itself
                 if (!native) toast(tr('common.backupDownloaded'));
               }}
             >
-              <Download className="size-4" /> {native ? tr('common.backUpJournal') : tr('common.downloadBackup')}
+              <Download className="size-4 shrink-0" />{' '}
+              {native ? tr('common.backUpJournal') : tr('common.downloadBackup')}
             </Button>
-            <Button onClick={() => fileInput.current?.click()}>
-              <Upload className="size-4" /> {tr('settings.restore')}
+            <Button wrap onClick={() => fileInput.current?.click()}>
+              <Upload className="size-4 shrink-0" /> {tr('settings.restore')}
             </Button>
             {CAN_BRING_OVER && (
-              <Button onClick={() => void bringOver()}>
-                <FolderInput className="size-4 rtl:-scale-x-100" /> {tr('settings.bringOver')}
+              <Button wrap onClick={() => void bringOver()}>
+                <FolderInput className="size-4 shrink-0 rtl:-scale-x-100" /> {tr('settings.bringOver')}
               </Button>
             )}
             <input
@@ -369,8 +371,8 @@ export function SettingsView() {
         </Section>
 
         <Section title={tr('settings.charts')} description={tr('settings.chartsHint')}>
-          <Button disabled={reclaiming} onClick={() => void reclaimCharts()}>
-            <ImageMinus className="size-4" /> {tr('settings.reclaim')}
+          <Button wrap disabled={reclaiming} onClick={() => void reclaimCharts()}>
+            <ImageMinus className="size-4 shrink-0" /> {tr('settings.reclaim')}
           </Button>
           <p className="mt-3 text-xs leading-relaxed text-faint">{tr('settings.reclaimHint')}</p>
         </Section>
@@ -378,12 +380,13 @@ export function SettingsView() {
         <Section title={tr('settings.testData')} description={tr('settings.testDataHint')}>
           <div className="flex flex-wrap items-center gap-2">
             <Button
+              wrap
               onClick={() => {
                 actions.loadSampleData();
                 toast(tr('settings.testDataLoaded'));
               }}
             >
-              <FlaskConical className="size-4" />{' '}
+              <FlaskConical className="size-4 shrink-0" />{' '}
               {sampleCount > 0 ? tr('settings.regenerateTestData') : tr('settings.loadTestData')}
             </Button>
             <Button

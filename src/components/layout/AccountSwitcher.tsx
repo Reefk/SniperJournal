@@ -6,7 +6,7 @@ import { ChevronsUpDown, Layers, Plus, Settings2, Wallet } from 'lucide-react';
 import { useJournal } from '@/store/JournalProvider';
 import { useUI } from '@/store/UIProvider';
 import { formatMoney } from '@/lib/format';
-import { toNumberOrNull } from '@/lib/utils';
+import { cn, toNumberOrNull } from '@/lib/utils';
 import { MenuDivider, MenuItem, Popover } from '@/components/ui/Popover';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -27,7 +27,8 @@ export function AccountSwitcher({ variant, align }: { variant: 'card' | 'pill'; 
     <>
       <Popover
         align={align ?? (variant === 'card' ? 'start' : 'end')}
-        className={variant === 'card' ? 'w-[224px]' : 'w-64'}
+        // as wide as a name and its balance need ("30,6 mil US$" is longer than "$30.6K"), up to the screen
+        className={cn('w-max max-w-[min(20rem,calc(100vw-2rem))]', variant === 'card' ? 'min-w-[224px]' : 'min-w-64')}
         trigger={({ toggle, open }) =>
           variant === 'card' ? (
             <button

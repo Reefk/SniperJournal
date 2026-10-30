@@ -53,11 +53,12 @@ export function Field({
   return (
     <FieldContext.Provider value={{ id, errorId }}>
       <div className={cn('min-w-0', className)}>
-        <div className="mb-1.5 flex items-baseline justify-between gap-2 text-xs">
+        {/* a hint too long to sit beside its label goes under it, whole */}
+        <div className="mb-1.5 flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5 text-xs">
           <label htmlFor={id} className="font-medium text-muted">
             {label}
           </label>
-          {hint && <span className="truncate text-faint">{hint}</span>}
+          {hint && <span className="ms-auto text-end text-faint">{hint}</span>}
         </div>
         {children}
         {error && (

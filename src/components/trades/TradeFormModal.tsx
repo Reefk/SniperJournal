@@ -209,6 +209,12 @@ const logWays = () =>
     { value: 'csv', label: tr('form.fromFile') },
   ] as const;
 
+// Three fields side by side, their labels, boxes and messages each in a row
+// they share, so the boxes line up when a label or hint takes two lines (a
+// phone, a longer language). Without subgrid, as before: each field stacked.
+const ROW3 = 'grid grid-cols-3 grid-rows-[auto_auto_auto] gap-x-3';
+const IN_ROW3 = 'row-span-3 grid grid-rows-subgrid';
+
 export function TradeFormModal() {
   const { tradeForm, closeTradeForm } = useUI();
   const editing = tradeForm.trade;
@@ -464,8 +470,8 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
             </Field>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
-            <Field label={tr('form.quantity')} error={errors.quantity}>
+          <div className={ROW3}>
+            <Field className={IN_ROW3} label={tr('form.quantity')} error={errors.quantity}>
               <Input
                 inputMode="decimal"
                 className="num"
@@ -475,7 +481,7 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
                 invalid={Boolean(errors.quantity)}
               />
             </Field>
-            <Field label={tr('form.entryPrice')} error={errors.entryPrice}>
+            <Field className={IN_ROW3} label={tr('form.entryPrice')} error={errors.entryPrice}>
               <Input
                 inputMode="decimal"
                 className="num"
@@ -486,6 +492,7 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
               />
             </Field>
             <Field
+              className={IN_ROW3}
               label={tr('form.exitPrice')}
               hint={<span className="max-md:hidden">{tr('form.emptyIsOpen')}</span>}
               error={errors.exitPrice}
@@ -501,8 +508,8 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
             </Field>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
-            <Field label={tr('form.stopLoss')} hint={tr('common.optional')} error={errors.stopLoss}>
+          <div className={ROW3}>
+            <Field className={IN_ROW3} label={tr('form.stopLoss')} hint={tr('common.optional')} error={errors.stopLoss}>
               <Input
                 inputMode="decimal"
                 className="num"
@@ -511,7 +518,12 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
                 placeholder="0.00"
               />
             </Field>
-            <Field label={tr('form.takeProfit')} hint={tr('common.optional')} error={errors.takeProfit}>
+            <Field
+              className={IN_ROW3}
+              label={tr('form.takeProfit')}
+              hint={tr('common.optional')}
+              error={errors.takeProfit}
+            >
               <Input
                 inputMode="decimal"
                 className="num"
@@ -521,6 +533,7 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
               />
             </Field>
             <Field
+              className={IN_ROW3}
               label={
                 <>
                   {tr('form.fees')}
@@ -544,8 +557,12 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
             </p>
           )}
 
-          <div className="grid grid-cols-3 gap-3">
-            <Field label={tr('form.setup')} hint={data.setups.length ? undefined : tr('form.addInPlaybook')}>
+          <div className={ROW3}>
+            <Field
+              className={IN_ROW3}
+              label={tr('form.setup')}
+              hint={data.setups.length ? undefined : tr('form.addInPlaybook')}
+            >
               <Select value={form.setupId} onChange={(e) => set('setupId', e.target.value)}>
                 <option value="">{tr('form.noSetup')}</option>
                 {data.setups.map((s) => (
@@ -556,6 +573,7 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
               </Select>
             </Field>
             <Field
+              className={IN_ROW3}
               label={tr('form.session')}
               hint={!form.sessionTouched && form.session ? tr('form.fromEntryTime') : undefined}
             >
@@ -571,7 +589,7 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
                 ))}
               </Select>
             </Field>
-            <Field label={tr('form.leverage')} hint={tr('common.optional')}>
+            <Field className={IN_ROW3} label={tr('form.leverage')} hint={tr('common.optional')}>
               {/* "1 ×" reads left to right in every language, as the number in it does */}
               <div className="relative" dir="ltr">
                 <Input
