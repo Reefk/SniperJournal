@@ -26,7 +26,7 @@ export const trade: Translation<typeof en> = {
 
   'form.symbol': 'Тикер',
   'form.account': 'Счёт',
-  'form.side': 'Направление',
+  'form.side': 'Сторона',
   'form.entryTime': 'Время входа',
   'form.exitTime': 'Время выхода',
   'form.quantity': 'Количество',

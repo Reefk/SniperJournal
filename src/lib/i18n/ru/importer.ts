@@ -198,7 +198,7 @@ export const importer: Translation<typeof en> = {
   'imp.xlsx.sheet': 'Лист {n}',
 
   'role.symbol': 'Тикер',
-  'role.side': 'Направление (покупка / продажа, лонг / шорт)',
+  'role.side': 'Сторона (покупка / продажа, лонг / шорт)',
   'role.quantity': 'Количество',
   'role.price': 'Цена исполнения',
   'role.entry_price': 'Цена входа',

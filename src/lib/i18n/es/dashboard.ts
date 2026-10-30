@@ -140,7 +140,7 @@ export const dashboard: Translation<typeof en> = {
 
   'score.winRate': 'Tasa de acierto',
   'score.profitFactor': 'Factor de beneficio',
-  'score.riskReward': 'Riesgo:beneficio',
+  'score.riskReward': 'Riesgo-beneficio',
   'score.consistency': 'Constancia',
   'score.discipline': 'Disciplina',
   'score.execution': 'Ejecución',

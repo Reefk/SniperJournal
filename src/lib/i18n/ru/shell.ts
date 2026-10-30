@@ -52,7 +52,7 @@ export const shell: Translation<typeof en> = {
   'header.logTrade': 'Новая сделка',
 
   'search.open': 'Открыть поиск',
-  'search.placeholder': 'Поиск по тикерам, тегам, заметкам, сетапам',
+  'search.placeholder': 'Поиск: тикеры, теги, заметки, сетапы',
   'search.label': 'Поиск по всем сделкам',
   'search.none': 'Нет сделок по этому запросу.',
   'search.showAll': 'Показать все результаты в «Сделках»',
