@@ -4,7 +4,8 @@
 // file (Windows), a server restart, the keyboard inside dialogs, and chart
 // images going with a deleted account, a restore, an erase and a merge, and
 // reclaimed in Settings once nothing uses them, and trades logged from a CSV
-// file in the trade form, with the same file again adding nothing. Synthetic data
+// file in the trade form, with the same file again adding nothing, and every
+// page in Spanish, Russian, Arabic and Hindi, chosen in Settings. Synthetic data
 // only, in a throwaway folder; your own data/ folder is never touched.
 //
 //   npm run build && npm run e2e
@@ -1812,6 +1813,277 @@ async function journey() {
     'Add details charges a fee per contract by size: 0.4 × 2 contracts in and out',
     await savedSoon((j) => j.trades.some((t) => t.symbol === 'FEEY' && t.fees === 1.6)),
   );
+  await b.close();
+
+  // ---- 18d. Spanish, Russian, Arabic and Hindi, chosen in Settings, then English again ----
+  // Each language with test data made in it, every page at two laptop widths and two phones'.
+  // No page is wider than the screen, and no text of the app's own is cut: "…" on a line its
+  // text is too wide for, measured by the text itself (a box's scroll width misses a cut under
+  // 1 px), lines past a clamp, or text past the edge of a box that hides it. Names from the
+  // journal carry dir="auto" and may be cut. In Arabic, also: an English name sits on the right
+  // like the Arabic around it, the icons that point along the line are turned, and the charts'
+  // axis labels are as section 8 checks them in English.
+  b = await openBrowser();
+  const journalBefore = journalOnDisk();
+  const languages = [
+    { code: 'es', name: 'Spanish', dir: 'ltr' },
+    { code: 'ru', name: 'Russian', dir: 'ltr' },
+    { code: 'ar', name: 'Arabic', dir: 'rtl' },
+    { code: 'hi', name: 'Hindi', dir: 'ltr' },
+  ];
+  const pages = [
+    '/',
+    '/trades',
+    '/calendar',
+    '/reports',
+    '/insights',
+    '/playbook',
+    '/resources',
+    '/support',
+    '/settings',
+  ];
+  const FITS = `
+    // a box wider than its room, and the app's own text in it that is cut
+    window.$fits = (root) => {
+      const wide = root === document.body ? document.documentElement.scrollWidth > innerWidth || document.querySelector('main').scrollWidth > document.querySelector('main').clientWidth : root.scrollWidth > root.clientWidth;
+      const cut = [];
+      // how many boxes that may cut their text were looked at: none means nothing was measured
+      let measured = 0;
+      for (const el of root.querySelectorAll('*')) {
+        if (el.closest('[dir="auto"], .sr-only, svg')) continue;
+        const box = el.getBoundingClientRect();
+        if (!box.width || !box.height) continue;
+        const cs = getComputedStyle(el);
+        if (cs.visibility === 'hidden') continue;
+        // a box whose words are all names from the journal (a setup beside its dot)
+        const words = [];
+        const walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+        for (let n = walk.nextNode(); n; n = walk.nextNode()) if (n.data.trim()) words.push(n);
+        if (!words.length || words.every((n) => n.parentElement.closest('[dir="auto"]'))) continue;
+        const text = el.textContent.trim().slice(0, 60);
+        // (an inline box draws no "…" whatever its class says)
+        if (cs.textOverflow === 'ellipsis' && cs.overflowX !== 'visible' && cs.display !== 'inline') {
+          measured++;
+          const range = document.createRange();
+          range.selectNodeContents(el);
+          const room = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+          if (range.getBoundingClientRect().width > room + 0.5) cut.push(text);
+        } else if (cs.webkitLineClamp && cs.webkitLineClamp !== 'none') {
+          measured++;
+          if (el.scrollHeight > el.clientHeight + 1) cut.push(text);
+        }
+      }
+      // and text drawn past the edge of a box that hides what overflows it, with no "…" to say so
+      const texts = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      for (let n = texts.nextNode(); n; n = texts.nextNode()) {
+        const owner = n.parentElement;
+        if (!n.data.trim() || owner.closest('[dir="auto"], .sr-only, svg, script, style')) continue;
+        // (an info bubble is there unseen until it's hovered)
+        if (!owner.checkVisibility({ opacityProperty: true, visibilityProperty: true })) continue;
+        const range = document.createRange();
+        range.selectNodeContents(n);
+        const drawn = range.getBoundingClientRect();
+        if (!drawn.width) continue;
+        for (let a = owner; a && a !== document.documentElement; a = a.parentElement) {
+          const cs = getComputedStyle(a);
+          if (cs.overflowX === 'visible' || cs.display === 'inline') continue;
+          // a box that scrolls sideways shows the rest, and "…" is measured above
+          if (cs.overflowX !== 'auto' && cs.overflowX !== 'scroll' && cs.textOverflow !== 'ellipsis') {
+            const left = a.getBoundingClientRect().left + a.clientLeft;
+            if (drawn.left < left - 1 || drawn.right > left + a.clientWidth + 1)
+              cut.push(n.data.trim().slice(0, 60) + ' (past the edge of its box)');
+          }
+          break;
+        }
+      }
+      return { wide, cut, measured };
+    };
+    // the page (or a window on it) still for 300 ms, the charts drawn and the figures fitted: its
+    // size as drawn (a window opening grows), its number of boxes and the figures' sizes unchanged
+    window.$still = (root = document.querySelector('main')) => {
+      const drawn = root.getBoundingClientRect();
+      const look = [
+        document.documentElement.scrollWidth,
+        drawn.width,
+        drawn.height,
+        root.scrollWidth,
+        root.scrollHeight,
+        root.querySelectorAll('*').length,
+        [...root.querySelectorAll('[style*="font-size"]')].map((el) => el.style.fontSize).join(),
+      ].join('|');
+      if (look !== window.$look) {
+        window.$look = look;
+        window.$since = performance.now();
+      }
+      return performance.now() - window.$since >= 300;
+    };
+    // Tailwind 4 turns an icon with the scale property
+    window.$turned = () => [...document.querySelectorAll('svg[class*="rtl:-scale-x-100"]')].filter((s) => s.getBoundingClientRect().width).map((s) => getComputedStyle(s).scale.startsWith('-1'));
+    true;
+  `;
+  const open = async (path, code, width) => {
+    await b.send('Emulation.setDeviceMetricsOverride', {
+      width,
+      height: width < 768 ? 780 : 864,
+      deviceScaleFactor: 1,
+      mobile: width < 768,
+    });
+    await b.send('Page.navigate', { url: base + path });
+    await b.until(
+      `document.readyState === 'complete' && document.documentElement.lang === '${code}' && !!document.querySelector('main') && document.fonts.status === 'loaded'`,
+      `${path} in ${code} at ${width} px`,
+      15000,
+    );
+    await b.run(PAGE);
+    await b.run(FITS);
+    // false for a page still changing after 5 s: measured all the same, and reported
+    return seen(`$still()`, `${path} in ${code} at ${width} px, still`, 5000);
+  };
+  // as a person does it: the language box in Settings
+  const languageBox = `[...document.querySelectorAll('main select')].find((s) => s.querySelector('option[value="ar"]'))`;
+  const chooseLanguage = async (from, code) => {
+    await open('/settings', from, 1366);
+    await b.run(`$type(${languageBox}, '${code}'); true`);
+    return (
+      (await seen(`document.documentElement.lang === '${code}'`, `the app in ${code}`, 5000)) &&
+      (await savedSoon((j) => (j.settings?.language ?? 'en') === code))
+    );
+  };
+  const sampleSetups = (j) =>
+    j.setups
+      .filter((s) => s.isSample)
+      .map((s) => s.name)
+      .join(' | ');
+  let current = 'en';
+  for (const { code, name, dir } of languages) {
+    const chosen = await chooseLanguage(current, code);
+    current = code;
+    check(
+      `${name}, chosen in Settings: the app is in ${name}, ${dir === 'rtl' ? 'right to left' : 'left to right'}, and the choice is saved`,
+      chosen && (await b.run(`document.documentElement.dir === '${dir}'`)),
+    );
+    // test data made in this language (the Settings button with the flask, whatever it says;
+    // once there is test data, a banner above it has the flask too)
+    const setupsBefore = sampleSetups(journalOnDisk());
+    await b.run(
+      `[...document.querySelectorAll('main button')].find((x) => x.querySelector('svg.lucide-flask-conical'))?.click(); true`,
+    );
+    const made = await savedSoon((j) => j.trades.some((t) => t.isSample) && sampleSetups(j) !== setupsBefore);
+    const wide = [];
+    const cut = [];
+    const unsure = [];
+    // a laptop, the narrowest the desktop layout gets (narrower windows scroll it), two phones
+    for (const width of [1366, 1180, 412, 360]) {
+      // (on a phone most pages cut only names, so it's all the pages that must have measured some)
+      let measured = 0;
+      for (const path of pages) {
+        if (!(await open(path, code, width))) unsure.push(`${path} at ${width} never still`);
+        const fits = await b.run(`$fits(document.body)`);
+        if (fits.wide) wide.push(`${path} at ${width}`);
+        cut.push(...fits.cut.map((t) => `${path} at ${width}: ${t}`));
+        measured += fits.measured;
+      }
+      if (!measured) unsure.push(`nothing measured at ${width}`);
+      // a trade's form, the first one on the Trades page
+      await open('/trades', code, width);
+      await b.run(`document.querySelector('main tbody tr, main li > button')?.click(); true`);
+      // the trade's own form, with its chart's file box (not some other window)
+      if (await seen(`!!$modal()?.querySelector('input[type=file]')`, 'trade form', 5000)) {
+        if (!(await seen(`$still($modal())`, 'the trade form, still', 5000)))
+          unsure.push(`the trade form at ${width} never still`);
+        const fits = await b.run(`$fits($modal())`);
+        if (fits.wide) wide.push(`the trade form at ${width}`);
+        cut.push(...fits.cut.map((t) => `the trade form at ${width}: ${t}`));
+      } else wide.push(`the trade form at ${width} did not open`);
+    }
+    check(`${name}: the test data is made in ${name}`, made, sampleSetups(journalOnDisk()));
+    check(`${name}: no page is wider than the screen at 1366, 1180, 412 or 360 px`, wide.length === 0, wide.join('; '));
+    check(
+      `${name}: no text of the app's own is cut at 1366, 1180, 412 or 360 px (every page still, text measured)`,
+      cut.length === 0 && unsure.length === 0,
+      [...cut.slice(0, 8), ...unsure].join('; '),
+    );
+
+    if (code !== 'ar') continue;
+    // an English name that fits sits on the right, like the Arabic around it (its own text
+    // starts on the left, so text-align: start would put it there)
+    const offside = [];
+    const looked = [];
+    for (const width of [1366, 412]) {
+      for (const path of ['/', '/reports', '/insights', '/settings']) {
+        await open(path, code, width);
+        const names = await b.run(`[...document.querySelectorAll('[dir="auto"]')].filter((el) => {
+          const box = el.getBoundingClientRect();
+          return box.width > 0 && /^[\\x20-\\x7e]+$/.test(el.textContent.trim()) && /[A-Za-z]/.test(el.textContent) && el.scrollWidth <= el.clientWidth + 1;
+        }).map((el) => {
+          const cs = getComputedStyle(el), box = el.getBoundingClientRect();
+          const range = document.createRange();
+          range.selectNodeContents(el);
+          const text = range.getBoundingClientRect();
+          const right = box.right - parseFloat(cs.paddingRight) - parseFloat(cs.borderRightWidth);
+          const left = box.left + parseFloat(cs.paddingLeft) + parseFloat(cs.borderLeftWidth);
+          return { name: el.textContent.trim(), gap: Math.round(right - text.right), roomy: right - left - text.width > 4 };
+        }).filter((n) => n.roomy)`);
+        looked.push(`${path} at ${width}: ${names.length}`);
+        offside.push(
+          ...names.filter((n) => Math.abs(n.gap) > 2).map((n) => `${path} at ${width}: ${n.name} ${n.gap} px off`),
+        );
+      }
+    }
+    check(
+      'Arabic: an English name sits on the right, like the Arabic around it',
+      offside.length === 0 && looked.some((l) => !l.endsWith(': 0')),
+      [...offside, `names looked at: ${looked.join(', ')}`].join('; '),
+    );
+    await open('/calendar', code, 1366);
+    const turned = await b.run(`$turned()`);
+    check(
+      'Arabic: the icons that point along the line are turned',
+      turned.length > 0 && turned.every(Boolean),
+      JSON.stringify(turned),
+    );
+    await open('/', code, 1366);
+    const pcAxes = await b.run(axisLabels);
+    await open('/', code, 360);
+    const phoneAxes = await b.run(axisLabels);
+    check(
+      "Arabic: the charts' axis labels are 11px, and no amount sits over a date, on a laptop and a phone",
+      axesOk(pcAxes) && axesOk(phoneAxes),
+      JSON.stringify({ pcAxes, phoneAxes }),
+    );
+  }
+
+  // English again, and the test data taken out as section 14b does it
+  const english = await chooseLanguage(current, 'en');
+  await open('/calendar', 'en', 1366);
+  const turnedBack = await b.run(`$turned()`);
+  check(
+    'English again, chosen in Settings: left to right, saved, and no icon turned',
+    english &&
+      (await b.run(`document.documentElement.dir === 'ltr'`)) &&
+      turnedBack.length > 0 &&
+      !turnedBack.some(Boolean),
+    JSON.stringify(turnedBack),
+  );
+  await open('/settings', 'en', 1366);
+  await b.run(`$tStarts('Remove test data', document.querySelector('main')).click(); true`);
+  await b.until(`!!$modal() && !!$t('Remove test data', $modal())`, 'remove test data confirmation');
+  await b.run(`$t('Remove test data', $modal()).click(); true`);
+  const removed = await savedSoon((j) => !j.trades.some((t) => t.isSample));
+  // loading test data gives a starting balance to an account with none
+  const balances = journalBefore.accounts.map((a) => a.startingBalance);
+  const changed = journalOnDisk().accounts.findIndex((a, i) => a.startingBalance !== balances[i]);
+  if (changed >= 0) {
+    await b.run(
+      `$type(document.querySelectorAll('input[aria-label="Starting balance"]')[${changed}], '${balances[changed]}'); true`,
+    );
+  }
+  const asBefore = (j) =>
+    JSON.stringify(j.trades) === JSON.stringify(journalBefore.trades) &&
+    JSON.stringify(j.setups) === JSON.stringify(journalBefore.setups) &&
+    JSON.stringify(j.accounts) === JSON.stringify(journalBefore.accounts);
+  check('the test data is gone again, and the journal is as it was', removed && (await savedSoon(asBefore)));
+  await b.send('Emulation.clearDeviceMetricsOverride');
   await b.close();
 
   // ---- 19. a journal a newer version saved is neither opened nor written over ----
