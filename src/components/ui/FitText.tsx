@@ -14,12 +14,18 @@ export function fitFontSize(full: number, room: number, wide: number, least: num
   return Math.max(full * least, Math.floor(((full * room) / wide) * 2) / 2);
 }
 
-// the box's own size first, then the one that fits its room
+// the box's own size first, then the one that fits its room; half a pixel smaller
+// while the line is still too wide, as it can be where each letter is drawn a
+// whole number of pixels wide and the line narrows less than its font
 function fit(el: HTMLElement, least: number) {
   el.style.fontSize = '';
   const full = parseFloat(getComputedStyle(el).fontSize);
-  const size = fitFontSize(full, el.clientWidth, el.scrollWidth, least);
-  if (size < full) el.style.fontSize = `${size}px`;
+  let size = fitFontSize(full, el.clientWidth, el.scrollWidth, least);
+  while (size < full) {
+    el.style.fontSize = `${size}px`;
+    if (el.scrollWidth <= el.clientWidth || size <= full * least) break;
+    size = Math.max(full * least, size - 0.5);
+  }
 }
 
 /**

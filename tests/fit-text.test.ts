@@ -47,7 +47,10 @@ describe('a figure in its box', () => {
     watched.length = 0;
     stopped = 0;
     vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockImplementation(() => room);
-    vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockImplementation(() => wide);
+    // `wide` at the full 27px; a smaller font draws the line narrower in step
+    vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockImplementation(function (this: HTMLElement) {
+      return Math.ceil((wide * parseFloat(this.style.fontSize || '27')) / 27);
+    });
     vi.stubGlobal(
       'ResizeObserver',
       class {
@@ -113,6 +116,18 @@ describe('a figure in its box', () => {
     wide = 223;
     await render(h(FitText, { className: 'big', children: '+11.179,87 US$' }));
     expect(figure(container).style.fontSize).toBe('25.5px');
+    await unmount();
+  });
+
+  it('goes half a pixel smaller while the line is still too wide', async () => {
+    // letters drawn a whole number of pixels wide (0.6 of the font, rounded), so the line
+    // narrows less than its font: 24.5px still draws 11 letters 15px wide, 165px in 160px
+    room = 160;
+    vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockImplementation(function (this: HTMLElement) {
+      return 11 * Math.round(0.6 * parseFloat(this.style.fontSize || '27'));
+    });
+    const { container, unmount } = await mount(h(FitText, { className: 'big', children: '+$15,622.29' }));
+    expect(figure(container).style.fontSize).toBe('24px');
     await unmount();
   });
 
