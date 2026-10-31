@@ -91,6 +91,12 @@ coverage floor, both builds (desktop and the Android export) and
 published. Lint warnings don't fail it, errors do. The warnings left today are
 known (see the comment in `eslint.config.mjs`); don't add new ones. A file
 Prettier would change fails it too: `npm run format -- .` fixes them all.
+When `npm run e2e` fails there, screenshots of the pages that failed are kept
+with the run for a week (Artifacts: `e2e-failure-windows-latest` or
+`e2e-failure-ubuntu-latest`). GitHub's Windows runner has animations turned
+off, so it draws every page as for someone who turned them off (the language
+step does the same at 1180 and 360 px): for a failure on that runner alone,
+try that first, with `prefers-reduced-motion: reduce` emulated.
 A Windows job of its own also builds the Windows app (`npm run build:desktop`)
 and runs `npm run e2e:desktop` on it: Smart App Control on the developer's PC
 can block the unsigned programs a Rust build runs. The runner's WebView2
@@ -147,6 +153,7 @@ src/
     JournalProvider every trade, account and setting, plus saving to disk
     UIProvider      modals, confirmations and toasts
   lib/              the thinking parts, plain functions with no React
+    i18n/           every text on screen, one folder per language
   hooks/            small bits of shared React behaviour
 src-tauri/          the Windows app: its window, and the only code that
                     touches its folder (src/folder.rs), in Rust
@@ -174,6 +181,7 @@ data/               your journal and its backups, created at runtime
 | The trade entry form                               | `src/components/trades/TradeFormModal.tsx`                                          |
 | Trading session hours                              | `src/lib/sessions.ts`                                                               |
 | The generated test data                            | `src/lib/sample.ts`                                                                 |
+| The words on screen, in any language               | `src/lib/i18n/<language>/` (English in `en/`); see Adding a language                |
 
 ### Changing the colours
 
@@ -223,6 +231,65 @@ the first place both showed up.
 
 Old journals keep working: `normalize()` in `src/lib/journal.ts` fills in
 anything an existing `journal.json` does not have yet.
+
+### Adding a language
+
+Every text on screen comes from `tr('key')` (`src/lib/i18n/index.ts`), and the
+texts themselves are in `src/lib/i18n/`: `en/` is the source, and each other
+language is a folder with the same files and every key in them. A new text goes
+into `en/` and into every other language's folder in the same change.
+
+1. Copy `src/lib/i18n/es/` to a folder named after the language's code (`fr/`)
+   and rename `es` to `fr` in its `index.ts`. Start from a translation rather
+   than from `en/`: its files are typed `Translation<…>`, so a missing key, an
+   extra one, or a plural where English has a single text is a type error.
+2. Translate every value, and keep what the app fills in or draws: every
+   `{placeholder}`, every `<tag>`, and a leading space where English has one
+   (`' test data'` continues another text). A plural has one text for each
+   form the language has, as `Intl.PluralRules` names them: `one` and `other`
+   for English, also `few` and `many` for Russian, all six for Arabic. Names
+   that stay as they are in every language (Sniper Score, FOMO, CSV, file
+   names) are listed in `tests/i18n-kept.ts`.
+3. In `src/lib/i18n/index.ts`, add the code to `Language`, the messages to
+   `MESSAGES`, and a line to `LANGUAGES`:
+   - `name`: the language in its own words, as the language menu shows it
+     (`Français`);
+   - `dir`: `'rtl'` for a language written right to left. The page's `dir`
+     follows it, and every name or amount put into a sentence keeps its own
+     direction. The layout mirrors because it uses start and end classes
+     (`ms-`, `ps-`, `start-`) rather than left and right; an icon that points
+     along the line gets `rtl:-scale-x-100`.
+   - `numbers` and `dates`: the `Intl` locales for its numbers and for its
+     month and weekday names. Arabic uses `en-US` and `ar-u-nu-latn`, which
+     keep the digits of English.
+4. `npm run typecheck` names whatever is missing. `npm test` checks each
+   language in `LANGUAGES` on its own (`tests/i18n.test.ts`): every key, the
+   same placeholders and tags, the plural forms its language needs, and no
+   English left in it. Two tests there list what each language gives (its
+   decimal mark, and whether a short amount has something after the number);
+   add the new one to both. The "no English left" check counts any two Latin
+   letters as English, except in Spanish, where only a text that is the same
+   as the English one counts (with `SAME_IN_SPANISH` for the ones that are
+   right as they are). A new language written in Latin letters needs the same
+   treatment.
+5. Fonts: Inter, and JetBrains Mono for figures, are bundled for Latin,
+   Cyrillic, Greek and Vietnamese. Words in another script are drawn in the
+   system's font. If the language writes words inside figures ("1 س 41 د",
+   "39 में से 29"), add it to the `:root:is([lang='ar'], [lang='hi']) .num` rule
+   in `globals.css`, so those words take the normal font rather than a
+   monospace one that lacks their letters.
+6. Add it to `languages` in the language step of
+   `tests/e2e/desktop-journey.mjs`, then `npm run build` and `npm run e2e`.
+   The step chooses the language in Settings as a person does, opens every page
+   and the trade form at 1366, 1180, 412 and 360 px, and fails on text that is
+   cut, ends in "…" or runs past its box, a word broken in the middle, an info
+   bubble that isn't whole when shown, and a calendar amount over its date.
+   Set `SNIPER_E2E_ARTIFACTS` to a folder to keep screenshots of the pages
+   that fail.
+7. Then read every page yourself, at 1180 px (the narrowest desktop) and on a
+   phone. The checks catch text that doesn't fit, not a translation that is
+   wrong. Words longer than English ones are the usual trouble: a label next
+   to a ring has the least room (about 63 px on the Dashboard at 1180 px).
 
 ## How the data flows
 

@@ -61,9 +61,9 @@ lost if a save fails while you are mid-edit.
 
 ## First steps
 
-1. On first launch you are asked for your name, account name, currency and
-   starting balance. The starting balance is what the equity curve and the
-   drawdown percentages are measured against.
+1. On first launch you are asked for your language, name, account name,
+   currency and starting balance. The starting balance is what the equity curve
+   and the drawdown percentages are measured against.
 2. Press **N**, or click **Log trade**, and enter your first trade, by hand or
    from your broker's CSV file.
 3. Statistics appear as soon as you have closed trades. The Insights page
@@ -83,6 +83,30 @@ any chart image you attached to one of them. Your own entries are never touched.
 fields**: **Clear**, the default, keeps examples like "0.00" as easy to read as
 any other text; **Faded** makes them paler, so an empty field never looks
 filled in.
+
+### Language
+
+The app speaks English, Spanish (Español), Russian (Русский), Arabic (العربية)
+and Hindi (हिन्दी). Choose one on the first screen, or at any time in
+**Settings → Profile and display → Language**. Every page changes at once;
+nothing restarts, and your trades stay exactly as they are.
+
+- **Numbers and dates** are written the way the language writes them: an
+  amount reads `+$12,345.67` in English, `+12.345,67 US$` in Spanish and
+  `+12 345,67 $` in Russian. Arabic keeps the digits you see in English.
+- **Arabic reads right to left**: the menu moves to the right and the pages
+  are mirrored. Amounts and prices still read left to right.
+- **What you type stays as you typed it**: setups, tags, notes, account names
+  and symbols are never translated. The test data is written in the language
+  on screen when you load it, and stays as it was written if you change the
+  language afterwards.
+- **The language is saved with your journal**, so a backup restored on another
+  PC or phone opens in it too.
+- **A CSV export is the same in every language**: English column names, and
+  numbers written with a point, so it imports again whatever the language.
+- **In the Windows app**, the date and time pickers and the right-click menu are
+  the browser's own and stay in English. On the phone they follow the phone's
+  language.
 
 ---
 
