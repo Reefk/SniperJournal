@@ -41,20 +41,24 @@ export function MetricCard({
   info,
   className,
 }: MetricCardProps) {
+  // below 1280 px a ring comes 8 px nearer: at 1180 px (the narrowest desktop) the label beside
+  // one had 55 px, and its longest word broke in the middle (Spanish "benefici / o", 57 px; Russian
+  // "Средний", 56 px)
   return (
     <div
       className={cn(
-        'flex items-center justify-between gap-3 rounded-xl border border-line bg-surface px-4 py-3.5 md:gap-4 md:px-5 md:py-4',
+        'flex items-center justify-between gap-3 rounded-xl border border-line bg-surface px-4 py-3.5 md:gap-4 md:px-5 md:py-4 md:max-xl:gap-2',
         className,
       )}
     >
       <div className="min-w-0">
         {/* a longer label or line in another language wraps rather than being cut: at the
-            narrowest desktop (1180 px) Spanish takes three lines for "Factor de beneficio" and four
+            narrowest desktop (1180 px) Spanish takes two lines for "Factor de beneficio" and four
             for "13,09 mil US$ ganados frente a 1,91 mil US$ perdidos" */}
         <div className="flex items-center gap-1.5 text-[13px] text-muted">
           {Icon && <Icon className="size-3.5 shrink-0 text-faint" />}
-          {/* min-w-0: a word longer than the card breaks rather than pushing out of it */}
+          {/* min-w-0: a word longer than the card breaks rather than pushing out of it (the e2e
+              language step fails on a word broken in the middle, so none is today) */}
           <span className="min-w-0 break-words">{label}</span>
           {info && <InfoTip text={info} />}
         </div>
