@@ -1966,6 +1966,14 @@ async function journey() {
       deviceScaleFactor: 1,
       mobile: width < 768,
     });
+    // at 1180 and 360 px as for someone who has turned animations off (Windows Server's
+    // default, so CI's): the rule for them once gave every property a transition, and the
+    // figures FitText makes smaller stayed full size, cut
+    await b.send('Emulation.setEmulatedMedia', {
+      features: [
+        { name: 'prefers-reduced-motion', value: width === 1180 || width === 360 ? 'reduce' : 'no-preference' },
+      ],
+    });
     await b.send('Page.navigate', { url: base + path });
     await b.until(
       `document.readyState === 'complete' && document.documentElement.lang === '${code}' && !!document.querySelector('main') && document.fonts.status === 'loaded'`,
