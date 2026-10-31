@@ -1826,8 +1826,9 @@ async function journey() {
   // text is too wide for, measured by the text itself (a box's scroll width misses a cut under
   // 1 px), lines past a clamp, or text past the edge of a box that hides it. Names from the
   // journal carry dir="auto" and may be cut. A calendar day's amount, on one line or two, stays
-  // inside its cell and off its date. No word breaks in the middle, and every info bubble,
-  // shown, is whole and on top (English too, on the pages that have them). In Arabic, also: an
+  // inside its cell and off its date, and the Sniper Score radar's names inside its chart. No
+  // word breaks in the middle, and every info bubble, shown, is whole and on top (English too,
+  // on the pages that have them, and the radar's names in English). In Arabic, also: an
   // English name sits on the right like the Arabic around it, the icons that point along the
   // line are turned, and the charts' axis labels are as section 8 checks them in English.
   b = await openBrowser();
@@ -1959,6 +1960,19 @@ async function journey() {
           off.push(name + ' (over its date)');
       }
       return { amounts: amounts.length, off };
+    };
+    // each of the Sniper Score radar's axis names, on one line or two, inside its chart: on one
+    // line the chart's edge cut the wider ones (at 1180 px Spanish "Riesgo-beneficio", 39 px)
+    window.$radar = () => {
+      const names = [...document.querySelectorAll('main .recharts-polar-angle-axis-tick text')];
+      const off = [];
+      for (const name of names) {
+        const box = name.closest('svg').getBoundingClientRect();
+        const r = name.getBoundingClientRect();
+        if (r.left < box.left - 0.5 || r.right > box.right + 0.5 || r.top < box.top - 0.5 || r.bottom > box.bottom + 0.5)
+          off.push(name.textContent.replace(/[\\u2068\\u2069]/g, '') + ' (' + Math.round(Math.max(box.left - r.left, r.right - box.right, box.top - r.top, r.bottom - box.bottom)) + ' px past its chart)');
+      }
+      return { names: names.length, off };
     };
     // a word of the app's own drawn on two lines, broken in the middle rather than at a space, a
     // hyphen or a slash (a <wbr> splits its text, so a break it allows isn't counted, and a file's
@@ -2115,6 +2129,11 @@ async function journey() {
           cut.push(...days.off.map((t) => `${path} at ${width}: ${t}`));
           if (!days.amounts) unsure.push(`no day's amount on ${path} at ${width}`);
         }
+        if (path === '/') {
+          const radar = await b.run(`$radar()`);
+          cut.push(...radar.off.map((t) => `${path} at ${width}: the radar's ${t}`));
+          if (!radar.names) unsure.push(`no radar names on ${path} at ${width}`);
+        }
         broken.push(...(await b.run(`$words(document.body)`)).map((t) => `${path} at ${width}: ${t}`));
         if (found() > before) await shot(`${code}-${width}${path}`);
         // (last, as it moves the page; its screenshot, if one fails, as the page was left)
@@ -2222,19 +2241,31 @@ async function journey() {
   const bubblesEn = [];
   // bubbles looked at, each page at each width: none would mean nothing was checked there
   const tipsEn = [];
+  // and the Sniper Score radar's names, on the Dashboard
+  const radarEn = [];
   for (const width of [1366, 1180, 360]) {
     for (const path of ['/', '/reports']) {
       if (!(await open(path, 'en', width))) brokenEn.push(`${path} at ${width} never still (${await change()})`);
       brokenEn.push(...(await b.run(`$words(document.body)`)).map((t) => `${path} at ${width}: ${t}`));
+      if (path === '/') {
+        const radar = await b.run(`$radar()`);
+        radarEn.push(...radar.off.map((t) => `${path} at ${width}: the radar's ${t}`));
+        if (!radar.names) radarEn.push(`no radar names on ${path} at ${width}`);
+      }
       const shown = await b.run(`$tips()`);
       bubblesEn.push(...shown.off.map((t) => `${path} at ${width}: ${t}`));
       tipsEn.push(`${path} at ${width}: ${shown.icons}`);
     }
   }
   check(
-    'English: no word breaks in the middle, and every info bubble, when shown, is whole, at 1366, 1180 and 360 px',
-    brokenEn.length === 0 && bubblesEn.length === 0 && !tipsEn.some((t) => t.endsWith(': 0')),
-    [...brokenEn.slice(0, 4), ...bubblesEn.slice(0, 4), `bubbles looked at: ${tipsEn.join(', ')}`].join('; '),
+    "English: no word breaks in the middle, every info bubble, when shown, is whole, and the radar's names are inside its chart, at 1366, 1180 and 360 px",
+    brokenEn.length === 0 && bubblesEn.length === 0 && radarEn.length === 0 && !tipsEn.some((t) => t.endsWith(': 0')),
+    [
+      ...brokenEn.slice(0, 4),
+      ...bubblesEn.slice(0, 4),
+      ...radarEn.slice(0, 4),
+      `bubbles looked at: ${tipsEn.join(', ')}`,
+    ].join('; '),
   );
   await open('/settings', 'en', 1366);
   await b.run(`$tStarts('Remove test data', document.querySelector('main')).click(); true`);
