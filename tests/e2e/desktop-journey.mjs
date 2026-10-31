@@ -152,6 +152,10 @@ async function openBrowser() {
   const page = drive(ws);
   const { send } = page;
   await send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: downloads, eventsEnabled: true });
+  // the page acts as a window someone is using: an unfocused window (Chrome's on CI's Linux
+  // runner, Edge's at first on Windows) fires no focus events, so an info bubble opened by
+  // focus stays shut
+  await send('Emulation.setFocusEmulationEnabled', { enabled: true });
   // a second tab in the same browser: same profile, so the same browser copy of the journal
   const newTab = async () => {
     const target = await (await fetch(`http://127.0.0.1:${debugPort}/json/new?about:blank`, { method: 'PUT' })).json();
