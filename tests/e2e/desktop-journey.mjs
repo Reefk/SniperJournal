@@ -1870,8 +1870,10 @@ async function journey() {
           range.selectNodeContents(el);
           const room = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
           const drawn = range.getBoundingClientRect().width;
-          // (with the numbers, and the font size: a figure may have been made smaller to fit)
-          if (drawn > room + 0.5) cut.push(text + ' [' + drawn.toFixed(1) + ' px in ' + room + ' at ' + cs.fontSize + ']');
+          // (with the numbers, the font size, as a figure may have been made smaller to fit, and the
+          // box's own scroll width, which FitText also measures)
+          if (drawn > room + 0.5)
+            cut.push(text + ' [' + drawn.toFixed(1) + ' px in ' + room + ' at ' + cs.fontSize + ', scroll width ' + el.scrollWidth + ']');
         } else if (cs.webkitLineClamp && cs.webkitLineClamp !== 'none') {
           measured++;
           if (el.scrollHeight > el.clientHeight + 1) cut.push(text + ' [' + el.scrollHeight + ' px high in ' + el.clientHeight + ']');
