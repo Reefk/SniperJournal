@@ -230,12 +230,16 @@
   outline: none;
 }
 
+/* Animations turned off: an animation ends at once, and a transition doesn't run.
+   0s, not 0.01ms: an element's transition-property is "all" unless it says otherwise,
+   so a duration on every element gave every property a transition, and a size set by
+   script read back as the old one: FitText's figures stayed full size, cut with "…". */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
+    transition-duration: 0s !important;
   }
 }
 
