@@ -59,9 +59,20 @@ jobs:
       # Linux, both already on the runner. It runs while the desktop build is
       # in place: build:mobile moves .next aside. The Windows app has a job of
       # its own (below); the Android journey needs an emulator, so it is still
-      # run by hand. About a minute; the limit is for a browser that hangs.
+      # run by hand. About four minutes; the limit is for a browser that hangs.
+      # On a failure the language step saves screenshots of the pages it found
+      # wanting here.
       - run: npm run e2e
         timeout-minutes: 10
+        env:
+          SNIPER_E2E_ARTIFACTS: ${{ runner.temp }}/e2e
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: e2e-failure-${{ matrix.os }}
+          path: ${{ runner.temp }}/e2e/
+          if-no-files-found: ignore
+          retention-days: 7
       - run: npm run build:mobile
 
   # The Windows app (src-tauri), built as build:desktop builds it, its Rust

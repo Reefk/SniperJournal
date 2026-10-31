@@ -16,6 +16,7 @@
 import { spawn } from 'node:child_process';
 import {
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
@@ -1820,7 +1821,8 @@ async function journey() {
   // No page is wider than the screen, and no text of the app's own is cut: "…" on a line its
   // text is too wide for, measured by the text itself (a box's scroll width misses a cut under
   // 1 px), lines past a clamp, or text past the edge of a box that hides it. Names from the
-  // journal carry dir="auto" and may be cut. In Arabic, also: an English name sits on the right
+  // journal carry dir="auto" and may be cut. A calendar day's amount, on one line or two, stays
+  // inside its cell and off its date. In Arabic, also: an English name sits on the right
   // like the Arabic around it, the icons that point along the line are turned, and the charts'
   // axis labels are as section 8 checks them in English.
   b = await openBrowser();
@@ -1867,10 +1869,12 @@ async function journey() {
           const range = document.createRange();
           range.selectNodeContents(el);
           const room = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
-          if (range.getBoundingClientRect().width > room + 0.5) cut.push(text);
+          const drawn = range.getBoundingClientRect().width;
+          // (with the numbers, and the font size: a figure may have been made smaller to fit)
+          if (drawn > room + 0.5) cut.push(text + ' [' + drawn.toFixed(1) + ' px in ' + room + ' at ' + cs.fontSize + ']');
         } else if (cs.webkitLineClamp && cs.webkitLineClamp !== 'none') {
           measured++;
-          if (el.scrollHeight > el.clientHeight + 1) cut.push(text);
+          if (el.scrollHeight > el.clientHeight + 1) cut.push(text + ' [' + el.scrollHeight + ' px high in ' + el.clientHeight + ']');
         }
       }
       // and text drawn past the edge of a box that hides what overflows it, with no "…" to say so
@@ -1891,7 +1895,7 @@ async function journey() {
           if (cs.overflowX !== 'auto' && cs.overflowX !== 'scroll' && cs.textOverflow !== 'ellipsis') {
             const left = a.getBoundingClientRect().left + a.clientLeft;
             if (drawn.left < left - 1 || drawn.right > left + a.clientWidth + 1)
-              cut.push(n.data.trim().slice(0, 60) + ' (past the edge of its box)');
+              cut.push(n.data.trim().slice(0, 60) + ' (past the edge of its box: ' + drawn.left.toFixed(1) + '–' + drawn.right.toFixed(1) + ' px in ' + left.toFixed(1) + '–' + (left + a.clientWidth).toFixed(1) + ')');
           }
           break;
         }
@@ -1912,10 +1916,42 @@ async function journey() {
         [...root.querySelectorAll('[style*="font-size"]')].map((el) => el.style.fontSize).join(),
       ].join('|');
       if (look !== window.$look) {
+        window.$was = window.$look;
         window.$look = look;
         window.$since = performance.now();
       }
       return performance.now() - window.$since >= 300;
+    };
+    // what changed last, for a page that never kept still
+    window.$change = () => {
+      const was = String(window.$was).split('|');
+      const now = String(window.$look).split('|');
+      return ['page width', 'width', 'height', 'scroll width', 'scroll height', 'boxes', 'figure sizes']
+        .flatMap((part, i) => (was[i] === now[i] ? [] : [part + ' ' + String(was[i]).slice(0, 60) + ' → ' + String(now[i]).slice(0, 60)]))
+        .join(', ');
+    };
+    // each day in the calendar inside its own cell, not over the next day: its amount, on one
+    // line or two, and its count of trades; and the amount's lines, each one, off its date
+    window.$days = () => {
+      const amounts = [...document.querySelectorAll('main .grid-cols-7 > button .num')].filter((el) => el.getBoundingClientRect().width);
+      const inside = (r, box) => r.left >= box.left - 0.5 && r.right <= box.right + 0.5 && r.top >= box.top - 0.5 && r.bottom <= box.bottom + 0.5;
+      const off = [];
+      for (const el of amounts) {
+        const button = el.closest('button');
+        const cell = button.getBoundingClientRect();
+        const date = button.querySelector('span.absolute')?.getBoundingClientRect();
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        const lines = [...range.getClientRects()].filter((r) => r.width);
+        const count = el.nextElementSibling?.getBoundingClientRect();
+        const name = el.innerText.trim().replace(/\\s*\\n\\s*/g, ' / ');
+        if (!lines.every((r) => inside(r, cell))) off.push(name + ' (past its cell)');
+        else if (count?.width && !inside(count, cell)) off.push(name + ' (its count of trades past its cell)');
+        else if (!date) off.push(name + ' (no date found in its cell)');
+        else if (lines.some((r) => r.left < date.right && r.right > date.left && r.top < date.bottom && r.bottom > date.top))
+          off.push(name + ' (over its date)');
+      }
+      return { amounts: amounts.length, off };
     };
     // Tailwind 4 turns an icon with the scale property
     window.$turned = () => [...document.querySelectorAll('svg[class*="rtl:-scale-x-100"]')].filter((s) => s.getBoundingClientRect().width).map((s) => getComputedStyle(s).scale.startsWith('-1'));
@@ -1954,6 +1990,23 @@ async function journey() {
       .filter((s) => s.isSample)
       .map((s) => s.name)
       .join(' | ');
+  // a page that fails, as it looked, in SNIPER_E2E_ARTIFACTS (CI uploads it on a failure), and
+  // the browser that drew it
+  const shot = async (name) => {
+    if (!process.env.SNIPER_E2E_ARTIFACTS) return;
+    // (one that can't be taken leaves the check it was for to say what failed)
+    try {
+      mkdirSync(process.env.SNIPER_E2E_ARTIFACTS, { recursive: true });
+      const { result } = await b.send('Page.captureScreenshot', { format: 'png' });
+      const file = name.replace(/[^\w-]+/g, '-').replace(/-$/, '');
+      writeFileSync(join(process.env.SNIPER_E2E_ARTIFACTS, `${file}.png`), Buffer.from(result.data, 'base64'));
+    } catch (error) {
+      console.log(`note: no screenshot of ${name} (${error.message})`);
+    }
+  };
+  // what changed on a page that never kept still, if it can be asked
+  const change = () => b.run(`$change()`).catch((error) => error.message);
+  const drawnBy = (await b.send('Browser.getVersion')).result?.product;
   let current = 'en';
   for (const { code, name, dir } of languages) {
     const chosen = await chooseLanguage(current, code);
@@ -1977,11 +2030,18 @@ async function journey() {
       // (on a phone most pages cut only names, so it's all the pages that must have measured some)
       let measured = 0;
       for (const path of pages) {
-        if (!(await open(path, code, width))) unsure.push(`${path} at ${width} never still`);
+        const before = wide.length + cut.length + unsure.length;
+        if (!(await open(path, code, width))) unsure.push(`${path} at ${width} never still (${await change()})`);
         const fits = await b.run(`$fits(document.body)`);
         if (fits.wide) wide.push(`${path} at ${width}`);
         cut.push(...fits.cut.map((t) => `${path} at ${width}: ${t}`));
         measured += fits.measured;
+        if (path === '/calendar') {
+          const days = await b.run(`$days()`);
+          cut.push(...days.off.map((t) => `${path} at ${width}: ${t}`));
+          if (!days.amounts) unsure.push(`no day's amount on ${path} at ${width}`);
+        }
+        if (wide.length + cut.length + unsure.length > before) await shot(`${code}-${width}${path}`);
       }
       if (!measured) unsure.push(`nothing measured at ${width}`);
       // a trade's form, the first one on the Trades page
@@ -1989,11 +2049,13 @@ async function journey() {
       await b.run(`document.querySelector('main tbody tr, main li > button')?.click(); true`);
       // the trade's own form, with its chart's file box (not some other window)
       if (await seen(`!!$modal()?.querySelector('input[type=file]')`, 'trade form', 5000)) {
+        const before = wide.length + cut.length + unsure.length;
         if (!(await seen(`$still($modal())`, 'the trade form, still', 5000)))
-          unsure.push(`the trade form at ${width} never still`);
+          unsure.push(`the trade form at ${width} never still (${await change()})`);
         const fits = await b.run(`$fits($modal())`);
         if (fits.wide) wide.push(`the trade form at ${width}`);
         cut.push(...fits.cut.map((t) => `the trade form at ${width}: ${t}`));
+        if (wide.length + cut.length + unsure.length > before) await shot(`${code}-${width}-trade-form`);
       } else wide.push(`the trade form at ${width} did not open`);
     }
     check(`${name}: the test data is made in ${name}`, made, sampleSetups(journalOnDisk()));
@@ -2001,7 +2063,7 @@ async function journey() {
     check(
       `${name}: no text of the app's own is cut at 1366, 1180, 412 or 360 px (every page still, text measured)`,
       cut.length === 0 && unsure.length === 0,
-      [...cut.slice(0, 8), ...unsure].join('; '),
+      [...cut.slice(0, 8), ...unsure, `drawn by ${drawnBy}`].join('; '),
     );
 
     if (code !== 'ar') continue;
