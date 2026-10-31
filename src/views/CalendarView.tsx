@@ -7,6 +7,7 @@ import { useJournal } from '@/store/JournalProvider';
 import { useUI } from '@/store/UIProvider';
 import { aggregateDays, computeStats } from '@/lib/stats';
 import {
+  breakableAmount,
   formatDate,
   formatMoney,
   formatMonthKey,
@@ -14,6 +15,7 @@ import {
   monthName,
   numberAndUnit,
   weekdayName,
+  wholeAndCents,
 } from '@/lib/format';
 import { isClosed, netPnl, tradeDay } from '@/lib/trade-math';
 import { cn, dateKey, pad2 } from '@/lib/utils';
@@ -23,7 +25,6 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { MetricCard, toneFor } from '@/components/ui/MetricCard';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { FitText } from '@/components/ui/FitText';
 import { PnlValue, SideBadge } from '@/components/ui/StatusBadge';
 import { Modal } from '@/components/ui/Modal';
 import { rich } from '@/components/ui/Rich';
@@ -43,15 +44,30 @@ function monthGrid(year: number, month: number): Array<{ key: string; inMonth: b
   return cells.slice(0, cells.slice(35).every((c) => !c.inMonth) ? 35 : 42);
 }
 
-/** a short amount, with a unit the language writes after the number ("тыс. $") on a line of its own */
-function ShortAmount({ text }: { text: string }) {
-  const parts = numberAndUnit(text);
-  if (!parts) return text;
+/**
+ * A day's amount, on two lines where its cell is too narrow for one: before a
+ * unit the language writes after the number ("тыс. $"), or else before the
+ * cents ("+$740" over ".31"). On a phone a unit always has a line of its own.
+ */
+function CellAmount({ text, phone = false }: { text: string; phone?: boolean }) {
+  const unit = numberAndUnit(text);
+  if (unit && phone) {
+    return (
+      <>
+        {unit[0]}
+        <br />
+        {unit[1]}
+      </>
+    );
+  }
+  if (unit) return breakableAmount(text);
+  const cents = wholeAndCents(text);
+  if (!cents) return text;
   return (
     <>
-      {parts[0]}
-      <br />
-      {parts[1]}
+      {cents[0]}
+      <wbr />
+      {cents[1]}
     </>
   );
 }
@@ -204,13 +220,15 @@ export function CalendarView() {
                 const hasTrades = Boolean(agg) && cell.inMonth;
                 const isToday = cell.key === todayKey;
                 return (
+                  // on a desktop the date has the top of the cell to itself: an amount on two
+                  // lines, centred in the whole cell, reached it (and today's circle) at 1180 px
                   <button
                     key={cell.key}
                     type="button"
                     disabled={!hasTrades}
                     onClick={() => setSelectedDay(cell.key)}
                     className={cn(
-                      'relative flex h-16 flex-col items-center justify-end gap-1 border-b border-e border-line px-0.5 pb-2 text-center transition md:h-[104px] md:justify-center md:p-2',
+                      'relative flex h-16 flex-col items-center justify-end gap-1 border-b border-e border-line px-0.5 pb-2 text-center transition md:h-[104px] md:justify-center md:p-2 md:pt-7',
                       i % 7 === 6 && 'border-e-0',
                       i >= cells.length - 7 && 'border-b-0',
                       !cell.inMonth && 'bg-app/40',
@@ -233,23 +251,28 @@ export function CalendarView() {
                     </span>
                     {hasTrades && agg && (
                       <>
-                        {/* a smaller figure rather than a cut one: "+$740.31" is 47 px in a 360 px
-                            phone's 42 px cell, "+1624,91 US$" wider than a cell of the narrowest
-                            desktop (1180 px) */}
-                        <FitText
+                        {/* two lines rather than a cut one: "+$740.31" is 47 px in a 360 px phone's
+                            42 px cell, "+1624,91 US$" wider than a cell of the narrowest desktop
+                            (1180 px); break-words for anything still too wide */}
+                        <span
                           className={cn(
-                            'num max-w-full text-[10px] font-semibold md:text-[17px]',
+                            'num max-w-full break-words text-[10px] font-semibold md:text-[17px] md:leading-tight',
                             agg.net > 0 ? 'text-profit' : agg.net < 0 ? 'text-loss' : 'text-muted',
                           )}
                         >
                           {/* a phone cell is a seventh of the screen: always the short form there */}
                           <span className="md:hidden">
-                            <ShortAmount text={formatMoney(agg.net, currency, { sign: true, compact: true })} />
+                            <CellAmount text={formatMoney(agg.net, currency, { sign: true, compact: true })} phone />
                           </span>
                           <span className="max-md:hidden">
-                            {formatMoney(agg.net, currency, { sign: true, compact: Math.abs(agg.net) >= 10000 })}
+                            <CellAmount
+                              text={formatMoney(agg.net, currency, {
+                                sign: true,
+                                compact: Math.abs(agg.net) >= 10000,
+                              })}
+                            />
                           </span>
-                        </FitText>
+                        </span>
                         <span className="text-[10px] font-medium uppercase tracking-wide text-faint max-md:hidden">
                           {tr('common.trades', { count: agg.trades })}
                         </span>

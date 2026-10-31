@@ -12,6 +12,7 @@ import {
   formatRatio,
   numberAndUnit,
   weekdayName,
+  wholeAndCents,
 } from '@/lib/format';
 import { withoutKept } from './i18n-kept';
 
@@ -219,6 +220,28 @@ describe('a short amount on two lines', () => {
       const parts = numberAndUnit(short);
       // English and Arabic, with nothing after the number, come back exactly as they were
       expect(breakableAmount(short), code).toBe(parts ? `${parts[0]} ${parts[1]}` : short);
+    }
+  });
+
+  it('may break before the cents instead, with nothing after the number', () => {
+    // a calendar day's amount in a 360 px phone's cell
+    expect(wholeAndCents('+$740.31')).toEqual(['+$740', '.31']);
+    expect(wholeAndCents('-$1,624.91')).toEqual(['-$1,624', '.91']);
+    expect(wholeAndCents('+CA$740.31')).toEqual(['+CA$740', '.31']);
+    // no cents to split off: a compact amount, or a currency without them
+    expect(wholeAndCents('+$1.36K')).toBeNull();
+    expect(wholeAndCents('+¥74,031')).toBeNull();
+    expect(wholeAndCents('')).toBeNull();
+    // a unit after the number is where it breaks then
+    expect(wholeAndCents('+740,31 US$')).toBeNull();
+    for (const { code } of LANGUAGES) {
+      setLanguage(code);
+      const text = formatMoney(740.31, 'USD', { sign: true });
+      const parts = wholeAndCents(text);
+      // the languages with nothing after the number, and the two parts are the whole amount
+      // (in Arabic too, with the marks that keep it left to right)
+      expect(parts === null, `${code}: ${text}`).toBe(numberAndUnit(text) !== null);
+      if (parts) expect(parts.join(''), code).toBe(text);
     }
   });
 });

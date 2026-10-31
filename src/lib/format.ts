@@ -58,6 +58,20 @@ export function breakableAmount(text: string): string {
 }
 
 /**
+ * An amount with nothing written after its number, split before its cents
+ * ("+$740" and ".31"), for a box that may be too narrow for it on one line.
+ * Null with no cents to split off (a compact "+$1.36K", yen) or with a unit
+ * after the number, which is where it breaks then (numberAndUnit).
+ */
+export function wholeAndCents(text: string): [string, string] | null {
+  if (numberAndUnit(text)) return null;
+  // the cents, then nothing but the marks that keep an amount left to right in Arabic
+  const match = /^(.*\d)([.,]\d+)([^\p{L}\p{N}]*)$/su.exec(text);
+  if (!match || match[2][0] !== decimalMark('.')) return null;
+  return [match[1], match[2] + match[3]];
+}
+
+/**
  * Axis labels: plain thousands until the numbers get big, then compact. `span`
  * is how much the axis covers (its highest value less its lowest): an axis
  * spanning little of a big number keeps whole dollars, where compact labels

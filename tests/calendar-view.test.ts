@@ -2,6 +2,7 @@
 import { createElement as h } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { JournalData, Trade } from '@/lib/types';
+import { setLanguage, type Language } from '@/lib/i18n';
 import { CalendarView } from '@/views/CalendarView';
 import { JournalProvider, useJournal } from '@/store/JournalProvider';
 import { UIProvider } from '@/store/UIProvider';
@@ -59,13 +60,20 @@ const OCTOBER: Trade[] = [
   pnl(0, { openedAt: '2026-10-20T10:00', closedAt: undefined, manualPnl: null, exitPrice: null }),
 ];
 
-function journalWith(trades: Trade[]): JournalData {
+function journalWith(trades: Trade[], language: Language = 'en'): JournalData {
   return {
     version: 1,
     updatedAt: '2026-10-14T09:00:00.000Z',
     onboarded: true,
     profile: { name: 'Test' },
-    settings: { currency: 'USD', theme: 'dark', timezone: 'local', maxDailyLoss: null, maxTradesPerDay: null },
+    settings: {
+      currency: 'USD',
+      theme: 'dark',
+      timezone: 'local',
+      maxDailyLoss: null,
+      maxTradesPerDay: null,
+      language,
+    },
     accounts: [{ id: 'acc1', name: 'Main', startingBalance: 1000, createdAt: '' }],
     activeAccountId: 'acc1',
     trades,
@@ -85,11 +93,12 @@ beforeEach(() => {
 });
 afterEach(async () => {
   await app?.unmount();
+  setLanguage('en');
   vi.useRealTimers();
 });
 
-async function calendar(trades: Trade[]) {
-  disk.journal = journalWith(trades);
+async function calendar(trades: Trade[], language: Language = 'en') {
+  disk.journal = journalWith(trades, language);
   app = await mount(h(JournalProvider, null, h(UIProvider, null, h(Probe, { onRender: rendered }), h(CalendarView))));
   await until(() => journal?.ready === true);
 }
@@ -127,5 +136,21 @@ describe('Calendar: the counts in its sentences', () => {
     await calendar([closed('2026-08-03', 10)]);
     expect(document.body.textContent).toContain('No trades in October 2026.');
     expect([...document.querySelectorAll('.mt-3.flex-wrap > button')].map((b) => b.textContent)).toEqual(['Aug 2026']);
+  });
+});
+
+describe("Calendar: a day's amount, on two lines where its cell is too narrow", () => {
+  const DAY = [closed('2026-10-08', 740.31)];
+  // the phone's and the desktop's, each with the place it may break (jsdom lays nothing out)
+  const amounts = () => ['.md\\:hidden', '.max-md\\:hidden'].map((s) => cell(8)?.querySelector(s)?.innerHTML);
+
+  it('before the cents, on a phone and on a desktop', async () => {
+    await calendar(DAY);
+    expect(amounts()).toEqual(['+$740<wbr>.31', '+$740<wbr>.31']);
+  });
+
+  it('before a unit written after the number: a line of its own on a phone, a space on a desktop', async () => {
+    await calendar(DAY, 'ru');
+    expect(amounts()).toEqual(['+740,31<br>$', '+740,31 $']);
   });
 });
