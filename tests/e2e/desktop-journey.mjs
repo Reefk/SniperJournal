@@ -1822,9 +1822,10 @@ async function journey() {
   // text is too wide for, measured by the text itself (a box's scroll width misses a cut under
   // 1 px), lines past a clamp, or text past the edge of a box that hides it. Names from the
   // journal carry dir="auto" and may be cut. A calendar day's amount, on one line or two, stays
-  // inside its cell and off its date. In Arabic, also: an English name sits on the right
-  // like the Arabic around it, the icons that point along the line are turned, and the charts'
-  // axis labels are as section 8 checks them in English.
+  // inside its cell and off its date. No word breaks in the middle, and every info bubble,
+  // shown, is whole and on top (English too, on the pages that have them). In Arabic, also: an
+  // English name sits on the right like the Arabic around it, the icons that point along the
+  // line are turned, and the charts' axis labels are as section 8 checks them in English.
   b = await openBrowser();
   const journalBefore = journalOnDisk();
   const languages = [
@@ -1955,6 +1956,61 @@ async function journey() {
       }
       return { amounts: amounts.length, off };
     };
+    // a word of the app's own drawn on two lines, broken in the middle rather than at a space, a
+    // hyphen or a slash (a <wbr> splits its text, so a break it allows isn't counted, and a file's
+    // path breaks anywhere on purpose)
+    window.$words = (root) => {
+      const broken = [];
+      const texts = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      for (let n = texts.nextNode(); n; n = texts.nextNode()) {
+        const owner = n.parentElement;
+        if (!n.data.trim() || owner.closest('[dir="auto"], .sr-only, svg, script, style')) continue;
+        if (getComputedStyle(owner).wordBreak === 'break-all') continue;
+        const words = /[^\\s/‐–—-]{2,}/g;
+        for (let m = words.exec(n.data); m; m = words.exec(n.data)) {
+          const range = document.createRange();
+          range.setStart(n, m.index);
+          range.setEnd(n, m.index + m[0].length);
+          const tops = [...range.getClientRects()].filter((r) => r.width).map((r) => r.top);
+          if (tops.length > 1 && Math.max(...tops) - Math.min(...tops) > 4)
+            broken.push(m[0] + ' in "' + n.data.trim().slice(0, 50) + '"');
+        }
+      }
+      return broken;
+    };
+    // each info bubble on the page, shown as a keyboard's focus shows it: all of it inside the
+    // window, and nothing drawn over it (the metric strip, which hides what sticks out of its
+    // rounded corners, once cut them)
+    window.$tips = async () => {
+      const off = [];
+      const icons = [...document.querySelectorAll('main [role="tooltip"]')]
+        .map((tip) => tip.parentElement)
+        .filter((icon) => icon.getBoundingClientRect().width);
+      for (const icon of icons) {
+        const name = icon.parentElement.innerText.trim().slice(0, 40);
+        icon.scrollIntoView({ block: 'center' });
+        icon.focus({ preventScroll: true });
+        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+        const tip = icon.querySelector('[role="tooltip"]');
+        const r = tip.getBoundingClientRect();
+        // (a bubble lets the pointer through to what is under it; here it is what is asked for,
+        // 4 px in from its rounded corners)
+        tip.style.pointerEvents = 'auto';
+        const points = [[r.left + 4, r.top + 4], [r.right - 4, r.top + 4], [r.left + 4, r.bottom - 4], [r.right - 4, r.bottom - 4], [(r.left + r.right) / 2, (r.top + r.bottom) / 2]];
+        // what is drawn there instead, named
+        const under = points
+          .map(([x, y]) => document.elementFromPoint(x, y))
+          .filter((hit) => !tip.contains(hit))
+          .map((hit) => (hit ? hit.tagName.toLowerCase() + (typeof hit.className === 'string' && hit.className ? '.' + hit.className.split(' ').slice(0, 2).join('.') : '') : 'nothing'));
+        tip.style.pointerEvents = '';
+        if (!r.width || !r.height) off.push(name + ' (not shown)');
+        else if (r.left < 0 || r.top < 0 || r.right > innerWidth || r.bottom > innerHeight)
+          off.push(name + ' (past the window: ' + [r.left, r.top, r.right, r.bottom].map(Math.round).join(', ') + ' in ' + innerWidth + ' × ' + innerHeight + ')');
+        else if (under.length) off.push(name + ' (' + under.length + ' of 5 points under ' + under.join(', ') + ')');
+        icon.blur();
+      }
+      return { icons: icons.length, off };
+    };
     // Tailwind 4 turns an icon with the scale property
     window.$turned = () => [...document.querySelectorAll('svg[class*="rtl:-scale-x-100"]')].filter((s) => s.getBoundingClientRect().width).map((s) => getComputedStyle(s).scale.startsWith('-1'));
     true;
@@ -2035,12 +2091,16 @@ async function journey() {
     const wide = [];
     const cut = [];
     const unsure = [];
+    const broken = [];
+    const bubbles = [];
+    let tips = 0;
+    const found = () => wide.length + cut.length + unsure.length + broken.length + bubbles.length;
     // a laptop, the narrowest the desktop layout gets (narrower windows scroll it), two phones
     for (const width of [1366, 1180, 412, 360]) {
       // (on a phone most pages cut only names, so it's all the pages that must have measured some)
       let measured = 0;
       for (const path of pages) {
-        const before = wide.length + cut.length + unsure.length;
+        const before = found();
         if (!(await open(path, code, width))) unsure.push(`${path} at ${width} never still (${await change()})`);
         const fits = await b.run(`$fits(document.body)`);
         if (fits.wide) wide.push(`${path} at ${width}`);
@@ -2051,7 +2111,13 @@ async function journey() {
           cut.push(...days.off.map((t) => `${path} at ${width}: ${t}`));
           if (!days.amounts) unsure.push(`no day's amount on ${path} at ${width}`);
         }
-        if (wide.length + cut.length + unsure.length > before) await shot(`${code}-${width}${path}`);
+        broken.push(...(await b.run(`$words(document.body)`)).map((t) => `${path} at ${width}: ${t}`));
+        if (found() > before) await shot(`${code}-${width}${path}`);
+        // (last, as it moves the page; its screenshot, if one fails, as the page was left)
+        const shown = await b.run(`$tips()`);
+        bubbles.push(...shown.off.map((t) => `${path} at ${width}: ${t}`));
+        tips += shown.icons;
+        if (shown.off.length) await shot(`${code}-${width}${path}-bubbles`);
       }
       if (!measured) unsure.push(`nothing measured at ${width}`);
       // a trade's form, the first one on the Trades page
@@ -2074,6 +2140,16 @@ async function journey() {
       `${name}: no text of the app's own is cut at 1366, 1180, 412 or 360 px (every page still, text measured)`,
       cut.length === 0 && unsure.length === 0,
       [...cut.slice(0, 8), ...unsure, `drawn by ${drawnBy}`].join('; '),
+    );
+    check(
+      `${name}: no word of the app's own breaks in the middle at 1366, 1180, 412 or 360 px`,
+      broken.length === 0,
+      [...broken.slice(0, 8), `drawn by ${drawnBy}`].join('; '),
+    );
+    check(
+      `${name}: every info bubble, when shown, is whole: inside the window and on top, at 1366, 1180, 412 and 360 px`,
+      bubbles.length === 0 && tips > 0,
+      [...bubbles.slice(0, 8), `bubbles looked at: ${tips}`].join('; '),
     );
 
     if (code !== 'ar') continue;
@@ -2136,6 +2212,25 @@ async function journey() {
       turnedBack.length > 0 &&
       !turnedBack.some(Boolean),
     JSON.stringify(turnedBack),
+  );
+  // the same two in English, on the pages with info bubbles (Dashboard, Reports)
+  const brokenEn = [];
+  const bubblesEn = [];
+  // bubbles looked at, each page at each width: none would mean nothing was checked there
+  const tipsEn = [];
+  for (const width of [1366, 1180, 360]) {
+    for (const path of ['/', '/reports']) {
+      if (!(await open(path, 'en', width))) brokenEn.push(`${path} at ${width} never still (${await change()})`);
+      brokenEn.push(...(await b.run(`$words(document.body)`)).map((t) => `${path} at ${width}: ${t}`));
+      const shown = await b.run(`$tips()`);
+      bubblesEn.push(...shown.off.map((t) => `${path} at ${width}: ${t}`));
+      tipsEn.push(`${path} at ${width}: ${shown.icons}`);
+    }
+  }
+  check(
+    'English: no word breaks in the middle, and every info bubble, when shown, is whole, at 1366, 1180 and 360 px',
+    brokenEn.length === 0 && bubblesEn.length === 0 && !tipsEn.some((t) => t.endsWith(': 0')),
+    [...brokenEn.slice(0, 4), ...bubblesEn.slice(0, 4), `bubbles looked at: ${tipsEn.join(', ')}`].join('; '),
   );
   await open('/settings', 'en', 1366);
   await b.run(`$tStarts('Remove test data', document.querySelector('main')).click(); true`);
