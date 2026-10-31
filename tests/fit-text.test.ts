@@ -73,6 +73,7 @@ describe('a figure in its box', () => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
     Reflect.deleteProperty(document, 'fonts');
+    Reflect.deleteProperty(Range.prototype, 'getBoundingClientRect');
     document.head.innerHTML = '';
   });
 
@@ -129,6 +130,55 @@ describe('a figure in its box', () => {
     const { container, unmount } = await mount(h(FitText, { className: 'big', children: '+$15,622.29' }));
     expect(figure(container).style.fontSize).toBe('24px');
     await unmount();
+  });
+
+  describe('measured as its text, where the box’s scroll width leaves out what is cut with "…"', () => {
+    // as on CI's Windows runner: the scroll width no wider than the box, and the text, at a
+    // font size, as wide as `drawn` says (jsdom has no text measure of its own)
+    const textDrawn = (drawn: (size: number) => number) => {
+      vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockImplementation(() => room);
+      Object.defineProperty(Range.prototype, 'getBoundingClientRect', {
+        configurable: true,
+        value(this: Range) {
+          return { width: drawn(parseFloat((this.startContainer as HTMLElement).style.fontSize || '27')) } as DOMRect;
+        },
+      });
+    };
+    const fitted = async (text: string) => {
+      const { container, unmount } = await mount(h(FitText, { className: 'big', children: text }));
+      const size = figure(container).style.fontSize;
+      await unmount();
+      return size;
+    };
+
+    it('gets the font size that fits', async () => {
+      textDrawn((size) => (223 * size) / 27);
+      expect(await fitted('+15.622,29 US$')).toBe('25.5px');
+    });
+
+    it('and goes half a pixel smaller while the text is still too wide', async () => {
+      room = 160;
+      textDrawn((size) => 11 * Math.round(0.6 * size));
+      expect(await fitted('+$15,622.29')).toBe('24px');
+    });
+
+    it('counts text less than half a pixel past its box as fitting, as a scroll width does', async () => {
+      textDrawn((size) => (214.4 * size) / 27);
+      expect(await fitted('+15.622,29 US$')).toBe('');
+      textDrawn((size) => (214.6 * size) / 27);
+      expect(await fitted('+15.622,29 US$')).toBe('26.5px');
+    });
+
+    it('still goes by the scroll width where that is the wider', async () => {
+      vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockImplementation(function (this: HTMLElement) {
+        return Math.ceil((223 * parseFloat(this.style.fontSize || '27')) / 27);
+      });
+      Object.defineProperty(Range.prototype, 'getBoundingClientRect', {
+        configurable: true,
+        value: () => ({ width: 150 }) as DOMRect,
+      });
+      expect(await fitted('+15.622,29 US$')).toBe('25.5px');
+    });
   });
 
   it('goes no smaller than its least share of the full size; past that the line is cut', async () => {

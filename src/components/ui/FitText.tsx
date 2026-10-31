@@ -14,16 +14,27 @@ export function fitFontSize(full: number, room: number, wide: number, least: num
   return Math.max(full * least, Math.floor(((full * room) / wide) * 2) / 2);
 }
 
+// The line's width, measured as its text as well as by the box's scroll width,
+// rounded as that is. On CI's Windows runner figures kept their full size, cut
+// with "…", while their text measured wider than the box: the scroll width
+// missed it there. (jsdom can't measure text; there the scroll width is all.)
+function lineWidth(el: HTMLElement): number {
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  const text = typeof range.getBoundingClientRect === 'function' ? range.getBoundingClientRect().width : 0;
+  return Math.max(el.scrollWidth, Math.round(text));
+}
+
 // the box's own size first, then the one that fits its room; half a pixel smaller
 // while the line is still too wide, as it can be where each letter is drawn a
 // whole number of pixels wide and the line narrows less than its font
 function fit(el: HTMLElement, least: number) {
   el.style.fontSize = '';
   const full = parseFloat(getComputedStyle(el).fontSize);
-  let size = fitFontSize(full, el.clientWidth, el.scrollWidth, least);
+  let size = fitFontSize(full, el.clientWidth, lineWidth(el), least);
   while (size < full) {
     el.style.fontSize = `${size}px`;
-    if (el.scrollWidth <= el.clientWidth || size <= full * least) break;
+    if (lineWidth(el) <= el.clientWidth || size <= full * least) break;
     size = Math.max(full * least, size - 0.5);
   }
 }
