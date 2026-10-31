@@ -55,6 +55,11 @@ jobs:
       # the tests, failing below the coverage floor in vitest.config.mts
       - run: npm run coverage
       - run: npm run build
+      # The runner's Linux has no font for Hindi: Chrome drew each letter as a
+      # box, and the language step measured boxes. Noto Sans Devanagari, the
+      # one Android draws Hindi with, is in this package.
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends fonts-noto-core
       # The desktop build in a headless browser: Edge on Windows, Chrome on
       # Linux, both already on the runner. It runs while the desktop build is
       # in place: build:mobile moves .next aside. The Windows app has a job of
