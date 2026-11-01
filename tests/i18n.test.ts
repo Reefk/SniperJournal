@@ -44,6 +44,8 @@ const SAME_IN_SPANISH = new Set<string>([
   'role.stop_loss',
   'role.take_profit',
   'role.strike',
+  'review.stop',
+  'review.setup',
 ]);
 
 afterEach(() => setLanguage('en'));
