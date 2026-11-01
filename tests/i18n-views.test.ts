@@ -153,6 +153,24 @@ const TAGGED = IN_SETUPS.map((t, i) => ({
 }));
 /** a day the month before, with a mistake, so Reports compares the two months */
 const SEPTEMBER = day('2026-09-10', [-25, 30]);
+/** a trade on day `i` of September, held `minutes` from 10:00, its stop 1R = $10 below */
+const heldFor = (i: number, minutes: number, net: number, more: Partial<Trade> = {}): Trade => {
+  const date = new Date(Date.UTC(2026, 8, 1 + i)).toISOString().slice(0, 10);
+  const close = `${String(10 + Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+  return pnl(net, { openedAt: `${date}T10:00`, closedAt: `${date}T${close}`, symbol: 'X', stopLoss: 90, ...more });
+};
+/**
+ * 12 quick losers, then 12 slower winners: the latest trades are better than the whole record, and
+ * holding longer paid; three with no stop (one among the last 10, so their average R is from too
+ * few), one with no close time
+ */
+const HOLDS = [
+  ...Array.from({ length: 12 }, (_, i) => heldFor(i, 5, -20)),
+  heldFor(12, 30, 10, { stopLoss: null }),
+  heldFor(13, 30, -10, { stopLoss: null }),
+  pnl(15, { openedAt: '2026-09-15T10:00', closedAt: undefined, symbol: 'X', stopLoss: 90 }),
+  ...Array.from({ length: 12 }, (_, i) => heldFor(15 + i, 120, 40, i === 11 ? { stopLoss: null } : {})),
+];
 /** the range picker's button for a range, found by its label in the language shown */
 const rangeButton = (range: RangeKey) =>
   [...document.querySelectorAll<HTMLButtonElement>('[role="group"] button')].find(
@@ -393,6 +411,10 @@ const SCREENS: Array<{
     modal: false,
     ready: () => journal?.data.accounts[0]?.startingBalance === 0,
   },
+  // Recent form above the record and from too few stops
+  { name: 'Reports, quick losers, then slow winners', view: ReportsView, trades: HOLDS },
+  // no R anywhere
+  { name: 'Reports, no stop', view: ReportsView, trades: UNRATED },
   { name: 'Settings', view: SettingsView, trades: TRADES },
   { name: 'Trade form, new', view: TradeFormModal, trades: TRADES, open: () => ui?.openTradeForm() },
   { name: 'Trade form, editing', view: TradeFormModal, trades: [FULL], open: () => ui?.openTradeForm({ trade: FULL }) },

@@ -51,6 +51,33 @@ export const reports: Translation<typeof en> = {
   'rep.sqn': 'Calidad del sistema (SQN)',
   'rep.hold': 'Duración media de una operación',
 
+  'rep.form': 'Forma reciente',
+  'rep.form.subtitle': 'Tus últimas operaciones frente a todo tu historial, sea cual sea el periodo de arriba',
+  'rep.form.last': {
+    one: 'La última operación',
+    many: 'Las últimas {count} operaciones',
+    other: 'Las últimas {count} operaciones',
+  },
+  'rep.form.all': {
+    one: '{count} operación en total',
+    many: 'Las {count} operaciones',
+    other: 'Las {count} operaciones',
+  },
+  'rep.form.needs': {
+    one: 'Falta {count} operación',
+    many: 'Faltan {count} operaciones',
+    other: 'Faltan {count} operaciones',
+  },
+  'rep.form.above': 'por encima de todo tu historial',
+  'rep.form.below': 'por debajo de todo tu historial',
+  'rep.form.rNote': 'La R media cuenta las operaciones con stop: {count} de {total}.',
+  'rep.form.noR': 'Ninguna operación tiene stop, así que no hay R que mostrar.',
+  'rep.form.rThin': {
+    one: 'Un R medio de menos de {count} operación con stop no lleva flecha: son muy pocas para comparar.',
+    many: 'Un R medio de menos de {count} operaciones con stop no lleva flecha: son muy pocas para comparar.',
+    other: 'Un R medio de menos de {count} operaciones con stop no lleva flecha: son muy pocas para comparar.',
+  },
+
   'rep.months': 'Mes a mes',
   'rep.months.empty': 'No hay operaciones cerradas en este periodo.',
   'rep.month': 'Mes',

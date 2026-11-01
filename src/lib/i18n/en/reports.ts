@@ -51,6 +51,20 @@ export const reports = {
   'rep.sqn': 'System quality (SQN)',
   'rep.hold': 'Average hold time',
 
+  'rep.form': 'Recent form',
+  'rep.form.subtitle': 'Your latest trades against your whole record, whatever the range above',
+  'rep.form.last': { one: 'Last {count} trade', other: 'Last {count} trades' },
+  'rep.form.all': { one: 'All {count} trade', other: 'All {count} trades' },
+  'rep.form.needs': { one: 'Needs {count} more trade', other: 'Needs {count} more trades' },
+  'rep.form.above': 'above your whole record',
+  'rep.form.below': 'below your whole record',
+  'rep.form.rNote': 'Average R counts the trades with a stop: {count} of {total}.',
+  'rep.form.noR': 'No trade has a stop, so there is no R to show.',
+  'rep.form.rThin': {
+    one: 'An average R from fewer than {count} trade with a stop gets no arrow: too few to compare.',
+    other: 'An average R from fewer than {count} trades with a stop gets no arrow: too few to compare.',
+  },
+
   'rep.months': 'Month by month',
   'rep.months.empty': 'No closed trades in this range.',
   'rep.month': 'Month',

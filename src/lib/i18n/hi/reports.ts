@@ -43,6 +43,20 @@ export const reports: Translation<typeof en> = {
   'rep.sqn': 'सिस्टम क्वालिटी (SQN)',
   'rep.hold': 'औसत होल्ड समय',
 
+  'rep.form': 'हाल का प्रदर्शन',
+  'rep.form.subtitle': 'आपके हाल के ट्रेड, आपके पूरे रिकॉर्ड के मुकाबले, ऊपर चुनी अवधि चाहे जो हो',
+  'rep.form.last': { one: 'आख़िरी {count} ट्रेड', other: 'आख़िरी {count} ट्रेड' },
+  'rep.form.all': { one: 'सभी {count} ट्रेड', other: 'सभी {count} ट्रेड' },
+  'rep.form.needs': { one: '{count} और ट्रेड चाहिए', other: '{count} और ट्रेड चाहिए' },
+  'rep.form.above': 'आपके पूरे रिकॉर्ड से ऊपर',
+  'rep.form.below': 'आपके पूरे रिकॉर्ड से नीचे',
+  'rep.form.rNote': 'औसत R स्टॉप वाले ट्रेडों पर गिना जाता है: {total} में से {count}।',
+  'rep.form.noR': 'किसी ट्रेड में स्टॉप नहीं है, इसलिए दिखाने को कोई R नहीं है।',
+  'rep.form.rThin': {
+    one: 'स्टॉप वाले {count} से कम ट्रेड से बने औसत R के साथ तीर नहीं दिखता: तुलना के लिए ये बहुत कम हैं।',
+    other: 'स्टॉप वाले {count} से कम ट्रेड से बने औसत R के साथ तीर नहीं दिखता: तुलना के लिए ये बहुत कम हैं।',
+  },
+
   'rep.months': 'महीनेवार',
   'rep.months.empty': 'इस अवधि में कोई बंद ट्रेड नहीं।',
   'rep.month': 'महीना',

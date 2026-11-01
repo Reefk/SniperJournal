@@ -41,6 +41,33 @@ export const reports: Translation<typeof en> = {
   'rep.sqn': 'جودة النظام (SQN)',
   'rep.hold': 'متوسط مدة الصفقة',
 
+  'rep.form': 'الأداء الأخير',
+  'rep.form.subtitle': 'صفقاتك الأخيرة مقابل سجلك كله، أيًّا كانت الفترة في الأعلى',
+  'rep.form.last': {
+    zero: 'آخر {count} صفقة',
+    one: 'آخر صفقة',
+    two: 'آخر صفقتين',
+    few: 'آخر {count} صفقات',
+    many: 'آخر {count} صفقة',
+    other: 'آخر {count} صفقة',
+  },
+  'rep.form.all': { other: 'كل الصفقات ({count})' },
+  'rep.form.needs': {
+    zero: 'لا يلزم المزيد',
+    one: 'تلزم صفقة أخرى',
+    two: 'تلزم صفقتان أخريان',
+    few: 'تلزم {count} صفقات أخرى',
+    many: 'تلزم {count} صفقة أخرى',
+    other: 'تلزم {count} صفقة أخرى',
+  },
+  'rep.form.above': 'أعلى من سجلك كله',
+  'rep.form.below': 'أدنى من سجلك كله',
+  'rep.form.rNote': 'متوسط R يحسب الصفقات التي لها وقف خسارة: {count} من {total}.',
+  'rep.form.noR': 'لا صفقة لها وقف خسارة، فلا R لعرضه.',
+  'rep.form.rThin': {
+    other: 'لا سهم لمتوسط R إذا كانت الصفقات ذات وقف الخسارة أقل من {count}: عددها أقل من أن يُقارن.',
+  },
+
   'rep.months': 'شهرًا بشهر',
   'rep.months.empty': 'لا صفقات مغلقة في هذه الفترة.',
   'rep.month': 'الشهر',

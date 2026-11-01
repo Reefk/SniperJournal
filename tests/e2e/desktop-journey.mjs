@@ -476,6 +476,17 @@ async function journey() {
     ),
   );
 
+  // ---- 3b'. Reports: recent form ---------------------------------------------
+  /** a Reports card, by its title */
+  const reportCard = (title) =>
+    `[...document.querySelectorAll('section')].find((s) => s.querySelector('h3')?.textContent === ${JSON.stringify(title)})`;
+  const formText = await b.run(`${reportCard('Recent form')}?.innerText ?? ''`);
+  check(
+    'Recent form: 4 trades are 6 short of the last 10, and the whole record is there',
+    formText.includes('Needs 6 more trades') && formText.includes('All 4 trades'),
+    formText,
+  );
+
   // ---- 3c. a goal: set in Settings, seen on the Dashboard -------------------
   await b.run(`$nav('/settings'); true`);
   await b.until(`!!$field('Win rate')`, 'goal fields');

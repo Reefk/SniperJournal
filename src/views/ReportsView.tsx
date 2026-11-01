@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Download, FileBarChart, Printer } from 'lucide-react';
+import { ArrowDown, ArrowUp, Download, FileBarChart, Printer } from 'lucide-react';
 import { useJournal } from '@/store/JournalProvider';
 import { useUI } from '@/store/UIProvider';
 import { computeStats, groupTrades, sqnLabel, thinMark } from '@/lib/stats';
@@ -33,6 +33,7 @@ import {
   type CleanMonth,
   type MistakeReport,
 } from '@/lib/mistakes';
+import { FORM_R_MIN, recentForm, type FormLine, type RecentForm } from '@/lib/recent-form';
 import { netPnl, statTrades, tradeDay } from '@/lib/trade-math';
 import { cn, dateKey, downloadFile, parseLocal } from '@/lib/utils';
 import { storage } from '@/lib/storage';
@@ -99,6 +100,8 @@ export function ReportsView() {
     [accountTrades, data.settings, start],
   );
   const cleanByMonth = useMemo(() => thisAndLastMonth(cleanMonths(accountTrades)), [accountTrades]);
+  // the latest trades whatever the range, as the card says
+  const form = useMemo(() => recentForm(accountTrades), [accountTrades]);
   const byGroup = useMemo(
     () => groupTables(inRange, data.settings.tagGroups ?? []),
     [inRange, data.settings.tagGroups],
@@ -280,6 +283,7 @@ export function ReportsView() {
         </ChartContainer>
 
         <div className="space-y-4">
+          <RecentFormCard form={form} />
           {[
             { title: tr('rep.bySymbol'), rows: bySymbol },
             { title: tr('rep.bySetup'), rows: bySetup },
@@ -359,6 +363,105 @@ function Row({ label, value, tone, info }: { label: string; value: string; tone?
 }
 
 const tone = (v: number) => (v > 0 ? 'text-profit' : v < 0 ? 'text-loss' : 'text-muted');
+
+/** a window's figure, with an arrow when it reads above or below the whole record's */
+function Against({ text, now, all }: { text: string; now: number; all: number }) {
+  if (now === all) return <>{text}</>;
+  const up = now > all;
+  const Arrow = up ? ArrowUp : ArrowDown;
+  return (
+    <span className="inline-flex items-center justify-end gap-0.5">
+      <Arrow className={cn('size-3', up ? 'text-profit' : 'text-loss')} aria-hidden />
+      {text}
+      <span className="sr-only">{tr(up ? 'rep.form.above' : 'rep.form.below')}</span>
+    </span>
+  );
+}
+
+/**
+ * Reports → Recent form: win rate and average R over the last 10, 20 and 50
+ * trades, each against the whole record (lib/recent-form.ts). Whatever the
+ * range: the latest trades are the point.
+ */
+function RecentFormCard({ form }: { form: RecentForm }) {
+  const { all } = form;
+  // compared as shown: a whole %, R to two decimals
+  const pct = (line: FormLine) => (line.winRate == null ? null : Math.round(line.winRate));
+  const r = (line: FormLine) => (line.avgR == null ? null : Math.round(line.avgR * 100) / 100);
+  // a window's average R from too few trades with a stop is shown, but not set against the record
+  const thinR = (line: FormLine) => line.size != null && line.rTrades < FORM_R_MIN;
+  const notes: Array<[key: string, text: string]> = [];
+  if (all.trades > 0 && all.rTrades === 0) notes.push(['noR', tr('rep.form.noR')]);
+  else if (all.rTrades < all.trades) {
+    notes.push(['rNote', tr('rep.form.rNote', { count: all.rTrades, total: all.trades })]);
+  }
+  if (form.windows.some((line) => line.needed === 0 && line.avgR != null && thinR(line))) {
+    notes.push(['rThin', tr('rep.form.rThin', { count: FORM_R_MIN })]);
+  }
+  const cell = 'num px-2 py-2 text-end md:px-3';
+  return (
+    <ChartContainer title={tr('rep.form')} subtitle={tr('rep.form.subtitle')} bodyClassName="px-2 pb-3 pt-1">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="text-xs text-muted">
+            <th className="px-2 py-2 text-start font-medium md:px-3">
+              <span className="sr-only">{tr('rep.trades')}</span>
+            </th>
+            <th className="px-2 py-2 text-end font-medium md:px-3">{tr('rep.winRate')}</th>
+            <th className="px-2 py-2 text-end font-medium md:px-3">{tr('goal.avgR.label')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {[...form.windows, all].map((line) => {
+            const isAll = line.size == null;
+            const nowPct = pct(line);
+            const nowR = r(line);
+            const allPct = pct(all);
+            const allR = r(all);
+            return (
+              <tr key={line.size ?? 'all'} className="border-t border-line">
+                <td className={cn('px-2 py-2 md:px-3', isAll ? 'text-muted' : 'text-fg')}>
+                  {isAll ? tr('rep.form.all', { count: line.trades }) : tr('rep.form.last', { count: line.size ?? 0 })}
+                </td>
+                {line.needed > 0 ? (
+                  <td colSpan={2} className="px-2 py-2 text-end text-xs text-faint md:px-3">
+                    {tr('rep.form.needs', { count: line.needed })}
+                  </td>
+                ) : (
+                  <>
+                    <td className={cn(cell, isAll ? 'text-muted' : 'text-fg')}>
+                      {nowPct == null ? (
+                        '—'
+                      ) : isAll || allPct == null ? (
+                        formatPct(nowPct, 0)
+                      ) : (
+                        <Against text={formatPct(nowPct, 0)} now={nowPct} all={allPct} />
+                      )}
+                    </td>
+                    <td className={cn(cell, isAll ? 'text-muted' : thinR(line) ? 'text-faint' : 'text-fg')}>
+                      {nowR == null ? (
+                        '—'
+                      ) : isAll || allR == null || thinR(line) ? (
+                        formatR(nowR)
+                      ) : (
+                        <Against text={formatR(nowR)} now={nowR} all={allR} />
+                      )}
+                    </td>
+                  </>
+                )}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      {notes.map(([key, text]) => (
+        <p key={key} className="px-2 pt-2 text-xs text-faint md:px-3">
+          {text}
+        </p>
+      ))}
+    </ChartContainer>
+  );
+}
 
 /** Reports → a table for each tag group (Settings → Tags), with each of its tags */
 function TagGroupTables({ tables, currency }: { tables: GroupTable[]; currency: string }) {
