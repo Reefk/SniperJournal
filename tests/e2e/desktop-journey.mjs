@@ -506,6 +506,14 @@ async function journey() {
   );
   await b.run(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); true`);
   await b.until(`!$modal()`, 'the trade closed');
+  // the four were opened Monday to Thursday, 09:30 to 14:00
+  const heatCard = reportCard('Weekday and hour');
+  const heatShown = await b.run(
+    `[...${heatCard}.querySelectorAll('table')].filter((t) => t.offsetParent).map((t) => t.querySelectorAll('tbody tr').length)`,
+  );
+  check('weekday and hour: on a PC one table, a row for each weekday', JSON.stringify(heatShown) === '[5]', heatShown);
+  const mondayAt9 = await b.run(`${heatCard}.querySelector('tbody tr td')?.innerText ?? ''`);
+  check(`Monday 09:00 holds AAPL's +${money(99)}, one trade`, /^\+\$99\.00\s*1×$/.test(mondayAt9), mondayAt9);
 
   // ---- 3c. a goal: set in Settings, seen on the Dashboard -------------------
   await b.run(`$nav('/settings'); true`);

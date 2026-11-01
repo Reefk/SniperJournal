@@ -83,6 +83,17 @@ export const reports: Translation<typeof en> = {
     other: 'होल्ड समय बनाम नतीजा: {count} ट्रेड, {from} से {to} तक रखे गए।',
   },
 
+  'rep.heat': 'दिन और घंटा',
+  'rep.heat.subtitle': 'आपके ट्रेड, जिस दिन और घंटे में खोले गए: शुद्ध नतीजा और गिनती।',
+  'rep.heat.day': 'दिन',
+  'rep.heat.hour': 'घंटा',
+  'rep.heat.none': 'कोई ट्रेड नहीं',
+  'rep.heat.noTime': {
+    one: 'सिर्फ़ तारीख वाला {count} ट्रेड, बिना खुलने के समय के, शामिल नहीं है।',
+    other: 'सिर्फ़ तारीख वाले {count} ट्रेड, बिना खुलने के समय के, शामिल नहीं हैं।',
+  },
+  'rep.heat.empty': 'इस अवधि के किसी ट्रेड में खुलने का समय नहीं है।',
+
   'rep.months': 'महीनेवार',
   'rep.months.empty': 'इस अवधि में कोई बंद ट्रेड नहीं।',
   'rep.month': 'महीना',

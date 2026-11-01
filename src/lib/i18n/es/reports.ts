@@ -108,6 +108,18 @@ export const reports: Translation<typeof en> = {
     other: 'Duración frente a resultado: {count} operaciones, mantenidas de {from} a {to}.',
   },
 
+  'rep.heat': 'Día y hora',
+  'rep.heat.subtitle': 'Tus operaciones según el día y la hora en que las abriste: el neto y cuántas.',
+  'rep.heat.day': 'Día',
+  'rep.heat.hour': 'Hora',
+  'rep.heat.none': 'Sin operaciones',
+  'rep.heat.noTime': {
+    one: '{count} operación con solo fecha, sin hora de apertura, queda fuera.',
+    many: '{count} operaciones con solo fecha, sin hora de apertura, quedan fuera.',
+    other: '{count} operaciones con solo fecha, sin hora de apertura, quedan fuera.',
+  },
+  'rep.heat.empty': 'Ninguna operación del periodo tiene hora de apertura.',
+
   'rep.months': 'Mes a mes',
   'rep.months.empty': 'No hay operaciones cerradas en este periodo.',
   'rep.month': 'Mes',

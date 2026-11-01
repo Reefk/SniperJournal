@@ -173,8 +173,11 @@ const HOLDS = [
   pnl(15, { openedAt: '2026-09-15T10:00', closedAt: undefined, symbol: 'X', stopLoss: 90 }),
   ...Array.from({ length: 12 }, (_, i) => heldFor(15 + i, 120, 40, i === 11 ? { stopLoss: null } : {})),
 ];
-/** enough trades for the hold chart to compare, but all held as long */
-const ONE_HOLD = Array.from({ length: 24 }, (_, i) => heldFor(i, 30, i % 2 ? 20 : -10));
+/** enough trades for the hold chart to compare, but all held as long; and one with only a date, which neither chart can place */
+const ONE_HOLD = [
+  ...Array.from({ length: 24 }, (_, i) => heldFor(i, 30, i % 2 ? 20 : -10)),
+  pnl(5, { openedAt: '2026-09-28', closedAt: undefined, symbol: 'X' }),
+];
 /** the range picker's button for a range, found by its label in the language shown */
 const rangeButton = (range: RangeKey) =>
   [...document.querySelectorAll<HTMLButtonElement>('[role="group"] button')].find(

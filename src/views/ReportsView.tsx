@@ -35,6 +35,7 @@ import {
 } from '@/lib/mistakes';
 import { FORM_R_MIN, recentForm, type FormLine, type RecentForm } from '@/lib/recent-form';
 import { defaultHoldMeasure, HOLD_SIDE_MIN, holdReport, type HoldMeasure, type HoldReport } from '@/lib/hold';
+import { weekdayHourHeatmap } from '@/lib/heatmap';
 import { netPnl, statTrades, tradeDay } from '@/lib/trade-math';
 import { cn, dateKey, downloadFile, parseLocal } from '@/lib/utils';
 import { storage } from '@/lib/storage';
@@ -47,6 +48,7 @@ import { ChartContainer } from '@/components/ui/ChartContainer';
 import { InfoTip } from '@/components/ui/InfoTip';
 import { rich } from '@/components/ui/Rich';
 import { HoldTimeChart } from '@/components/reports/HoldTimeChart';
+import { WeekHourHeatmap } from '@/components/reports/WeekHourHeatmap';
 
 export function ReportsView() {
   const { accountTrades, data, startingBalance, activeLabel } = useJournal();
@@ -109,6 +111,7 @@ export function ReportsView() {
   const fittingMeasure = useMemo(() => defaultHoldMeasure(inRange), [inRange]);
   const holdMeasure = pickedMeasure?.account === data.activeAccountId ? pickedMeasure.measure : fittingMeasure;
   const hold = useMemo(() => holdReport(inRange, holdMeasure), [inRange, holdMeasure]);
+  const heat = useMemo(() => weekdayHourHeatmap(inRange), [inRange]);
   const byGroup = useMemo(
     () => groupTables(inRange, data.settings.tagGroups ?? []),
     [inRange, data.settings.tagGroups],
@@ -359,6 +362,19 @@ export function ReportsView() {
           />
         </div>
         <HoldLines hold={hold} currency={currency} />
+      </ChartContainer>
+
+      <ChartContainer
+        className="mt-4"
+        title={tr('rep.heat')}
+        subtitle={tr('rep.heat.subtitle')}
+        empty={heat.hours.length === 0}
+        emptyText={[tr('rep.heat.empty'), heat.noTime ? tr('rep.heat.noTime', { count: heat.noTime }) : null]
+          .filter(Boolean)
+          .join(' ')}
+        bodyClassName="px-2 pb-3 pt-1"
+      >
+        <WeekHourHeatmap map={heat} currency={currency} />
       </ChartContainer>
 
       <TagGroupTables tables={byGroup} currency={currency} />

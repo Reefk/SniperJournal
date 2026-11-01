@@ -81,6 +81,14 @@ export const reports: Translation<typeof en> = {
   'rep.holdVs.empty': 'لا صفقة في هذه الفترة لها مدة احتفاظ تُعرض.',
   'rep.holdVs.summary': { other: 'مدة الاحتفاظ مقابل النتيجة: الصفقات {count}، من {from} إلى {to}.' },
 
+  'rep.heat': 'اليوم والساعة',
+  'rep.heat.subtitle': 'صفقاتك حسب اليوم والساعة التي فتحتها فيها: الصافي وعددها.',
+  'rep.heat.day': 'اليوم',
+  'rep.heat.hour': 'الساعة',
+  'rep.heat.none': 'لا صفقات',
+  'rep.heat.noTime': { other: 'صفقات لها تاريخ فقط دون وقت الفتح لم تُحتسب: {count}.' },
+  'rep.heat.empty': 'لا صفقة في هذه الفترة لها وقت فتح.',
+
   'rep.months': 'شهرًا بشهر',
   'rep.months.empty': 'لا صفقات مغلقة في هذه الفترة.',
   'rep.month': 'الشهر',

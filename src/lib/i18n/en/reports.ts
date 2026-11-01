@@ -90,6 +90,17 @@ export const reports = {
     other: 'Hold time against result: {count} trades, held from {from} to {to}.',
   },
 
+  'rep.heat': 'Weekday and hour',
+  'rep.heat.subtitle': 'Your trades by the day and hour you opened them: the net, and how many.',
+  'rep.heat.day': 'Weekday',
+  'rep.heat.hour': 'Hour',
+  'rep.heat.none': 'No trades',
+  'rep.heat.noTime': {
+    one: '{count} trade with only a date, no time it was opened, is left out.',
+    other: '{count} trades with only a date, no time they were opened, are left out.',
+  },
+  'rep.heat.empty': 'No trade in this range has a time it was opened.',
+
   'rep.months': 'Month by month',
   'rep.months.empty': 'No closed trades in this range.',
   'rep.month': 'Month',
