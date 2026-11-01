@@ -50,6 +50,9 @@ export const shell: Translation<typeof en> = {
   'header.logTradeTitle': 'Записать сделку (N)',
   'header.logTradeLabel': 'Записать сделку',
   'header.logTrade': 'Новая сделка',
+  'header.hideMoney': 'Скрыть суммы',
+  'header.hideMoneyTitle': 'Скрыть суммы, чтобы на снимке экрана не было денег',
+  'header.moneyHidden': 'Суммы скрыты: показать',
 
   'search.open': 'Открыть поиск',
   'search.placeholder': 'Поиск: тикеры, теги, заметки, сетапы',

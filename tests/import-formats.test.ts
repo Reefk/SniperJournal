@@ -5,6 +5,7 @@ import { roleFromWords } from '@/lib/import/words';
 import { dateOrderOf, parseAction, parseMoment } from '@/lib/import/values';
 import { futuresPointValue, isStock } from '@/lib/import/instruments';
 import { grossPnl, isClosed, netPnl } from '@/lib/trade-math';
+import { setMoneyHidden } from '@/lib/format';
 import type { Account, Trade } from '@/lib/types';
 
 /**
@@ -331,6 +332,13 @@ describe('one row per fill', () => {
     expect(none.notices.join(' ')).not.toMatch(/There are no fees in this file/);
     // every line matched: nothing to say
     expect(statement('09:31:12', '10:12:41').errors).toEqual([]);
+    // privacy mode: the amount is hidden like any other
+    setMoneyHidden(true);
+    try {
+      expect(statement('09:31:12', '10:20:00').errors.join(' ')).toContain('so its fees (•••) were left out.');
+    } finally {
+      setMoneyHidden(false);
+    }
   });
 
   it('Thinkorswim statement: money back on a fee line (a rebate) takes from the fees, it is not charged', () => {

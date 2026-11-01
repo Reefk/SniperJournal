@@ -45,6 +45,9 @@ export const shell: Translation<typeof en> = {
   'header.logTradeTitle': 'ट्रेड दर्ज करें (N)',
   'header.logTradeLabel': 'ट्रेड दर्ज करें',
   'header.logTrade': 'ट्रेड दर्ज करें',
+  'header.hideMoney': 'रकम छिपाएँ',
+  'header.hideMoneyTitle': 'रकम छिपाएँ, ताकि स्क्रीनशॉट में पैसे न दिखें',
+  'header.moneyHidden': 'रकम छिपी है: दिखाएँ',
 
   'search.open': 'खोज खोलें',
   'search.placeholder': 'सिंबल, टैग, नोट्स, सेटअप खोजें',

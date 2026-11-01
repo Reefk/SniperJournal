@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { aggregateDays, computeStats, groupTrades, sniperScore, sqnLabel } from '@/lib/stats';
+import { aggregateDays, computeStats, equityInPercent, groupTrades, sniperScore, sqnLabel } from '@/lib/stats';
 import type { Trade } from '@/lib/types';
 import { pnl, seeded, shuffle, trade } from './helpers';
 
@@ -341,6 +341,23 @@ describe('computeStats: R multiples and SQN basis', () => {
     expect(s.sqn).toBeCloseTo((m / sd) * Math.sqrt(rs.length), 10);
   });
 
+  it('adds up the R of the trades with a stop, and counts them; privacy mode shows it in place of money', () => {
+    // 3 with a stop, 2 without: the 2 without add nothing and are not counted
+    const s = computeStats([...withStop([2, -1, 0.5]), ...series([30, -10])]);
+    expect(s.totalR).toBeCloseTo(1.5, 10);
+    expect(s.rTrades).toBe(3);
+    // the average is this total over the same trades
+    expect(s.avgR).toBeCloseTo(1.5 / 3, 10);
+  });
+
+  it('has no R total with no stop recorded, or no trades', () => {
+    const none = computeStats(series([30, -10]));
+    expect(none.totalR).toBeNull();
+    expect(none.rTrades).toBe(0);
+    expect(computeStats([]).totalR).toBeNull();
+    expect(computeStats([]).rTrades).toBe(0);
+  });
+
   it('current behaviour, under review: one more trade without a stop flips SQN from R to money', () => {
     const rs = [2, -1, 1, -1, 2, 0.5];
     const noStop = [30, -10, 5, 20, 15, -5];
@@ -421,6 +438,19 @@ describe('computeStats: properties over random records', () => {
       near(b.netWithoutBestDay, a.netWithoutBestDay);
       near(b.recoveryFactor, a.recoveryFactor);
     }
+  });
+});
+
+describe('equityInPercent: privacy mode’s curve', () => {
+  it('each point as its change from the start in %, the same shape', () => {
+    // +100, -50 and +100 on $1,000
+    const { equity } = computeStats(series([100, -50, 100]), 1000);
+    const pct = equityInPercent(equity, 1000);
+    expect(pct.map((p) => p.equity)).toEqual([0, 10, 5, 15]);
+    expect(pct.map((p) => p.net)).toEqual([0, 10, -5, 10]);
+    expect(pct.map((p) => p.peak)).toEqual([0, 10, 10, 15]);
+    // what else a point holds is kept
+    expect(pct.map((p) => [p.index, p.label])).toEqual(equity.map((p) => [p.index, p.label]));
   });
 });
 

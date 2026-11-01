@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import type { DayAgg, EquityPoint, ScoreAxis } from '@/lib/stats';
-import { formatMoney, formatShortDate } from '@/lib/format';
+import { formatMoney, formatShortDate, formatSignedPct } from '@/lib/format';
 import { language, tr } from '@/lib/i18n';
 
 /** Minimal shape of what Recharts hands a custom tooltip */
@@ -24,15 +24,23 @@ function Card({ title, children }: { title: ReactNode; children: ReactNode }) {
   );
 }
 
-export function EquityTooltip({ active, payload, currency }: TooltipProps<EquityPoint> & { currency?: string }) {
+export function EquityTooltip({
+  active,
+  payload,
+  currency,
+  inPercent = false,
+}: TooltipProps<EquityPoint> & { currency?: string; inPercent?: boolean }) {
   const point = active ? payload?.[0]?.payload : undefined;
   if (!point) return null;
+  // privacy mode: the points are in % of the starting balance already (EquityCurveChart)
+  const amount = (value: number, sign?: boolean) =>
+    inPercent ? formatSignedPct(value, 2) : formatMoney(value, currency, { sign });
   return (
     <Card title={point.label === 'Start' ? tr('common.startingBalance') : formatShortDate(point.label)}>
-      <div className="num text-sm text-fg">{formatMoney(point.equity, currency)}</div>
+      <div className="num text-sm text-fg">{amount(point.equity)}</div>
       {point.index > 0 && (
         <div className={point.net > 0 ? 'text-profit' : point.net < 0 ? 'text-loss' : undefined}>
-          {tr('dash.onThisTrade', { money: formatMoney(point.net, currency, { sign: true }) })}
+          {tr('dash.onThisTrade', { money: amount(point.net, true) })}
         </div>
       )}
     </Card>

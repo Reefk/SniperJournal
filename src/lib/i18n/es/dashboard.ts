@@ -88,6 +88,18 @@ export const dashboard: Translation<typeof en> = {
   'dash.equityHint': 'El saldo de la cuenta después de cada operación cerrada',
   'dash.currentBalance': 'saldo actual',
   'dash.currentBalanceExcluded': 'saldo actual, con las operaciones excluidas',
+  'dash.privacy.sinceStart': 'cambio desde el inicio del periodo',
+  'dash.privacy.rTotal': {
+    one: '{r} en {count} operación con stop',
+    many: '{r} en {count} operaciones con stop',
+    other: '{r} en {count} operaciones con stop',
+  },
+  'dash.privacy.netInfo':
+    'Los importes están ocultos. Aquí ves el beneficio neto como porcentaje del saldo con el que empezó el periodo, y tus resultados en R: el neto de cada operación frente al riesgo que fijó su stop.',
+  'dash.privacy.pctInfo':
+    'Los importes están ocultos. Aquí ves el beneficio neto como porcentaje del saldo con el que empezó el periodo.',
+  'dash.privacy.rInfo':
+    'Los importes están ocultos. Aquí ves el beneficio neto en R: el neto de cada operación frente al riesgo que fijó su stop, sumado en las operaciones con stop.',
   'dash.start': 'Inicio',
   'dash.onThisTrade': '{money} en esta operación',
   'dash.dayTrades': {

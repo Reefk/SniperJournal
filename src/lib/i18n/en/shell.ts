@@ -52,6 +52,9 @@ export const shell = {
   'header.logTradeTitle': 'Log a trade (N)',
   'header.logTradeLabel': 'Log a trade',
   'header.logTrade': 'Log trade',
+  'header.hideMoney': 'Hide amounts',
+  'header.hideMoneyTitle': 'Hide amounts, for a screenshot that shows no money',
+  'header.moneyHidden': 'Amounts are hidden: show them',
 
   'search.open': 'Open search',
   'search.placeholder': 'Search symbols, tags, notes, setups',

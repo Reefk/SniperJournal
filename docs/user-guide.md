@@ -84,6 +84,27 @@ fields**: **Clear**, the default, keeps examples like "0.00" as easy to read as
 any other text; **Faded** makes them paler, so an empty field never looks
 filled in.
 
+### Hiding amounts
+
+The **eye** in the header hides every amount of money in the app: the cards,
+tables, calendar, charts and their tooltips all read **•••**, so you can share
+a screenshot without showing your account size. Tap it again to show them.
+
+With amounts hidden, the Dashboard still tells you how you did:
+
+- **Net profit** shows your net as a share of the balance the range began
+  with (**+4.3%**), and under it your result in R, added up over the trades
+  with a stop (**+12.50R over 18 trades with a stop**). With no starting
+  balance it shows the R alone; with neither, •••.
+- **The equity curve** keeps its shape, with its axis in % from the start.
+  With no starting balance its axis is left off.
+- **The Daily P&L** bars keep their shape; their axis, which would only read
+  •••, is left off.
+
+The app remembers the choice. Exports and backups are unchanged: they always
+hold the real amounts. Prices, quantities and the boxes you type into (a
+trade's fees, an account's starting balance) still show what they hold.
+
 ### Language
 
 The app speaks English, Spanish (Español), Russian (Русский), Arabic (العربية)

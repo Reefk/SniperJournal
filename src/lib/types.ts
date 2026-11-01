@@ -112,6 +112,12 @@ export interface Settings {
    */
   fadedPlaceholders?: boolean;
   /**
+   * Privacy mode, from the eye in the header: every amount reads •••, and the
+   * Net profit card and the equity curve show % and R instead (lib/format.ts).
+   * Absent or false (the default): amounts show.
+   */
+  hideMoney?: boolean;
+  /**
    * The mistakes the trade form offers, in order. Absent until the list is
    * first changed, which reads as STARTING_MISTAKES (lib/mistakes.ts).
    */

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { dailySummary, equitySummary, scoreSummary } from '@/lib/chart-summary';
-import { computeStats, sniperScore, type SniperScore } from '@/lib/stats';
+import { computeStats, equityInPercent, sniperScore, type SniperScore } from '@/lib/stats';
 import { pnl } from './helpers';
 
 /**
@@ -54,6 +54,19 @@ describe('equitySummary', () => {
       peak: i,
     }));
     expect(equitySummary(many, 'USD')).toContain('lowest $0.00, highest $199,999.00.');
+  });
+});
+
+describe('equitySummary in privacy mode', () => {
+  it('says the curve in % of where it started, with no amount', () => {
+    const text = equitySummary(equityInPercent(stats.equity, 10000), 'USD', true);
+    expect(text).toBe(
+      'Account balance after each of 4 closed trades, 02 Mar 2026 to 05 Mar 2026: ' +
+        'from 0.00% to +0.43%, lowest 0.00%, highest +0.99%.',
+    );
+    expect(equitySummary(equityInPercent(computeStats([], 2500).equity, 2500), 'USD', true)).toBe(
+      'Account balance: no closed trades in this range yet, so it stays at 0.00%.',
+    );
   });
 });
 

@@ -8,11 +8,12 @@ import { GlobalSearch } from './GlobalSearch';
 import { AccountSwitcher } from './AccountSwitcher';
 import { ClockDisplay } from './ClockDisplay';
 import { ProfileMenu } from './ProfileMenu';
+import { PrivacyToggle } from './PrivacyToggle';
 import { tr } from '@/lib/i18n';
 
 /**
- * PC:    [search box]                 [Log trade] | [account] [clock] [profile]
- * phone: [logo] [account]                     [search] [+] [profile]
+ * PC:    [search box]                 [Log trade] | [eye] [account] [clock] [profile]
+ * phone: [logo] [account]                 [search] [eye] [+] [profile]
  */
 export function Header() {
   const { openTradeForm } = useUI();
@@ -24,6 +25,8 @@ export function Header() {
       </div>
       <GlobalSearch />
       <div className="flex items-center gap-2 md:ms-auto">
+        {/* 40 px on a phone, as + and the profile are, so a 360 px screen still has room for the account */}
+        <PrivacyToggle className="max-md:size-10 md:hidden" />
         <Button
           variant="primary"
           onClick={() => openTradeForm()}
@@ -36,6 +39,7 @@ export function Header() {
           <kbd className="num ms-0.5 rounded bg-white/15 px-1.5 py-px text-[10px] font-medium max-md:hidden">N</kbd>
         </Button>
         <div className="mx-2 h-6 w-px bg-line max-md:hidden" />
+        <PrivacyToggle className="max-md:hidden" />
         <div className="max-md:hidden">
           <AccountSwitcher variant="pill" />
         </div>

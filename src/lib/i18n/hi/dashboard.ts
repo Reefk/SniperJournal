@@ -80,6 +80,16 @@ export const dashboard: Translation<typeof en> = {
   'dash.equityHint': 'हर बंद ट्रेड के बाद खाते का बैलेंस',
   'dash.currentBalance': 'मौजूदा बैलेंस',
   'dash.currentBalanceExcluded': 'मौजूदा बैलेंस, बाहर रखे गए ट्रेड समेत',
+  'dash.privacy.sinceStart': 'अवधि की शुरुआत से बदलाव',
+  'dash.privacy.rTotal': {
+    one: 'स्टॉप वाले {count} ट्रेड पर {r}',
+    other: 'स्टॉप वाले {count} ट्रेड पर {r}',
+  },
+  'dash.privacy.netInfo':
+    'रकम छिपी है। यहाँ नेट मुनाफ़ा अवधि की शुरुआत के बैलेंस के हिस्से के रूप में दिखता है, और आपके नतीजे R में: हर ट्रेड का नेट, उसके स्टॉप से तय जोखिम के मुकाबले।',
+  'dash.privacy.pctInfo': 'रकम छिपी है। यहाँ नेट मुनाफ़ा अवधि की शुरुआत के बैलेंस के हिस्से के रूप में दिखता है।',
+  'dash.privacy.rInfo':
+    'रकम छिपी है। यहाँ नेट मुनाफ़ा R में दिखता है: हर ट्रेड का नेट, उसके स्टॉप से तय जोखिम के मुकाबले, स्टॉप वाले ट्रेडों पर जोड़कर।',
   'dash.start': 'शुरुआत',
   'dash.onThisTrade': 'इस ट्रेड पर {money}',
   'dash.dayTrades': { one: '{count} ट्रेड · {wl}', other: '{count} ट्रेड · {wl}' },

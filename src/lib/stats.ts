@@ -47,6 +47,16 @@ export interface EquityPoint {
   peak: number;
 }
 
+/**
+ * Privacy mode's equity curve: each point as its change from `start`, in %,
+ * so the curve keeps its shape without showing the account's size. `start`
+ * must be above 0 (the Dashboard only asks with an opening balance).
+ */
+export function equityInPercent(points: EquityPoint[], start: number): EquityPoint[] {
+  const pct = (v: number) => (v / start) * 100;
+  return points.map((p) => ({ ...p, equity: pct(p.equity - start), net: pct(p.net), peak: pct(p.peak - start) }));
+}
+
 export interface Stats {
   total: number;
   wins: number;
@@ -66,6 +76,10 @@ export interface Stats {
   payoff: number | null;
   expectancy: number;
   avgR: number | null;
+  /** every R added up, from the trades that recorded a stop; null with none */
+  totalR: number | null;
+  /** how many trades recorded a stop, so have an R */
+  rTrades: number;
   sqn: number | null;
   maxWinStreak: number;
   maxLossStreak: number;
@@ -117,6 +131,8 @@ const EMPTY_STATS = (startingBalance: number): Stats => ({
   payoff: null,
   expectancy: 0,
   avgR: null,
+  totalR: null,
+  rTrades: 0,
   sqn: null,
   maxWinStreak: 0,
   maxLossStreak: 0,
@@ -246,6 +262,8 @@ export function computeStats(allTrades: Trade[], startingBalance = 0): Stats {
     payoff: avgLoss > 0 ? avgWin / avgLoss : avgWin > 0 ? Infinity : null,
     expectancy: net / closed.length,
     avgR,
+    totalR: rs.length ? rs.reduce((a, r) => a + r, 0) : null,
+    rTrades: rs.length,
     sqn,
     maxWinStreak,
     maxLossStreak: Math.abs(maxLossStreak),

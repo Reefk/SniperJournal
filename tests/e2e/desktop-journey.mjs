@@ -508,6 +508,92 @@ async function journey() {
   await b.run(`$type($field('Win rate'), ''); true`);
   check('a box left blank takes the goal off', await savedSoon((j) => j.settings.goals === undefined));
 
+  // ---- 3d. privacy mode: the eye in the header hides every amount -------------
+  // on All: +111 on a $10,000 start, and no trade with a stop, so +1.1% and no R
+  await b.run(`$nav('/'); true`);
+  await b.until(`!!$t('All')`, 'dashboard');
+  for (let i = 0; i < 10; i++) {
+    await b.run(`$t('All').click(); true`);
+    if (await seen(`$text().includes('+${money(111)}')`, 'net profit', 800)) break;
+  }
+  /** every piece of text the page draws or says, the charts' labels among them, its scripts left out */
+  const drawnText = `(() => {
+    const out = [];
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) if (!n.parentElement?.closest('script, style')) out.push(n.textContent);
+    for (const el of document.querySelectorAll('[aria-label], [title]')) out.push(el.getAttribute('aria-label') ?? '', el.getAttribute('title') ?? '');
+    return out.join(' | ');
+  })()`;
+  const privacyEye = `[...document.querySelectorAll('header button[aria-label="Hide amounts"]')].find((e) => e.offsetParent)`;
+  /** the amounts each page still shows: in dollars, every one has a $ */
+  const amountsOn = async (path, ready) => {
+    await b.run(`$nav(${JSON.stringify(path)}); true`);
+    await b.until(ready, path);
+    // the charts draw a moment after the page
+    await sleep(500);
+    return (await b.run(drawnText)).split(' | ').filter((t) => t.includes('$'));
+  };
+  check(
+    'the eye is in the header, and amounts show to start with',
+    await b.run(`${privacyEye}?.getAttribute('aria-pressed') === 'false'`),
+  );
+  await b.run(`${privacyEye}.click(); true`);
+  check('the eye hides amounts, and the journal file keeps it', await savedSoon((j) => j.settings.hideMoney === true));
+  check(
+    'on the Dashboard, not one amount: the cards, the charts, their axes and the sidebar',
+    await seen(
+      `!${drawnText}.includes('$') && document.querySelector('aside').innerText.includes('•••')`,
+      'amounts hidden',
+      3000,
+    ),
+    (await b.run(drawnText))
+      .split(' | ')
+      .filter((t) => t.includes('$'))
+      .join(' / '),
+  );
+  const privateText = await b.run(`$text()`);
+  check(
+    'the Net profit card gives the net as a share of the $10,000 start',
+    /Net profit[^\n]*\n\+1\.1%/.test(privateText),
+    privateText.match(/Net profit[^\n]*\n[^\n]+/)?.[0],
+  );
+  const privateTicks = await b.run(
+    `[...[...document.querySelectorAll('main section')].find((s) => s.querySelector('h3')?.textContent === 'Equity curve').querySelectorAll('.recharts-yAxis-tick-labels .recharts-cartesian-axis-tick-value')].map((t) => t.textContent)`,
+  );
+  check(
+    "the Daily P&L's axis, which would only read •••, is left off",
+    await b.run(
+      `!![...document.querySelectorAll('main section')].find((s) => s.querySelector('h3')?.textContent === 'Daily P&L')?.querySelector('.recharts-bar') && ![...document.querySelectorAll('main section')].find((s) => s.querySelector('h3')?.textContent === 'Daily P&L').querySelector('.recharts-yAxis-tick-labels text')`,
+    ),
+  );
+  check(
+    "the equity curve's axis reads in %, its shape the same",
+    privateTicks.length >= 3 && privateTicks.every((t) => /^[+-]?\d+(\.\d+)?%$/.test(t)) && privateTicks.includes('0%'),
+    privateTicks.join(' '),
+  );
+  for (const [path, ready] of [
+    ['/trades', `!!document.querySelector('tbody tr')`],
+    ['/calendar', `!!document.querySelector('.grid-cols-7 > button')`],
+    ['/reports', `!!${reportLine(JSON.stringify('Recovery factor'))}`],
+  ]) {
+    const left = await amountsOn(path, ready);
+    check(`${path}: not one amount`, left.length === 0, left.join(' / '));
+  }
+  await b.run(`$nav('/'); true`);
+  await b.until(`!!${privacyEye}`, 'dashboard');
+  await b.run(`${privacyEye}.click(); true`);
+  check(
+    'the eye shows them again, and the journal file keeps that',
+    await savedSoon((j) => j.settings.hideMoney === false),
+  );
+  // the Dashboard opens on its last 30 days again, which have no trades: on All
+  let backInDollars = false;
+  for (let i = 0; i < 10 && !backInDollars; i++) {
+    await b.run(`$t('All').click(); true`);
+    backInDollars = await seen(`$text().includes('+${money(111)}')`, 'amounts shown', 800);
+  }
+  check('the Dashboard is back in dollars', backInDollars);
+
   // back where section 4 expects to start: Reports has its own TSLA row, which
   // the wait for the trades table would take for the Trades page
   await b.run(`$nav('/'); true`);

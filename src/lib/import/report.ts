@@ -1,4 +1,5 @@
 import { decimalMark, tr } from '../i18n';
+import { HIDDEN_MONEY, isMoneyHidden } from '../format';
 import { roleLabels, type Role } from './columns';
 import type { ImportLayout } from './layout';
 import type { Findings } from './reader';
@@ -110,8 +111,8 @@ export function collectMessages(
   if (table.cashFees) notices.push(tr('imp.cashFees', { count: table.cashFees, section: 'Cash Balance' }));
   if (table.cashFeesUnmatched) {
     const { lines, fees } = table.cashFeesUnmatched;
-    // less than a cent is shown as it is, not as 0.00
-    const amount = decimalMark(fees >= 0.01 ? fees.toFixed(2) : String(fees));
+    // less than a cent is shown as it is, not as 0.00; hidden like any amount in privacy mode
+    const amount = isMoneyHidden() ? HIDDEN_MONEY : decimalMark(fees >= 0.01 ? fees.toFixed(2) : String(fees));
     errors.push(tr('imp.cashUnmatched', { count: lines, section: 'Account Trade History', amount }));
   }
   if (table.statement) notices.push(tr('imp.statement', { section: 'Trades' }));

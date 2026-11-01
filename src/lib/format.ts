@@ -22,12 +22,31 @@ function nf(currency: string, decimals: number, compact: boolean): Intl.NumberFo
   return f;
 }
 
+/** what every amount reads while money is hidden */
+export const HIDDEN_MONEY = '•••';
+
+let moneyHidden = false;
+
+/**
+ * Privacy mode: every amount formatMoney writes reads ••• from now on, so a
+ * screenshot shows no money. JournalProvider sets it from the journal's
+ * settings before anything below it draws.
+ */
+export function setMoneyHidden(hidden: boolean): void {
+  moneyHidden = hidden;
+}
+
+export function isMoneyHidden(): boolean {
+  return moneyHidden;
+}
+
 export function formatMoney(
   value: number,
   currency = 'USD',
   opts: { sign?: boolean; compact?: boolean; decimals?: number } = {},
 ): string {
   if (!Number.isFinite(value)) return '—';
+  if (moneyHidden) return HIDDEN_MONEY;
   const decimals = opts.decimals ?? 2;
   // compact shortens thousands and up; below that it would only drop a cent's zero ($103.8)
   const compact = Boolean(opts.compact) && Math.abs(value) >= 1000;
@@ -109,6 +128,20 @@ export function formatPrice(value: number | null | undefined): string {
 export function formatPct(value: number, decimals = 1): string {
   if (!Number.isFinite(value)) return '—';
   return isolate(tr('format.percent', { value: decimalMark(value.toFixed(decimals)) }));
+}
+
+/** a change in percent with its sign: +4.3%, -0.8%; nothing left after rounding is 0.0%, with none */
+export function formatSignedPct(value: number, decimals = 1): string {
+  if (!Number.isFinite(value)) return '—';
+  const text = Math.abs(value).toFixed(decimals);
+  const sign = Number(text) === 0 ? '' : value > 0 ? '+' : '-';
+  return isolate(tr('format.percent', { value: sign + decimalMark(text) }));
+}
+
+/** a tick of an axis in %: as few decimals as it needs (recharts puts ticks at round steps, 5%, 2.5%, 0.25%), up to 3 */
+export function formatAxisPct(value: number): string {
+  const decimals = [0, 1, 2].find((d) => Math.abs(Math.round(value * 10 ** d) - value * 10 ** d) < 1e-6) ?? 3;
+  return formatSignedPct(value, decimals);
 }
 
 /** a percentage already rounded as it is to be read: 90, 89.5 */

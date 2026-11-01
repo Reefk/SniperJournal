@@ -25,6 +25,7 @@ import { withGoal } from '@/lib/goals';
 import { chartsOnlyInSample, deleteScreenshot, imagesOnlyIn } from '@/lib/screenshots';
 import { JournalConflict, storage } from '@/lib/storage';
 import { uid } from '@/lib/utils';
+import { setMoneyHidden } from '@/lib/format';
 import { tr } from '@/lib/i18n';
 import { accountBalances } from './selectors';
 import { createAutosave, readPatiently } from './autosave';
@@ -358,6 +359,12 @@ export function JournalProvider({ children }: { children: ReactNode }) {
 
   // the app is drawn again, from the top, in a newly chosen language
   const language = useJournalLanguage(ready, data.settings.language);
+
+  // privacy mode: set before anything below draws an amount (formatMoney reads it); turning it
+  // on or off changes the settings, so every screen draws again, keeping its place. Set while
+  // drawing, it counts on no draw of this being thrown away: settings change in plain updates,
+  // never in a transition or under Suspense, which the app has none of.
+  setMoneyHidden(data.settings.hideMoney === true);
 
   const mutate = useCallback((fn: (draft: JournalData) => JournalData) => {
     setData((prev) => ({ ...fn(prev), updatedAt: new Date().toISOString() }));

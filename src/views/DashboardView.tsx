@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { useJournal } from '@/store/JournalProvider';
 import { useUI } from '@/store/UIProvider';
-import { computeStats, sniperScore, sqnLabel } from '@/lib/stats';
+import { computeStats, equityInPercent, sniperScore, sqnLabel } from '@/lib/stats';
 import { dailySummary, equitySummary, scoreSummary } from '@/lib/chart-summary';
 import { rangeOptions, splitByRange, type RangeKey } from '@/lib/ranges';
 import { goalReport } from '@/lib/goals';
@@ -31,6 +31,7 @@ import {
   formatPct,
   formatR,
   formatRatio,
+  formatSignedPct,
   pctText,
   wholePct,
 } from '@/lib/format';
@@ -121,6 +122,13 @@ export function DashboardView() {
   const pfRing = pf == null ? 0 : Number.isFinite(pf) ? Math.min(pf / 4, 1) : 1;
   const rrRing = stats.payoff == null ? 0 : Math.min(Number.isFinite(stats.payoff) ? stats.payoff / 3 : 1, 1);
   const balanceNow = opening + stats.net + excludedNet;
+  // privacy mode: the net as a share of the balance the range began with, and the R behind it,
+  // in place of money; with no balance to measure against, the R alone
+  const hidden = data.settings.hideMoney === true;
+  const inPercent = hidden && opening > 0;
+  const totalR =
+    stats.totalR != null ? tr('dash.privacy.rTotal', { r: formatR(stats.totalR), count: stats.rTrades }) : null;
+  const balanceLine = tr('dash.balance', { money: formatMoney(balanceNow, currency) });
   const { greenDays } = stats;
   const openCount = accountTrades.filter((t) => !isClosed(t)).length;
 
@@ -162,11 +170,23 @@ export function DashboardView() {
           <div className="grid grid-cols-1 gap-3 md:grid-cols-4 md:gap-4">
             <MetricCard
               label={tr('stat.netProfit')}
-              value={formatMoney(stats.net, currency, { sign: true })}
-              tone={toneFor(stats.net)}
+              value={
+                inPercent
+                  ? formatSignedPct((stats.net / opening) * 100)
+                  : hidden && stats.totalR != null
+                    ? formatR(stats.totalR)
+                    : formatMoney(stats.net, currency, { sign: true })
+              }
+              tone={toneFor(hidden && !inPercent && stats.totalR != null ? stats.totalR : stats.net)}
               icon={TrendingUp}
-              sub={tr('dash.balance', { money: formatMoney(balanceNow, currency) })}
-              info={tr('dash.netInfo')}
+              sub={inPercent && totalR ? totalR : balanceLine}
+              info={
+                inPercent
+                  ? tr(totalR ? 'dash.privacy.netInfo' : 'dash.privacy.pctInfo')
+                  : hidden && totalR
+                    ? tr('dash.privacy.rInfo')
+                    : tr('dash.netInfo')
+              }
             />
             <MetricCard
               label={tr('goal.winRate.label')}
@@ -294,7 +314,11 @@ export function DashboardView() {
             <ChartContainer
               className="h-[280px] md:col-span-2 md:h-[340px]"
               title={tr('dash.equity')}
-              summary={equitySummary(stats.equity, currency)}
+              summary={
+                inPercent
+                  ? equitySummary(equityInPercent(stats.equity, opening), currency, true)
+                  : equitySummary(stats.equity, currency)
+              }
               subtitle={
                 stats.maxDrawdown > 0
                   ? stats.maxDrawdownPct != null
@@ -310,15 +334,26 @@ export function DashboardView() {
                   <div
                     className={`num text-lg font-semibold ${stats.net > 0 ? 'text-profit' : stats.net < 0 ? 'text-loss' : 'text-fg'}`}
                   >
-                    {formatMoney(balanceNow, currency)}
+                    {inPercent
+                      ? formatSignedPct(((balanceNow - opening) / opening) * 100)
+                      : formatMoney(balanceNow, currency)}
                   </div>
                   <div className="text-[11px] text-faint">
-                    {excludedNet !== 0 ? tr('dash.currentBalanceExcluded') : tr('dash.currentBalance')}
+                    {inPercent
+                      ? tr('dash.privacy.sinceStart')
+                      : excludedNet !== 0
+                        ? tr('dash.currentBalanceExcluded')
+                        : tr('dash.currentBalance')}
                   </div>
                 </div>
               }
             >
-              <EquityCurveChart points={stats.equity} currency={currency} startingBalance={opening} />
+              <EquityCurveChart
+                points={stats.equity}
+                currency={currency}
+                startingBalance={opening}
+                inPercent={inPercent}
+              />
             </ChartContainer>
 
             <ChartContainer

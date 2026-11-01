@@ -49,6 +49,9 @@ export const shell: Translation<typeof en> = {
   'header.logTradeTitle': 'Registrar una operación (N)',
   'header.logTradeLabel': 'Registrar una operación',
   'header.logTrade': 'Registrar',
+  'header.hideMoney': 'Ocultar importes',
+  'header.hideMoneyTitle': 'Ocultar importes, para una captura sin dinero a la vista',
+  'header.moneyHidden': 'Los importes están ocultos: mostrarlos',
 
   'search.open': 'Abrir búsqueda',
   'search.placeholder': 'Busca símbolos, etiquetas, notas, setups',

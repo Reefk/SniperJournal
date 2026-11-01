@@ -484,6 +484,11 @@ automatic updates, so a broken one stays broken on their phones.
 4. If you change the shape of the journal, update `normalize()` in
    `src/lib/journal.ts` so existing journals still load.
 5. Keep it offline. The app makes no network requests and keeps no telemetry.
+6. Write every amount of money on screen with `formatMoney` (or
+   `formatAxisMoney`, which uses it) from `src/lib/format.ts`. Privacy mode
+   (the eye in the header) hides amounts there, so an amount written any
+   other way would still show. `tests/privacy-views.test.ts` looks for a `$`
+   on each page with amounts hidden.
 
 Built with Next.js 16, React 19, TypeScript, Tailwind CSS 4, Recharts, Lucide
 icons, Capacitor 8 and Tauri 2.

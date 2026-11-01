@@ -1,14 +1,20 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import {
   formatAxisMoney,
+  formatAxisPct,
   formatDate,
+  formatMoney,
   formatMonthKey,
   formatNumber,
   formatPct,
   formatPrice,
   formatRatio,
   formatShortDate,
+  formatSignedPct,
   formatTime,
+  HIDDEN_MONEY,
+  isMoneyHidden,
+  setMoneyHidden,
   wholePct,
 } from '@/lib/format';
 
@@ -73,6 +79,56 @@ describe('formatPct', () => {
   it('shows a dash for what is not a number', () => {
     expect(formatPct(12.345)).toBe('12.3%');
     expect(formatPct(Number.NaN)).toBe('—');
+  });
+});
+
+describe('formatSignedPct', () => {
+  it('writes a change with its sign, and none where nothing is left after rounding', () => {
+    expect(formatSignedPct(4.25)).toBe('+4.3%');
+    expect(formatSignedPct(-0.8)).toBe('-0.8%');
+    expect(formatSignedPct(0)).toBe('0.0%');
+    // -0.04 rounds to nothing: no minus on a 0.0
+    expect(formatSignedPct(-0.04)).toBe('0.0%');
+    expect(formatSignedPct(12.5, 0)).toBe('+13%');
+    expect(formatSignedPct(Number.NaN)).toBe('—');
+  });
+});
+
+describe('formatAxisPct', () => {
+  it('writes a tick of a % axis with as few decimals as it needs, up to 3', () => {
+    expect([0, 5, -10, 2.5, 0.25, 0.125, -7.5].map(formatAxisPct)).toEqual([
+      '0%',
+      '+5%',
+      '-10%',
+      '+2.5%',
+      '+0.25%',
+      '+0.125%',
+      '-7.5%',
+    ]);
+    // a step of 0.025: every tick its own label
+    const ticks = [0, 0.025, 0.05, 0.075, 0.1].map(formatAxisPct);
+    expect(new Set(ticks).size).toBe(ticks.length);
+  });
+});
+
+describe('privacy mode: hidden money', () => {
+  afterEach(() => setMoneyHidden(false));
+
+  it('every amount reads ••• while money is hidden, and comes back as it was', () => {
+    expect(isMoneyHidden()).toBe(false);
+    setMoneyHidden(true);
+    expect(isMoneyHidden()).toBe(true);
+    expect(formatMoney(1234.5)).toBe(HIDDEN_MONEY);
+    expect(formatMoney(-80, 'EUR', { sign: true })).toBe(HIDDEN_MONEY);
+    expect(formatMoney(25_000, 'USD', { compact: true })).toBe(HIDDEN_MONEY);
+    // axis labels go through it too
+    expect(formatAxisMoney(10_000)).toBe(HIDDEN_MONEY);
+    // nothing to show is still a dash, not a hidden amount
+    expect(formatMoney(Number.NaN)).toBe('—');
+    // percentages and R are not money, and show
+    expect(formatPct(12.345)).toBe('12.3%');
+    setMoneyHidden(false);
+    expect(formatMoney(1234.5)).toBe('$1,234.50');
   });
 });
 

@@ -159,6 +159,7 @@ export function cleanSettings(v: unknown, base: Settings): Settings {
     // absent until it is first changed, which reads as off
     countExcludedInBalance: optBool(s.countExcludedInBalance),
     fadedPlaceholders: optBool(s.fadedPlaceholders),
+    hideMoney: optBool(s.hideMoney),
     // absent, or a language this version doesn't speak, reads as English
     language: isLanguage(s.language) ? s.language : undefined,
     // absent reads as the starting list; an empty one is a list with every mistake taken off,

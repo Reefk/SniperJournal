@@ -12,7 +12,7 @@ import {
   YAxis,
 } from 'recharts';
 import type { DayAgg } from '@/lib/stats';
-import { formatAxisMoney, formatShortDate } from '@/lib/format';
+import { formatAxisMoney, formatShortDate, isMoneyHidden } from '@/lib/format';
 import { useChartTheme } from '@/hooks/useChartTheme';
 import { DayTooltip } from './ChartTooltip';
 
@@ -35,6 +35,8 @@ export function DailyPnlChart({ days, currency }: { days: DayAgg[]; currency: st
           tickFormatter={formatShortDate}
         />
         <YAxis
+          // amounts hidden: no axis, rather than ••• at every tick; the bars keep their shape
+          hide={isMoneyHidden()}
           tick={{ fill: theme.axis }}
           tickLine={false}
           axisLine={false}

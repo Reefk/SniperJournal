@@ -56,7 +56,7 @@ export function GlobalSearch() {
       <Button
         size="icon"
         variant="ghost"
-        className="ms-auto md:hidden"
+        className="ms-auto max-md:size-10 md:hidden"
         aria-label={tr('search.open')}
         aria-expanded={phoneOpen}
         onClick={() => {

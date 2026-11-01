@@ -82,6 +82,16 @@ export const dashboard = {
   'dash.equityHint': 'Account balance after every closed trade',
   'dash.currentBalance': 'current balance',
   'dash.currentBalanceExcluded': 'current balance, incl. excluded trades',
+  'dash.privacy.sinceStart': 'change since the range began',
+  'dash.privacy.rTotal': {
+    one: '{r} over {count} trade with a stop',
+    other: '{r} over {count} trades with a stop',
+  },
+  'dash.privacy.netInfo':
+    "Amounts are hidden. This is your net profit as a share of the balance the range began with, and your results in R: each trade's net against the risk its stop set.",
+  'dash.privacy.pctInfo': 'Amounts are hidden. This is your net profit as a share of the balance the range began with.',
+  'dash.privacy.rInfo':
+    "Amounts are hidden. This is your net profit in R: each trade's net against the risk its stop set, added up over the trades with a stop.",
   'dash.start': 'Start',
   'dash.onThisTrade': '{money} on this trade',
   'dash.dayTrades': { one: '{count} trade · {wl}', other: '{count} trades · {wl}' },

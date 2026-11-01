@@ -1,4 +1,4 @@
-import { formatDate, formatMoney } from './format';
+import { formatDate, formatMoney, formatSignedPct } from './format';
 import { tr } from './i18n';
 import type { DayAgg, EquityPoint, SniperScore } from './stats';
 
@@ -13,23 +13,27 @@ import type { DayAgg, EquityPoint, SniperScore } from './stats';
 const lowest = (values: number[]) => values.reduce((a, b) => (b < a ? b : a));
 const highest = (values: number[]) => values.reduce((a, b) => (b > a ? b : a));
 
-/** the equity curve: the balance after every closed trade, from the opening balance */
-export function equitySummary(points: EquityPoint[], currency: string): string {
+/**
+ * the equity curve: the balance after every closed trade, from the opening balance;
+ * `inPercent` for privacy mode's curve, its points already in % (equityInPercent)
+ */
+export function equitySummary(points: EquityPoint[], currency: string, inPercent = false): string {
+  const amount = (v: number) => (inPercent ? formatSignedPct(v, 2) : formatMoney(v, currency));
   const start = points[0];
   const trades = points.slice(1);
   const last = trades.at(-1);
   if (!start || !last) {
-    return tr('summary.equityEmpty', { money: formatMoney(start?.equity ?? 0, currency) });
+    return tr('summary.equityEmpty', { money: amount(start?.equity ?? 0) });
   }
   const values = points.map((p) => p.equity);
   return tr('summary.equity', {
     count: trades.length,
     from: formatDate(trades[0].label),
     to: formatDate(last.label),
-    start: formatMoney(start.equity, currency),
-    end: formatMoney(last.equity, currency),
-    low: formatMoney(lowest(values), currency),
-    high: formatMoney(highest(values), currency),
+    start: amount(start.equity),
+    end: amount(last.equity),
+    low: amount(lowest(values)),
+    high: amount(highest(values)),
   });
 }
 

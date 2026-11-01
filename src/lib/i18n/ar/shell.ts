@@ -45,6 +45,9 @@ export const shell: Translation<typeof en> = {
   'header.logTradeTitle': 'تسجيل صفقة (N)',
   'header.logTradeLabel': 'تسجيل صفقة',
   'header.logTrade': 'تسجيل صفقة',
+  'header.hideMoney': 'إخفاء المبالغ',
+  'header.hideMoneyTitle': 'إخفاء المبالغ، للقطة شاشة لا تظهر فيها أموال',
+  'header.moneyHidden': 'المبالغ مخفية: إظهارها',
 
   'search.open': 'فتح البحث',
   'search.placeholder': 'ابحث في الرموز والوسوم والملاحظات والنماذج',

@@ -85,6 +85,15 @@ describe('normalize: loading a journal', () => {
     expect(parseBackup(JSON.stringify(withSetting(true))).data?.settings.fadedPlaceholders).toBe(true);
   });
 
+  it('privacy mode is off unless set, kept as set, and survives a backup', () => {
+    const withSetting = (value: unknown) => journal({ settings: { ...base, hideMoney: value as boolean } });
+    expect(normalize(journal()).settings.hideMoney).toBeUndefined();
+    expect(normalize(withSetting(true)).settings.hideMoney).toBe(true);
+    expect(normalize(withSetting(false)).settings.hideMoney).toBe(false);
+    expect(normalize(withSetting('yes')).settings.hideMoney).toBeUndefined();
+    expect(parseBackup(JSON.stringify(withSetting(true))).data?.settings.hideMoney).toBe(true);
+  });
+
   it('values of the wrong type are replaced instead of crashing a screen', () => {
     const j = normalize(
       journal({
