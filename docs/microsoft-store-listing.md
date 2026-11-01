@@ -29,6 +29,7 @@ LOG EVERY TRADE PROPERLY
 • Fees, leverage, trading session, playbook setup, tags and notes
 • A screenshot of the chart, saved with the trade: paste it with Ctrl+V or drop the file in
 • Rate your discipline, execution and patience from 1 to 5
+• Mark the mistakes a trade made: an early entry, a moved stop, too big a size, or your own
 • Futures and forex: set the contract multiplier, or enter the P&L by hand
 • Leave the exit empty while a position is open; it stays out of your stats until you close it
 
@@ -39,6 +40,9 @@ SEE WHAT YOUR TRADING IS REALLY DOING
 • Daily P&L chart
 • Sniper Score: seven axes, from win rate and consistency to your own discipline ratings
 • View the last 7, 30 or 90 days, year to date, or all time
+
+MISTAKES AND GOALS
+See what each of your mistakes cost you, against the trades you made without one, and your share of clean trades this month against last month. Set your own goals, the ones you control on the day first (rules kept, clean trades, trades with a stop), then results, and the Dashboard shows each one against its target, with the last 8 weeks.
 
 PERFORMANCE CALENDAR
 Every day's net P&L at a glance. Click a day to see the trades behind the number.
@@ -54,13 +58,17 @@ TRADES, FILTERS AND REPORTS
 • Add the same details to many trades at once
 • Merge partial exits back into one position, with the P&L exact to the cent
 • Exclude a trade from the statistics without deleting it
-• Reports month by month and by symbol, setup and weekday, ready to print
+• Rename, merge or delete a tag on every trade at once, and sort your tags into groups of your own
+• Reports month by month and by symbol, setup, weekday and tag group, with green days and the recovery factor, ready to print
 
 IMPORT FROM YOUR BROKER
-Import a CSV or Excel export and preview exactly what was understood before anything is added. The exports of 30 trading platforms import as they come, from NinjaTrader, Tradovate and TopstepX to Interactive Brokers, thinkorswim, MetaTrader and Binance, and many other brokers' files are understood too. Importing your history again leaves out the trades already in your journal, and a file that closes a trade you logged as open finishes it. Export your trades to CSV at any time.
+Import a CSV or Excel export and preview exactly what was understood before anything is added. The exports of 30 trading platforms import as they come, from NinjaTrader, Tradovate and TopstepX to Interactive Brokers, thinkorswim, MetaTrader and Binance, and many other brokers' files are understood too. Importing your history again leaves out the trades already in your journal, and a file that closes a trade you logged as open finishes it. A file without fees can be given a fee per trade or per contract before it comes in. Export your trades to CSV at any time.
 
 SEVERAL ACCOUNTS
 Keep a live account, a prop firm challenge and a practice account apart, or view them all together.
+
+IN YOUR LANGUAGE
+Use the app in English, Spanish (Español), Russian (Русский), Arabic (العربية) or Hindi (हिन्दी), and switch at any time in Settings. Numbers and dates are written the way your language writes them, and Arabic reads right to left. Your own setups, tags and notes stay exactly as you typed them.
 
 MADE FOR THE KEYBOARD
 Press N to log a trade, Ctrl+K to search everything, and Ctrl+Enter to save.
@@ -88,39 +96,30 @@ Sniper Journal is a record-keeping and analysis tool. It does not place trades, 
 ### What's new in this version
 
 1,500 characters max. Left empty for the first submission (Microsoft's own
-advice). For 1.1.1, the first Store release since 1.0 (1.1 never went to the
-Store on its own):
+advice). For 1.2.0 (the Store has 1.1.1.0):
 
 ```
-IMPORT FROM 30 PLATFORMS
-• Exports of 30 trading platforms import as they come, from NinjaTrader, Tradovate and TopstepX to Interactive Brokers, thinkorswim, MetaTrader and Binance, and the preview names the platform it recognised
-• Excel workbooks (.xlsx) import as well as CSV files
-• Importing a file again leaves out the trades already in your journal
-• A file that closes a trade you logged as open finishes it, the oldest open trade first
-• Spreads, partial closes, rebates and fees are read more accurately
-• Log a trade can take trades from a CSV file too
+FIVE LANGUAGES
+• Use the app in English, Spanish, Russian, Arabic or Hindi: choose on the first screen, or any time in Settings
+• Numbers and dates are written the way each language writes them, and Arabic reads right to left
+• Your own setups, tags and notes stay exactly as you typed them
 
-PLAYBOOK RULES
-Tick each rule of a trade's setup as kept or broken. Insights then shows what breaking your rules cost, comparing each setup with itself.
+MISTAKES, APART FROM TAGS
+Tap the mistakes a trade made, such as an early entry or a moved stop. Reports shows what each one cost you against your clean trades.
+
+YOUR TAGS, TIDIED
+Rename, merge or delete a tag on every trade at once, merge look-alikes such as "fomo" and "FOMO", and sort tags into groups of your own, each with its table in Reports.
+
+GOALS
+Set your own targets, the ones you control on the day first, then results. The Dashboard shows each against its target, with the last 8 weeks.
+
+FEES WHEN IMPORTING
+A file with no fees, such as Tradovate's exports, can be given a fee per trade or per contract in the preview, remembered for the account.
 
 ALSO NEW
-• Sniper Score: steadiness now counts only for steady gains, so steadily losing days no longer raise your score
-• A new logo
-• Faded placeholders, as an option in Settings
-• Screen readers hear when the journal is saved, and each chart is described in words
-• A journal saved by a newer version of the app is never opened or written over
-• Date fields and menus in English, whatever language Windows is in
-• Clearer numbers: amounts under $1,000 show both decimals ($103.80, not $103.8), and the equity curve's labels tell its levels apart
-• Many smaller fixes to wording and numbers
-```
-
-For the next release after 1.1.1, so far:
-
-```
-FEES WHEN IMPORTING
-• A file with no fees, such as Tradovate's exports, comes in with fees of 0, and the preview lets you add a fee per trade or per contract, each side, with the total and the net P&L after it. The fee is remembered for the account
-• A file with fees keeps them, and the preview shows what they come to; if they are wrong, charge your own in their place
-• Add details can set a fee per contract too, by each trade's size
+• Reports: green days, the best day's share of your green days' profit, net without the best day, and the recovery factor
+• On the calendar, an amount too long for its day takes two lines instead of being cut off
+• Many smaller fixes
 ```
 
 ### Product features (up to 20, 200 characters each; the Store adds the bullets)
@@ -133,9 +132,13 @@ Performance calendar with every day's net P&L
 Insights found in your own trades, explained in plain language
 A playbook of your setups and their rules, with how each one performs and what breaking a rule cost
 Import the exports of 30 trading platforms, CSV or Excel, with a preview before anything is added
-Reports by month, symbol, setup and weekday, ready to print or export to CSV
+Reports by month, symbol, setup, weekday and tag group, ready to print or export to CSV
+Mark each trade's mistakes and see what each one cost you against your clean trades
+Goals of your own, tracked on the Dashboard against their targets week by week
+Rename, merge and group your tags across every trade at once
 Several accounts, kept apart or viewed together
 Rate your discipline, execution and patience on every trade
+In English, Spanish, Russian, Arabic or Hindi, with Arabic right to left
 Your journal is a plain file in your Documents folder, and nothing is uploaded
 A daily backup, kept automatically for the last 30 days
 No account, no ads, no tracking, and it works offline
@@ -146,7 +149,7 @@ Dark and light themes
 ### Short description (1,000 max; the Store shows the first 270)
 
 ```
-A private trading journal for your PC. Log every trade, then see your real win rate, profit factor, expectancy and equity curve. No account, no cloud, no ads: your journal is a file in your Documents folder and never leaves your computer.
+A private trading journal for your PC. Log every trade, then see your real win rate, profit factor, expectancy and equity curve. No account, no cloud, no ads: your journal is a file in your Documents folder and never leaves your computer. In five languages.
 ```
 
 ### Screenshots (desktop: PNG, 1366 × 768 to 3840 × 2160, up to 10)
