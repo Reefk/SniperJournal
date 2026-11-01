@@ -172,6 +172,11 @@ export function formatR(value: number): string {
   return isolate(`${value >= 0 ? '+' : ''}${decimalMark(value.toFixed(2))}R`);
 }
 
+/** a tick of an R axis in half-R steps, with no decimals it doesn't need: -2R, -1.5R, 0R, +4R */
+export function formatAxisR(value: number): string {
+  return isolate(`${value > 0 ? '+' : ''}${decimalMark(String(value))}R`);
+}
+
 const MONTHS_LONG = [
   'January',
   'February',

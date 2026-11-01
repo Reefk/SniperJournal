@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   formatAxisMoney,
   formatAxisPct,
+  formatAxisR,
   formatDate,
   formatMoney,
   formatMonthKey,
@@ -108,6 +109,12 @@ describe('formatAxisPct', () => {
     // a step of 0.025: every tick its own label
     const ticks = [0, 0.025, 0.05, 0.075, 0.1].map(formatAxisPct);
     expect(new Set(ticks).size).toBe(ticks.length);
+  });
+});
+
+describe('formatAxisR', () => {
+  it('writes a tick of an R axis with no decimals it does not need, and no sign on 0', () => {
+    expect([-2, -1.5, 0, 0.5, 4].map(formatAxisR)).toEqual(['-2R', '-1.5R', '0R', '+0.5R', '+4R']);
   });
 });
 
