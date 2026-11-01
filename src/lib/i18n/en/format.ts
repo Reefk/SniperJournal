@@ -9,6 +9,7 @@ export const format = {
   'format.minutes': '{m}m',
   'format.hours': '{h}h',
   'format.hoursMinutes': '{h}h {m}m',
+  'format.days': '{d}d',
   'format.daysHours': '{d}d {h}h',
   'format.bytes': { one: '{count} byte', other: '{count} bytes' },
   'format.kb': '{n} KB',

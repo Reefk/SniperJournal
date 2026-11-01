@@ -8,6 +8,7 @@ export const format: Translation<typeof en> = {
   'format.minutes': '{m} min',
   'format.hours': '{h} h',
   'format.hoursMinutes': '{h} h {m} min',
+  'format.days': '{d} d',
   'format.daysHours': '{d} d {h} h',
   'format.bytes': { one: '{count} byte', many: '{count} bytes', other: '{count} bytes' },
   'format.kb': '{n} KB',

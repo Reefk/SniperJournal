@@ -1,5 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { formatBytes, formatDuration, formatMoney, formatPct, formatPrice, formatRatio } from '@/lib/format';
+import {
+  formatAxisDuration,
+  formatBytes,
+  formatDuration,
+  formatMoney,
+  formatPct,
+  formatPrice,
+  formatRatio,
+} from '@/lib/format';
 import { buildInsights, buildSignals } from '@/lib/insights';
 import { rangeStart, splitByRange } from '@/lib/ranges';
 import { computeStats } from '@/lib/stats';
@@ -138,6 +146,16 @@ describe('formatting', () => {
     [-1, '—'],
   ])('durations: %s minutes -> %s', (minutes, expected) => {
     expect(formatDuration(minutes)).toBe(expected);
+  });
+
+  it.each([
+    [1440, '1d'],
+    [10080, '7d'],
+    [1500, '1d 1h'],
+    [60, '1h'],
+    [0.5, 'under a minute'],
+  ])('durations on a chart axis: %s minutes -> %s', (minutes, expected) => {
+    expect(formatAxisDuration(minutes)).toBe(expected);
   });
 
   it.each([

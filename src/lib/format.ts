@@ -267,6 +267,12 @@ export function formatTime(value: string): string {
   return time || '--:--';
 }
 
+/** a hold time marked on a chart's axis, where whole days read "1d", not "1d 0h" */
+export function formatAxisDuration(minutes: number): string {
+  if (minutes >= 1440 && minutes % 1440 === 0) return tr('format.days', { d: minutes / 1440 });
+  return formatDuration(minutes);
+}
+
 export function formatDuration(minutes: number | null | undefined): string {
   if (minutes == null || !Number.isFinite(minutes) || minutes < 0) return '—';
   if (minutes < 1) return tr('format.underMinute');
