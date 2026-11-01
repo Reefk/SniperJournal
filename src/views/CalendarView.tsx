@@ -19,21 +19,7 @@ import { PnlValue, SideBadge } from '@/components/ui/StatusBadge';
 import { Modal } from '@/components/ui/Modal';
 import { rich } from '@/components/ui/Rich';
 import { CellAmount } from '@/components/ui/CellAmount';
-
-/** Monday-first grid cells, including the padding days from adjacent months */
-function monthGrid(year: number, month: number): Array<{ key: string; inMonth: boolean; day: number }> {
-  const first = new Date(year, month, 1);
-  const offset = (first.getDay() + 6) % 7; // shift Sunday to the end
-  const cells: Array<{ key: string; inMonth: boolean; day: number }> = [];
-  const start = new Date(year, month, 1 - offset);
-  for (let i = 0; i < 42; i++) {
-    const d = new Date(start);
-    d.setDate(start.getDate() + i);
-    cells.push({ key: dateKey(d), inMonth: d.getMonth() === month, day: d.getDate() });
-  }
-  // trim a trailing week that belongs entirely to the next month
-  return cells.slice(0, cells.slice(35).every((c) => !c.inMonth) ? 35 : 42);
-}
+import { monthGrid } from '@/lib/calendar';
 
 export function CalendarView() {
   const { accountTrades, data, activeLabel } = useJournal();
