@@ -6,17 +6,7 @@ import type { Trade } from '@/lib/types';
 import { useJournal } from '@/store/JournalProvider';
 import { useUI } from '@/store/UIProvider';
 import { aggregateDays, computeStats } from '@/lib/stats';
-import {
-  breakableAmount,
-  formatDate,
-  formatMoney,
-  formatMonthKey,
-  formatPct,
-  monthName,
-  numberAndUnit,
-  weekdayName,
-  wholeAndCents,
-} from '@/lib/format';
+import { formatDate, formatMoney, formatMonthKey, formatPct, monthName, weekdayName } from '@/lib/format';
 import { isClosed, netPnl, tradeDay } from '@/lib/trade-math';
 import { cn, dateKey, pad2 } from '@/lib/utils';
 import { realised } from '@/store/selectors';
@@ -28,6 +18,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { PnlValue, SideBadge } from '@/components/ui/StatusBadge';
 import { Modal } from '@/components/ui/Modal';
 import { rich } from '@/components/ui/Rich';
+import { CellAmount } from '@/components/ui/CellAmount';
 
 /** Monday-first grid cells, including the padding days from adjacent months */
 function monthGrid(year: number, month: number): Array<{ key: string; inMonth: boolean; day: number }> {
@@ -42,34 +33,6 @@ function monthGrid(year: number, month: number): Array<{ key: string; inMonth: b
   }
   // trim a trailing week that belongs entirely to the next month
   return cells.slice(0, cells.slice(35).every((c) => !c.inMonth) ? 35 : 42);
-}
-
-/**
- * A day's amount, on two lines where its cell is too narrow for one: before a
- * unit the language writes after the number ("тыс. $"), or else before the
- * cents ("+$740" over ".31"). On a phone a unit always has a line of its own.
- */
-function CellAmount({ text, phone = false }: { text: string; phone?: boolean }) {
-  const unit = numberAndUnit(text);
-  if (unit && phone) {
-    return (
-      <>
-        {unit[0]}
-        <br />
-        {unit[1]}
-      </>
-    );
-  }
-  if (unit) return breakableAmount(text);
-  const cents = wholeAndCents(text);
-  if (!cents) return text;
-  return (
-    <>
-      {cents[0]}
-      <wbr />
-      {cents[1]}
-    </>
-  );
 }
 
 export function CalendarView() {
