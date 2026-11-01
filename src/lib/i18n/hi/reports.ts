@@ -98,6 +98,8 @@ export const reports: Translation<typeof en> = {
   'rep.months.empty': 'इस अवधि में कोई बंद ट्रेड नहीं।',
   'rep.month': 'महीना',
   'rep.net': 'शुद्ध',
+  'rep.balance': 'बैलेंस',
+  'rep.netSoFar': 'अब तक का शुद्ध',
   'rep.bySymbol': 'सबसे अच्छे और सबसे बुरे सिंबल',
   'rep.bySetup': 'प्लेबुक सेटअप',
   'rep.byWeekday': 'हफ़्ते का दिन',

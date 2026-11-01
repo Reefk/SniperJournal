@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { ArrowDown, ArrowUp, Download, FileBarChart, Printer } from 'lucide-react';
 import { useJournal } from '@/store/JournalProvider';
 import { useUI } from '@/store/UIProvider';
@@ -68,7 +68,14 @@ export function ReportsView() {
   );
   const closed = useMemo(() => statTrades(inRange), [inRange]);
 
-  const months = useMemo(() => monthRows(inRange), [inRange]);
+  // the range's months, each with the balance it left: from all the account's trades, whatever the range
+  const countExcluded = data.settings.countExcludedInBalance === true;
+  const months = useMemo(
+    () => monthRows(inRange, accountTrades, startingBalance, countExcluded),
+    [inRange, accountTrades, startingBalance, countExcluded],
+  );
+  // with no starting balance, what the months add up to is no balance: the net so far
+  const balanceLabel = startingBalance > 0 ? tr('rep.balance') : tr('rep.netSoFar');
 
   const bySymbol = useMemo(() => groupTrades(closed, (t) => t.symbol), [closed]);
   const bySetup = useMemo(() => {
@@ -252,29 +259,46 @@ export function ReportsView() {
                 <th className="px-2 py-2 text-end font-medium md:px-3">{tr('rep.trades')}</th>
                 <th className="px-2 py-2 text-end font-medium md:px-3">{tr('rep.winRate')}</th>
                 <th className="px-2 py-2 text-end font-medium md:px-3">{tr('rep.net')}</th>
+                <th className="px-2 py-2 text-end font-medium max-md:hidden md:px-3">{balanceLabel}</th>
               </tr>
             </thead>
             <tbody>
               {months.map((month) => {
                 const [y, m] = month.key.split('-').map(Number);
+                const balance = breakableAmount(formatMoney(month.balance, currency, { sign: startingBalance <= 0 }));
                 return (
-                  <tr key={month.key} className="border-t border-line">
-                    <td className="px-2 py-2 text-fg md:px-3">
-                      {monthName(m - 1, 'short')} {y}
-                    </td>
-                    <td className="num px-2 py-2 text-end text-muted md:px-3">{month.trades}</td>
-                    <td className="num px-2 py-2 text-end text-muted md:px-3">
-                      {formatPct((month.wins / month.trades) * 100, 0)}
-                    </td>
-                    <td
-                      className={cn(
-                        'num px-2 py-2 text-end font-medium md:px-3',
-                        month.net > 0 ? 'text-profit' : month.net < 0 ? 'text-loss' : 'text-muted',
-                      )}
-                    >
-                      {breakableAmount(formatMoney(month.net, currency, { sign: true }))}
-                    </td>
-                  </tr>
+                  <Fragment key={month.key}>
+                    <tr className="border-t border-line">
+                      <td className="px-2 py-2 text-fg md:px-3">
+                        {monthName(m - 1, 'short')} {y}
+                      </td>
+                      <td className="num px-2 py-2 text-end text-muted md:px-3">{month.trades}</td>
+                      <td className="num px-2 py-2 text-end text-muted md:px-3">
+                        {formatPct((month.wins / month.trades) * 100, 0)}
+                      </td>
+                      <td
+                        className={cn(
+                          'num px-2 py-2 text-end font-medium md:px-3',
+                          month.net > 0 ? 'text-profit' : month.net < 0 ? 'text-loss' : 'text-muted',
+                        )}
+                      >
+                        {breakableAmount(formatMoney(month.net, currency, { sign: true }))}
+                        {/* read with the month on a phone, where the line under it is only for the eye */}
+                        <span className="sr-only md:hidden">
+                          {' '}
+                          {balanceLabel} {balance}
+                        </span>
+                      </td>
+                      <td className="num px-2 py-2 text-end text-fg max-md:hidden md:px-3">{balance}</td>
+                    </tr>
+                    {/* a phone has no room for a fifth column: the balance on a line of its own, under the net;
+                        a screen reader reads it in the net's cell, so the table keeps a row a month */}
+                    <tr className="md:hidden" aria-hidden>
+                      <td colSpan={4} className="px-2 pb-2 text-end text-xs text-muted">
+                        {balanceLabel} <span className="num text-fg">{balance}</span>
+                      </td>
+                    </tr>
+                  </Fragment>
                 );
               })}
             </tbody>

@@ -93,6 +93,8 @@ export const reports: Translation<typeof en> = {
   'rep.months.empty': 'لا صفقات مغلقة في هذه الفترة.',
   'rep.month': 'الشهر',
   'rep.net': 'الصافي',
+  'rep.balance': 'الرصيد',
+  'rep.netSoFar': 'الصافي المتراكم',
   'rep.bySymbol': 'أفضل الرموز وأسوؤها',
   'rep.bySetup': 'نماذج دليل التداول',
   'rep.byWeekday': 'يوم الأسبوع',

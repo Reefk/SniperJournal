@@ -124,6 +124,8 @@ export const reports: Translation<typeof en> = {
   'rep.months.empty': 'No hay operaciones cerradas en este periodo.',
   'rep.month': 'Mes',
   'rep.net': 'Neto',
+  'rep.balance': 'Saldo',
+  'rep.netSoFar': 'Neto acumulado',
   'rep.bySymbol': 'Mejores y peores símbolos',
   'rep.bySetup': 'Setups del Playbook',
   'rep.byWeekday': 'Día de la semana',

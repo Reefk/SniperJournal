@@ -105,6 +105,10 @@ export const reports = {
   'rep.months.empty': 'No closed trades in this range.',
   'rep.month': 'Month',
   'rep.net': 'Net',
+  // the month table's last column: the starting balance plus the net of every trade closed by the month's end
+  'rep.balance': 'Balance',
+  // the same with no starting balance set: the net of every trade closed by the month's end
+  'rep.netSoFar': 'Net so far',
   'rep.bySymbol': 'Best and worst symbols',
   'rep.bySetup': 'Playbook setups',
   'rep.byWeekday': 'Day of the week',

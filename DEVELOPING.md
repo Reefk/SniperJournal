@@ -180,6 +180,7 @@ data/               your journal and its backups, created at runtime
 | Hold time against result, and when it compares     | `src/lib/hold.ts`                                                                   |
 | The weekday and hour grid on Reports               | `src/lib/heatmap.ts`, `src/components/reports/WeekHourHeatmap.tsx`                  |
 | The Calendar's grid, week totals and month line    | `src/lib/calendar.ts`                                                               |
+| Reports' month table and its balance column        | `src/lib/months.ts`                                                                 |
 | Chart image upload, scaling and storage            | `src/lib/screenshots.ts`, `src/app/api/screenshot/`                                 |
 | The app icon and the store artwork                 | `assets/logo.png` and `assets/banner.png`, then `npm run icons` redraws all of them |
 | The trade entry form                               | `src/components/trades/TradeFormModal.tsx`                                          |

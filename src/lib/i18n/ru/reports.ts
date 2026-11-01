@@ -135,6 +135,8 @@ export const reports: Translation<typeof en> = {
   'rep.months.empty': 'В этом периоде нет закрытых сделок.',
   'rep.month': 'Месяц',
   'rep.net': 'Итог',
+  'rep.balance': 'Баланс',
+  'rep.netSoFar': 'Накопленный итог',
   'rep.bySymbol': 'Лучшие и худшие тикеры',
   'rep.bySetup': 'Сетапы плейбука',
   'rep.byWeekday': 'День недели',

@@ -514,6 +514,17 @@ async function journey() {
   check('weekday and hour: on a PC one table, a row for each weekday', JSON.stringify(heatShown) === '[5]', heatShown);
   const mondayAt9 = await b.run(`${heatCard}.querySelector('tbody tr td')?.innerText ?? ''`);
   check(`Monday 09:00 holds AAPL's +${money(99)}, one trade`, /^\+\$99\.00\s*1×$/.test(mondayAt9), mondayAt9);
+  // all four in March, from a starting balance of 10,000
+  // the first row as a PC shows it (a phone's balance line under it, and what a phone reads out in its net, are hidden here)
+  const marchRow = await b.run(
+    `[...${reportCard('Month by month')}.querySelector('tbody tr').cells].map((td) => td.innerText.trim())`,
+  );
+  check(
+    `month by month: March, 4 trades, +${money(111)}, leaving the balance at ${money(10111)}`,
+    JSON.stringify(marchRow) === JSON.stringify(['Mar 2026', '4', '75%', `+${money(111)}`, money(10111)]),
+    marchRow,
+  );
+
   // ---- 3b''. the Calendar: the weeks, and the line under the month ----------
   await b.run(`$nav('/calendar'); true`);
   await b.until(`!!document.querySelector('.grid-cols-7 > button:enabled')`, 'calendar');
@@ -2270,6 +2281,7 @@ async function journey() {
     const unsure = [];
     const broken = [];
     const bubbles = [];
+    const monthTable = [];
     let tips = 0;
     const found = () => wide.length + cut.length + unsure.length + broken.length + bubbles.length;
     // a laptop, the narrowest the desktop layout gets (narrower windows scroll it), two phones
@@ -2287,6 +2299,21 @@ async function journey() {
           const days = await b.run(`$days()`);
           cut.push(...days.off.map((t) => `${path} at ${width}: ${t}`));
           if (!days.amounts) unsure.push(`no day's amount on ${path} at ${width}`);
+        }
+        if (path === '/reports') {
+          // the month table's balance: a column from 768 px, a line under each month below
+          const months = await b.run(`(() => {
+            const table = document.querySelector('main tbody tr[aria-hidden]')?.closest('table');
+            const shown = (el) => !!el && getComputedStyle(el).display !== 'none';
+            return table && {
+              column: shown(table.querySelector('tbody tr:not([aria-hidden])')?.cells[4]),
+              line: shown(table.querySelector('tbody tr[aria-hidden]')),
+            };
+          })()`);
+          const phone = width < 768;
+          if (!months) monthTable.push(`no month table at ${width}`);
+          else if (months.column === phone || months.line !== phone)
+            monthTable.push(`at ${width}: a balance column ${months.column}, a line under the month ${months.line}`);
         }
         if (path === '/') {
           const radar = await b.run(`$radar()`);
@@ -2332,6 +2359,11 @@ async function journey() {
       `${name}: every info bubble, when shown, is whole: inside the window and on top, at 1366, 1180, 412 and 360 px`,
       bubbles.length === 0 && tips > 0,
       [...bubbles.slice(0, 8), `bubbles looked at: ${tips}`].join('; '),
+    );
+    check(
+      `${name}: Reports' month table has its balance as a column at 1366 and 1180 px, as a line under each month at 412 and 360 px`,
+      monthTable.length === 0,
+      monthTable.join('; '),
     );
 
     if (code !== 'ar') continue;
