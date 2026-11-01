@@ -94,6 +94,29 @@ export const reports: Translation<typeof en> = {
   },
   'rep.heat.empty': 'इस अवधि के किसी ट्रेड में खुलने का समय नहीं है।',
 
+  'rep.spread': 'R का फैलाव',
+  'rep.spread.subtitle':
+    'हर R के आसपास कितने ट्रेड खत्म हुए, आधे R के कदमों में: {low} या उससे खराब से लेकर {high} या उससे बेहतर तक।',
+  'rep.spread.bar': { one: '{r}: {count} ट्रेड', other: '{r}: {count} ट्रेड' },
+  'rep.spread.low': '{r} या उससे खराब',
+  'rep.spread.high': '{r} या उससे बेहतर',
+  'rep.spread.top': 'आपके सबसे अच्छे {tenth} ट्रेड ({of} में से {count}) ने आपके शुद्ध नतीजे का {share} कमाया।',
+  'rep.spread.split': {
+    one: 'आपके सबसे अच्छे {tenth} ट्रेड ({of} में से {top}) ने {best} कमाया; बाकी {count} ट्रेड का नतीजा {rest} रहा।',
+    other:
+      'आपके सबसे अच्छे {tenth} ट्रेड ({of} में से {top}) ने {best} कमाया; बाकी {count} ट्रेडों का नतीजा {rest} रहा।',
+  },
+  'rep.spread.past': {
+    one: 'घाटे वाला {count} ट्रेड {stop} से आगे गया: स्टॉप से {beyond} आगे।',
+    other: 'घाटे वाले {count} ट्रेड {stop} से आगे गए: कुल मिलाकर स्टॉप से {beyond} आगे।',
+  },
+  'rep.spread.held': 'कोई घाटा {stop} से चौथाई R से ज़्यादा आगे नहीं गया: आपके स्टॉप टिके रहे।',
+  'rep.spread.noStop': {
+    one: 'बिना स्टॉप वाला {count} ट्रेड बार में शामिल नहीं है: उसका कोई R नहीं है।',
+    other: 'बिना स्टॉप वाले {count} ट्रेड बार में शामिल नहीं हैं: उनका कोई R नहीं है।',
+  },
+  'rep.spread.empty': 'इस अवधि में कोई बंद ट्रेड नहीं।',
+
   'rep.months': 'महीनेवार',
   'rep.months.empty': 'इस अवधि में कोई बंद ट्रेड नहीं।',
   'rep.month': 'महीना',

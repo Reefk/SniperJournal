@@ -101,6 +101,33 @@ export const reports = {
   },
   'rep.heat.empty': 'No trade in this range has a time it was opened.',
 
+  // how many trades ended near each R (src/lib/r-spread.ts); low and high: the bars' ends, "-2R" and "+4R"
+  'rep.spread': 'R spread',
+  'rep.spread.subtitle': 'How many trades ended near each R, in half-R steps, from {low} or worse to {high} or better.',
+  // a bar, read out and on hover: "-1.5R: 3 trades"; at an end r is rep.spread.low or .high
+  'rep.spread.bar': { one: '{r}: {count} trade', other: '{r}: {count} trades' },
+  'rep.spread.low': '{r} or worse',
+  'rep.spread.high': '{r} or better',
+  // the best tenth of the range's trades by net, R or not: tenth is "10%", count of of "2 of 15", share "74%"
+  'rep.spread.top': 'Your best {tenth} of trades ({count} of {of}) made {share} of your net.',
+  // the same when the others lost money or the net is at or below zero; count: the others, best and rest: amounts
+  'rep.spread.split': {
+    one: 'Your best {tenth} of trades ({top} of {of}) made {best}; the other {count} trade came to {rest}.',
+    other: 'Your best {tenth} of trades ({top} of {of}) made {best}; the other {count} trades came to {rest}.',
+  },
+  // losses that ended at -1.25R or worse, so fees on a stop that held don't count; stop: "-1R";
+  // beyond: how much further they went, as a distance: "5.60R"
+  'rep.spread.past': {
+    one: '{count} loss went past {stop}: {beyond} more than its stop allowed.',
+    other: '{count} losses went past {stop}: {beyond} more than their stops allowed, in all.',
+  },
+  'rep.spread.held': 'No loss went more than a quarter R past {stop}: your stops held.',
+  'rep.spread.noStop': {
+    one: '{count} trade with no stop is left out of the bars: it has no R.',
+    other: '{count} trades with no stop are left out of the bars: they have no R.',
+  },
+  'rep.spread.empty': 'No closed trade in this range.',
+
   'rep.months': 'Month by month',
   'rep.months.empty': 'No closed trades in this range.',
   'rep.month': 'Month',

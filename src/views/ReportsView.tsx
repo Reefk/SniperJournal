@@ -10,6 +10,7 @@ import { rangeOptions, splitByRange, type RangeKey } from '@/lib/ranges';
 import { tradesToCsv } from '@/lib/csv';
 import {
   breakableAmount,
+  formatAxisR,
   formatDate,
   formatDuration,
   formatMoney,
@@ -37,6 +38,7 @@ import { FORM_R_MIN, recentForm, type FormLine, type RecentForm } from '@/lib/re
 import { defaultHoldMeasure, HOLD_SIDE_MIN, holdReport, type HoldMeasure, type HoldReport } from '@/lib/hold';
 import { weekdayHourHeatmap } from '@/lib/heatmap';
 import { monthRows } from '@/lib/months';
+import { rSpread, SPREAD_HIGH, SPREAD_LOW } from '@/lib/r-spread';
 import { statTrades } from '@/lib/trade-math';
 import { cn, dateKey, downloadFile, parseLocal } from '@/lib/utils';
 import { storage } from '@/lib/storage';
@@ -50,6 +52,7 @@ import { InfoTip } from '@/components/ui/InfoTip';
 import { rich } from '@/components/ui/Rich';
 import { HoldTimeChart } from '@/components/reports/HoldTimeChart';
 import { WeekHourHeatmap } from '@/components/reports/WeekHourHeatmap';
+import { RSpreadChart } from '@/components/reports/RSpreadChart';
 
 export function ReportsView() {
   const { accountTrades, data, startingBalance, activeLabel } = useJournal();
@@ -108,6 +111,7 @@ export function ReportsView() {
   const holdMeasure = pickedMeasure?.account === data.activeAccountId ? pickedMeasure.measure : fittingMeasure;
   const hold = useMemo(() => holdReport(inRange, holdMeasure), [inRange, holdMeasure]);
   const heat = useMemo(() => weekdayHourHeatmap(inRange), [inRange]);
+  const spread = useMemo(() => rSpread(inRange), [inRange]);
   const byGroup = useMemo(
     () => groupTables(inRange, data.settings.tagGroups ?? []),
     [inRange, data.settings.tagGroups],
@@ -246,64 +250,76 @@ export function ReportsView() {
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-        <ChartContainer
-          title={tr('rep.months')}
-          bodyClassName="px-2 pb-3 pt-1"
-          empty={months.length === 0}
-          emptyText={tr('rep.months.empty')}
-        >
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-xs text-muted">
-                <th className="px-2 py-2 text-start font-medium md:px-3">{tr('rep.month')}</th>
-                <th className="px-2 py-2 text-end font-medium md:px-3">{tr('rep.trades')}</th>
-                <th className="px-2 py-2 text-end font-medium md:px-3">{tr('rep.winRate')}</th>
-                <th className="px-2 py-2 text-end font-medium md:px-3">{tr('rep.net')}</th>
-                <th className="px-2 py-2 text-end font-medium max-md:hidden md:px-3">{balanceLabel}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {months.map((month) => {
-                const [y, m] = month.key.split('-').map(Number);
-                const balance = breakableAmount(formatMoney(month.balance, currency, { sign: startingBalance <= 0 }));
-                return (
-                  <Fragment key={month.key}>
-                    <tr className="border-t border-line">
-                      <td className="px-2 py-2 text-fg md:px-3">
-                        {monthName(m - 1, 'short')} {y}
-                      </td>
-                      <td className="num px-2 py-2 text-end text-muted md:px-3">{month.trades}</td>
-                      <td className="num px-2 py-2 text-end text-muted md:px-3">
-                        {formatPct((month.wins / month.trades) * 100, 0)}
-                      </td>
-                      <td
-                        className={cn(
-                          'num px-2 py-2 text-end font-medium md:px-3',
-                          month.net > 0 ? 'text-profit' : month.net < 0 ? 'text-loss' : 'text-muted',
-                        )}
-                      >
-                        {breakableAmount(formatMoney(month.net, currency, { sign: true }))}
-                        {/* read with the month on a phone, where the line under it is only for the eye */}
-                        <span className="sr-only md:hidden">
-                          {' '}
-                          {balanceLabel} {balance}
-                        </span>
-                      </td>
-                      <td className="num px-2 py-2 text-end text-fg max-md:hidden md:px-3">{balance}</td>
-                    </tr>
-                    {/* a phone has no room for a fifth column: the balance on a line of its own, under the net;
+        <div className="space-y-4">
+          <ChartContainer
+            title={tr('rep.months')}
+            bodyClassName="px-2 pb-3 pt-1"
+            empty={months.length === 0}
+            emptyText={tr('rep.months.empty')}
+          >
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-xs text-muted">
+                  <th className="px-2 py-2 text-start font-medium md:px-3">{tr('rep.month')}</th>
+                  <th className="px-2 py-2 text-end font-medium md:px-3">{tr('rep.trades')}</th>
+                  <th className="px-2 py-2 text-end font-medium md:px-3">{tr('rep.winRate')}</th>
+                  <th className="px-2 py-2 text-end font-medium md:px-3">{tr('rep.net')}</th>
+                  <th className="px-2 py-2 text-end font-medium max-md:hidden md:px-3">{balanceLabel}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {months.map((month) => {
+                  const [y, m] = month.key.split('-').map(Number);
+                  const balance = breakableAmount(formatMoney(month.balance, currency, { sign: startingBalance <= 0 }));
+                  return (
+                    <Fragment key={month.key}>
+                      <tr className="border-t border-line">
+                        <td className="px-2 py-2 text-fg md:px-3">
+                          {monthName(m - 1, 'short')} {y}
+                        </td>
+                        <td className="num px-2 py-2 text-end text-muted md:px-3">{month.trades}</td>
+                        <td className="num px-2 py-2 text-end text-muted md:px-3">
+                          {formatPct((month.wins / month.trades) * 100, 0)}
+                        </td>
+                        <td
+                          className={cn(
+                            'num px-2 py-2 text-end font-medium md:px-3',
+                            month.net > 0 ? 'text-profit' : month.net < 0 ? 'text-loss' : 'text-muted',
+                          )}
+                        >
+                          {breakableAmount(formatMoney(month.net, currency, { sign: true }))}
+                          {/* read with the month on a phone, where the line under it is only for the eye */}
+                          <span className="sr-only md:hidden">
+                            {' '}
+                            {balanceLabel} {balance}
+                          </span>
+                        </td>
+                        <td className="num px-2 py-2 text-end text-fg max-md:hidden md:px-3">{balance}</td>
+                      </tr>
+                      {/* a phone has no room for a fifth column: the balance on a line of its own, under the net;
                         a screen reader reads it in the net's cell, so the table keeps a row a month */}
-                    <tr className="md:hidden" aria-hidden>
-                      <td colSpan={4} className="px-2 pb-2 text-end text-xs text-muted">
-                        {balanceLabel} <span className="num text-fg">{balance}</span>
-                      </td>
-                    </tr>
-                  </Fragment>
-                );
-              })}
-            </tbody>
-          </table>
-        </ChartContainer>
+                      <tr className="md:hidden" aria-hidden>
+                        <td colSpan={4} className="px-2 pb-2 text-end text-xs text-muted">
+                          {balanceLabel} <span className="num text-fg">{balance}</span>
+                        </td>
+                      </tr>
+                    </Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          </ChartContainer>
+
+          <ChartContainer
+            title={tr('rep.spread')}
+            subtitle={tr('rep.spread.subtitle', { low: formatAxisR(SPREAD_LOW), high: formatAxisR(SPREAD_HIGH) })}
+            empty={spread.rated + spread.noStop === 0}
+            emptyText={tr('rep.spread.empty')}
+            bodyClassName="px-2 pb-3 pt-1"
+          >
+            <RSpreadChart spread={spread} currency={currency} />
+          </ChartContainer>
+        </div>
 
         <div className="space-y-4">
           <RecentFormCard form={form} />

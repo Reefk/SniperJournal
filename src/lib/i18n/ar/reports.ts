@@ -89,6 +89,20 @@ export const reports: Translation<typeof en> = {
   'rep.heat.noTime': { other: 'صفقات لها تاريخ فقط دون وقت الفتح لم تُحتسب: {count}.' },
   'rep.heat.empty': 'لا صفقة في هذه الفترة لها وقت فتح.',
 
+  'rep.spread': 'توزيع R',
+  'rep.spread.subtitle': 'كم صفقة انتهت قرب كل قيمة R، بخطوات من نصف R، من {low} أو أسوأ إلى {high} أو أفضل.',
+  'rep.spread.bar': { other: '{r} — الصفقات: {count}' },
+  'rep.spread.low': '{r} أو أسوأ',
+  'rep.spread.high': '{r} أو أفضل',
+  'rep.spread.top': 'أفضل {tenth} من صفقاتك ({count} من {of}) حققت {share} من صافي ربحك.',
+  'rep.spread.split': {
+    other: 'أفضل {tenth} من صفقاتك ({top} من {of}) حققت {best}، وبلغت بقية الصفقات {rest} (عددها: {count}).',
+  },
+  'rep.spread.past': { other: 'خسائر تجاوزت {stop}: {count}، بمجموع {beyond} بعد وقف الخسارة.' },
+  'rep.spread.held': 'لم تتجاوز أي خسارة {stop} بأكثر من ربع R: صمدت أوامر وقف الخسارة.',
+  'rep.spread.noStop': { other: 'صفقات بلا وقف خسارة خارج الأعمدة، فلا R لها: {count}.' },
+  'rep.spread.empty': 'لا صفقات مغلقة في هذه الفترة.',
+
   'rep.months': 'شهرًا بشهر',
   'rep.months.empty': 'لا صفقات مغلقة في هذه الفترة.',
   'rep.month': 'الشهر',

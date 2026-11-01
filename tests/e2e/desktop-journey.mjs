@@ -524,6 +524,20 @@ async function journey() {
     JSON.stringify(marchRow) === JSON.stringify(['Mar 2026', '4', '75%', `+${money(111)}`, money(10111)]),
     marchRow,
   );
+  // under the month table, beside the cards on the right
+  const spreadText = await b.run(`${reportCard('R spread')}?.innerText ?? ''`);
+  check(
+    'R spread: none of the four has a stop, so no bars, and it says why',
+    spreadText.includes('4 trades with no stop are left out of the bars: they have no R.') &&
+      !(await b.run(`!!${reportCard('R spread')}?.querySelector('ul')`)),
+    spreadText,
+  );
+  const spreadUnder = await b.run(`(() => {
+    const months = ${reportCard('Month by month')}.getBoundingClientRect();
+    const spread = ${reportCard('R spread')}.getBoundingClientRect();
+    return Math.abs(spread.left - months.left) < 1 && spread.top > months.bottom;
+  })()`);
+  check('R spread: under the month table, in the same column', spreadUnder);
 
   // ---- 3b''. the Calendar: the weeks, and the line under the month ----------
   await b.run(`$nav('/calendar'); true`);

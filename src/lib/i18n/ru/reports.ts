@@ -131,6 +131,39 @@ export const reports: Translation<typeof en> = {
   },
   'rep.heat.empty': 'Ни у одной сделки за период нет времени открытия.',
 
+  'rep.spread': 'Распределение R',
+  'rep.spread.subtitle':
+    'Сколько сделок закончилось около каждого значения R, с шагом в половину R: от {low} и хуже до {high} и лучше.',
+  'rep.spread.bar': {
+    one: '{r}: {count} сделка',
+    few: '{r}: {count} сделки',
+    many: '{r}: {count} сделок',
+    other: '{r}: {count} сделки',
+  },
+  'rep.spread.low': '{r} и хуже',
+  'rep.spread.high': '{r} и лучше',
+  'rep.spread.top': 'Лучшие {tenth} ваших сделок ({count} из {of}) дали {share} вашего итога.',
+  'rep.spread.split': {
+    one: 'Лучшие {tenth} ваших сделок ({top} из {of}) дали {best}; остальная {count} сделка — {rest}.',
+    few: 'Лучшие {tenth} ваших сделок ({top} из {of}) дали {best}; остальные {count} сделки — {rest}.',
+    many: 'Лучшие {tenth} ваших сделок ({top} из {of}) дали {best}; остальные {count} сделок — {rest}.',
+    other: 'Лучшие {tenth} ваших сделок ({top} из {of}) дали {best}; остальные {count} сделки — {rest}.',
+  },
+  'rep.spread.past': {
+    one: '{count} убыточная сделка ушла дальше {stop}: на {beyond} за стопом.',
+    few: '{count} убыточные сделки ушли дальше {stop}: в сумме на {beyond} за стопами.',
+    many: '{count} убыточных сделок ушли дальше {stop}: в сумме на {beyond} за стопами.',
+    other: '{count} убыточные сделки ушли дальше {stop}: в сумме на {beyond} за стопами.',
+  },
+  'rep.spread.held': 'Ни одна убыточная сделка не вышла за {stop} больше чем на четверть R: стопы удержали убытки.',
+  'rep.spread.noStop': {
+    one: '{count} сделка без стопа не вошла в столбцы: у неё нет R.',
+    few: '{count} сделки без стопа не вошли в столбцы: у них нет R.',
+    many: '{count} сделок без стопа не вошли в столбцы: у них нет R.',
+    other: '{count} сделки без стопа не вошли в столбцы: у них нет R.',
+  },
+  'rep.spread.empty': 'В этом периоде нет закрытых сделок.',
+
   'rep.months': 'По месяцам',
   'rep.months.empty': 'В этом периоде нет закрытых сделок.',
   'rep.month': 'Месяц',

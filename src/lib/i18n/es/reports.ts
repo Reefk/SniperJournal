@@ -120,6 +120,36 @@ export const reports: Translation<typeof en> = {
   },
   'rep.heat.empty': 'Ninguna operación del periodo tiene hora de apertura.',
 
+  'rep.spread': 'Distribución de R',
+  'rep.spread.subtitle':
+    'Cuántas operaciones terminaron cerca de cada R, en pasos de media R, de {low} o peor a {high} o mejor.',
+  'rep.spread.bar': {
+    one: '{r}: {count} operación',
+    many: '{r}: {count} operaciones',
+    other: '{r}: {count} operaciones',
+  },
+  'rep.spread.low': '{r} o peor',
+  'rep.spread.high': '{r} o mejor',
+  'rep.spread.top': 'Tus mejores operaciones, el {tenth} ({count} de {of}), hicieron el {share} de tu neto.',
+  'rep.spread.split': {
+    one: 'Tus mejores operaciones, el {tenth} ({top} de {of}), hicieron {best}; la otra {count} operación sumó {rest}.',
+    many: 'Tus mejores operaciones, el {tenth} ({top} de {of}), hicieron {best}; las otras {count} operaciones sumaron {rest}.',
+    other:
+      'Tus mejores operaciones, el {tenth} ({top} de {of}), hicieron {best}; las otras {count} operaciones sumaron {rest}.',
+  },
+  'rep.spread.past': {
+    one: '{count} pérdida superó {stop}: {beyond} más de lo que permitía su stop.',
+    many: '{count} pérdidas superaron {stop}: {beyond} más de lo que permitían sus stops, en total.',
+    other: '{count} pérdidas superaron {stop}: {beyond} más de lo que permitían sus stops, en total.',
+  },
+  'rep.spread.held': 'Ninguna pérdida superó {stop} en más de un cuarto de R: tus stops aguantaron.',
+  'rep.spread.noStop': {
+    one: '{count} operación sin stop queda fuera de las barras: no tiene R.',
+    many: '{count} operaciones sin stop quedan fuera de las barras: no tienen R.',
+    other: '{count} operaciones sin stop quedan fuera de las barras: no tienen R.',
+  },
+  'rep.spread.empty': 'No hay operaciones cerradas en este periodo.',
+
   'rep.months': 'Mes a mes',
   'rep.months.empty': 'No hay operaciones cerradas en este periodo.',
   'rep.month': 'Mes',

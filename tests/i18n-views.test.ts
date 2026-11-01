@@ -179,6 +179,8 @@ const ONE_HOLD = [
   ...Array.from({ length: 24 }, (_, i) => heldFor(i, 30, i % 2 ? 20 : -10)),
   pnl(5, { openedAt: '2026-09-28', closedAt: undefined, symbol: 'X' }),
 ];
+/** nine losers at their stop and one big winner: the best tenth made more than the net, the others lost */
+const CARRIED = [...Array.from({ length: 9 }, (_, i) => heldFor(i, 5, -10)), heldFor(10, 30, 300)];
 /** the range picker's button for a range, found by its label in the language shown */
 const rangeButton = (range: RangeKey) =>
   [...document.querySelectorAll<HTMLButtonElement>('[role="group"] button')].find(
@@ -429,6 +431,8 @@ const SCREENS: Array<{
   // Recent form above the record and from too few stops; the hold chart's split and what it left out
   { name: 'Reports, quick losers, then slow winners', view: ReportsView, trades: HOLDS },
   { name: 'Reports, one hold time', view: ReportsView, trades: ONE_HOLD },
+  // R spread: the best tenth's two amounts, every stop held
+  { name: 'Reports, one winner carries the rest', view: ReportsView, trades: CARRIED },
   // no R anywhere
   { name: 'Reports, no stop', view: ReportsView, trades: UNRATED },
   { name: 'Settings', view: SettingsView, trades: TRADES },

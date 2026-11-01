@@ -133,16 +133,16 @@ nothing restarts, and your trades stay exactly as they are.
 
 ## What each page does
 
-| Page                   | What it is for                                                                                                                |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| **Dashboard**          | Net profit, win rate, profit factor, average R:R, expectancy, SQN, equity curve, Sniper Score, daily P&L and your goals.      |
-| **Calendar**           | Each day's net P&L and trades, each week's total, your average green and red day. Click a day to see its trades.              |
-| **The Playbook**       | The setups you allow yourself to trade and their rules, with the real performance of each one underneath.                     |
-| **Trades**             | The full table, with filters for pair, session, leverage, setup, mistake, date, direction and result. Click a row to edit it. |
-| **Insights & Signals** | Patterns found in your own trades: your best session, revenge trading, holding losers too long, fee drag, and more.           |
-| **Resources**          | Your own shortlist of tools and links.                                                                                        |
-| **Support**            | How the app works, where your data is, and the keyboard shortcuts.                                                            |
-| **Reports**            | Printable: green days, recovery factor, recent form, hold times, weekday and hour, months, symbols, setups, tags, mistakes.   |
+| Page                   | What it is for                                                                                                                        |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| **Dashboard**          | Net profit, win rate, profit factor, average R:R, expectancy, SQN, equity curve, Sniper Score, daily P&L and your goals.              |
+| **Calendar**           | Each day's net P&L and trades, each week's total, your average green and red day. Click a day to see its trades.                      |
+| **The Playbook**       | The setups you allow yourself to trade and their rules, with the real performance of each one underneath.                             |
+| **Trades**             | The full table, with filters for pair, session, leverage, setup, mistake, date, direction and result. Click a row to edit it.         |
+| **Insights & Signals** | Patterns found in your own trades: your best session, revenge trading, holding losers too long, fee drag, and more.                   |
+| **Resources**          | Your own shortlist of tools and links.                                                                                                |
+| **Support**            | How the app works, where your data is, and the keyboard shortcuts.                                                                    |
+| **Reports**            | Printable: green days, recovery factor, recent form, hold times, weekday and hour, months, R spread, symbols, setups, tags, mistakes. |
 
 ---
 
