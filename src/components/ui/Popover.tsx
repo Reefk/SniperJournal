@@ -9,11 +9,15 @@ export function Popover({
   children,
   align = 'end',
   className,
+  rootClassName,
 }: {
   trigger: (props: { open: boolean; toggle: () => void }) => ReactNode;
   children: (close: () => void) => ReactNode;
   align?: 'start' | 'end';
+  /** the menu's own classes */
   className?: string;
+  /** the classes of the box around the button and its menu: min-w-0 lets a button in a row shrink */
+  rootClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -50,7 +54,7 @@ export function Popover({
   }, [open]);
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className={cn('relative', rootClassName)}>
       {trigger({ open, toggle: () => setOpen((o) => !o) })}
       {open && (
         <div

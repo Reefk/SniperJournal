@@ -29,6 +29,8 @@ export function AccountSwitcher({ variant, align }: { variant: 'card' | 'pill'; 
         align={align ?? (variant === 'card' ? 'start' : 'end')}
         // as wide as a name and its balance need ("30,6 mil US$" is longer than "$30.6K"), up to the screen
         className={cn('w-max max-w-[min(20rem,calc(100vw-2rem))]', variant === 'card' ? 'min-w-[224px]' : 'min-w-64')}
+        // on a phone the pill gives way to the header's buttons: a long name is cut shorter, never over them
+        rootClassName={variant === 'pill' ? 'min-w-0' : undefined}
         trigger={({ toggle, open }) =>
           variant === 'card' ? (
             <button
@@ -53,13 +55,13 @@ export function AccountSwitcher({ variant, align }: { variant: 'card' | 'pill'; 
               type="button"
               onClick={toggle}
               aria-expanded={open}
-              className="flex h-10 items-center gap-2 rounded-md border border-line bg-app ps-2.5 pe-2 text-sm transition hover:border-line-strong md:h-9"
+              className="flex h-10 max-w-full items-center gap-2 rounded-md border border-line bg-app ps-2.5 pe-2 text-sm transition hover:border-line-strong md:h-9"
             >
-              <Wallet className="size-3.5 text-faint" />
-              <span dir="auto" className="max-w-[96px] truncate text-fg md:max-w-[160px]">
+              <Wallet className="size-3.5 shrink-0 text-faint" />
+              <span dir="auto" className="min-w-0 max-w-[96px] truncate text-fg md:max-w-[160px]">
                 {activeLabel}
               </span>
-              <ChevronsUpDown className="size-3.5 text-faint" />
+              <ChevronsUpDown className="size-3.5 shrink-0 text-faint" />
             </button>
           )
         }
