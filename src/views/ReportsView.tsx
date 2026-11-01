@@ -36,7 +36,8 @@ import {
 import { FORM_R_MIN, recentForm, type FormLine, type RecentForm } from '@/lib/recent-form';
 import { defaultHoldMeasure, HOLD_SIDE_MIN, holdReport, type HoldMeasure, type HoldReport } from '@/lib/hold';
 import { weekdayHourHeatmap } from '@/lib/heatmap';
-import { netPnl, statTrades, tradeDay } from '@/lib/trade-math';
+import { monthRows } from '@/lib/months';
+import { statTrades } from '@/lib/trade-math';
 import { cn, dateKey, downloadFile, parseLocal } from '@/lib/utils';
 import { storage } from '@/lib/storage';
 import { openingBalance } from '@/store/selectors';
@@ -67,19 +68,7 @@ export function ReportsView() {
   );
   const closed = useMemo(() => statTrades(inRange), [inRange]);
 
-  const months = useMemo(() => {
-    const map = new Map<string, { net: number; trades: number; wins: number }>();
-    for (const t of closed) {
-      const key = tradeDay(t).slice(0, 7);
-      const agg = map.get(key) ?? { net: 0, trades: 0, wins: 0 };
-      const p = netPnl(t);
-      agg.net += p;
-      agg.trades += 1;
-      if (p > 0) agg.wins += 1;
-      map.set(key, agg);
-    }
-    return [...map.entries()].sort((a, b) => b[0].localeCompare(a[0]));
-  }, [closed]);
+  const months = useMemo(() => monthRows(inRange), [inRange]);
 
   const bySymbol = useMemo(() => groupTrades(closed, (t) => t.symbol), [closed]);
   const bySetup = useMemo(() => {
@@ -266,24 +255,24 @@ export function ReportsView() {
               </tr>
             </thead>
             <tbody>
-              {months.map(([key, agg]) => {
-                const [y, m] = key.split('-').map(Number);
+              {months.map((month) => {
+                const [y, m] = month.key.split('-').map(Number);
                 return (
-                  <tr key={key} className="border-t border-line">
+                  <tr key={month.key} className="border-t border-line">
                     <td className="px-2 py-2 text-fg md:px-3">
                       {monthName(m - 1, 'short')} {y}
                     </td>
-                    <td className="num px-2 py-2 text-end text-muted md:px-3">{agg.trades}</td>
+                    <td className="num px-2 py-2 text-end text-muted md:px-3">{month.trades}</td>
                     <td className="num px-2 py-2 text-end text-muted md:px-3">
-                      {formatPct((agg.wins / agg.trades) * 100, 0)}
+                      {formatPct((month.wins / month.trades) * 100, 0)}
                     </td>
                     <td
                       className={cn(
                         'num px-2 py-2 text-end font-medium md:px-3',
-                        agg.net > 0 ? 'text-profit' : agg.net < 0 ? 'text-loss' : 'text-muted',
+                        month.net > 0 ? 'text-profit' : month.net < 0 ? 'text-loss' : 'text-muted',
                       )}
                     >
-                      {breakableAmount(formatMoney(agg.net, currency, { sign: true }))}
+                      {breakableAmount(formatMoney(month.net, currency, { sign: true }))}
                     </td>
                   </tr>
                 );
