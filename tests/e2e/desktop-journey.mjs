@@ -476,7 +476,7 @@ async function journey() {
     ),
   );
 
-  // ---- 3b'. Reports: recent form ---------------------------------------------
+  // ---- 3b'. Reports: recent form, and hold time against result ----------------
   /** a Reports card, by its title */
   const reportCard = (title) =>
     `[...document.querySelectorAll('section')].find((s) => s.querySelector('h3')?.textContent === ${JSON.stringify(title)})`;
@@ -486,6 +486,26 @@ async function journey() {
     formText.includes('Needs 6 more trades') && formText.includes('All 4 trades'),
     formText,
   );
+  const holdCard = reportCard('Hold time against result');
+  await b.until(`${holdCard}?.querySelectorAll('.recharts-scatter-symbol').length === 4`, 'a dot for each trade');
+  check(
+    'hold time against result: a dot for each trade, in money, as none has a stop',
+    await b.run(`${holdCard}.querySelector('[aria-pressed="true"]')?.textContent === 'Net'`),
+  );
+  // the rightmost dot is the longest hold: TSLA's 2h 15m
+  await b.run(`(() => {
+    const dots = [...${holdCard}.querySelectorAll('.recharts-scatter-symbol')];
+    const x = (d) => d.getBoundingClientRect().x;
+    dots.reduce((a, d) => (x(d) > x(a) ? d : a)).dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    return true;
+  })()`);
+  await b.until(`!!$modal()`, 'the trade a dot opens');
+  check(
+    'a dot opens its trade: the rightmost, held longest, is TSLA',
+    await b.run(`[...$modal().querySelectorAll('input')].some((i) => i.value === 'TSLA')`),
+  );
+  await b.run(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); true`);
+  await b.until(`!$modal()`, 'the trade closed');
 
   // ---- 3c. a goal: set in Settings, seen on the Dashboard -------------------
   await b.run(`$nav('/settings'); true`);

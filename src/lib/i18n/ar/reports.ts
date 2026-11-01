@@ -68,6 +68,19 @@ export const reports: Translation<typeof en> = {
     other: 'لا سهم لمتوسط R إذا كانت الصفقات ذات وقف الخسارة أقل من {count}: عددها أقل من أن يُقارن.',
   },
 
+  'rep.holdVs': 'مدة الاحتفاظ مقابل النتيجة',
+  'rep.holdVs.subtitle': 'نقطة لكل صفقة في الفترة: كم احتفظت بها وكيف انتهت. اضغط عليها لفتحها.',
+  'rep.holdVs.held': 'مدة الاحتفاظ {duration}',
+  'rep.holdVs.split':
+    'الاحتفاظ أكثر من {duration}: {longer} للصفقة ({longerTrades}). حتى {duration}: {shorter} للصفقة ({shorterTrades}).',
+  'rep.holdVs.trades': { other: 'الصفقات: {count}' },
+  'rep.holdVs.thin': { other: 'هل يربح الاحتفاظ الأطول؟ يظهر ذلك حين يبلغ كل نصف عدد الصفقات المطلوب ({count}).' },
+  'rep.holdVs.noStop': { other: 'صفقات بلا وقف خسارة لم تُحتسب، فلا R لها: {count}.' },
+  'rep.holdVs.noTime': { other: 'صفقات بلا وقت إغلاق لم تُحتسب: {count}.' },
+  'rep.holdVs.same': 'صفقات كثيرة لها مدة الاحتفاظ نفسها، فلا يمكن قسمتها إلى نصفين.',
+  'rep.holdVs.empty': 'لا صفقة في هذه الفترة لها مدة احتفاظ تُعرض.',
+  'rep.holdVs.summary': { other: 'مدة الاحتفاظ مقابل النتيجة: الصفقات {count}، من {from} إلى {to}.' },
+
   'rep.months': 'شهرًا بشهر',
   'rep.months.empty': 'لا صفقات مغلقة في هذه الفترة.',
   'rep.month': 'الشهر',

@@ -65,6 +65,31 @@ export const reports = {
     other: 'An average R from fewer than {count} trades with a stop gets no arrow: too few to compare.',
   },
 
+  'rep.holdVs': 'Hold time against result',
+  'rep.holdVs.subtitle': 'A dot for each trade in the range: how long you held it, and how it did. Tap one to open it.',
+  'rep.holdVs.held': 'held {duration}',
+  'rep.holdVs.split':
+    'Held longer than {duration}: {longer} a trade ({longerTrades}). Up to {duration}: {shorter} a trade ({shorterTrades}).',
+  'rep.holdVs.trades': { one: '{count} trade', other: '{count} trades' },
+  'rep.holdVs.thin': {
+    one: 'Whether holding longer pays shows once each half has {count} trade.',
+    other: 'Whether holding longer pays shows once each half has {count} trades.',
+  },
+  'rep.holdVs.noStop': {
+    one: '{count} trade with no stop is left out: it has no R.',
+    other: '{count} trades with no stop are left out: they have no R.',
+  },
+  'rep.holdVs.noTime': {
+    one: '{count} trade with no close time is left out.',
+    other: '{count} trades with no close time are left out.',
+  },
+  'rep.holdVs.same': 'Too many trades share the same hold time to split them in two.',
+  'rep.holdVs.empty': 'No trade in this range has a hold time to show.',
+  'rep.holdVs.summary': {
+    one: 'Hold time against result: {count} trade, held from {from} to {to}.',
+    other: 'Hold time against result: {count} trades, held from {from} to {to}.',
+  },
+
   'rep.months': 'Month by month',
   'rep.months.empty': 'No closed trades in this range.',
   'rep.month': 'Month',

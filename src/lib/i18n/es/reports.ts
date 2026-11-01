@@ -78,6 +78,36 @@ export const reports: Translation<typeof en> = {
     other: 'Un R medio de menos de {count} operaciones con stop no lleva flecha: son muy pocas para comparar.',
   },
 
+  'rep.holdVs': 'Duración frente a resultado',
+  'rep.holdVs.subtitle':
+    'Un punto por cada operación del periodo: cuánto la mantuviste y cómo salió. Tócalo para abrirla.',
+  'rep.holdVs.held': 'mantenida {duration}',
+  'rep.holdVs.split':
+    'Mantenidas más de {duration}: {longer} por operación ({longerTrades}). Hasta {duration}: {shorter} por operación ({shorterTrades}).',
+  'rep.holdVs.trades': { one: '{count} operación', many: '{count} operaciones', other: '{count} operaciones' },
+  'rep.holdVs.thin': {
+    one: 'Si mantener más tiempo rinde se verá cuando cada mitad tenga {count} operación.',
+    many: 'Si mantener más tiempo rinde se verá cuando cada mitad tenga {count} operaciones.',
+    other: 'Si mantener más tiempo rinde se verá cuando cada mitad tenga {count} operaciones.',
+  },
+  'rep.holdVs.noStop': {
+    one: '{count} operación sin stop queda fuera: no tiene R.',
+    many: '{count} operaciones sin stop quedan fuera: no tienen R.',
+    other: '{count} operaciones sin stop quedan fuera: no tienen R.',
+  },
+  'rep.holdVs.noTime': {
+    one: '{count} operación sin hora de cierre queda fuera.',
+    many: '{count} operaciones sin hora de cierre quedan fuera.',
+    other: '{count} operaciones sin hora de cierre quedan fuera.',
+  },
+  'rep.holdVs.same': 'Demasiadas operaciones tienen la misma duración para dividirlas en dos.',
+  'rep.holdVs.empty': 'Ninguna operación del periodo tiene una duración que mostrar.',
+  'rep.holdVs.summary': {
+    one: 'Duración frente a resultado: {count} operación, mantenida de {from} a {to}.',
+    many: 'Duración frente a resultado: {count} operaciones, mantenidas de {from} a {to}.',
+    other: 'Duración frente a resultado: {count} operaciones, mantenidas de {from} a {to}.',
+  },
+
   'rep.months': 'Mes a mes',
   'rep.months.empty': 'No hay operaciones cerradas en este periodo.',
   'rep.month': 'Mes',

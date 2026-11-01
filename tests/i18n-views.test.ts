@@ -10,6 +10,7 @@ import { LANGUAGES, setLanguage, tr, type Language } from '@/lib/i18n';
 import { reports } from '@/lib/i18n/en/reports';
 import type { RangeKey } from '@/lib/ranges';
 import { STARTING_MISTAKES } from '@/lib/mistakes';
+import { holdReport } from '@/lib/hold';
 import { CalendarView } from '@/views/CalendarView';
 import { DashboardView } from '@/views/DashboardView';
 import { InsightsView } from '@/views/InsightsView';
@@ -22,6 +23,7 @@ import { TradesView } from '@/views/TradesView';
 import { TradeFormModal } from '@/components/trades/TradeFormModal';
 import { BulkDetailsModal } from '@/components/trades/BulkDetailsModal';
 import { ImportTradesModal } from '@/components/trades/ImportTradesModal';
+import { HoldTooltip } from '@/components/reports/HoldTimeChart';
 import { JournalProvider, useJournal } from '@/store/JournalProvider';
 import { UIProvider, useUI } from '@/store/UIProvider';
 import { pnl, trade } from './helpers';
@@ -171,6 +173,8 @@ const HOLDS = [
   pnl(15, { openedAt: '2026-09-15T10:00', closedAt: undefined, symbol: 'X', stopLoss: 90 }),
   ...Array.from({ length: 12 }, (_, i) => heldFor(15 + i, 120, 40, i === 11 ? { stopLoss: null } : {})),
 ];
+/** enough trades for the hold chart to compare, but all held as long */
+const ONE_HOLD = Array.from({ length: 24 }, (_, i) => heldFor(i, 30, i % 2 ? 20 : -10));
 /** the range picker's button for a range, found by its label in the language shown */
 const rangeButton = (range: RangeKey) =>
   [...document.querySelectorAll<HTMLButtonElement>('[role="group"] button')].find(
@@ -411,8 +415,9 @@ const SCREENS: Array<{
     modal: false,
     ready: () => journal?.data.accounts[0]?.startingBalance === 0,
   },
-  // Recent form above the record and from too few stops
+  // Recent form above the record and from too few stops; the hold chart's split and what it left out
   { name: 'Reports, quick losers, then slow winners', view: ReportsView, trades: HOLDS },
+  { name: 'Reports, one hold time', view: ReportsView, trades: ONE_HOLD },
   // no R anywhere
   { name: 'Reports, no stop', view: ReportsView, trades: UNRATED },
   { name: 'Settings', view: SettingsView, trades: TRADES },
@@ -720,6 +725,24 @@ describe.each(LANGUAGES.filter((l) => l.code !== 'en'))('$name', ({ code, dir })
       expect(leftovers(code, own)).toEqual([]);
     },
   );
+});
+
+// the hold chart's tooltip shows only over a dot, and jsdom draws no chart
+describe.each(LANGUAGES.filter((l) => l.code !== 'en'))('$name', ({ code }) => {
+  it('Reports: the hold chart’s tooltip has no English left', async () => {
+    setLanguage(code);
+    const [dot] = holdReport(HOLDS, 'R').dots;
+    app = await mount(
+      h(HoldTooltip, {
+        active: true,
+        payload: [{ payload: { x: dot.minutes, y: dot.value, dot } }],
+        measure: 'R',
+        currency: 'USD',
+      }),
+    );
+    expect(document.body.textContent).toContain(tr('rep.holdVs.held', { duration: tr('format.minutes', { m: 5 }) }));
+    expect(leftovers(code)).toEqual([]);
+  });
 });
 
 // each of Reports' texts was asked for on one of the screens above, so each was checked in every language;

@@ -34,6 +34,7 @@ import {
   type MistakeReport,
 } from '@/lib/mistakes';
 import { FORM_R_MIN, recentForm, type FormLine, type RecentForm } from '@/lib/recent-form';
+import { defaultHoldMeasure, HOLD_SIDE_MIN, holdReport, type HoldMeasure, type HoldReport } from '@/lib/hold';
 import { netPnl, statTrades, tradeDay } from '@/lib/trade-math';
 import { cn, dateKey, downloadFile, parseLocal } from '@/lib/utils';
 import { storage } from '@/lib/storage';
@@ -45,11 +46,14 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ChartContainer } from '@/components/ui/ChartContainer';
 import { InfoTip } from '@/components/ui/InfoTip';
 import { rich } from '@/components/ui/Rich';
+import { HoldTimeChart } from '@/components/reports/HoldTimeChart';
 
 export function ReportsView() {
   const { accountTrades, data, startingBalance, activeLabel } = useJournal();
-  const { toast } = useUI();
+  const { toast, openTradeForm } = useUI();
   const [range, setRange] = useState<RangeKey>('ALL');
+  // the hold-time chart in R or money: as picked for this account, or R while most trades have a stop
+  const [pickedMeasure, setPickedMeasure] = useState<{ account: string; measure: HoldMeasure } | null>(null);
   const currency = data.settings.currency;
 
   const { inRange, before, start } = useMemo(() => splitByRange(accountTrades, range), [accountTrades, range]);
@@ -102,6 +106,9 @@ export function ReportsView() {
   const cleanByMonth = useMemo(() => thisAndLastMonth(cleanMonths(accountTrades)), [accountTrades]);
   // the latest trades whatever the range, as the card says
   const form = useMemo(() => recentForm(accountTrades), [accountTrades]);
+  const fittingMeasure = useMemo(() => defaultHoldMeasure(inRange), [inRange]);
+  const holdMeasure = pickedMeasure?.account === data.activeAccountId ? pickedMeasure.measure : fittingMeasure;
+  const hold = useMemo(() => holdReport(inRange, holdMeasure), [inRange, holdMeasure]);
   const byGroup = useMemo(
     () => groupTables(inRange, data.settings.tagGroups ?? []),
     [inRange, data.settings.tagGroups],
@@ -318,6 +325,42 @@ export function ReportsView() {
         </div>
       </div>
 
+      <ChartContainer
+        className="mt-4"
+        title={tr('rep.holdVs')}
+        subtitle={tr('rep.holdVs.subtitle')}
+        actions={
+          <SegmentedControl
+            value={holdMeasure}
+            onChange={(measure) => setPickedMeasure({ account: data.activeAccountId, measure })}
+            options={[
+              { value: 'R', label: 'R' },
+              { value: 'net', label: tr('rep.net') },
+            ]}
+          />
+        }
+        empty={hold.dots.length === 0}
+        // no dot: say why, with what was left out
+        emptyText={[
+          hold.noStop ? tr('rep.holdVs.noStop', { count: hold.noStop }) : tr('rep.holdVs.empty'),
+          hold.noTime ? tr('rep.holdVs.noTime', { count: hold.noTime }) : null,
+        ]
+          .filter(Boolean)
+          .join(' ')}
+        summary={holdSummary(hold)}
+        bodyClassName="px-2 pb-3 pt-1"
+      >
+        <div className="h-[240px] md:h-[300px]">
+          <HoldTimeChart
+            dots={hold.dots}
+            measure={holdMeasure}
+            currency={currency}
+            onOpen={(trade) => openTradeForm({ trade })}
+          />
+        </div>
+        <HoldLines hold={hold} currency={currency} />
+      </ChartContainer>
+
       <TagGroupTables tables={byGroup} currency={currency} />
 
       <MistakesReport report={mistakes} rangeStart={start} months={cleanByMonth} currency={currency} />
@@ -363,6 +406,56 @@ function Row({ label, value, tone, info }: { label: string; value: string; tone?
 }
 
 const tone = (v: number) => (v > 0 ? 'text-profit' : v < 0 ? 'text-loss' : 'text-muted');
+
+/** a trade's result in the hold chart's measure: R, or money */
+const holdValue = (hold: HoldReport, value: number, currency: string) =>
+  hold.measure === 'R' ? formatR(value) : formatMoney(value, currency, { sign: true });
+
+/** the hold chart's lines: whether holding longer paid, and what was left out */
+function HoldLines({ hold, currency }: { hold: HoldReport; currency: string }) {
+  const { split } = hold;
+  const lines: Array<[key: string, text: string]> = [];
+  if (split) {
+    lines.push([
+      'split',
+      tr('rep.holdVs.split', {
+        duration: formatDuration(split.minutes),
+        longer: holdValue(hold, split.longer.avg, currency),
+        longerTrades: tr('rep.holdVs.trades', { count: split.longer.trades }),
+        shorter: holdValue(hold, split.shorter.avg, currency),
+        shorterTrades: tr('rep.holdVs.trades', { count: split.shorter.trades }),
+      }),
+    ]);
+  } else if (hold.dots.length >= HOLD_SIDE_MIN * 2) {
+    // enough trades, but so many held as long as the middle one that a side stays short: more won't help
+    lines.push(['same', tr('rep.holdVs.same')]);
+  } else if (hold.dots.length) {
+    lines.push(['thin', tr('rep.holdVs.thin', { count: HOLD_SIDE_MIN })]);
+  }
+  if (hold.noStop) lines.push(['noStop', tr('rep.holdVs.noStop', { count: hold.noStop })]);
+  if (hold.noTime) lines.push(['noTime', tr('rep.holdVs.noTime', { count: hold.noTime })]);
+  if (!lines.length) return null;
+  return (
+    <div className="space-y-1 px-2 pt-2 text-xs md:px-3">
+      {lines.map(([key, text]) => (
+        <p key={key} className={key === 'split' ? 'text-muted' : 'text-faint'}>
+          {text}
+        </p>
+      ))}
+    </div>
+  );
+}
+
+/** the hold chart in words, for a screen reader; the lines under it say the rest */
+function holdSummary(hold: HoldReport): string {
+  if (!hold.dots.length) return '';
+  const holds = hold.dots.map((d) => d.minutes);
+  return tr('rep.holdVs.summary', {
+    count: hold.dots.length,
+    from: formatDuration(holds.reduce((a, b) => (b < a ? b : a))),
+    to: formatDuration(holds.reduce((a, b) => (b > a ? b : a))),
+  });
+}
 
 /** a window's figure, with an arrow when it reads above or below the whole record's */
 function Against({ text, now, all }: { text: string; now: number; all: number }) {

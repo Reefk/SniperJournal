@@ -142,7 +142,7 @@ nothing restarts, and your trades stay exactly as they are.
 | **Insights & Signals** | Patterns found in your own trades: your best session, revenge trading, holding losers too long, fee drag, and more.           |
 | **Resources**          | Your own shortlist of tools and links.                                                                                        |
 | **Support**            | How the app works, where your data is, and the keyboard shortcuts.                                                            |
-| **Reports**            | A printable summary: green days, recovery factor, recent form; by month, symbol, setup and tag; mistake costs.                |
+| **Reports**            | A printable summary: green days, recovery factor, recent form, hold times; by month, symbol, setup and tag; mistake costs.    |
 
 ---
 
