@@ -18,4 +18,11 @@ export const calendar: Translation<typeof en> = {
   'cal.noneClosed': 'अभी कोई बंद ट्रेड नहीं',
   'cal.noneIn': '{month} में कोई ट्रेड नहीं।',
   'cal.dayNet': { other: '{count} ट्रेड · शुद्ध {net}' },
+  'cal.weeks': 'हफ़्ते',
+  'cal.week.days': '{from} – {to}',
+  'cal.week.none': 'कोई ट्रेड नहीं',
+  'cal.line.both': 'औसतन हरा दिन {green} और लाल दिन {red} का रहा।',
+  'cal.line.green': 'औसतन हरा दिन {green} का रहा।',
+  'cal.line.red': 'औसतन लाल दिन {red} का रहा।',
+  'cal.line.best': { other: 'हफ़्ते का सबसे अच्छा दिन: {day}, {count} ट्रेड में {net}।' },
 };

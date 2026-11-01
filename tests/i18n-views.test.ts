@@ -8,6 +8,7 @@ import { CURRENCIES } from '@/lib/format';
 import { PLATFORMS, importTradesFromCsv } from '@/lib/csv';
 import { LANGUAGES, setLanguage, tr, type Language } from '@/lib/i18n';
 import { reports } from '@/lib/i18n/en/reports';
+import { calendar } from '@/lib/i18n/en/calendar';
 import type { RangeKey } from '@/lib/ranges';
 import { STARTING_MISTAKES } from '@/lib/mistakes';
 import { holdReport } from '@/lib/hold';
@@ -364,6 +365,13 @@ const SCREENS: Array<{
     trades: TRADES,
     open: () => document.querySelector<HTMLButtonElement>('.grid-cols-7 > button:enabled')?.click(),
   },
+  // only green days, and 10 trades on Mondays: the best weekday named
+  {
+    name: 'Calendar, a green month and its best weekday',
+    view: CalendarView,
+    trades: [...day('2026-10-05', [5, 5, 5, 5, 5]), ...day('2026-10-12', [5, 5, 5, 5, 5])],
+  },
+  { name: 'Calendar, a red month', view: CalendarView, trades: day('2026-10-05', [-5]) },
   { name: 'Insights', view: InsightsView, trades: INSIGHTS },
   {
     name: 'Insights, with more setups',
@@ -752,6 +760,11 @@ describe.each(LANGUAGES.filter((l) => l.code !== 'en'))('$name', ({ code }) => {
 // it counts on those screens running first, so a -t filter that leaves them out fails it
 it('Reports: every text is on one of its screens', () => {
   expect(Object.keys(reports).filter((key) => !asked.has(key))).toEqual([]);
+});
+
+// the same for the Calendar's texts
+it('Calendar: every text is on one of its screens', () => {
+  expect(Object.keys(calendar).filter((key) => !asked.has(key))).toEqual([]);
 });
 
 // what the person typed reads in its own direction (dir="auto"), so English typed into the Arabic app,

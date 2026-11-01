@@ -20,4 +20,19 @@ export const calendar = {
   'cal.noneClosed': 'no closed trades yet',
   'cal.noneIn': 'No trades in {month}.',
   'cal.dayNet': { one: '{count} trade · net {net}', other: '{count} trades · net {net}' },
+  // the month's weeks, a row each as on the grid: beside it on a wide screen, under it otherwise
+  'cal.weeks': 'Weeks',
+  // a week's first and last day in the month
+  'cal.week.days': '{from} – {to}',
+  'cal.week.none': 'No trades',
+  // the line under the month's numbers; green and red are amounts with their sign
+  'cal.line.both': 'Green days average {green}, red days {red}.',
+  'cal.line.green': 'Green days average {green}.',
+  'cal.line.red': 'Red days average {red}.',
+  // day: a weekday's name as a sentence names it (weekdayName's long form: "lunes", "понедельник";
+  // English keeps "Mon", as its other sentences do); count is 10 or more
+  'cal.line.best': {
+    one: 'Best weekday: {day}, {net} from {count} trade.',
+    other: 'Best weekday: {day}, {net} from {count} trades.',
+  },
 } satisfies Record<string, Message>;

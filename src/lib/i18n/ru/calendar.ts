@@ -23,4 +23,16 @@ export const calendar: Translation<typeof en> = {
     many: '{count} сделок · итог {net}',
     other: '{count} сделки · итог {net}',
   },
+  'cal.weeks': 'Недели',
+  'cal.week.days': '{from} – {to}',
+  'cal.week.none': 'Нет сделок',
+  'cal.line.both': 'В среднем зелёный день даёт {green}, красный — {red}.',
+  'cal.line.green': 'В среднем зелёный день даёт {green}.',
+  'cal.line.red': 'В среднем красный день даёт {red}.',
+  'cal.line.best': {
+    one: 'Лучший день недели: {day}, {net} за {count} сделку.',
+    few: 'Лучший день недели: {day}, {net} за {count} сделки.',
+    many: 'Лучший день недели: {day}, {net} за {count} сделок.',
+    other: 'Лучший день недели: {day}, {net} за {count} сделки.',
+  },
 };

@@ -6,7 +6,17 @@ import type { Trade } from '@/lib/types';
 import { useJournal } from '@/store/JournalProvider';
 import { useUI } from '@/store/UIProvider';
 import { aggregateDays, computeStats } from '@/lib/stats';
-import { formatDate, formatMoney, formatMonthKey, formatPct, monthName, weekdayName } from '@/lib/format';
+import {
+  breakableAmount,
+  formatDate,
+  formatMoney,
+  formatMonthKey,
+  formatPct,
+  formatShortDate,
+  monthName,
+  weekdayName,
+} from '@/lib/format';
+import { monthGrid, monthLine, weekTotals, type WeekTotal } from '@/lib/calendar';
 import { isClosed, netPnl, tradeDay } from '@/lib/trade-math';
 import { cn, dateKey, pad2 } from '@/lib/utils';
 import { realised } from '@/store/selectors';
@@ -19,7 +29,51 @@ import { PnlValue, SideBadge } from '@/components/ui/StatusBadge';
 import { Modal } from '@/components/ui/Modal';
 import { rich } from '@/components/ui/Rich';
 import { CellAmount } from '@/components/ui/CellAmount';
-import { monthGrid } from '@/lib/calendar';
+
+/**
+ * The month's weeks, a row each as on the grid: under it, or beside it on a
+ * wide screen, where its rows are as tall as the grid's and level with them.
+ */
+function WeekList({ weeks, currency }: { weeks: WeekTotal[]; currency: string }) {
+  return (
+    <section className="mt-4 overflow-hidden rounded-xl border border-line bg-surface xl:mt-0">
+      <h2 className="border-b border-line bg-app/40 px-3 py-2 text-[11px] font-medium text-muted md:py-2.5 md:text-xs">
+        {tr('cal.weeks')}
+      </h2>
+      <ul>
+        {weeks.map((week) => (
+          <li
+            key={week.from}
+            className="flex items-center justify-between gap-3 border-b border-line px-3 py-2 last:border-b-0 xl:h-[104px] xl:flex-col xl:items-start xl:justify-center xl:gap-1"
+          >
+            <div className="min-w-0">
+              <div className="num text-xs text-fg">
+                {week.from === week.to
+                  ? formatShortDate(week.from)
+                  : tr('cal.week.days', { from: formatShortDate(week.from), to: formatShortDate(week.to) })}
+              </div>
+              <div className="text-[11px] text-faint">
+                {week.trades
+                  ? `${tr('common.trades', { count: week.trades })} · ${tr('cal.greenRed', { count: week.green, red: week.red })}`
+                  : tr('cal.week.none')}
+              </div>
+            </div>
+            {week.trades > 0 && (
+              <span
+                className={cn(
+                  'num shrink-0 text-sm font-semibold',
+                  week.net > 0 ? 'text-profit' : week.net < 0 ? 'text-loss' : 'text-muted',
+                )}
+              >
+                {breakableAmount(formatMoney(week.net, currency, { sign: true }))}
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
 
 export function CalendarView() {
   const { accountTrades, data, activeLabel } = useJournal();
@@ -45,8 +99,11 @@ export function CalendarView() {
     [accountTrades, monthPrefix],
   );
   const stats = useMemo(() => computeStats(monthTrades), [monthTrades]);
-  const dayMap = useMemo(() => new Map(aggregateDays(monthTrades).map((d) => [d.day, d])), [monthTrades]);
+  const days = useMemo(() => aggregateDays(monthTrades), [monthTrades]);
+  const dayMap = useMemo(() => new Map(days.map((d) => [d.day, d])), [days]);
   const cells = useMemo(() => monthGrid(cursor.year, cursor.month), [cursor]);
+  const weeks = useMemo(() => weekTotals(cells, days), [cells, days]);
+  const line = useMemo(() => monthLine(days), [days]);
 
   const tradesByDay = useMemo(() => {
     const map = new Map<string, Trade[]>();
@@ -72,6 +129,25 @@ export function CalendarView() {
 
   const selectedTrades = selectedDay ? (tradesByDay.get(selectedDay) ?? []) : [];
   const todayKey = dateKey(today);
+
+  // under the month's numbers: the average green day against the average red one, and the best weekday
+  const money = (value: number) => formatMoney(value, currency, { sign: true });
+  const monthSaid = [
+    line.green != null && line.red != null
+      ? tr('cal.line.both', { green: money(line.green), red: money(line.red) })
+      : line.green != null
+        ? tr('cal.line.green', { green: money(line.green) })
+        : line.red != null
+          ? tr('cal.line.red', { red: money(line.red) })
+          : null,
+    line.best
+      ? tr('cal.line.best', {
+          day: weekdayName(line.best.weekday, 'long'),
+          net: money(line.best.net),
+          count: line.best.trades,
+        })
+      : null,
+  ].filter(Boolean);
 
   return (
     <>
@@ -152,85 +228,95 @@ export function CalendarView() {
             />
           </div>
 
-          <div className="mt-4 overflow-hidden rounded-xl border border-line bg-surface">
-            <div className="grid grid-cols-7 border-b border-line bg-app/40">
-              {[0, 1, 2, 3, 4, 5, 6].map((i) => (
-                <div
-                  key={i}
-                  className="py-2 text-center text-[11px] font-medium text-muted md:px-3 md:py-2.5 md:text-xs"
-                >
-                  {weekdayName(i)}
-                </div>
-              ))}
-            </div>
-            <div className="grid grid-cols-7">
-              {cells.map((cell, i) => {
-                const agg = dayMap.get(cell.key);
-                const hasTrades = Boolean(agg) && cell.inMonth;
-                const isToday = cell.key === todayKey;
-                return (
-                  // on a desktop the date has the top of the cell to itself: an amount on two
-                  // lines, centred in the whole cell, reached it (and today's circle) at 1180 px
-                  <button
-                    key={cell.key}
-                    type="button"
-                    disabled={!hasTrades}
-                    onClick={() => setSelectedDay(cell.key)}
-                    className={cn(
-                      'relative flex h-16 flex-col items-center justify-end gap-1 border-b border-e border-line px-0.5 pb-2 text-center transition md:h-[104px] md:justify-center md:p-2 md:pt-7',
-                      i % 7 === 6 && 'border-e-0',
-                      i >= cells.length - 7 && 'border-b-0',
-                      !cell.inMonth && 'bg-app/40',
-                      hasTrades ? 'cursor-pointer hover:bg-raised' : 'cursor-default',
-                      hasTrades && agg && agg.net > 0 && 'bg-profit/[0.07]',
-                      hasTrades && agg && agg.net < 0 && 'bg-loss/[0.07]',
-                    )}
+          {monthSaid.length > 0 && <p className="mt-3 text-sm text-muted">{monthSaid.join(' ')}</p>}
+
+          <div
+            className={cn(
+              'mt-4',
+              days.length > 0 && 'xl:grid xl:grid-cols-[minmax(0,1fr)_12rem] xl:items-start xl:gap-4',
+            )}
+          >
+            <div className="overflow-hidden rounded-xl border border-line bg-surface">
+              <div className="grid grid-cols-7 border-b border-line bg-app/40">
+                {[0, 1, 2, 3, 4, 5, 6].map((i) => (
+                  <div
+                    key={i}
+                    className="py-2 text-center text-[11px] font-medium text-muted md:px-3 md:py-2.5 md:text-xs"
                   >
-                    <span
+                    {weekdayName(i)}
+                  </div>
+                ))}
+              </div>
+              <div className="grid grid-cols-7">
+                {cells.map((cell, i) => {
+                  const agg = dayMap.get(cell.key);
+                  const hasTrades = Boolean(agg) && cell.inMonth;
+                  const isToday = cell.key === todayKey;
+                  return (
+                    // on a desktop the date has the top of the cell to itself: an amount on two
+                    // lines, centred in the whole cell, reached it (and today's circle) at 1180 px
+                    <button
+                      key={cell.key}
+                      type="button"
+                      disabled={!hasTrades}
+                      onClick={() => setSelectedDay(cell.key)}
                       className={cn(
-                        'absolute start-1.5 top-1 text-[11px] md:start-2.5 md:top-2 md:text-xs',
-                        isToday
-                          ? 'grid size-5 place-items-center rounded-full bg-accent-strong font-semibold text-white'
-                          : cell.inMonth
-                            ? 'text-muted'
-                            : 'text-faint/60',
+                        'relative flex h-16 flex-col items-center justify-end gap-1 border-b border-e border-line px-0.5 pb-2 text-center transition md:h-[104px] md:justify-center md:p-2 md:pt-7',
+                        i % 7 === 6 && 'border-e-0',
+                        i >= cells.length - 7 && 'border-b-0',
+                        !cell.inMonth && 'bg-app/40',
+                        hasTrades ? 'cursor-pointer hover:bg-raised' : 'cursor-default',
+                        hasTrades && agg && agg.net > 0 && 'bg-profit/[0.07]',
+                        hasTrades && agg && agg.net < 0 && 'bg-loss/[0.07]',
                       )}
                     >
-                      {cell.day}
-                    </span>
-                    {hasTrades && agg && (
-                      <>
-                        {/* two lines rather than a cut one: "+$740.31" is 47 px in a 360 px phone's
+                      <span
+                        className={cn(
+                          'absolute start-1.5 top-1 text-[11px] md:start-2.5 md:top-2 md:text-xs',
+                          isToday
+                            ? 'grid size-5 place-items-center rounded-full bg-accent-strong font-semibold text-white'
+                            : cell.inMonth
+                              ? 'text-muted'
+                              : 'text-faint/60',
+                        )}
+                      >
+                        {cell.day}
+                      </span>
+                      {hasTrades && agg && (
+                        <>
+                          {/* two lines rather than a cut one: "+$740.31" is 47 px in a 360 px phone's
                             42 px cell, "+1624,91 US$" wider than a cell of the narrowest desktop
                             (1180 px); break-words for anything still too wide */}
-                        <span
-                          className={cn(
-                            'num max-w-full break-words text-[10px] font-semibold md:text-[17px] md:leading-tight',
-                            agg.net > 0 ? 'text-profit' : agg.net < 0 ? 'text-loss' : 'text-muted',
-                          )}
-                        >
-                          {/* a phone cell is a seventh of the screen: always the short form there */}
-                          <span className="md:hidden">
-                            <CellAmount text={formatMoney(agg.net, currency, { sign: true, compact: true })} phone />
+                          <span
+                            className={cn(
+                              'num max-w-full break-words text-[10px] font-semibold md:text-[17px] md:leading-tight',
+                              agg.net > 0 ? 'text-profit' : agg.net < 0 ? 'text-loss' : 'text-muted',
+                            )}
+                          >
+                            {/* a phone cell is a seventh of the screen: always the short form there */}
+                            <span className="md:hidden">
+                              <CellAmount text={formatMoney(agg.net, currency, { sign: true, compact: true })} phone />
+                            </span>
+                            <span className="max-md:hidden">
+                              <CellAmount
+                                text={formatMoney(agg.net, currency, {
+                                  sign: true,
+                                  compact: Math.abs(agg.net) >= 10000,
+                                })}
+                              />
+                            </span>
                           </span>
-                          <span className="max-md:hidden">
-                            <CellAmount
-                              text={formatMoney(agg.net, currency, {
-                                sign: true,
-                                compact: Math.abs(agg.net) >= 10000,
-                              })}
-                            />
+                          <span className="text-[10px] font-medium uppercase tracking-wide text-faint max-md:hidden">
+                            {tr('common.trades', { count: agg.trades })}
                           </span>
-                        </span>
-                        <span className="text-[10px] font-medium uppercase tracking-wide text-faint max-md:hidden">
-                          {tr('common.trades', { count: agg.trades })}
-                        </span>
-                      </>
-                    )}
-                  </button>
-                );
-              })}
+                        </>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
+            {days.length > 0 && <WeekList weeks={weeks} currency={currency} />}
           </div>
 
           {monthTrades.length === 0 && (

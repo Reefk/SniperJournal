@@ -22,4 +22,15 @@ export const calendar: Translation<typeof en> = {
     many: '{count} operaciones · neto {net}',
     other: '{count} operaciones · neto {net}',
   },
+  'cal.weeks': 'Semanas',
+  'cal.week.days': '{from} – {to}',
+  'cal.week.none': 'Sin operaciones',
+  'cal.line.both': 'De media, un día verde deja {green} y uno rojo {red}.',
+  'cal.line.green': 'De media, un día verde deja {green}.',
+  'cal.line.red': 'De media, un día rojo deja {red}.',
+  'cal.line.best': {
+    one: 'Mejor día de la semana: {day}, {net} en {count} operación.',
+    many: 'Mejor día de la semana: {day}, {net} en {count} operaciones.',
+    other: 'Mejor día de la semana: {day}, {net} en {count} operaciones.',
+  },
 };

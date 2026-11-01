@@ -154,3 +154,51 @@ describe("Calendar: a day's amount, on two lines where its cell is too narrow", 
     expect(amounts()).toEqual(['+740,31<br>$', '+740,31 $']);
   });
 });
+
+describe('Calendar: the weeks, and the line under the month', () => {
+  const weeksCard = () =>
+    [...document.querySelectorAll('section')].find((s) => s.querySelector('h2')?.textContent === 'Weeks') ?? null;
+  /** each week's lines: its dates, its trades or none, its net */
+  const weeks = () =>
+    [...(weeksCard()?.querySelectorAll('li') ?? [])].map((li) =>
+      [...li.children].flatMap((c) => (c.children.length ? [...c.children] : [c]).map((e) => e.textContent)),
+    );
+  /** the line under the month's cards, a no-break space (before "$" in Russian) read as a space */
+  const said = () => document.querySelector('p.mt-3.text-sm')?.textContent?.replace(/\s/g, ' ') ?? null;
+  /** `count` trades of `net` each on `day` */
+  const many = (count: number, day: string, net: number) => Array.from({ length: count }, () => closed(day, net));
+
+  it("a row for each of the grid's, with the month's own days in it", async () => {
+    await calendar(OCTOBER);
+    expect(weeks()).toEqual([
+      ['01 Oct – 04 Oct', 'No trades'],
+      ['05 Oct – 11 Oct', '4 trades · 2 green, 1 red', '+$45.00'],
+      ['12 Oct – 18 Oct', 'No trades'],
+      // the 20th's trade is still open
+      ['19 Oct – 25 Oct', 'No trades'],
+      ['26 Oct – 31 Oct', 'No trades'],
+    ]);
+    expect(document.querySelectorAll('.grid-cols-7 > button')).toHaveLength(weeks().length * 7);
+  });
+
+  it('the average green day against the average red one', async () => {
+    await calendar(OCTOBER);
+    expect(said()).toBe('Green days average +$30.00, red days -$15.00.');
+  });
+
+  it('the best weekday, once it has 10 trades', async () => {
+    await calendar([...many(5, '2026-10-05', 5), ...many(5, '2026-10-12', 5), closed('2026-10-06', -15)]);
+    expect(said()).toBe('Green days average +$25.00, red days -$15.00. Best weekday: Mon, +$50.00 from 10 trades.');
+  });
+
+  it('in Russian, the weekday named whole and the trades counted', async () => {
+    await calendar([...many(5, '2026-10-05', 5), ...many(5, '2026-10-12', 5)], 'ru');
+    expect(said()).toContain('Лучший день недели: понедельник, +50,00 $ за 10 сделок.');
+  });
+
+  it('a month with no closed trade has no weeks and no line', async () => {
+    await calendar([closed('2026-08-03', 10)]);
+    expect(weeksCard()).toBeNull();
+    expect(said()).toBeNull();
+  });
+});

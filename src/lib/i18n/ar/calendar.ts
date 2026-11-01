@@ -25,4 +25,11 @@ export const calendar: Translation<typeof en> = {
     many: '{count} صفقة · الصافي {net}',
     other: '{count} صفقة · الصافي {net}',
   },
+  'cal.weeks': 'الأسابيع',
+  'cal.week.days': '{from} – {to}',
+  'cal.week.none': 'لا صفقات',
+  'cal.line.both': 'متوسط اليوم الأخضر {green}، ومتوسط اليوم الأحمر {red}.',
+  'cal.line.green': 'متوسط اليوم الأخضر {green}.',
+  'cal.line.red': 'متوسط اليوم الأحمر {red}.',
+  'cal.line.best': { other: 'أفضل يوم في الأسبوع: {day}، {net} (عدد الصفقات: {count}).' },
 };

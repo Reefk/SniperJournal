@@ -514,6 +514,40 @@ async function journey() {
   check('weekday and hour: on a PC one table, a row for each weekday', JSON.stringify(heatShown) === '[5]', heatShown);
   const mondayAt9 = await b.run(`${heatCard}.querySelector('tbody tr td')?.innerText ?? ''`);
   check(`Monday 09:00 holds AAPL's +${money(99)}, one trade`, /^\+\$99\.00\s*1×$/.test(mondayAt9), mondayAt9);
+  // ---- 3b''. the Calendar: the weeks, and the line under the month ----------
+  await b.run(`$nav('/calendar'); true`);
+  await b.until(`!!document.querySelector('.grid-cols-7 > button:enabled')`, 'calendar');
+  const weeksCard = `[...document.querySelectorAll('section')].find((s) => s.querySelector('h2')?.textContent === 'Weeks')`;
+  // the second row's lines: its dates, its trades and days, its net
+  const marchWeek = await b.run(`(() => {
+    const week = ${weeksCard}?.querySelectorAll('li')[1];
+    return week ? [...week.querySelectorAll('div > div, li > span')].map((e) => e.textContent) : [];
+  })()`);
+  check(
+    `the Calendar's week of 2 March: 4 trades, 3 green days and 1 red, +${money(111)}`,
+    JSON.stringify(marchWeek) === JSON.stringify(['02 Mar – 08 Mar', '4 trades · 3 green, 1 red', `+${money(111)}`]),
+    marchWeek,
+  );
+  // 1 March is a Sunday: six rows, each with its week beside it on a 1440 px screen
+  check(
+    'a week beside each row of the grid, level with it and as tall, under a heading as tall as the weekdays',
+    await b.run(`(() => {
+      const days = [...document.querySelectorAll('.grid-cols-7 > button')];
+      const grid = days[0].parentElement.parentElement.getBoundingClientRect();
+      const rows = days.filter((_, i) => i % 7 === 0).map((c) => c.getBoundingClientRect());
+      const weeks = [...${weeksCard}.querySelectorAll('li')].map((li) => li.getBoundingClientRect());
+      const heads = [days[0].parentElement.previousElementSibling, ${weeksCard}.querySelector('h2')].map((e) => e.getBoundingClientRect());
+      return rows.length === 6 && weeks.length === 6 && weeks.every((w) => w.left > grid.right)
+        && rows.every((r, i) => Math.abs(r.top - weeks[i].top) < 1 && Math.abs(r.height - weeks[i].height) < 1)
+        && Math.abs(heads[0].top - heads[1].top) < 1 && Math.abs(heads[0].height - heads[1].height) < 1;
+    })()`),
+  );
+  const monthSaid = await b.run(`document.querySelector('main p.mt-3.text-sm')?.textContent ?? ''`);
+  check(
+    `under the month: green days average +${money(152.5 / 3)}, the red one -${money(41.5)}`,
+    monthSaid === `Green days average +${money(152.5 / 3)}, red days -${money(41.5)}.`,
+    monthSaid,
+  );
 
   // ---- 3c. a goal: set in Settings, seen on the Dashboard -------------------
   await b.run(`$nav('/settings'); true`);
