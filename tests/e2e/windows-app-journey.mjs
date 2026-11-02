@@ -550,7 +550,8 @@ async function journey() {
   // ---- 13. copy for review: a trade's text on the Windows clipboard ---------------------
   // (it overwrites the clipboard of whoever runs this)
   await b.run(`$nav('/trades'); true`);
-  await b.until(`!!document.querySelector('main tbody tr')`, 'trades page');
+  // Reports has table rows too, so wait for the page itself
+  await b.until(`location.pathname.startsWith('/trades') && !!document.querySelector('main tbody tr')`, 'trades page');
   await b.run(`document.querySelector('main tbody tr').click(); true`);
   await b.until(`!!$modal()?.querySelector('button[title="Copy this trade for review"]')`, 'trade form');
   await b.run(`$modal().querySelector('button[title="Copy this trade for review"]').click(); true`);
