@@ -45,7 +45,7 @@ MISTAKES AND GOALS
 See what each of your mistakes cost you, against the trades you made without one, and your share of clean trades this month against last month. Set your own goals, the ones you control on the day first (rules kept, clean trades, trades with a stop), then results, and the Dashboard shows each one against its target, with the last 8 weeks.
 
 PERFORMANCE CALENDAR
-Every day's net P&L at a glance. Click a day to see the trades behind the number.
+Every day's net P&L at a glance, each week's total beside it, and your average green and red day. Click a day to see the trades behind the number.
 
 INSIGHTS AND SIGNALS
 Patterns found in your own trades, explained in plain language: your most profitable session, the weekday that costs you, whether the trade after a loss performs worse, whether you hold losers longer than winners, and which tags lose money. Set a daily loss limit or a maximum number of trades and get a warning as you approach it.
@@ -59,7 +59,13 @@ TRADES, FILTERS AND REPORTS
 • Merge partial exits back into one position, with the P&L exact to the cent
 • Exclude a trade from the statistics without deleting it
 • Rename, merge or delete a tag on every trade at once, and sort your tags into groups of your own
-• Reports month by month and by symbol, setup, weekday and tag group, with green days and the recovery factor, ready to print
+• Reports month by month and by symbol, setup, weekday and tag group, with green days, the recovery factor, your recent form, hold time against result, your trades by weekday and hour, and how your trades ended in R, ready to print
+
+COPY FOR REVIEW
+Turn a trade, a day or a week into plain text to paste into an AI chat or send to a mentor: the trades in full, then your setups' rules, your mistake list and your goals, with instructions to grade how each trade was traded rather than its result. Leave the money out and it writes R instead, with % of your balance once you've set a starting balance. The app sends nothing: the text goes only where you paste it.
+
+HIDE YOUR AMOUNTS
+One click on the eye hides every amount of money in the app, so you can share a screenshot without showing your account size. Net profit still shows your result in R, and in % once you've set a starting balance, and the equity curve keeps its shape.
 
 IMPORT FROM YOUR BROKER
 Import a CSV or Excel export and preview exactly what was understood before anything is added. The exports of 30 trading platforms import as they come, from NinjaTrader, Tradovate and TopstepX to Interactive Brokers, thinkorswim, MetaTrader and Binance, and many other brokers' files are understood too. Importing your history again leaves out the trades already in your journal, and a file that closes a trade you logged as open finishes it. A file without fees can be given a fee per trade or per contract before it comes in. Export your trades to CSV at any time.
@@ -96,29 +102,33 @@ Sniper Journal is a record-keeping and analysis tool. It does not place trades, 
 ### What's new in this version
 
 1,500 characters max. Left empty for the first submission (Microsoft's own
-advice). For 1.2.0 (the Store has 1.1.1.0):
+advice). For 1.3.0 (the Store has 1.1.1.0 and skipped 1.2.0, so this covers
+both):
 
 ```
 FIVE LANGUAGES
-• Use the app in English, Spanish, Russian, Arabic or Hindi: choose on the first screen, or any time in Settings
-• Numbers and dates are written the way each language writes them, and Arabic reads right to left
-• Your own setups, tags and notes stay exactly as you typed them
+Use the app in English, Spanish, Russian, Arabic or Hindi, with numbers and dates written each language's way and Arabic right to left. Your own setups, tags and notes stay as you typed them.
 
-MISTAKES, APART FROM TAGS
-Tap the mistakes a trade made, such as an early entry or a moved stop. Reports shows what each one cost you against your clean trades.
+HIDE YOUR AMOUNTS
+The eye in the header turns every amount into •••, so you can share a screenshot. Net profit then shows your result in R, and in % once you've set a starting balance.
 
-YOUR TAGS, TIDIED
-Rename, merge or delete a tag on every trade at once, merge look-alikes such as "fomo" and "FOMO", and sort tags into groups of your own, each with its table in Reports.
+COPY FOR REVIEW
+Turn a trade, a day or a week into plain text for an AI chat or a mentor, with your rules, mistakes and goals. Leave the money out if you like. The app sends nothing.
 
-GOALS
-Set your own targets, the ones you control on the day first, then results. The Dashboard shows each against its target, with the last 8 weeks.
+MISTAKES, TAGS AND GOALS
+• Mark a trade's mistakes and see what each one cost you
+• Rename, merge or group tags across every trade at once
+• Set goals of your own and follow them on the Dashboard week by week
 
-FEES WHEN IMPORTING
-A file with no fees, such as Tradovate's exports, can be given a fee per trade or per contract in the preview, remembered for the account.
+NEW IN REPORTS AND THE CALENDAR
+• Recent form: your last 10, 20 or 50 trades against your whole record
+• Hold time against result, and your trades by weekday and hour
+• R spread: how your trades ended in R, what your best 10% made, and the losses that went past their stop
+• Green days, the recovery factor, and the balance at each month's end
+• Each week's total on the Calendar, with your average green and red day
 
 ALSO NEW
-• Reports: green days, the best day's share of your green days' profit, net without the best day, and the recovery factor
-• On the calendar, an amount too long for its day takes two lines instead of being cut off
+• A file without fees can be given a fee per trade or per contract as it comes in
 • Many smaller fixes
 ```
 
@@ -128,19 +138,20 @@ ALSO NEW
 Log trades with stop, target, fees, setup, tags, notes and a chart screenshot
 Win rate, profit factor, expectancy, SQN and average reward-to-risk, worked out for you
 Equity curve with maximum drawdown, and a daily P&L chart
-Performance calendar with every day's net P&L
+Performance calendar with every day's net P&L and each week's total
 Insights found in your own trades, explained in plain language
 A playbook of your setups and their rules, with how each one performs and what breaking a rule cost
 Import the exports of 30 trading platforms, CSV or Excel, with a preview before anything is added
-Reports by month, symbol, setup, weekday and tag group, ready to print or export to CSV
+Reports by month, symbol, setup, weekday, hour and tag group, with your recent form and R spread, ready to print or export to CSV
+Copy a trade, a day or a week as text for an AI chat or a mentor to review, with or without money
+Hide every amount with one click, to share a screenshot without showing your account size
 Mark each trade's mistakes and see what each one cost you against your clean trades
 Goals of your own, tracked on the Dashboard against their targets week by week
 Rename, merge and group your tags across every trade at once
 Several accounts, kept apart or viewed together
 Rate your discipline, execution and patience on every trade
 In English, Spanish, Russian, Arabic or Hindi, with Arabic right to left
-Your journal is a plain file in your Documents folder, and nothing is uploaded
-A daily backup, kept automatically for the last 30 days
+Your journal is a plain file in your Documents folder, backed up daily for 30 days, and nothing is uploaded
 No account, no ads, no tracking, and it works offline
 Test trades to explore with, removed in one click
 Dark and light themes
