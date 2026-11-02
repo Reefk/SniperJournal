@@ -1,6 +1,6 @@
 [package]
 name = "sniper-journal"
-version = "1.2.0"
+version = "1.3.0"
 description = "Sniper Journal for Windows"
 edition = "2024"
 rust-version = "1.90"
