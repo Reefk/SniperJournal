@@ -18,7 +18,10 @@ import { tr } from '@/lib/i18n';
 export function Header() {
   const { openTradeForm } = useUI();
   return (
-    <header className="h-header relative z-30 flex shrink-0 items-center gap-2 border-b border-line bg-surface px-3 pt-safe md:gap-4 md:px-6">
+    <header
+      data-print-hidden
+      className="h-header relative z-30 flex shrink-0 items-center gap-2 border-b border-line bg-surface px-3 pt-safe md:gap-4 md:px-6"
+    >
       <div className="flex min-w-0 items-center gap-2 md:hidden">
         <LogoMark />
         <AccountSwitcher variant="pill" align="start" />

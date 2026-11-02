@@ -244,8 +244,8 @@
 }
 
 @media print {
-  aside,
-  header {
+  /* the app's top bar and sidebar; not every header, as a card's holds its title */
+  [data-print-hidden] {
     display: none !important;
   }
   main {

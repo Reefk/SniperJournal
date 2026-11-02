@@ -538,6 +538,20 @@ async function journey() {
     return Math.abs(spread.left - months.left) < 1 && spread.top > months.bottom;
   })()`);
   check('R spread: under the month table, in the same column', spreadUnder);
+  // printed (the Print button above): the app's top bar and sidebar left out, every card's title kept
+  await b.send('Emulation.setEmulatedMedia', { media: 'print' });
+  const printed = await b.run(`(() => {
+    const shown = (el) => el.getClientRects().length > 0;
+    const bars = [...document.querySelectorAll('[data-print-hidden]')];
+    const titles = [...document.querySelectorAll('main header')];
+    return { bars: bars.length, barsShown: bars.filter(shown).length, titles: titles.length, titlesHidden: titles.filter((h) => !shown(h)).map((h) => h.textContent) };
+  })()`);
+  await b.send('Emulation.setEmulatedMedia', { media: '' });
+  check(
+    "printed, Reports leaves out the app's top bar and sidebar, and keeps every card's title",
+    printed.bars === 2 && printed.barsShown === 0 && printed.titles >= 5 && printed.titlesHidden.length === 0,
+    printed,
+  );
 
   // ---- 3b''. the Calendar: the weeks, and the line under the month ----------
   await b.run(`$nav('/calendar'); true`);
