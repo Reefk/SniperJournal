@@ -45,6 +45,12 @@ export const settings: Translation<typeof en> = {
   'settings.tagsHint':
     'Todas las etiquetas de tus operaciones, en todas las cuentas. Renombrar, fusionar o eliminar una cambia todas las operaciones que la tienen.',
 
+  'settings.review': 'Copiar para revisión',
+  'settings.reviewHint':
+    'Una operación, un día o una semana copiados para revisión terminan con instrucciones para quien los lea. Escribe las tuyas, o deja esto vacío para usar las de la app, que se ven en gris.',
+  'settings.reviewLabel': 'Mis instrucciones',
+  'settings.reviewReset': 'Usar las de la app',
+
   'settings.accounts': 'Cuentas',
   'settings.accountsHint': 'Cada cuenta tiene sus propias operaciones, saldo y estadísticas.',
   'settings.accountTrades': {

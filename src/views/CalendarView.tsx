@@ -29,6 +29,7 @@ import { PnlValue, SideBadge } from '@/components/ui/StatusBadge';
 import { Modal } from '@/components/ui/Modal';
 import { rich } from '@/components/ui/Rich';
 import { CellAmount } from '@/components/ui/CellAmount';
+import { CopyForReview } from '@/components/review/CopyForReview';
 
 /**
  * The month's weeks, a row each as on the grid: under it, or beside it on a
@@ -41,35 +42,45 @@ function WeekList({ weeks, currency }: { weeks: WeekTotal[]; currency: string })
         {tr('cal.weeks')}
       </h2>
       <ul>
-        {weeks.map((week) => (
-          <li
-            key={week.from}
-            className="flex items-center justify-between gap-3 border-b border-line px-3 py-2 last:border-b-0 xl:h-[104px] xl:flex-col xl:items-start xl:justify-center xl:gap-1"
-          >
-            <div className="min-w-0">
-              <div className="num text-xs text-fg">
-                {week.from === week.to
-                  ? formatShortDate(week.from)
-                  : tr('cal.week.days', { from: formatShortDate(week.from), to: formatShortDate(week.to) })}
+        {weeks.map((week) => {
+          const days =
+            week.from === week.to
+              ? formatShortDate(week.from)
+              : tr('cal.week.days', { from: formatShortDate(week.from), to: formatShortDate(week.to) });
+          return (
+            <li
+              key={week.from}
+              className="flex items-center justify-between gap-3 border-b border-line px-3 py-2 last:border-b-0 xl:h-[104px] xl:flex-col xl:items-start xl:justify-center xl:gap-1"
+            >
+              <div className="min-w-0">
+                <div className="num text-xs text-fg">{days}</div>
+                <div className="text-[11px] text-faint">
+                  {week.trades
+                    ? `${tr('common.trades', { count: week.trades })} · ${tr('cal.greenRed', { count: week.green, red: week.red })}`
+                    : tr('cal.week.none')}
+                </div>
               </div>
-              <div className="text-[11px] text-faint">
-                {week.trades
-                  ? `${tr('common.trades', { count: week.trades })} · ${tr('cal.greenRed', { count: week.green, red: week.red })}`
-                  : tr('cal.week.none')}
-              </div>
-            </div>
-            {week.trades > 0 && (
-              <span
-                className={cn(
-                  'num shrink-0 text-sm font-semibold',
-                  week.net > 0 ? 'text-profit' : week.net < 0 ? 'text-loss' : 'text-muted',
-                )}
-              >
-                {breakableAmount(formatMoney(week.net, currency, { sign: true }))}
-              </span>
-            )}
-          </li>
-        ))}
+              {week.trades > 0 && (
+                // the week's net, and a button to copy the week for review after it
+                <div className="flex shrink-0 items-center gap-1 xl:-me-2 xl:self-stretch xl:justify-between">
+                  <span
+                    className={cn(
+                      'num text-sm font-semibold',
+                      week.net > 0 ? 'text-profit' : week.net < 0 ? 'text-loss' : 'text-muted',
+                    )}
+                  >
+                    {breakableAmount(formatMoney(week.net, currency, { sign: true }))}
+                  </span>
+                  <CopyForReview
+                    of={{ kind: 'week', from: week.from, to: week.to }}
+                    look="icon"
+                    name={tr('review.copyWeekOf', { week: days })}
+                  />
+                </div>
+              )}
+            </li>
+          );
+        })}
       </ul>
     </section>
   );
@@ -354,6 +365,7 @@ export function CalendarView() {
               })
             : undefined
         }
+        footer={selectedDay ? <CopyForReview of={{ kind: 'day', day: selectedDay }} /> : undefined}
       >
         <ul className="divide-y divide-line">
           {selectedTrades.map((t) => (

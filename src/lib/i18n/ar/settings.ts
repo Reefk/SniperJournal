@@ -46,6 +46,12 @@ export const settings: Translation<typeof en> = {
   'settings.tags': 'الوسوم',
   'settings.tagsHint': 'كل وسم على صفقاتك، في كل الحسابات. إعادة تسمية وسم أو دمجه أو حذفه تغيّر كل صفقة تحمله.',
 
+  'settings.review': 'نسخ للمراجعة',
+  'settings.reviewHint':
+    'ينتهي النص المنسوخ للمراجعة، لصفقة أو يوم أو أسبوع، بتعليمات لمن يقرؤه. اكتب تعليماتك، أو اترك هذا الحقل فارغًا لاستخدام تعليمات التطبيق الظاهرة باللون الرمادي.',
+  'settings.reviewLabel': 'تعليماتي',
+  'settings.reviewReset': 'استخدام تعليمات التطبيق',
+
   'settings.accounts': 'الحسابات',
   'settings.accountsHint': 'لكل حساب صفقاته ورصيده وإحصاءاته الخاصة.',
   'settings.accountTrades': {

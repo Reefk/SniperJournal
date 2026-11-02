@@ -44,6 +44,12 @@ export const settings: Translation<typeof en> = {
   'settings.tagsHint':
     'आपके ट्रेड का हर टैग, हर खाते में। किसी टैग का नाम बदलने, उसे मिलाने या हटाने से हर वह ट्रेड बदलता है जिसमें वह है।',
 
+  'settings.review': 'समीक्षा के लिए कॉपी',
+  'settings.reviewHint':
+    'समीक्षा के लिए कॉपी किया गया ट्रेड, दिन या हफ़्ता, पढ़ने वाले के लिए निर्देशों पर खत्म होता है। अपने निर्देश लिखें, या ऐप के निर्देशों के लिए इसे खाली छोड़ दें, जो हल्के रंग में दिखते हैं।',
+  'settings.reviewLabel': 'मेरे निर्देश',
+  'settings.reviewReset': 'ऐप के निर्देश इस्तेमाल करें',
+
   'settings.accounts': 'खाते',
   'settings.accountsHint': 'हर खाते के अपने ट्रेड, बैलेंस और आँकड़े होते हैं।',
   'settings.accountTrades': { one: '{count} ट्रेड', other: '{count} ट्रेड' },

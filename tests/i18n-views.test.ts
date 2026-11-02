@@ -367,6 +367,34 @@ const SCREENS: Array<{
     trades: TRADES,
     open: () => document.querySelector<HTMLButtonElement>('.grid-cols-7 > button:enabled')?.click(),
   },
+  {
+    name: 'Calendar, a week copied for review',
+    view: CalendarView,
+    trades: TRADES.map((t) => ({ ...t, setupId: 's1', ruleChecks: { r1: false } })),
+    open: () => document.querySelector('svg.lucide-clipboard-copy')?.closest('button')?.click(),
+    ready: () => Boolean((inModal('textarea') as HTMLTextAreaElement | null)?.value),
+  },
+  {
+    name: 'Calendar, a day copied for review, money left out',
+    view: CalendarView,
+    trades: TRADES,
+    open: () => document.querySelector<HTMLButtonElement>('.grid-cols-7 > button:enabled')?.click(),
+    then: async () => {
+      await click(inModal('svg.lucide-clipboard-copy')?.closest('button') ?? null);
+      await until(() => Boolean((inModal('textarea') as HTMLTextAreaElement | null)?.value));
+      await click(inModal('input[type="checkbox"]'));
+    },
+  },
+  {
+    name: 'Trade form, editing, copied for review',
+    view: TradeFormModal,
+    trades: [FULL],
+    open: () => ui?.openTradeForm({ trade: FULL }),
+    then: async () => {
+      await click(inModal('svg.lucide-clipboard-copy')?.closest('button') ?? null);
+      await until(() => document.querySelectorAll('[data-modal-root]').length === 2);
+    },
+  },
   // only green days, and 10 trades on Mondays: the best weekday named
   {
     name: 'Calendar, a green month and its best weekday',

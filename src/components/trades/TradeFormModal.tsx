@@ -21,6 +21,7 @@ import { Field, Input, Select, Textarea } from '@/components/ui/Field';
 import { TagInput } from '@/components/ui/TagInput';
 import { RatingInput } from '@/components/ui/RatingInput';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
+import { CopyForReview } from '@/components/review/CopyForReview';
 import { ChartImage } from './ChartImage';
 import { ImportBody } from './ImportTradesModal';
 import { RuleChecklist } from './RuleChecklist';
@@ -325,6 +326,10 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
       ? tr(form.side === 'LONG' ? 'form.stopAbove' : 'form.stopBelow')
       : null;
 
+  // Copy for review takes the trade as the form shows it, saved or not; while the
+  // form has something it wouldn't save, the trade as saved
+  const shown = trade && { ...trade, ...validate(form, chosenSetup?.rules ?? [], trade).input };
+
   const save = (addAnother: boolean) => {
     const result = validate(form, chosenSetup?.rules ?? [], trade);
     if (!result.input) {
@@ -383,6 +388,8 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
         save(false);
       }}
       onKeyDown={(e) => {
+        // keys in a window opened from the form (Copy for review) reach it through React too
+        if (!e.currentTarget.contains(e.target as Node)) return;
         if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
           e.preventDefault();
           save(false);
@@ -761,10 +768,17 @@ function TradeForm({ trade, defaults, onDone }: { trade?: Trade; defaults?: Part
       {/* on a phone the buttons stay pinned to the bottom while the form scrolls */}
       <div className="-mx-5 -mb-4 mt-5 flex items-center gap-2 border-t border-line px-5 py-3 max-md:pb-safe-3 max-md:sticky max-md:bottom-[-1rem] max-md:bg-surface">
         {trade && (
-          <Button variant="ghost" className="text-loss hover:bg-loss/10 hover:text-loss" onClick={remove}>
-            <Trash2 className="size-4" /> {tr('common.delete')}
+          // on a phone the icon alone, as Copy for review beside it, so Save keeps its room in any language
+          <Button
+            variant="ghost"
+            className="text-loss hover:bg-loss/10 hover:text-loss max-md:size-11 max-md:px-0"
+            aria-label={tr('common.delete')}
+            onClick={remove}
+          >
+            <Trash2 className="size-4" /> <span className="max-md:hidden">{tr('common.delete')}</span>
           </Button>
         )}
+        {shown && <CopyForReview of={{ kind: 'trade', trade: shown }} look="compact" />}
         <span className="flex-1 md:hidden" />
         <span className="ms-auto me-2 text-xs text-faint max-md:hidden">{tr('form.ctrlEnter')}</span>
         <Button variant="ghost" className="max-md:hidden" onClick={onDone}>

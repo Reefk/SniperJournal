@@ -128,6 +128,11 @@ export interface Settings {
   tagsKeptApart?: string[][];
   /** my targets, one set for every account; absent until the first is set (see lib/goals.ts) */
   goals?: Goals;
+  /**
+   * My own instructions at the end of a text copied for review, in place of
+   * the app's (lib/review-text.ts). Absent or blank: the app's.
+   */
+  reviewNote?: string;
 }
 
 export type GoalKey =

@@ -96,6 +96,7 @@ export const review = {
   'review.copy': 'Copy for review',
   'review.copyTrade': 'Copy this trade for review',
   'review.copyWeek': 'Copy this week for review',
+  'review.copyWeekOf': 'Copy the week {week} for review',
   'review.copyDay': 'Copy this day for review',
   'review.dialog':
     'Paste it into any AI chat, or send it to a mentor. The app sends nothing: the text goes only where you paste it.',

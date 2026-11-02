@@ -182,6 +182,7 @@ data/               your journal and its backups, created at runtime
 | The Calendar's grid, week totals and month line    | `src/lib/calendar.ts`                                                               |
 | Reports' month table and its balance column        | `src/lib/months.ts`                                                                 |
 | Reports' R spread and its best tenth               | `src/lib/r-spread.ts`, `src/components/reports/RSpreadChart.tsx`                    |
+| Copy for review: the text and its window           | `src/lib/review-text.ts`, `src/components/review/CopyForReview.tsx`                 |
 | Chart image upload, scaling and storage            | `src/lib/screenshots.ts`, `src/app/api/screenshot/`                                 |
 | The app icon and the store artwork                 | `assets/logo.png` and `assets/banner.png`, then `npm run icons` redraws all of them |
 | The trade entry form                               | `src/components/trades/TradeFormModal.tsx`                                          |

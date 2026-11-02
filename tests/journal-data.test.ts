@@ -94,6 +94,16 @@ describe('normalize: loading a journal', () => {
     expect(parseBackup(JSON.stringify(withSetting(true))).data?.settings.hideMoney).toBe(true);
   });
 
+  it("my own review instructions are the app's unless set, kept as written, and survive a backup", () => {
+    const withSetting = (value: unknown) => journal({ settings: { ...base, reviewNote: value as string } });
+    expect(normalize(journal()).settings.reviewNote).toBeUndefined();
+    expect(normalize(withSetting('Grade me hard.\nOne line each.')).settings.reviewNote).toBe(
+      'Grade me hard.\nOne line each.',
+    );
+    expect(normalize(withSetting(42)).settings.reviewNote).toBeUndefined();
+    expect(parseBackup(JSON.stringify(withSetting('Be brief.'))).data?.settings.reviewNote).toBe('Be brief.');
+  });
+
   it('values of the wrong type are replaced instead of crashing a screen', () => {
     const j = normalize(
       journal({

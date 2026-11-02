@@ -68,6 +68,7 @@ export const review: Translation<typeof en> = {
   'review.copy': 'نسخ للمراجعة',
   'review.copyTrade': 'نسخ هذه الصفقة للمراجعة',
   'review.copyWeek': 'نسخ هذا الأسبوع للمراجعة',
+  'review.copyWeekOf': 'نسخ أسبوع {week} للمراجعة',
   'review.copyDay': 'نسخ هذا اليوم للمراجعة',
   'review.dialog':
     'الصقه في أي محادثة مع الذكاء الاصطناعي، أو أرسله إلى مرشد. التطبيق لا يرسل شيئًا: يذهب النص فقط إلى حيث تلصقه.',

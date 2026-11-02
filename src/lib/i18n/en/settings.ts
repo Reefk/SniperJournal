@@ -43,6 +43,13 @@ export const settings = {
   'settings.tagsHint':
     'Every tag on your trades, in every account. Renaming, merging or deleting one changes every trade that has it.',
 
+  // my own instructions at the end of a text copied for review; empty is the app's (review.note)
+  'settings.review': 'Copy for review',
+  'settings.reviewHint':
+    "A trade, a day or a week copied for review ends with instructions for whoever reads it. Write your own, or leave this empty for the app's, shown greyed.",
+  'settings.reviewLabel': 'My instructions',
+  'settings.reviewReset': "Use the app's",
+
   'settings.accounts': 'Accounts',
   'settings.accountsHint': 'Each account keeps its own trades, balance and statistics.',
   'settings.accountTrades': { one: '{count} trade', other: '{count} trades' },

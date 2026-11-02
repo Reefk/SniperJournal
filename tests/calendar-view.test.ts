@@ -158,10 +158,12 @@ describe("Calendar: a day's amount, on two lines where its cell is too narrow", 
 describe('Calendar: the weeks, and the line under the month', () => {
   const weeksCard = () =>
     [...document.querySelectorAll('section')].find((s) => s.querySelector('h2')?.textContent === 'Weeks') ?? null;
-  /** each week's lines: its dates, its trades or none, its net */
+  /** each week's lines: its dates, its trades or none, its net (not the button that copies it for review) */
   const weeks = () =>
     [...(weeksCard()?.querySelectorAll('li') ?? [])].map((li) =>
-      [...li.children].flatMap((c) => (c.children.length ? [...c.children] : [c]).map((e) => e.textContent)),
+      [...li.children].flatMap((c) =>
+        (c.children.length ? [...c.children] : [c]).filter((e) => e.tagName !== 'BUTTON').map((e) => e.textContent),
+      ),
     );
   /** the line under the month's cards, a no-break space (before "$" in Russian) read as a space */
   const said = () => document.querySelector('p.mt-3.text-sm')?.textContent?.replace(/\s/g, ' ') ?? null;

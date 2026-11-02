@@ -85,6 +85,7 @@ export const review: Translation<typeof en> = {
   'review.copy': 'Copiar para revisión',
   'review.copyTrade': 'Copiar esta operación para revisión',
   'review.copyWeek': 'Copiar esta semana para revisión',
+  'review.copyWeekOf': 'Copiar la semana {week} para revisión',
   'review.copyDay': 'Copiar este día para revisión',
   'review.dialog':
     'Pégalo en cualquier chat de IA o envíalo a un mentor. La app no envía nada: el texto solo va donde lo pegues.',

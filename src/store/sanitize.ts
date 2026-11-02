@@ -169,6 +169,7 @@ export function cleanSettings(v: unknown, base: Settings): Settings {
     tagGroups: tagGroups(s.tagGroups),
     tagsKeptApart: keptApart(s.tagsKeptApart),
     goals: goals(s.goals),
+    reviewNote: optText(s.reviewNote),
   };
 }
 

@@ -26,7 +26,7 @@ import { storage, type CopyReason } from '@/lib/storage';
 import { CAN_BRING_OVER, useBringOver } from '@/hooks/useBringOver';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
-import { Field, Input, Select } from '@/components/ui/Field';
+import { Field, Input, Select, Textarea } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
 import { TagManager } from '@/components/settings/TagManager';
 import { GoalFields } from '@/components/settings/GoalFields';
@@ -238,6 +238,23 @@ export function SettingsView() {
 
         <Section title={tr('settings.tags')} description={tr('settings.tagsHint')}>
           <TagManager />
+        </Section>
+
+        <Section title={tr('settings.review')} description={tr('settings.reviewHint')}>
+          <Field label={tr('settings.reviewLabel')}>
+            <Textarea
+              rows={4}
+              dir="auto"
+              value={data.settings.reviewNote ?? ''}
+              onChange={(e) => actions.updateSettings({ reviewNote: e.target.value || undefined })}
+              placeholder={tr('review.note')}
+            />
+          </Field>
+          {data.settings.reviewNote?.trim() && (
+            <Button className="mt-3" onClick={() => actions.updateSettings({ reviewNote: undefined })}>
+              <RotateCcw className="size-4" /> {tr('settings.reviewReset')}
+            </Button>
+          )}
         </Section>
 
         <Section title={tr('settings.accounts')} description={tr('settings.accountsHint')}>

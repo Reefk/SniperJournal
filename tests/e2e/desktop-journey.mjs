@@ -546,7 +546,7 @@ async function journey() {
   // the second row's lines: its dates, its trades and days, its net
   const marchWeek = await b.run(`(() => {
     const week = ${weeksCard}?.querySelectorAll('li')[1];
-    return week ? [...week.querySelectorAll('div > div, li > span')].map((e) => e.textContent) : [];
+    return week ? [...week.querySelectorAll('div > div, li > div > span')].map((e) => e.textContent) : [];
   })()`);
   check(
     `the Calendar's week of 2 March: 4 trades, 3 green days and 1 red, +${money(111)}`,
@@ -572,6 +572,41 @@ async function journey() {
     `under the month: green days average +${money(152.5 / 3)}, the red one -${money(41.5)}`,
     monthSaid === `Green days average +${money(152.5 / 3)}, red days -${money(41.5)}.`,
     monthSaid,
+  );
+
+  // ---- 3b'''. Copy for review: the week of 2 March as text for any AI --------
+  await b.run(
+    `${weeksCard}.querySelectorAll('li')[1].querySelector('button[aria-label="Copy the week 02 Mar – 08 Mar for review"]').click(); true`,
+  );
+  await b.until(`!!$modal()?.querySelector('textarea')?.value`, 'the week copied for review');
+  const weekText = await b.run(`$modal().querySelector('textarea').value`);
+  check(
+    `Copy for review: the week of 2 March, its 4 trades and +${money(111)}, a line a day, and what to do at its end`,
+    weekText.startsWith(
+      `A trading week of mine to review: 02 Mar – 08 Mar 2026.\n\n4 trades: 3 won, 1 lost.\nNet: +${money(111)}.\n\nDay by day:\n- Mon 02 Mar: 1 trade, +${money(99)}\n`,
+    ) && weekText.endsWith('Then name one thing to keep doing and one thing to change.'),
+    weekText.slice(0, 300),
+  );
+  await b.run(`$modal().querySelector('input[type="checkbox"]').click(); true`);
+  await b.until(`$modal().querySelector('textarea').value.includes('of my balance')`, 'money left out');
+  const leftOutText = await b.run(`$modal().querySelector('textarea').value`);
+  check(
+    'with "Leave out money", the net is a % of the balance and no amount is left in it',
+    leftOutText.includes('\nNet: +1.11% of my balance.\n') && !leftOutText.includes('$'),
+    leftOutText.slice(0, 300),
+  );
+  // the clipboard, allowed as a person's click allows it on localhost
+  await b.send('Browser.grantPermissions', {
+    origin: base,
+    permissions: ['clipboardReadWrite', 'clipboardSanitizedWrite'],
+  });
+  await b.run(`$t('Copy for review', $modal()).click(); true`);
+  await b.until(`!$modal()`, 'the copy window closed');
+  check(
+    'Copy puts the text on the clipboard, says so, and closes the window',
+    (await b.run(
+      `(async () => (await navigator.clipboard.readText()).replace(/\\r\\n/g, '\\n') === ${JSON.stringify(leftOutText)})()`,
+    )) && (await b.run(`document.body.innerText.includes('Copied. Paste it wherever you like.')`)),
   );
 
   // ---- 3c. a goal: set in Settings, seen on the Dashboard -------------------
@@ -2035,9 +2070,11 @@ async function journey() {
     '/settings',
   ];
   const FITS = `
-    // a box wider than its room, and the app's own text in it that is cut
+    // a box wider than its room, and the app's own text in it that is cut. A window is also too
+    // wide when a box in it scrolls sideways: its form does, when a row is too wide for it
     window.$fits = (root) => {
-      const wide = root === document.body ? document.documentElement.scrollWidth > innerWidth || document.querySelector('main').scrollWidth > document.querySelector('main').clientWidth : root.scrollWidth > root.clientWidth;
+      const sideways = (el) => ['auto', 'scroll'].includes(getComputedStyle(el).overflowX) && el.scrollWidth > el.clientWidth + 1;
+      const wide = root === document.body ? document.documentElement.scrollWidth > innerWidth || document.querySelector('main').scrollWidth > document.querySelector('main').clientWidth : root.scrollWidth > root.clientWidth || [...root.querySelectorAll('*')].some(sideways);
       const cut = [];
       // how many boxes that may cut their text were looked at: none means nothing was measured
       let measured = 0;
@@ -2356,6 +2393,18 @@ async function journey() {
         cut.push(...fits.cut.map((t) => `the trade form at ${width}: ${t}`));
         if (wide.length + cut.length + unsure.length > before) await shot(`${code}-${width}-trade-form`);
       } else wide.push(`the trade form at ${width} did not open`);
+      // the Calendar's first week with trades, copied for review: the dialog with its text
+      await open('/calendar', code, width);
+      await b.run(`document.querySelector('main svg.lucide-clipboard-copy')?.closest('button')?.click(); true`);
+      if (await seen(`!!$modal()?.querySelector('textarea')?.value`, 'copy for review', 5000)) {
+        const before = wide.length + cut.length + unsure.length;
+        if (!(await seen(`$still($modal())`, 'the copy for review window, still', 5000)))
+          unsure.push(`the copy for review window at ${width} never still (${await change()})`);
+        const fits = await b.run(`$fits($modal())`);
+        if (fits.wide) wide.push(`the copy for review window at ${width}`);
+        cut.push(...fits.cut.map((t) => `the copy for review window at ${width}: ${t}`));
+        if (wide.length + cut.length + unsure.length > before) await shot(`${code}-${width}-copy-for-review`);
+      } else wide.push(`the copy for review window at ${width} did not open`);
     }
     check(`${name}: the test data is made in ${name}`, made, sampleSetups(journalOnDisk()));
     check(`${name}: no page is wider than the screen at 1366, 1180, 412 or 360 px`, wide.length === 0, wide.join('; '));

@@ -133,16 +133,44 @@ nothing restarts, and your trades stay exactly as they are.
 
 ## What each page does
 
-| Page                   | What it is for                                                                                                                        |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| **Dashboard**          | Net profit, win rate, profit factor, average R:R, expectancy, SQN, equity curve, Sniper Score, daily P&L and your goals.              |
-| **Calendar**           | Each day's net P&L and trades, each week's total, your average green and red day. Click a day to see its trades.                      |
-| **The Playbook**       | The setups you allow yourself to trade and their rules, with the real performance of each one underneath.                             |
-| **Trades**             | The full table, with filters for pair, session, leverage, setup, mistake, date, direction and result. Click a row to edit it.         |
-| **Insights & Signals** | Patterns found in your own trades: your best session, revenge trading, holding losers too long, fee drag, and more.                   |
-| **Resources**          | Your own shortlist of tools and links.                                                                                                |
-| **Support**            | How the app works, where your data is, and the keyboard shortcuts.                                                                    |
-| **Reports**            | Printable: green days, recovery factor, recent form, hold times, weekday and hour, months, R spread, symbols, setups, tags, mistakes. |
+| Page                   | What it is for                                                                                                                                    |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Dashboard**          | Net profit, win rate, profit factor, average R:R, expectancy, SQN, equity curve, Sniper Score, daily P&L and your goals.                          |
+| **Calendar**           | Each day's net P&L and trades, each week's total, your average green and red day. Click a day to see its trades. Copy a day or a week for review. |
+| **The Playbook**       | The setups you allow yourself to trade and their rules, with the real performance of each one underneath.                                         |
+| **Trades**             | The full table, with filters for pair, session, leverage, setup, mistake, date, direction and result. Click a row to edit it.                     |
+| **Insights & Signals** | Patterns found in your own trades: your best session, revenge trading, holding losers too long, fee drag, and more.                               |
+| **Resources**          | Your own shortlist of tools and links.                                                                                                            |
+| **Support**            | How the app works, where your data is, and the keyboard shortcuts.                                                                                |
+| **Reports**            | Printable: green days, recovery factor, recent form, hold times, weekday and hour, months, R spread, symbols, setups, tags, mistakes.             |
+
+### Copy for review
+
+**Copy for review** turns a trade, a day or a week into plain text to paste
+into any AI chat, or to send to a mentor. It is in a trade's form when you edit
+it, in a day's window on the Calendar, and beside each week's total on the
+Calendar.
+
+- **A trade** gives everything it has: times, size, entry and exit, stop and
+  target, R and net after fees, its setup with the rules kept or broken,
+  mistakes, tags, your ratings, session and notes. It is the trade as the form
+  shows it, so a change you haven't saved yet is in it too.
+- **A day** gives its numbers (trades, won and lost, net, R), then each trade
+  in full.
+- **A week** gives its numbers and a line for each day, and in full only the
+  trades that broke a rule or had a mistake, so it stays short.
+- **It ends with your own rules:** the rules of the setups used, your mistake
+  list and your goals, then instructions to grade each trade on how it was
+  traded, against them, rather than on its result. Write your own instructions
+  in **Settings → Copy for review**.
+- **Leave out money** writes R and % of your balance in place of amounts,
+  sizes and fees, and leaves out goals in money, so your account size stays
+  with you. Your notes go as you wrote them. With amounts hidden (the eye),
+  money is always left out.
+
+**The app sends nothing.** The text goes to the clipboard and from there only
+where you paste it, like a CSV export. Where a device won't let the app copy,
+the text is selected for you to copy by hand.
 
 ---
 
