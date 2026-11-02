@@ -1,5 +1,5 @@
 import type { Goals, Setup, Trade } from './types';
-import { tr } from './i18n';
+import { language, tr } from './i18n';
 import {
   formatDate,
   formatDuration,
@@ -163,7 +163,7 @@ function numberLines(trades: Trade[], book: ReviewBook, money: ReviewMoney): str
   return lines;
 }
 
-/** the trader's own rules for the setups these trades used, their mistake list and goals, then the instructions */
+/** the trader's own rules for the setups these trades used, their mistake list and goals */
 function closing(trades: Trade[], book: ReviewBook, money: ReviewMoney): string[] {
   const used = new Set(trades.map((t) => t.setupId));
   const mine = book.setups
@@ -179,7 +179,21 @@ function closing(trades: Trade[], book: ReviewBook, money: ReviewMoney): string[
     .filter(({ def }) => !(money.leaveOut && def.unit === 'money'))
     .map(({ def, target }) => `${def.label} ${goalTargetText(def, target, book.currency)}`);
   if (goals.length) mine.push(`- ${tr('review.goals', { list: goals.join(comma()) })}`);
-  return [...(mine.length ? ['', tr('review.mine'), ...mine] : []), '', book.note?.trim() || tr('review.note')];
+  return mine.length ? ['', tr('review.mine'), ...mine] : [];
+}
+
+const RLM = String.fromCharCode(0x200f);
+
+/**
+ * The text, ending with the instructions. In a right-to-left language each
+ * line the app writes starts with a right-to-left mark: a line made only of
+ * isolated parts (a week's "- Mon 2 Mar: 2 trades, -$70.67") has no letter of
+ * its own to set its direction, and a text box or a chat would draw it left
+ * to right. The trader's own instructions are left as they were written.
+ */
+function finish(lines: string[], book: ReviewBook): string {
+  const mark = (line: string) => (line && language().dir === 'rtl' ? RLM + line : line);
+  return [...lines.map(mark), '', book.note?.trim() || mark(tr('review.note'))].join('\n');
 }
 
 /** the line saying amounts were left out, under the first */
@@ -188,28 +202,34 @@ const leftOut = (money: ReviewMoney) =>
 
 /** one trade, for review */
 export function tradeReview(t: Trade, book: ReviewBook, money: ReviewMoney): string {
-  return [
-    tr('review.head.trade', { symbol: t.symbol, date: formatDate(tradeDay(t)) }),
-    ...leftOut(money),
-    '',
-    ...tradeLines(t, book, money),
-    ...closing([t], book, money),
-  ].join('\n');
+  return finish(
+    [
+      tr('review.head.trade', { symbol: t.symbol, date: formatDate(tradeDay(t)) }),
+      ...leftOut(money),
+      '',
+      ...tradeLines(t, book, money),
+      ...closing([t], book, money),
+    ],
+    book,
+  );
 }
 
 /** a day ('YYYY-MM-DD') and its trades, each in full */
 export function dayReview(day: string, trades: Trade[], book: ReviewBook, money: ReviewMoney): string {
   const weekday = weekdayName((parseLocal(day).getDay() + 6) % 7, 'long');
   const uncounted = trades.length - statTrades(trades).length;
-  return [
-    tr('review.head.day', { day: weekday, date: formatDate(day) }),
-    ...leftOut(money),
-    '',
-    ...numberLines(trades, book, money),
-    ...(uncounted ? [tr('review.uncounted.day', { count: uncounted })] : []),
-    ...sortChronological(trades).flatMap((t, i) => ['', ...tradeLines(t, book, money, i + 1)]),
-    ...closing(trades, book, money),
-  ].join('\n');
+  return finish(
+    [
+      tr('review.head.day', { day: weekday, date: formatDate(day) }),
+      ...leftOut(money),
+      '',
+      ...numberLines(trades, book, money),
+      ...(uncounted ? [tr('review.uncounted.day', { count: uncounted })] : []),
+      ...sortChronological(trades).flatMap((t, i) => ['', ...tradeLines(t, book, money, i + 1)]),
+      ...closing(trades, book, money),
+    ],
+    book,
+  );
 }
 
 /**
@@ -248,17 +268,20 @@ export function weekReview(from: string, to: string, trades: Trade[], book: Revi
   // the counted trades not given in full are in the day lines; the others are only in the count under the numbers
   const rest = [...counted].filter((t) => !flagged.includes(t)).length;
   const uncounted = inWeek.length - counted.size;
-  return [
-    tr('review.head.week', { from: formatShortDate(from), to: formatDate(to) }),
-    ...leftOut(money),
-    '',
-    ...numberLines(inWeek, book, money),
-    ...(uncounted ? [tr('review.uncounted.week', { count: uncounted })] : []),
-    ...(dayLines.length ? ['', tr('review.days'), ...dayLines] : []),
-    '',
-    flagged.length ? tr('review.flagged') : tr('review.flagged.none'),
-    ...flagged.flatMap((t, i) => ['', ...tradeLines(t, book, money, i + 1)]),
-    ...(flagged.length && rest ? ['', tr('review.flagged.rest', { count: rest })] : []),
-    ...closing(flagged.length ? flagged : inWeek, book, money),
-  ].join('\n');
+  return finish(
+    [
+      tr('review.head.week', { from: formatShortDate(from), to: formatDate(to) }),
+      ...leftOut(money),
+      '',
+      ...numberLines(inWeek, book, money),
+      ...(uncounted ? [tr('review.uncounted.week', { count: uncounted })] : []),
+      ...(dayLines.length ? ['', tr('review.days'), ...dayLines] : []),
+      '',
+      flagged.length ? tr('review.flagged') : tr('review.flagged.none'),
+      ...flagged.flatMap((t, i) => ['', ...tradeLines(t, book, money, i + 1)]),
+      ...(flagged.length && rest ? ['', tr('review.flagged.rest', { count: rest })] : []),
+      ...closing(flagged.length ? flagged : inWeek, book, money),
+    ],
+    book,
+  );
 }

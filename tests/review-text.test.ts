@@ -146,6 +146,27 @@ describe('tradeReview: a trade, for review', () => {
     expect(text).not.toMatch(/[,;]/);
   });
 
+  it('in Arabic each line it writes reads right to left, one made only of dates and numbers too; my own instructions stay as written', () => {
+    setLanguage('ar');
+    const RLM = String.fromCharCode(0x200f);
+    const FSI = String.fromCharCode(0x2068);
+    const book = { ...BOOK, note: 'Grade me hard.\nOne line each.' };
+    const lines = weekReview('2026-03-02', '2026-03-08', [AAPL, TSLA], book, MONEY).split('\n');
+    expect(lines.slice(-2)).toEqual(['Grade me hard.', 'One line each.']);
+    expect(lines.slice(0, -2).filter((line) => line && !line.startsWith(RLM))).toEqual([]);
+    // lines with no letter of their own, each part isolated (the Arabic comma sets no direction):
+    // a day's "- {day}: {trades}، {result}" and a setup's "- {name}: {rules}"
+    expect(lines.filter((line) => line.startsWith(`${RLM}- ${FSI}`)).map((line) => line.slice(0, 6))).toEqual([
+      `${RLM}- ${FSI}ال`,
+      `${RLM}- ${FSI}Br`,
+    ]);
+    // the app's own instructions are marked like the rest; blank lines stay blank
+    expect(tradeReview(AAPL, BOOK, MONEY).split('\n').at(-1)?.startsWith(RLM)).toBe(true);
+    expect(lines).toContain('');
+    setLanguage('en');
+    expect(weekReview('2026-03-02', '2026-03-08', [AAPL, TSLA], BOOK, MONEY)).not.toContain(RLM);
+  });
+
   it('with no setup used, no mistakes listed and no goals, it goes straight to the instructions', () => {
     const bare: ReviewBook = { setups: [], mistakes: [], currency: 'USD' };
     expect(tradeReview(TSLA, bare, MONEY).endsWith(`Result: -0.67R, -$20.00.\n\n${NOTE}`)).toBe(true);
