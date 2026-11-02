@@ -1,8 +1,9 @@
 // The Android app on an emulator: restore and erase with their safety copies,
 // the journal surviving a force-stop, a corrupted journal, a save the phone
 // refuses, reclaiming chart images nothing uses, a trade logged in the trade
-// form, a CSV imported with a fee per contract, the back button and the
-// share sheet. Works on a debug build and,
+// form, a CSV imported with a fee per contract, amounts hidden with the eye, a
+// trade copied for review and pasted back, the back button and the share
+// sheet. Works on a debug build and,
 // on an emulator image that allows `adb root`, on a release build too.
 //
 //   npm run build:mobile && npx cap sync android, build and install the app,
@@ -152,6 +153,30 @@ const goSettings = `(async () => {
 const goTrades = `(() => { [...document.querySelectorAll('a')].find((a) => a.getAttribute('href') === '/trades').click(); return true; })()`;
 const clickText = (text) =>
   `(() => { const b = [...document.querySelectorAll('button')].find((x) => x.textContent.trim().includes(${JSON.stringify(text)})); b.click(); return !!b; })()`;
+/** a finger's tap, through Android's own input, on the element `selector` finds in the page:
+ * the clipboard takes a copy from a tap, not from a page's click() */
+async function tap(selector) {
+  // where the WebView starts on the screen, below the status bar
+  let ui = '';
+  for (let i = 0; i < 3 && !ui.includes('android.webkit.WebView'); i++) {
+    if (i) await sleep(500);
+    try {
+      adb('shell', 'uiautomator', 'dump', '/sdcard/sj-ui.xml');
+      ui = adb('shell', 'cat', '/sdcard/sj-ui.xml');
+    } catch {
+      // a screen still moving; again
+    } finally {
+      adb('shell', 'rm', '-f', '/sdcard/sj-ui.xml');
+    }
+  }
+  // measured last, with anything opening on the page settled by now
+  const at = await ev(
+    `(() => { const el = ${selector}; el.scrollIntoView({ block: 'center' }); const r = el.getBoundingClientRect(); return { x: (r.left + r.width / 2) * devicePixelRatio, y: (r.top + r.height / 2) * devicePixelRatio }; })()`,
+  );
+  const [, left, top] = ui.match(/class="android\.webkit\.WebView"[^>]*?bounds="\[(\d+),(\d+)\]/) ?? [];
+  if (left === undefined) throw new Error('No WebView on the screen to tap');
+  adb('shell', 'input', 'tap', String(Math.round(+left + at.x)), String(Math.round(+top + at.y)));
+}
 const setCurrency = (v) => `(() => {
   const l = [...document.querySelectorAll('label')].find((x) => x.textContent.startsWith('Currency'));
   const el = document.getElementById(l.htmlFor);
@@ -502,6 +527,59 @@ try {
           j.trades.some((t) => t.symbol === 'DROIDB' && t.fees === 0.5),
       )),
   );
+
+  // ---- privacy mode and Copy for review on a phone ----------------------------------
+  const eye = `document.querySelector('header button[aria-label="Hide amounts"]')`;
+  const shownBefore = (await ev(`${eye}.getAttribute('aria-pressed')`)) === 'false';
+  await ev(`${eye}.click(); true`);
+  check(
+    "the header's eye hides every amount, and the journal keeps it",
+    shownBefore &&
+      (await seen(
+        `${eye}.getAttribute('aria-pressed') === 'true' && document.querySelector('main').innerText.includes('•••') && !/[€$£]/.test(document.querySelector('main').innerText)`,
+        'amounts hidden',
+        5000,
+      )) &&
+      (await savedSoon((j) => j.settings.hideMoney === true)),
+  );
+  await ev(`${eye}.click(); true`);
+  check(
+    'pressed again, it shows them, and the journal keeps that too',
+    (await seen(`${eye}.getAttribute('aria-pressed') === 'false'`, 'amounts shown', 5000)) &&
+      (await savedSoon((j) => j.settings.hideMoney !== true)),
+  );
+  // a trade's text, copied, then pasted back into a box of the test's own with Android's paste key
+  await ev(`document.querySelector('main li > button, main tbody tr').click(); true`);
+  await until(`!!$modal()?.querySelector('button[title="Copy this trade for review"]')`, 'trade form');
+  await ev(`$modal().querySelector('button[title="Copy this trade for review"]').click(); true`);
+  await until(
+    `$modal()?.querySelector('h2')?.textContent === 'Copy this trade for review' && !!$modal().querySelector('textarea').value`,
+    'copy for review',
+  );
+  const reviewText = await ev(`$modal().querySelector('textarea').value`);
+  await tap(`$t('Copy for review', $modal())`);
+  check(
+    'Copy for review copies, says so, and closes its window',
+    await seen(
+      `document.body.innerText.includes('Copied. Paste it wherever you like.') && $modal()?.querySelector('h2')?.textContent !== 'Copy this trade for review'`,
+      'copied',
+      5000,
+    ),
+    await ev(`$modal()?.innerText.slice(0, 300)`),
+  );
+  // the trade form closed first: it keeps the focus inside itself
+  await ev(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); true`);
+  await until(`!$modal()`, 'trade form closed');
+  await ev(
+    `(() => { const box = document.createElement('textarea'); box.id = 'e2e-paste'; document.body.append(box); box.focus(); return document.activeElement === box; })()`,
+  );
+  adb('shell', 'input', 'keyevent', 'KEYCODE_PASTE');
+  const samePasted =
+    reviewText.startsWith('A trade of mine to review: ') &&
+    (await seen(`document.getElementById('e2e-paste')?.value === ${JSON.stringify(reviewText)}`, 'pasted', 5000));
+  const pasted = await ev(`document.getElementById('e2e-paste')?.value.slice(0, 120)`);
+  await ev(`document.getElementById('e2e-paste')?.remove(); true`);
+  check("the trade's text is on the phone's clipboard: pasted, it is the same", samePasted, pasted);
 
   // ---- the App and Share plugins ------------------------------------------------
   adb('logcat', '-c');

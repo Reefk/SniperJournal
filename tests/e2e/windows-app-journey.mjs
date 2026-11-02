@@ -3,8 +3,9 @@
 // image served by the app, a change saved although the window is closed
 // straight after it, a second launch, a restart, the daily backup, a restore
 // with its safety copy, a save while another program holds the journal, the
-// earlier version's chart images brought over, and the app's own limits: no
-// network, nothing outside its folder. Synthetic data only, in a throwaway
+// earlier version's chart images brought over, the app's own limits (no
+// network, nothing outside its folder), and a trade copied for review onto the
+// Windows clipboard. Synthetic data only, in a throwaway
 // folder (SNIPER_JOURNAL_DIR); your own Documents\Sniper Journal is never
 // touched.
 //
@@ -545,6 +546,61 @@ async function journey() {
   // the Trades page has an Export CSV button too, so wait for the page itself
   await b.until(`location.pathname.startsWith('/reports') && !!$tStarts('Export CSV')`, 'reports page');
   check('Reports offers Print, as on any PC', await b.run(`!!$tStarts('Print')`));
+
+  // ---- 13. copy for review: a trade's text on the Windows clipboard ---------------------
+  // (it overwrites the clipboard of whoever runs this)
+  await b.run(`$nav('/trades'); true`);
+  await b.until(`!!document.querySelector('main tbody tr')`, 'trades page');
+  await b.run(`document.querySelector('main tbody tr').click(); true`);
+  await b.until(`!!$modal()?.querySelector('button[title="Copy this trade for review"]')`, 'trade form');
+  await b.run(`$modal().querySelector('button[title="Copy this trade for review"]').click(); true`);
+  await b.until(
+    `$modal()?.querySelector('h2')?.textContent === 'Copy this trade for review' && !!$modal().querySelector('textarea').value`,
+    'copy for review',
+  );
+  const reviewText = await b.run(`$modal().querySelector('textarea').value`);
+  // a real press, as the mouse gives it: the clipboard takes a copy from that, not from a page's
+  // click(), and only while the page has the focus, which a runner's window may not
+  await b.send('Page.bringToFront');
+  await b.send('Emulation.setFocusEmulationEnabled', { enabled: true });
+  await sleep(300); // the window settled
+  const at = await b.run(
+    `(() => { const el = $t('Copy for review', $modal()); el.scrollIntoView({ block: 'center' }); const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()`,
+  );
+  for (const type of ['mouseMoved', 'mousePressed', 'mouseReleased']) {
+    const sent = await b.send('Input.dispatchMouseEvent', { type, ...at, button: 'left', clickCount: 1 });
+    if (sent.error) throw new Error(`the press on Copy for review: ${sent.error.message}`);
+  }
+  check(
+    'Copy for review copies, says so, and closes its window',
+    await seen(
+      `$text().includes('Copied. Paste it wherever you like.') && $modal()?.querySelector('h2')?.textContent !== 'Copy this trade for review'`,
+      'copied',
+      5000,
+    ),
+    await b.run(`$modal()?.innerText.slice(0, 300)`),
+  );
+  // as UTF-8 in base64: Windows PowerShell writes its output in the console's code page
+  const clipboard = spawnSync(
+    'powershell',
+    [
+      '-NoProfile',
+      '-Command',
+      '[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes([string](Get-Clipboard -Raw)))',
+    ],
+    { encoding: 'utf8', timeout: 15000 },
+  );
+  const pasted = Buffer.from(clipboard.stdout?.trim() ?? '', 'base64')
+    .toString('utf8')
+    .replace(/\r\n/g, '\n');
+  check(
+    "the trade's text is on the Windows clipboard",
+    reviewText.startsWith('A trade of mine to review: ') && pasted === reviewText,
+    `${pasted.slice(0, 120)} | ${(clipboard.stderr ?? clipboard.error?.message ?? '').slice(0, 120)}`,
+  );
+  await b.send('Emulation.setFocusEmulationEnabled', { enabled: false });
+  await b.run(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); true`);
+  await b.until(`!$modal()`, 'trade form closed');
 
   check('nothing on any page was refused or failed', logged.length === 0, logged.join(' | '));
   check('the window closes when asked', await quit());
